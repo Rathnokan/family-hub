@@ -22,16 +22,21 @@ PERSON_TYPE_PARENT = "parent"
 PERSON_TYPES = [PERSON_TYPE_KID, PERSON_TYPE_PARENT]
 
 # Chore categories
-CATEGORY_ASSIGNED = "assigned"       # Assigned to a specific person
-CATEGORY_CLAIMABLE = "claimable"     # First come, first served
-CATEGORY_MAINTENANCE = "maintenance" # House/home maintenance tasks
-CATEGORY_ONE_TIME = "one_time"       # One-off tasks, no recurrence
+CATEGORY_ASSIGNED = "assigned"               # Assigned to a specific person
+CATEGORY_CLAIMABLE = "claimable"             # First come, first served
+CATEGORY_MAINTENANCE = "maintenance"         # House/home maintenance tasks
+CATEGORY_PERSONAL_REMINDER = "personal_reminder"  # Personal recurring reminders (CPAP, contacts, etc.)
+CATEGORY_ONE_TIME = "one_time"               # One-off tasks, no recurrence
 CHORE_CATEGORIES = [
     CATEGORY_ASSIGNED,
     CATEGORY_CLAIMABLE,
     CATEGORY_MAINTENANCE,
+    CATEGORY_PERSONAL_REMINDER,
     CATEGORY_ONE_TIME,
 ]
+
+# Categories that track by last-completed date (maintenance-style)
+MAINTENANCE_CATEGORIES = [CATEGORY_MAINTENANCE, CATEGORY_PERSONAL_REMINDER]
 
 # Recurrence types
 RECURRENCE_DAILY = "daily"
@@ -84,11 +89,14 @@ HISTORY_TASK_ADDED = "task_added"
 HISTORY_PERSON_ADDED = "person_added"
 
 # HA sensor names
-SENSOR_POINTS_BALANCE = "points_balance"
-SENSOR_POINTS_LIFETIME = "points_lifetime"
-SENSOR_TASKS_DUE_TODAY = "tasks_due_today"
-SENSOR_TASKS_OVERDUE = "tasks_overdue"
-SENSOR_PENDING_APPROVALS = "pending_approvals"
+SENSOR_PERSON = "family_hub"                          # Per-person: sensor.family_hub_[name]
+SENSOR_MAINTENANCE_DUE = "maintenance_due"            # Global: items due within 14 days
+SENSOR_MAINTENANCE_OVERDUE = "maintenance_overdue"    # Global: overdue maintenance/reminders
+SENSOR_NEEDS_ATTENTION = "needs_attention"            # Global: total parent actions needed
+SENSOR_CLAIMABLE = "claimable_tasks"                  # Global: unclaimed claimable tasks
+
+# Maintenance due-soon window (days)
+MAINTENANCE_DUE_SOON_DAYS = 14
 
 # Service names
 SERVICE_COMPLETE_TASK = "complete_task"
