@@ -1,0 +1,109 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Welcome to Family Hub",
+        "description": "Set up your family's task manager. You can change these settings later from the admin dashboard.",
+        "data": {
+          "family_name": "Family name",
+          "points_per_dollar": "Points per dollar (e.g. 10 = 10 pts equals $1)"
+        }
+      },
+      "add_parent": {
+        "title": "Add a parent",
+        "description": "Add at least one parent account. You can add a second parent and link HA user accounts from the admin dashboard later.",
+        "data": {
+          "parent_name": "Parent name"
+        }
+      },
+      "add_kids": {
+        "title": "Add your kids",
+        "description": "Enter your kids' names separated by commas. You can add or edit people later from the admin dashboard.",
+        "data": {
+          "kid_names": "Kid names (comma-separated)",
+          "skip": "Skip — I'll add kids later"
+        }
+      }
+    },
+    "error": {
+      "name_required": "Please enter a name."
+    },
+    "abort": {
+      "already_configured": "Family Hub is already set up. Use the admin dashboard to make changes."
+    }
+  },
+  "services": {
+    "complete_task": {
+      "name": "Complete task",
+      "description": "Mark a task as complete. Awards points immediately if self-reported, or queues for parent approval."
+    },
+    "claim_task": {
+      "name": "Claim task",
+      "description": "Claim an unclaimed task from the claimable pool."
+    },
+    "approve_task": {
+      "name": "Approve task",
+      "description": "Approve a completed task and award points to the completer."
+    },
+    "deny_task": {
+      "name": "Deny task",
+      "description": "Deny a completed task. No points are awarded."
+    },
+    "add_one_time_task": {
+      "name": "Add one-time task",
+      "description": "Quickly add a one-off task for anyone."
+    },
+    "add_person": {
+      "name": "Add person",
+      "description": "Add a new family member."
+    },
+    "update_person": {
+      "name": "Update person",
+      "description": "Update a family member's details."
+    },
+    "add_chore": {
+      "name": "Add chore",
+      "description": "Add a recurring chore with full recurrence configuration."
+    },
+    "update_chore": {
+      "name": "Update chore",
+      "description": "Update an existing chore's details."
+    },
+    "delete_chore": {
+      "name": "Delete chore",
+      "description": "Deactivate a chore and remove its pending task instances."
+    },
+    "request_redemption": {
+      "name": "Request redemption",
+      "description": "Request to spend points on a store item. Requires parent approval."
+    },
+    "approve_redemption": {
+      "name": "Approve redemption",
+      "description": "Approve a store redemption request and deduct points."
+    },
+    "decline_redemption": {
+      "name": "Decline redemption",
+      "description": "Decline a store redemption request. No points are deducted."
+    },
+    "add_store_item": {
+      "name": "Add store item",
+      "description": "Add a reward item to the store."
+    },
+    "update_store_item": {
+      "name": "Update store item",
+      "description": "Update an existing store item."
+    },
+    "delete_store_item": {
+      "name": "Delete store item",
+      "description": "Deactivate a store item."
+    },
+    "award_bonus_points": {
+      "name": "Award bonus points",
+      "description": "Award bonus points to a family member for any reason."
+    },
+    "export_backup": {
+      "name": "Export backup",
+      "description": "Save a timestamped backup of all Family Hub data."
+    }
+  }
+}
