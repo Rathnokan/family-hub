@@ -18,6 +18,7 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 
 from .const import CONF_FAMILY_NAME, CONF_POINTS_PER_DOLLAR, DOMAIN
 from .coordinator import FamilyHubCoordinator
@@ -78,6 +79,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Set up sensor platform
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
+    # Clean up any stale entities from previous versions of the integration.
+    # Build the set of unique IDs this version creates, then remove anything
+    # in the registry that belongs to this entry but isn't in that set.
+    await _async_cleanup_stale_entities(hass, entry, store)
+
     _LOGGER.info(
         "Family Hub: ready — %s, %d people, %d active chores",
         family_name,
@@ -85,6 +91,46 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         len(store.get_active_chores()),
     )
     return True
+
+
+
+async def _async_cleanup_stale_entities(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    store: FamilyHubDataStore,
+) -> None:
+    """Remove entities that belong to this entry but are no longer created."""
+
+    # Build the complete set of unique IDs this version of the integration creates
+    expected_unique_ids: set[str] = set()
+
+    # Per-person sensors
+    for person in store.people:
+        expected_unique_ids.add(f"{DOMAIN}_person_{person['id']}")
+
+    # Global sensors
+    expected_unique_ids.update({
+        f"{DOMAIN}_maintenance_due",
+        f"{DOMAIN}_maintenance_overdue",
+        f"{DOMAIN}_needs_attention",
+        f"{DOMAIN}_claimable_tasks",
+    })
+
+    registry = er.async_get(hass)
+    stale = [
+        entity
+        for entity in er.async_entries_for_config_entry(registry, entry.entry_id)
+        if entity.unique_id not in expected_unique_ids
+    ]
+
+    if stale:
+        _LOGGER.info(
+            "Family Hub: removing %d stale entities from previous version: %s",
+            len(stale),
+            [e.entity_id for e in stale],
+        )
+        for entity in stale:
+            registry.async_remove(entity.entity_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
