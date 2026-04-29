@@ -2,13 +2,13 @@
   "domain": "family_hub",
   "name": "Family Hub",
   "version": "0.1.0",
-  "documentation": "https://github.com/YOUR_USERNAME/family_hub",
-  "issue_tracker": "https://github.com/YOUR_USERNAME/family_hub/issues",
-  "codeowners": ["@YOUR_USERNAME"],
+  "documentation": "https://github.com/Rathnokan/family-hub",
+  "issue_tracker": "https://github.com/Rathnokan/family-hub/issues",
+  "codeowners": ["@Rathnokan"],
   "requirements": [],
   "dependencies": [],
   "after_dependencies": ["persistent_notification"],
   "iot_class": "local_push",
   "config_flow": true,
-  "homeassistant": "2024.1.0"
+  "homeassistant": "2025.1.0"
 }
