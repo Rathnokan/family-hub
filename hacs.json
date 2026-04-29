@@ -1,8 +1,8 @@
 {
   "name": "Family Hub",
   "domain": "family_hub",
-  "documentation": "https://github.com/YOUR_USERNAME/family_hub",
-  "issue_tracker": "https://github.com/YOUR_USERNAME/family_hub/issues",
-  "homeassistant": "2024.1.0",
+  "documentation": "https://github.com/Rathnokan/family-hub",
+  "issue_tracker": "https://github.com/Rathnokan/family-hub/issues",
+  "homeassistant": "2025.1.0",
   "version": "0.1.0"
 }
