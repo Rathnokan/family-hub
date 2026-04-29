@@ -26,14 +26,14 @@ A private, self-hosted family task management integration for Home Assistant.
 ### Via HACS (recommended)
 
 1. Open HACS → Integrations → Custom repositories
-2. Add `https://github.com/YOUR_USERNAME/family_hub` as type **Integration**
+2. Add `https://github.com/Rathnokan/family-hub` as type **Integration**
 3. Search for "Family Hub" and install
 4. Restart Home Assistant
 
 ### Manual
 
 1. Download this repository
-2. Copy the `custom_components/family_hub` folder into your HA config:
+2. Copy the `custom_components/family-hub` folder into your HA config:
    ```
    /config/custom_components/family_hub/
    ```
