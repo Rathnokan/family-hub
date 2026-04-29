@@ -851,7 +851,22 @@ class FamilyHubDataStore:
             "pending_approvals": len(self.get_pending_approvals()),
             "pending_redemptions": len(self.get_pending_redemptions()),
             "claimable_tasks": len(self.get_claimable_tasks()),
+            "active_chores": len(self.get_active_chores()),
         }
+
+    def get_personal_reminders(self, person_id: str) -> list[dict]:
+        """Return active personal_reminder task instances for one person."""
+        from .const import CATEGORY_PERSONAL_REMINDER
+        return [
+            t for t in self.task_instances
+            if t.get("assigned_to") == person_id
+            and t["status"] in ACTIVE_STATUSES
+            and self._get_chore_category(t) == CATEGORY_PERSONAL_REMINDER
+        ]
+
+    def _get_chore_category(self, task: dict) -> str | None:
+        chore = self.get_chore(task["chore_id"])
+        return chore.get("category") if chore else None
 
     # ------------------------------------------------------------------
     # Backup / export
