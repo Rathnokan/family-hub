@@ -23,6 +23,7 @@ from .const import (
     CATEGORY_CLAIMABLE,
     CATEGORY_MAINTENANCE,
     CATEGORY_ONE_TIME,
+    CATEGORY_PERSONAL_REMINDER,
     DEFAULT_FAMILY_NAME,
     DEFAULT_POINTS_PER_DOLLAR,
     DOMAIN,
@@ -35,6 +36,7 @@ from .const import (
     HISTORY_TASK_APPROVED,
     HISTORY_TASK_COMPLETED,
     HISTORY_TASK_DENIED,
+    MAINTENANCE_CATEGORIES,
     PERSON_TYPE_KID,
     PERSON_TYPE_PARENT,
     RECURRENCE_DAILY,
@@ -301,11 +303,8 @@ class FamilyHubDataStore:
             person_id=created_by,
             note=f'Chore "{name}" created',
         )
-        # Generate the first task instance for non-one-time chores
-        if recurrence_type != RECURRENCE_ONE_TIME:
-            await self._async_create_task_instance(chore, due_date=date.today())
-        else:
-            await self._async_create_task_instance(chore, due_date=date.today())
+        # Generate the first task instance for all chore types
+        await self._async_create_task_instance(chore, due_date=date.today())
         await self.async_save()
         return chore
 
@@ -438,19 +437,6 @@ class FamilyHubDataStore:
         await self.async_save()
         return instance
 
-    async def async_claim_task(self, instance_id: str, claimed_by: str) -> dict | None:
-        """Claim a claimable task."""
-        instance = self.get_task_instance(instance_id)
-        if not instance or instance["status"] != STATUS_PENDING:
-            return None
-        if not self._is_claimable_task(instance):
-            return None
-        instance["status"] = STATUS_CLAIMED
-        instance["assigned_to"] = claimed_by
-        instance["claimed_by"] = claimed_by
-        await self.async_save()
-        return instance
-
     async def async_approve_task(self, instance_id: str, approved_by: str) -> dict | None:
         """Approve a pending task. Awards points to the completer."""
         instance = self.get_task_instance(instance_id)
@@ -499,6 +485,19 @@ class FamilyHubDataStore:
             reference_id=instance_id,
             note=f'"{chore_name}" denied by {denied_by}. {reason}'.strip(),
         )
+        await self.async_save()
+        return instance
+
+    async def async_claim_task(self, instance_id: str, claimed_by: str) -> dict | None:
+        """Claim a claimable task."""
+        instance = self.get_task_instance(instance_id)
+        if not instance or instance["status"] != STATUS_PENDING:
+            return None
+        if not self._is_claimable_task(instance):
+            return None
+        instance["status"] = STATUS_CLAIMED
+        instance["assigned_to"] = claimed_by
+        instance["claimed_by"] = claimed_by
         await self.async_save()
         return instance
 
@@ -560,7 +559,6 @@ class FamilyHubDataStore:
 
         if r_type == RECURRENCE_MONTHLY_ON_DATE:
             day = recurrence.get("day_of_month", 1)
-            # Find next month's occurrence
             month = today.month + 1
             year = today.year
             if month > 12:
@@ -616,7 +614,6 @@ class FamilyHubDataStore:
 
         if r_type == RECURRENCE_EVERY_N_DAYS:
             n = recurrence.get("interval", 1)
-            # Check from chore creation date
             created = date.fromisoformat(chore["created_at"][:10])
             return (today - created).days % n == 0
 
@@ -856,7 +853,6 @@ class FamilyHubDataStore:
 
     def get_personal_reminders(self, person_id: str) -> list[dict]:
         """Return active personal_reminder task instances for one person."""
-        from .const import CATEGORY_PERSONAL_REMINDER
         return [
             t for t in self.task_instances
             if t.get("assigned_to") == person_id
@@ -867,6 +863,232 @@ class FamilyHubDataStore:
     def _get_chore_category(self, task: dict) -> str | None:
         chore = self.get_chore(task["chore_id"])
         return chore.get("category") if chore else None
+
+    # ------------------------------------------------------------------
+    # Card data helpers — rich list data for the Lovelace card
+    # ------------------------------------------------------------------
+
+    def get_tasks_for_card(self, person_id: str) -> dict:
+        """
+        Return all task data for a person needed by the dashboard card.
+
+        Returns a dict with keys:
+          due_today  — list of tasks due today (excludes maintenance categories)
+          overdue    — list of overdue tasks, sorted most overdue first
+          pending_approval — tasks this person submitted that await approval
+        """
+        today = date.today()
+        today_str = today.isoformat()
+
+        # Collect active tasks assigned to this person (non-maintenance categories)
+        due_today: list[dict] = []
+        overdue: list[dict] = []
+
+        for t in self.task_instances:
+            if t.get("assigned_to") != person_id:
+                continue
+            if t["status"] not in ACTIVE_STATUSES:
+                continue
+            chore = self.get_chore(t["chore_id"])
+            if not chore:
+                continue
+            # Maintenance / personal_reminder tasks belong on the maintenance dashboard
+            if chore.get("category") in MAINTENANCE_CATEGORIES:
+                continue
+
+            task_data = {
+                "task_id": t["id"],
+                "chore_id": t["chore_id"],
+                "name": chore["name"],
+                "description": chore.get("description", ""),
+                "points": chore.get("points", 0),
+                "due_date": t["due_date"],
+                "status": t["status"],
+                "category": chore.get("category"),
+                "icon": chore.get("icon"),
+            }
+
+            if t["due_date"] == today_str:
+                due_today.append(task_data)
+            elif t["due_date"] < today_str:
+                days_overdue = (today - date.fromisoformat(t["due_date"])).days
+                task_data["days_overdue"] = days_overdue
+                overdue.append(task_data)
+
+        # Tasks this person submitted and are awaiting parent approval
+        pending_approval: list[dict] = []
+        for t in self.task_instances:
+            if t.get("completed_by") != person_id:
+                continue
+            if t["status"] != STATUS_PENDING_APPROVAL:
+                continue
+            chore = self.get_chore(t["chore_id"])
+            pending_approval.append({
+                "task_id": t["id"],
+                "chore_id": t["chore_id"],
+                "name": chore["name"] if chore else t["chore_id"],
+                "points": chore.get("points", 0) if chore else 0,
+                "completed_at": t.get("completed_at"),
+                "status": t["status"],
+            })
+
+        return {
+            "due_today": sorted(due_today, key=lambda x: x["name"]),
+            "overdue": sorted(overdue, key=lambda x: -x.get("days_overdue", 0)),
+            "pending_approval": pending_approval,
+        }
+
+    def get_store_items_for_card(self, person_id: str) -> list[dict]:
+        """Return store items visible to a person, formatted for the card."""
+        items = self.get_store_items_for_person(person_id)
+        return [
+            {
+                "item_id": i["id"],
+                "name": i["name"],
+                "description": i.get("description", ""),
+                "dollar_value": i.get("dollar_value", 0),
+                "points_cost": i.get("points_cost", 0),
+                "scope": i.get("scope"),
+            }
+            for i in items
+        ]
+
+    def get_approval_queue_for_card(self) -> list[dict]:
+        """
+        Return pending approval tasks with full detail for the admin view.
+        Sorted by completion time, oldest first (most urgent at top).
+        """
+        queue = []
+        for t in self.get_pending_approvals():
+            chore = self.get_chore(t["chore_id"])
+            person = self.get_person(t.get("completed_by", ""))
+            queue.append({
+                "task_id": t["id"],
+                "chore_name": chore["name"] if chore else t["chore_id"],
+                "chore_points": chore.get("points", 0) if chore else 0,
+                "person_id": t.get("completed_by"),
+                "person_name": person["name"] if person else "Unknown",
+                "person_color": person.get("avatar_color", "#7F77DD") if person else "#7F77DD",
+                "completed_at": t.get("completed_at"),
+            })
+        return sorted(queue, key=lambda x: x.get("completed_at") or "")
+
+    def get_redemption_queue_for_card(self) -> list[dict]:
+        """
+        Return pending redemptions with full detail for the admin view.
+        Sorted by request time, oldest first.
+        """
+        queue = []
+        for r in self.get_pending_redemptions():
+            person = self.get_person(r["person_id"])
+            queue.append({
+                "redemption_id": r["id"],
+                "item_name": r["item_name"],
+                "person_id": r["person_id"],
+                "person_name": person["name"] if person else "Unknown",
+                "person_color": person.get("avatar_color", "#7F77DD") if person else "#7F77DD",
+                "points_cost": r["points_cost"],
+                "requested_at": r.get("requested_at"),
+            })
+        return sorted(queue, key=lambda x: x.get("requested_at") or "")
+
+    def get_maintenance_items_for_card(self) -> list[dict]:
+        """
+        Return all maintenance + personal_reminder task instances with full
+        detail for the maintenance dashboard.
+        Sorted by days_delta ascending (most overdue first, then soonest due).
+        """
+        today = date.today()
+        items = []
+
+        for task in self.task_instances:
+            if task["status"] not in ACTIVE_STATUSES:
+                continue
+            chore = self.get_chore(task["chore_id"])
+            if not chore or chore.get("category") not in MAINTENANCE_CATEGORIES:
+                continue
+
+            due_date = date.fromisoformat(task["due_date"])
+            # days_delta: negative = overdue by N days, 0 = due today, positive = due in N days
+            days_delta = (due_date - today).days
+
+            assigned_to = task.get("assigned_to")
+            person = self.get_person(assigned_to) if assigned_to else None
+
+            items.append({
+                "task_id": task["id"],
+                "chore_id": task["chore_id"],
+                "name": chore["name"],
+                "category": chore.get("category"),
+                "due_date": task["due_date"],
+                "days_delta": days_delta,
+                "assigned_to": assigned_to,
+                "person_name": person["name"] if person else None,
+                "person_color": person.get("avatar_color", "#7F77DD") if person else None,
+            })
+
+        return sorted(items, key=lambda x: x["days_delta"])
+
+    def get_claimable_tasks_for_card(self) -> list[dict]:
+        """Return claimable tasks with chore details for the card."""
+        items = []
+        for task in self.get_claimable_tasks():
+            chore = self.get_chore(task["chore_id"])
+            items.append({
+                "task_id": task["id"],
+                "name": chore["name"] if chore else task["chore_id"],
+                "description": chore.get("description", "") if chore else "",
+                "points": chore.get("points", 0) if chore else 0,
+                "due_date": task["due_date"],
+                "icon": chore.get("icon") if chore else None,
+            })
+        return items
+
+    def get_all_tasks_for_command_center(self) -> list[dict]:
+        """
+        Return all active, non-maintenance tasks for all people.
+        Used by the command center to show the full household task list.
+        Includes overdue tasks. Sorted: overdue first, then due today, then by person.
+        """
+        today = date.today()
+        today_str = today.isoformat()
+        items = []
+
+        for task in self.task_instances:
+            if task["status"] not in [STATUS_PENDING, STATUS_CLAIMED]:
+                continue
+            chore = self.get_chore(task["chore_id"])
+            if not chore:
+                continue
+            if chore.get("category") in MAINTENANCE_CATEGORIES:
+                continue
+            if chore.get("category") == CATEGORY_CLAIMABLE and task.get("assigned_to") is None:
+                continue  # Claimable tasks show in their own section
+
+            assigned_to = task.get("assigned_to")
+            person = self.get_person(assigned_to) if assigned_to else None
+            due_date = date.fromisoformat(task["due_date"])
+            days_delta = (due_date - today).days
+
+            items.append({
+                "task_id": task["id"],
+                "chore_id": task["chore_id"],
+                "name": chore["name"],
+                "points": chore.get("points", 0),
+                "due_date": task["due_date"],
+                "days_delta": days_delta,
+                "status": task["status"],
+                "category": chore.get("category"),
+                "assigned_to": assigned_to,
+                "person_name": person["name"] if person else None,
+                "person_color": person.get("avatar_color", "#7F77DD") if person else "#7F77DD",
+                "approval_required": chore.get("approval_required", True),
+            })
+
+        # Sort: overdue first (most overdue at top), then due today, future tasks excluded
+        # We show today + overdue on the command center by default
+        today_and_overdue = [i for i in items if i["days_delta"] <= 0]
+        return sorted(today_and_overdue, key=lambda x: x["days_delta"])
 
     # ------------------------------------------------------------------
     # Backup / export
