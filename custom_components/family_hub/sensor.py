@@ -6,9 +6,9 @@ Family Hub — sensor platform.
 Per-person (1 per family member, dynamic):
   sensor.family_hub_[name]
     state  = current spendable point balance
-    attrs  = lifetime points, dollar value, tasks due today,
-             tasks overdue, pending approval, completed this week,
-             completed total, pending redemptions, person type
+    attrs  = lifetime points, dollar value, task counts, store items,
+             full task lists, pending approval items — everything the
+             dashboard card needs to render that person's view
 
 Global (4 fixed):
   sensor.family_hub_maintenance_due      — items due within 14 days
@@ -16,8 +16,8 @@ Global (4 fixed):
   sensor.family_hub_needs_attention      — total things needing parent action
   sensor.family_hub_claimable_tasks      — unclaimed tasks in the claimable pool
 
-All richer data (chore lists, store items, history) is served via the
-coordinator/store directly to dashboards — not as HA entities.
+Global sensors also expose list attributes so the card can render full detail
+without making separate data calls.
 """
 
 from __future__ import annotations
@@ -97,7 +97,10 @@ class FamilyHubPersonSensor(FamilyHubBaseSensor):
     One sensor per family member.
 
     State = current spendable point balance (most useful for voice + automations).
-    Attributes carry everything else about that person.
+
+    Attributes carry everything the dashboard card needs to render that person's
+    full view: counts for quick reads, full task lists for rendering rows,
+    store items for the rewards tab, and pending approval status.
     """
 
     _attr_state_class = SensorStateClass.MEASUREMENT
@@ -128,19 +131,20 @@ class FamilyHubPersonSensor(FamilyHubBaseSensor):
         today = date.today().isoformat()
         week_ago = (date.today() - timedelta(days=7)).isoformat()
 
+        # --- Counts (kept for automations / voice) ---
         all_tasks = store.task_instances
         person_active = [
             t for t in all_tasks
             if t.get("assigned_to") == self._person_id
             and t["status"] in ACTIVE_STATUSES
         ]
-        due_today = [t for t in person_active if t["due_date"] == today]
-        overdue = [t for t in person_active if t["due_date"] < today]
-        pending_approval = [
+        due_today_count = len([t for t in person_active if t["due_date"] == today])
+        overdue_count = len([t for t in person_active if t["due_date"] < today])
+        pending_approval_count = len([
             t for t in all_tasks
             if t.get("completed_by") == self._person_id
             and t["status"] == STATUS_PENDING_APPROVAL
-        ]
+        ])
         completed_total = [
             t for t in all_tasks
             if t.get("completed_by") == self._person_id
@@ -150,26 +154,44 @@ class FamilyHubPersonSensor(FamilyHubBaseSensor):
             t for t in completed_total
             if t.get("completed_at", "")[:10] >= week_ago
         ]
-        pending_redemptions = [
+        pending_redemptions_count = len([
             r for r in store.redemptions
             if r["person_id"] == self._person_id and r["status"] == "pending"
-        ]
+        ])
 
         balance = person.get("points_balance", 0)
         ppdollar = store.points_per_dollar
 
+        # --- Rich list data for the dashboard card ---
+        task_data = store.get_tasks_for_card(self._person_id)
+        store_items = store.get_store_items_for_card(self._person_id)
+
         return {
+            # Identity
             "person_id": self._person_id,
             "person_type": person.get("type", "kid"),
+            "avatar_color": person.get("avatar_color", "#7F77DD"),
             "active": person.get("active", True),
+
+            # Point summary
             "lifetime_points": person.get("points_lifetime", 0),
             "dollar_value": round(balance / ppdollar, 2) if ppdollar else 0,
-            "tasks_due_today": len(due_today),
-            "tasks_overdue": len(overdue),
-            "pending_approval": len(pending_approval),
+
+            # Counts — fast reads for automations and badges
+            "tasks_due_today": due_today_count,
+            "tasks_overdue": overdue_count,
+            "pending_approval": pending_approval_count,
             "tasks_completed_this_week": len(completed_this_week),
             "tasks_completed_total": len(completed_total),
-            "pending_redemptions": len(pending_redemptions),
+            "pending_redemptions": pending_redemptions_count,
+
+            # Full task lists — used by the dashboard card to render rows
+            "tasks_due_today_list": task_data["due_today"],
+            "tasks_overdue_list": task_data["overdue"],
+            "tasks_pending_approval_list": task_data["pending_approval"],
+
+            # Store items visible to this person
+            "store_items": store_items,
         }
 
 
@@ -208,6 +230,7 @@ class FamilyHubMaintenanceDueSensor(FamilyHubBaseSensor):
     """
     Count of house maintenance + personal reminder items
     due within the next 14 days (including today and overdue).
+    Attributes include the full item list for the maintenance dashboard card.
     """
 
     _attr_state_class = SensorStateClass.MEASUREMENT
@@ -244,6 +267,9 @@ class FamilyHubMaintenanceDueSensor(FamilyHubBaseSensor):
             next_due_date = upcoming[0]["due_date"]
             next_due_days = (date.fromisoformat(next_due_date) - today).days
 
+        # Full item list for the maintenance dashboard card
+        items_for_card = store.get_maintenance_items_for_card()
+
         return {
             "overdue": len(overdue),
             "due_this_week": len(due_this_week),
@@ -251,6 +277,8 @@ class FamilyHubMaintenanceDueSensor(FamilyHubBaseSensor):
             "next_item": next_item,
             "next_due_date": next_due_date,
             "next_due_days": next_due_days,
+            # Full list consumed by the maintenance dashboard card
+            "items": items_for_card,
         }
 
 
@@ -309,6 +337,9 @@ class FamilyHubNeedsAttentionSensor(FamilyHubBaseSensor):
     Total count of things needing a parent's attention right now.
     Perfect for a dashboard badge or automation trigger.
     State = total. Zero means all clear.
+
+    Attributes include the full approval and redemption queues so the
+    admin card can render actionable rows without additional data calls.
     """
 
     _attr_state_class = SensorStateClass.MEASUREMENT
@@ -335,11 +366,48 @@ class FamilyHubNeedsAttentionSensor(FamilyHubBaseSensor):
         overdue_maintenance = _get_maintenance_tasks(store, overdue_only=True)
 
         return {
+            # Counts for automations / badges
             "pending_task_approvals": len(pending_tasks),
             "pending_redemptions": len(pending_redemptions),
             "overdue_maintenance": len(overdue_maintenance),
-            "task_ids": [t["id"] for t in pending_tasks],
-            "redemption_ids": [r["id"] for r in pending_redemptions],
+
+            # Full queues for the admin card — actionable rows with names,
+            # person info, and IDs ready to pass straight to services
+            "approval_queue": store.get_approval_queue_for_card(),
+            "redemption_queue": store.get_redemption_queue_for_card(),
+
+            # All people with balances — for the admin overview
+            "people": [
+                {
+                    "person_id": p["id"],
+                    "name": p["name"],
+                    "type": p.get("type", "kid"),
+                    "avatar_color": p.get("avatar_color", "#7F77DD"),
+                    "points_balance": p.get("points_balance", 0),
+                    "points_lifetime": p.get("points_lifetime", 0),
+                    "active": p.get("active", True),
+                }
+                for p in store.people
+                if p.get("active", True)
+            ],
+
+            # All active chores — for the admin chore management view
+            "active_chores": [
+                {
+                    "chore_id": c["id"],
+                    "name": c["name"],
+                    "category": c.get("category"),
+                    "assigned_to": c.get("assigned_to"),
+                    "points": c.get("points", 0),
+                    "approval_required": c.get("approval_required", True),
+                    "recurrence": c.get("recurrence", {}),
+                }
+                for c in store.get_active_chores()
+            ],
+
+            # Settings — for display in admin header
+            "family_name": store.family_name,
+            "points_per_dollar": store.points_per_dollar,
         }
 
 
@@ -351,6 +419,7 @@ class FamilyHubClaimableTasksSensor(FamilyHubBaseSensor):
     """
     Count of unclaimed tasks in the claimable pool.
     Useful for the command center and 'bonus chores available' automations.
+    Attributes include the full task list for the card.
     """
 
     _attr_state_class = SensorStateClass.MEASUREMENT
@@ -367,14 +436,9 @@ class FamilyHubClaimableTasksSensor(FamilyHubBaseSensor):
     @property
     def extra_state_attributes(self) -> dict:
         store = self.coordinator.store
-        tasks = store.get_claimable_tasks()
-        items = []
-        for task in tasks:
-            chore = store.get_chore(task["chore_id"])
-            items.append({
-                "task_id": task["id"],
-                "name": chore["name"] if chore else task["chore_id"],
-                "points": chore.get("points", 0) if chore else 0,
-                "due_date": task["due_date"],
-            })
-        return {"tasks": items}
+        return {
+            # Full list for the card — names, points, IDs ready to render
+            "tasks": store.get_claimable_tasks_for_card(),
+            # Command center also needs all assigned tasks
+            "all_tasks": store.get_all_tasks_for_command_center(),
+        }
