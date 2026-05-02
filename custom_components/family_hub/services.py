@@ -66,7 +66,7 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
         result = await store.async_complete_task(instance_id, completed_by)
         if result:
             await coordinator.async_refresh()
-            _send_approval_notification(hass, result, store)
+            await _send_approval_notification(hass, result, store)
         else:
             _LOGGER.warning("Family Hub: complete_task failed for task %s", instance_id)
 
@@ -358,7 +358,7 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
         result = await store.async_request_redemption(call.data["person_id"], call.data["item_id"])
         if result:
             await coordinator.async_refresh()
-            _send_redemption_notification(hass, result, store)
+            await _send_redemption_notification(hass, result, store)
 
     hass.services.async_register(
         DOMAIN,
@@ -441,10 +441,15 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
         backup_path = os.path.join(backup_dir, f"family_hub_backup_{timestamp}.json")
         success = await store.async_export_backup(backup_path)
         if success:
-            hass.components.persistent_notification.async_create(
-                f"Family Hub backup saved to:\n`{backup_path}`",
-                title="Family Hub backup complete",
-                notification_id="family_hub_backup",
+            # Use hass.services.async_call — hass.components.* is deprecated
+            await hass.services.async_call(
+                "persistent_notification",
+                "create",
+                {
+                    "message": f"Family Hub backup saved to:\n`{backup_path}`",
+                    "title": "Family Hub backup complete",
+                    "notification_id": "family_hub_backup",
+                },
             )
 
     hass.services.async_register(
@@ -459,7 +464,7 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
 # Internal notification helpers
 # ------------------------------------------------------------------
 
-def _send_approval_notification(hass: HomeAssistant, task_instance: dict, store) -> None:
+async def _send_approval_notification(hass: HomeAssistant, task_instance: dict, store) -> None:
     """Send a persistent notification when a task needs parent approval."""
     if task_instance.get("status") != "pending_approval":
         return
@@ -467,22 +472,36 @@ def _send_approval_notification(hass: HomeAssistant, task_instance: dict, store)
     person = store.get_person(task_instance.get("completed_by", ""))
     chore_name = chore["name"] if chore else "a task"
     person_name = person["name"] if person else "Someone"
-    hass.components.persistent_notification.async_create(
-        f"**{person_name}** completed **{chore_name}** and needs your approval.\n\n"
-        f"Task ID: `{task_instance['id']}`",
-        title="Family Hub: approval needed",
-        notification_id=f"family_hub_approval_{task_instance['id']}",
+    # Use hass.services.async_call — hass.components.* is deprecated
+    await hass.services.async_call(
+        "persistent_notification",
+        "create",
+        {
+            "message": (
+                f"**{person_name}** completed **{chore_name}** and needs your approval.\n\n"
+                f"Task ID: `{task_instance['id']}`"
+            ),
+            "title": "Family Hub: approval needed",
+            "notification_id": f"family_hub_approval_{task_instance['id']}",
+        },
     )
 
 
-def _send_redemption_notification(hass: HomeAssistant, redemption: dict, store) -> None:
+async def _send_redemption_notification(hass: HomeAssistant, redemption: dict, store) -> None:
     """Send a persistent notification when a store redemption is requested."""
     person = store.get_person(redemption["person_id"])
     person_name = person["name"] if person else "Someone"
-    hass.components.persistent_notification.async_create(
-        f"**{person_name}** wants to redeem **{redemption['item_name']}** "
-        f"for **{redemption['points_cost']} points**.\n\n"
-        f"Redemption ID: `{redemption['id']}`",
-        title="Family Hub: redemption requested",
-        notification_id=f"family_hub_redemption_{redemption['id']}",
+    # Use hass.services.async_call — hass.components.* is deprecated
+    await hass.services.async_call(
+        "persistent_notification",
+        "create",
+        {
+            "message": (
+                f"**{person_name}** wants to redeem **{redemption['item_name']}** "
+                f"for **{redemption['points_cost']} points**.\n\n"
+                f"Redemption ID: `{redemption['id']}`"
+            ),
+            "title": "Family Hub: redemption requested",
+            "notification_id": f"family_hub_redemption_{redemption['id']}",
+        },
     )
