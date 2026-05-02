@@ -5,22 +5,34 @@ A private, self-hosted family task management system:
   • Chores for kids (assigned + claimable, daily/weekly/custom recurrence)
   • Points, rewards store, and redemption approval flow
   • Home maintenance tracking
+  • Personal reminders (per-person recurring reminders)
   • One-time tasks for anyone
-  • Four dashboards: command center, personal, home maintenance, admin
+  • Four dashboard modes via the custom family-hub-card Lovelace card
 
 All data lives in a single JSON file — no cloud, no third-party accounts.
+
+The custom Lovelace card (www/family-hub-card.js) is served automatically
+as a static path and registered as a Lovelace resource on startup.
+Users add it to any dashboard as: type: custom:family-hub-card
 """
 
 from __future__ import annotations
 
 import logging
+import os
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
-from .const import CONF_FAMILY_NAME, CONF_POINTS_PER_DOLLAR, DOMAIN
+from .const import (
+    CARD_JS_URL,
+    CARD_URL_PATH,
+    CONF_FAMILY_NAME,
+    CONF_POINTS_PER_DOLLAR,
+    DOMAIN,
+)
 from .coordinator import FamilyHubCoordinator
 from .data_store import FamilyHubDataStore
 from .services import async_setup_services
@@ -45,7 +57,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     points_per_dollar = entry.data[CONF_POINTS_PER_DOLLAR]
     initial_people = entry.data.get("initial_people", [])
 
-    # Init data store
+    # --- Serve the Lovelace card JS as a static path ---
+    # This makes the file available at /family_hub/family-hub-card.js
+    # The path is registered once; HA deduplicates subsequent calls on reload.
+    www_path = os.path.join(os.path.dirname(__file__), "www")
+    hass.http.register_static_path(CARD_URL_PATH, www_path, cache_headers=False)
+    _LOGGER.debug("Family Hub: registered static path %s → %s", CARD_URL_PATH, www_path)
+
+    # --- Register the card as a Lovelace resource ---
+    # This is what makes the card appear in the card picker and loads the JS
+    # automatically in every Lovelace dashboard, including on restart.
+    await _async_register_lovelace_resource(hass)
+
+    # --- Init data store ---
     store = FamilyHubDataStore(hass, storage_path)
     await store.async_load()
 
@@ -64,7 +88,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 person_type=person_data["type"],
             )
 
-    # Init coordinator
+    # --- Init coordinator ---
     coordinator = FamilyHubCoordinator(hass, store)
     await coordinator.async_config_entry_first_refresh()
 
@@ -73,15 +97,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         "store": store,
     }
 
-    # Register all services
+    # --- Register all services ---
     await async_setup_services(hass, coordinator)
 
-    # Set up sensor platform
+    # --- Set up sensor platform ---
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
-    # Clean up any stale entities from previous versions of the integration.
-    # Build the set of unique IDs this version creates, then remove anything
-    # in the registry that belongs to this entry but isn't in that set.
+    # --- Clean up any stale entities from previous versions ---
     await _async_cleanup_stale_entities(hass, entry, store)
 
     _LOGGER.info(
@@ -92,6 +114,49 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     )
     return True
 
+
+async def _async_register_lovelace_resource(hass: HomeAssistant) -> None:
+    """
+    Register family-hub-card.js as a Lovelace resource if not already registered.
+
+    HA's Lovelace resource storage lives at lovelace_resources in the storage
+    collection. We use the lovelace.resources service to add the resource so it
+    appears in Settings → Dashboards → Resources and loads on every dashboard.
+
+    This is idempotent — if the URL is already registered we skip it silently.
+    """
+    try:
+        # Access the Lovelace resource collection directly via the storage helper.
+        # This is the same mechanism used by the HA frontend and other integrations
+        # that ship custom cards (e.g. HACS itself uses this pattern).
+        from homeassistant.components.lovelace import resources as lovelace_resources  # noqa: PLC0415
+
+        resource_collection = await lovelace_resources.async_get_resource_collection(hass)
+        existing_urls = {r["url"] for r in resource_collection.async_items()}
+
+        if CARD_JS_URL not in existing_urls:
+            await resource_collection.async_create_item({
+                "res_type": "module",
+                "url": CARD_JS_URL,
+            })
+            _LOGGER.info(
+                "Family Hub: registered Lovelace resource %s — "
+                "the family-hub-card is now available in the card picker",
+                CARD_JS_URL,
+            )
+        else:
+            _LOGGER.debug("Family Hub: Lovelace resource %s already registered", CARD_JS_URL)
+
+    except Exception as err:  # noqa: BLE001
+        # Non-fatal — the card will still work if users manually add the resource,
+        # or if Lovelace is in YAML mode. Log clearly so it's easy to diagnose.
+        _LOGGER.warning(
+            "Family Hub: could not auto-register Lovelace resource (%s). "
+            "If the card is missing from the picker, add it manually in "
+            "Settings → Dashboards → Resources with URL: %s (type: JavaScript module)",
+            err,
+            CARD_JS_URL,
+        )
 
 
 async def _async_cleanup_stale_entities(
@@ -155,5 +220,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Called when the entry is removed — optionally clean up the data file."""
-    _LOGGER.info("Family Hub: entry removed. Data file kept at %s", entry.data.get("storage_path"))
+    """Called when the entry is removed — data file is intentionally kept."""
+    _LOGGER.info(
+        "Family Hub: entry removed. Data file kept at %s",
+        entry.data.get("storage_path"),
+    )
