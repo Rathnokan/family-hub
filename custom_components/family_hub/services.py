@@ -413,10 +413,18 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
     # ------------------------------------------------------------------
 
     async def handle_award_bonus_points(call: ServiceCall) -> None:
+        """
+        Award bonus points to a person.
+        Accepts either 'points' (integer) or 'dollar_amount' (float).
+        If dollar_amount is provided it is converted automatically using the
+        current points_per_dollar rate. dollar_amount takes precedence if both
+        are provided.
+        """
         await store.async_award_bonus_points(
-            call.data["person_id"],
-            call.data["points"],
-            call.data.get("reason", ""),
+            person_id=call.data["person_id"],
+            points=call.data.get("points", 0),
+            reason=call.data.get("reason", ""),
+            dollar_amount=call.data.get("dollar_amount"),
         )
         await coordinator.async_refresh()
 
@@ -426,8 +434,64 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
         handle_award_bonus_points,
         schema=vol.Schema({
             vol.Required("person_id"): cv.string,
-            vol.Required("points"): vol.All(vol.Coerce(int), vol.Range(min=1)),
+            # Either points OR dollar_amount must be supplied (validated in data_store)
+            vol.Optional("points", default=0): vol.All(vol.Coerce(int), vol.Range(min=0)),
+            vol.Optional("dollar_amount"): vol.All(vol.Coerce(float), vol.Range(min=0.01)),
             vol.Optional("reason", default=""): cv.string,
+        }),
+    )
+
+    # ------------------------------------------------------------------
+    # Deduct points (admin penalty / correction)
+    # ------------------------------------------------------------------
+
+    async def handle_deduct_points(call: ServiceCall) -> None:
+        """
+        Deduct points from a person as an admin action.
+        Accepts either 'points' (integer) or 'dollar_amount' (float).
+        The person's spendable balance decreases but lifetime total is unchanged.
+        """
+        await store.async_admin_deduct_points(
+            person_id=call.data["person_id"],
+            points=call.data.get("points", 0),
+            reason=call.data.get("reason", ""),
+            dollar_amount=call.data.get("dollar_amount"),
+        )
+        await coordinator.async_refresh()
+
+    hass.services.async_register(
+        DOMAIN,
+        "deduct_points",
+        handle_deduct_points,
+        schema=vol.Schema({
+            vol.Required("person_id"): cv.string,
+            vol.Optional("points", default=0): vol.All(vol.Coerce(int), vol.Range(min=0)),
+            vol.Optional("dollar_amount"): vol.All(vol.Coerce(float), vol.Range(min=0.01)),
+            vol.Optional("reason", default=""): cv.string,
+        }),
+    )
+
+    # ------------------------------------------------------------------
+    # Settings (admin)
+    # ------------------------------------------------------------------
+
+    async def handle_update_settings(call: ServiceCall) -> None:
+        """Update integration settings. All fields are optional."""
+        await store.async_update_settings(
+            family_name=call.data.get("family_name"),
+            points_per_dollar=call.data.get("points_per_dollar"),
+            show_dollar_value_to_kids=call.data.get("show_dollar_value_to_kids"),
+        )
+        await coordinator.async_refresh()
+
+    hass.services.async_register(
+        DOMAIN,
+        "update_settings",
+        handle_update_settings,
+        schema=vol.Schema({
+            vol.Optional("family_name"): cv.string,
+            vol.Optional("points_per_dollar"): vol.All(vol.Coerce(int), vol.Range(min=1, max=1000)),
+            vol.Optional("show_dollar_value_to_kids"): cv.boolean,
         }),
     )
 
