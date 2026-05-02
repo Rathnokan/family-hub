@@ -24,8 +24,10 @@ from .const import (
     CATEGORY_MAINTENANCE,
     CATEGORY_ONE_TIME,
     CATEGORY_PERSONAL_REMINDER,
+    CONF_SHOW_DOLLAR_VALUE_TO_KIDS,
     DEFAULT_FAMILY_NAME,
     DEFAULT_POINTS_PER_DOLLAR,
+    DEFAULT_SHOW_DOLLAR_VALUE_TO_KIDS,
     DOMAIN,
     HISTORY_PERSON_ADDED,
     HISTORY_POINTS_AWARDED,
@@ -157,11 +159,23 @@ class FamilyHubDataStore:
     def points_per_dollar(self) -> int:
         return self.settings.get("points_per_dollar", DEFAULT_POINTS_PER_DOLLAR)
 
-    async def async_update_settings(self, family_name: str | None = None, points_per_dollar: int | None = None) -> None:
+    @property
+    def show_dollar_value_to_kids(self) -> bool:
+        """Whether kids can see the dollar equivalent of their point balance."""
+        return self.settings.get(CONF_SHOW_DOLLAR_VALUE_TO_KIDS, DEFAULT_SHOW_DOLLAR_VALUE_TO_KIDS)
+
+    async def async_update_settings(
+        self,
+        family_name: str | None = None,
+        points_per_dollar: int | None = None,
+        show_dollar_value_to_kids: bool | None = None,
+    ) -> None:
         if family_name is not None:
             self._data["settings"]["family_name"] = family_name
         if points_per_dollar is not None:
             self._data["settings"]["points_per_dollar"] = points_per_dollar
+        if show_dollar_value_to_kids is not None:
+            self._data["settings"][CONF_SHOW_DOLLAR_VALUE_TO_KIDS] = show_dollar_value_to_kids
         await self.async_save()
 
     # ------------------------------------------------------------------
@@ -829,9 +843,55 @@ class FamilyHubDataStore:
     # Bonus points (admin action)
     # ------------------------------------------------------------------
 
-    async def async_award_bonus_points(self, person_id: str, points: int, reason: str = "") -> dict | None:
+    async def async_award_bonus_points(
+        self,
+        person_id: str,
+        points: int = 0,
+        reason: str = "",
+        dollar_amount: float | None = None,
+    ) -> dict | None:
+        """
+        Award bonus points to a person (admin action).
+
+        Pass either `points` directly or `dollar_amount` — if dollar_amount is
+        provided it is automatically converted using the current points_per_dollar
+        rate and overrides the points value.
+        """
+        if dollar_amount is not None:
+            points = round(dollar_amount * self.points_per_dollar)
+        if points <= 0:
+            _LOGGER.warning("Family Hub: award_bonus_points called with zero or negative points")
+            return None
         ref_id = _new_id()
-        return await self.async_award_points(person_id, points, ref_id, f"Bonus: {reason}")
+        note = f"Bonus: {reason}" if reason else "Bonus points"
+        if dollar_amount is not None:
+            note = f"Bonus (${dollar_amount:.2f}): {reason}".rstrip(": ")
+        return await self.async_award_points(person_id, points, ref_id, note)
+
+    async def async_admin_deduct_points(
+        self,
+        person_id: str,
+        points: int = 0,
+        reason: str = "",
+        dollar_amount: float | None = None,
+    ) -> dict | None:
+        """
+        Deduct points from a person as an admin action (penalty / correction).
+
+        Pass either `points` directly or `dollar_amount` — if dollar_amount is
+        provided it is automatically converted and overrides the points value.
+        Lifetime total is NOT reduced — only the spendable balance decreases.
+        """
+        if dollar_amount is not None:
+            points = round(dollar_amount * self.points_per_dollar)
+        if points <= 0:
+            _LOGGER.warning("Family Hub: deduct_points called with zero or negative value")
+            return None
+        ref_id = _new_id()
+        note = f"Deduction: {reason}" if reason else "Points deducted"
+        if dollar_amount is not None:
+            note = f"Deduction (${dollar_amount:.2f}): {reason}".rstrip(": ")
+        return await self.async_deduct_points(person_id, points, ref_id, note)
 
     # ------------------------------------------------------------------
     # Summary helpers (used by sensors and coordinator)
