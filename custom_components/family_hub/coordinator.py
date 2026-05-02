@@ -4,6 +4,12 @@ Family Hub — coordinator.
 The coordinator is the central hub that HA entities (sensors) subscribe to.
 It owns the data store, runs the daily tick scheduler, and notifies
 all listeners when data changes.
+
+Daily tick note: The tick date is now tracked persistently inside the data
+store's JSON file (settings.last_tick_date). The coordinator simply calls
+async_daily_tick() on every poll interval and lets the store decide whether
+action is needed. This means missed days due to HA downtime are caught up
+automatically without any in-memory state that would be lost on restart.
 """
 
 from __future__ import annotations
@@ -11,9 +17,8 @@ from __future__ import annotations
 import logging
 from datetime import timedelta
 
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, UPDATE_INTERVAL
 from .data_store import FamilyHubDataStore
@@ -38,23 +43,18 @@ class FamilyHubCoordinator(DataUpdateCoordinator):
             update_interval=timedelta(seconds=UPDATE_INTERVAL),
         )
         self.store = store
-        self._last_tick_date: str | None = None
 
     async def _async_update_data(self) -> dict:
         """
         Called by the coordinator on its UPDATE_INTERVAL schedule and
         whenever async_refresh() is called.
 
-        Runs the daily tick if the date has changed, then returns the
-        current summary dict that all sensors read from.
+        Delegates tick logic entirely to the data store, which uses persistent
+        state to determine whether tasks need to be generated and handles
+        catch-up for any days missed while HA was offline.
         """
         try:
-            today_str = dt_util.now().date().isoformat()
-            if self._last_tick_date != today_str:
-                _LOGGER.debug("Family Hub: new day detected (%s), running daily tick", today_str)
-                await self.store.async_daily_tick()
-                self._last_tick_date = today_str
-
+            await self.store.async_daily_tick()
             return self.store.get_summary()
 
         except Exception as err:
