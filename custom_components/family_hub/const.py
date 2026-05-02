@@ -1,7 +1,7 @@
 """Constants for Family Hub integration."""
 
 DOMAIN = "family_hub"
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 
 # Config entry keys
 CONF_FAMILY_NAME = "family_name"
@@ -124,6 +124,11 @@ UPDATE_INTERVAL = 30
 # Weekday constants for recurrence
 WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 
-# Notification targets (persistent_notification + mobile app)
+# Notification targets
 NOTIFICATION_APPROVAL_NEEDED = "family_hub_approval_needed"
 NOTIFICATION_REDEMPTION_REQUESTED = "family_hub_redemption_requested"
+
+# Frontend / Lovelace card
+# The card JS is served from the integration's www/ subfolder at this URL path.
+CARD_URL_PATH = "/family_hub"
+CARD_JS_URL = "/family_hub/family-hub-card.js"
