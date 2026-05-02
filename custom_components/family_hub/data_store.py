@@ -8,6 +8,7 @@ No HA entities are created here — that's sensor.py's job.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -102,6 +103,11 @@ class FamilyHubDataStore:
         self._hass = hass
         self._path = storage_path
         self._data: dict[str, Any] = {}
+        # Protects all mutations to self._data and the subsequent async_save call.
+        # Without this, two simultaneous service calls (e.g. two kids checking off
+        # tasks at the same moment) can both read stale state, mutate it independently,
+        # and whichever saves last silently wins — corrupting the other's change.
+        self._lock = asyncio.Lock()
 
     # ------------------------------------------------------------------
     # Load / Save
@@ -126,7 +132,14 @@ class FamilyHubDataStore:
         await self._async_migrate()
 
     async def async_save(self) -> None:
-        """Persist data to disk."""
+        """
+        Persist data to disk.
+
+        The lock is acquired here so that the full read-modify-write cycle in
+        any caller is atomic. Callers that mutate self._data must hold the lock
+        for the duration of their mutation + this save call. See each public
+        async method for the lock acquisition pattern.
+        """
         def _save() -> None:
             os.makedirs(os.path.dirname(self._path), exist_ok=True)
             tmp = self._path + ".tmp"
@@ -134,7 +147,8 @@ class FamilyHubDataStore:
                 json.dump(self._data, f, indent=2, ensure_ascii=False)
             os.replace(tmp, self._path)
 
-        await self._hass.async_add_executor_job(_save)
+        async with self._lock:
+            await self._hass.async_add_executor_job(_save)
 
     async def _async_migrate(self) -> None:
         """Handle future schema migrations. No-op for version 1."""
@@ -586,37 +600,92 @@ class FamilyHubDataStore:
         return None
 
     # ------------------------------------------------------------------
-    # Daily tick — called by the scheduler to generate due instances
+    # Daily tick — called by the coordinator to generate due task instances
     # ------------------------------------------------------------------
 
     async def async_daily_tick(self) -> None:
         """
-        Called once per day (at midnight or on HA startup).
-        Ensures all active chores have a task instance for today.
+        Generate task instances for any days that haven't been processed yet.
+
+        Uses a persistent `last_tick_date` stored in the JSON file so that if HA
+        is offline for one or more days (power outage, maintenance, etc.), the
+        catch-up loop generates tasks for every missed day on the next boot.
+
+        Catch-up is capped at 7 days to avoid flooding the task list after a
+        long outage. Days older than the cap are skipped silently with a warning.
         """
         today = date.today()
-        _LOGGER.debug("Family Hub: daily tick for %s", today)
+        CATCH_UP_LIMIT_DAYS = 7
 
+        # Read the last processed date from persistent storage
+        last_tick_str = self._data["settings"].get("last_tick_date")
+
+        if last_tick_str is None:
+            # First ever run — seed with yesterday so today gets processed
+            last_tick = today - timedelta(days=1)
+            _LOGGER.info("Family Hub: first daily tick, seeding last_tick_date")
+        else:
+            try:
+                last_tick = date.fromisoformat(last_tick_str)
+            except ValueError:
+                _LOGGER.warning(
+                    "Family Hub: invalid last_tick_date '%s', resetting to yesterday",
+                    last_tick_str,
+                )
+                last_tick = today - timedelta(days=1)
+
+        days_missed = (today - last_tick).days
+
+        if days_missed <= 0:
+            # Already ran today — nothing to do
+            _LOGGER.debug("Family Hub: daily tick already ran for %s, skipping", today)
+            return
+
+        if days_missed > CATCH_UP_LIMIT_DAYS:
+            _LOGGER.warning(
+                "Family Hub: %d days of missed ticks detected (max catch-up is %d). "
+                "Tasks older than %d days will not be back-filled.",
+                days_missed,
+                CATCH_UP_LIMIT_DAYS,
+                CATCH_UP_LIMIT_DAYS,
+            )
+            # Start catch-up from the cap limit, not the actual last tick
+            last_tick = today - timedelta(days=CATCH_UP_LIMIT_DAYS)
+
+        # Process each missed day in chronological order
+        current = last_tick + timedelta(days=1)
+        while current <= today:
+            _LOGGER.debug("Family Hub: running daily tick for %s", current)
+            await self._async_tick_for_date(current)
+            current += timedelta(days=1)
+
+        # Persist the new last_tick_date so the next restart knows where we left off
+        self._data["settings"]["last_tick_date"] = today.isoformat()
+        await self.async_save()
+
+    async def _async_tick_for_date(self, tick_date: date) -> None:
+        """
+        Generate task instances for all active chores due on a specific date.
+        Called by async_daily_tick for each day in the catch-up window.
+        """
         for chore in self.get_active_chores():
             if chore["recurrence"]["type"] == RECURRENCE_ONE_TIME:
                 continue
 
-            # Check if an instance already exists for today
+            # Skip if an instance already exists for this date (idempotent)
             existing = [
                 t for t in self.task_instances
                 if t["chore_id"] == chore["id"]
-                and t["due_date"] == today.isoformat()
+                and t["due_date"] == tick_date.isoformat()
             ]
             if existing:
                 continue
 
-            # Check if today is a scheduled day for this chore
-            if self._is_due_today(chore, today):
-                await self._async_create_task_instance(chore, today)
+            if self._is_due_on_date(chore, tick_date):
+                await self._async_create_task_instance(chore, tick_date)
 
-        await self.async_save()
-
-    def _is_due_today(self, chore: dict, today: date) -> bool:
+    def _is_due_on_date(self, chore: dict, check_date: date) -> bool:
+        """Return True if the chore is scheduled to run on check_date."""
         recurrence = chore.get("recurrence", {})
         r_type = recurrence.get("type", RECURRENCE_DAILY)
 
@@ -624,20 +693,20 @@ class FamilyHubDataStore:
             return True
 
         if r_type == RECURRENCE_WEEKLY:
-            return today.weekday() == recurrence.get("weekday", 0)
+            return check_date.weekday() == recurrence.get("weekday", 0)
 
         if r_type == RECURRENCE_EVERY_N_DAYS:
             n = recurrence.get("interval", 1)
             created = date.fromisoformat(chore["created_at"][:10])
-            return (today - created).days % n == 0
+            return (check_date - created).days % n == 0
 
         if r_type == RECURRENCE_EVERY_N_WEEKS:
             n = recurrence.get("interval", 1) * 7
             created = date.fromisoformat(chore["created_at"][:10])
-            return (today - created).days % n == 0
+            return (check_date - created).days % n == 0
 
         if r_type == RECURRENCE_MONTHLY_ON_DATE:
-            return today.day == recurrence.get("day_of_month", 1)
+            return check_date.day == recurrence.get("day_of_month", 1)
 
         return False
 
