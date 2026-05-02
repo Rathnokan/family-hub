@@ -128,7 +128,16 @@ WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", 
 NOTIFICATION_APPROVAL_NEEDED = "family_hub_approval_needed"
 NOTIFICATION_REDEMPTION_REQUESTED = "family_hub_redemption_requested"
 
+# Admin point adjustment service
+SERVICE_DEDUCT_POINTS = "deduct_points"
+
+# Settings key — whether kids can see the dollar equivalent of their point balance.
+# Parents always see it. Off by default.
+CONF_SHOW_DOLLAR_VALUE_TO_KIDS = "show_dollar_value_to_kids"
+DEFAULT_SHOW_DOLLAR_VALUE_TO_KIDS = False
+
 # Frontend / Lovelace card
-# The card JS is served from the integration's www/ subfolder at this URL path.
+# Served from www/ subfolder. Version appended as ?v= for browser cache-busting.
 CARD_URL_PATH = "/family_hub"
+CARD_JS_FILENAME = "family-hub-card.js"
 CARD_JS_URL = "/family_hub/family-hub-card.js"
