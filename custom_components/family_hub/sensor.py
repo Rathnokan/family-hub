@@ -176,6 +176,13 @@ class FamilyHubPersonSensor(FamilyHubBaseSensor):
             # Point summary
             "lifetime_points": person.get("points_lifetime", 0),
             "dollar_value": round(balance / ppdollar, 2) if ppdollar else 0,
+            # show_dollar_value: True for parents always; for kids only if the
+            # setting is enabled. The card reads this to decide whether to render
+            # the $ equivalent next to the point balance.
+            "show_dollar_value": (
+                True if person.get("type") == "parent"
+                else store.show_dollar_value_to_kids
+            ),
 
             # Counts — fast reads for automations and badges
             "tasks_due_today": due_today_count,
@@ -405,9 +412,10 @@ class FamilyHubNeedsAttentionSensor(FamilyHubBaseSensor):
                 for c in store.get_active_chores()
             ],
 
-            # Settings — for display in admin header
+            # Settings — for display and editing in admin header
             "family_name": store.family_name,
             "points_per_dollar": store.points_per_dollar,
+            "show_dollar_value_to_kids": store.show_dollar_value_to_kids,
         }
 
 
