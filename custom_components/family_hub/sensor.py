@@ -101,9 +101,12 @@ class FamilyHubPersonSensor(FamilyHubBaseSensor):
     Attributes carry everything the dashboard card needs to render that person's
     full view: counts for quick reads, full task lists for rendering rows,
     store items for the rewards tab, and pending approval status.
+
+    No state_class assigned — point balances are arbitrary tracked values,
+    not physical measurements. Omitting state_class prevents HA from attempting
+    meaningless long-term statistics on these entities.
     """
 
-    _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_native_unit_of_measurement = "pts"
     _attr_icon = "mdi:star-circle"
 
