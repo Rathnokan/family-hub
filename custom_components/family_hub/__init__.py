@@ -11,31 +11,28 @@ A private, self-hosted family task management system:
 
 All data lives in a single JSON file — no cloud, no third-party accounts.
 
-Card registration notes:
-  - The www/ subfolder is registered as a static HTTP path in async_setup.
-  - The card JS is registered as a Lovelace module resource in async_setup
-    (once per integration load, not per config entry).
-  - manifest.json declares "frontend" and "http" as dependencies so HA
-    loads those components before this integration starts.
-  - Uses async_register_static_paths with StaticPathConfig — current API
-    as of HA 2025+. The old sync register_static_path is deprecated.
+Card registration:
+  - www/ is registered as a static HTTP path so the JS file is served.
+  - add_extra_js_url() loads the card JS on every HA frontend page load.
+    This is the reliable, officially-supported way to register custom cards
+    from within an integration — it makes the card available in the picker
+    without manually touching Lovelace resource storage.
+  - manifest.json declares "frontend" and "http" as dependencies.
 """
 
 from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any
 
+from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EVENT_HOMEASSISTANT_STARTED, Platform
-from homeassistant.core import CoreState, Event, HomeAssistant
+from homeassistant.const import Platform
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.event import async_call_later
 
 from .const import (
-    CARD_JS_FILENAME,
     CARD_JS_URL,
     CARD_URL_PATH,
     CONF_FAMILY_NAME,
@@ -57,139 +54,41 @@ _WWW_PATH = Path(__file__).parent / "www"
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """
-    Called once when the integration is loaded (not per config entry).
+    Called once when the integration is loaded (before any config entries).
 
-    Static path and Lovelace resource registration live here so they run
-    exactly once per HA start, regardless of how many config entries exist.
+    Registers the static HTTP path so the card JS is served, then registers
+    the JS with the HA frontend so it loads on every page and appears in the
+    Lovelace card picker automatically.
     """
     hass.data.setdefault(DOMAIN, {})
 
-    # --- Register www/ as a static HTTP path ---
+    # --- Serve www/ as a static HTTP path ---
     # Makes /family_hub/family-hub-card.js accessible to the browser.
-    # cache_headers=False ensures the browser always fetches the latest version
-    # (we also append ?v=VERSION to the resource URL for extra safety).
+    # cache_headers=False so the browser always fetches the latest file.
     try:
         await hass.http.async_register_static_paths([
             StaticPathConfig(CARD_URL_PATH, str(_WWW_PATH), cache_headers=False)
         ])
         _LOGGER.debug("Family Hub: static path registered %s → %s", CARD_URL_PATH, _WWW_PATH)
     except RuntimeError:
-        # RuntimeError means the path was already registered (e.g. reload).
+        # Already registered — safe on reload
         _LOGGER.debug("Family Hub: static path %s already registered", CARD_URL_PATH)
     except Exception as err:  # noqa: BLE001
         _LOGGER.warning("Family Hub: could not register static path: %s", err)
 
-    # --- Schedule Lovelace resource registration ---
-    # Must happen after HA is fully started so the Lovelace storage is loaded.
-    async def _register_resource(_event: Event | None = None) -> None:
-        await _async_register_lovelace_resource(hass)
-
-    if hass.state == CoreState.running:
-        # Already running (e.g. reload via UI) — register immediately
-        await _register_resource()
-    else:
-        # Still booting — wait for the start event
-        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, _register_resource)
+    # --- Register the card JS with the HA frontend ---
+    # add_extra_js_url() is the supported public API for loading custom JS
+    # on every HA frontend page. The ?v= query parameter forces the browser
+    # to re-fetch the file on every integration update.
+    versioned_url = f"{CARD_JS_URL}?v={VERSION}"
+    add_extra_js_url(hass, versioned_url)
+    _LOGGER.info(
+        "Family Hub: card JS registered — family-hub-card is available in the "
+        "Lovelace card picker (%s)",
+        versioned_url,
+    )
 
     return True
-
-
-async def _async_register_lovelace_resource(hass: HomeAssistant) -> None:
-    """
-    Register family-hub-card.js as a Lovelace JavaScript module resource.
-
-    Behaviour:
-    - Only runs when Lovelace is in storage mode (the default UI mode).
-    - Appends ?v=VERSION to force browser cache-busting on every update.
-    - If the URL is already registered at the current version, it's a no-op.
-    - If registered at an older version, it updates the URL in-place.
-    - Retries every 5 s (up to 10 times) if resources haven't loaded yet.
-    - All failures are non-fatal — logs a clear fallback instruction.
-    """
-    lovelace = hass.data.get("lovelace")
-    if not lovelace:
-        _LOGGER.debug("Family Hub: Lovelace not in hass.data, skipping resource registration")
-        return
-
-    if lovelace.mode != "storage":
-        _LOGGER.info(
-            "Family Hub: Lovelace is in '%s' mode — add the resource manually in "
-            "Settings → Dashboards → Resources  URL: %s  Type: JavaScript module",
-            lovelace.mode,
-            f"{CARD_JS_URL}?v={VERSION}",
-        )
-        return
-
-    async def _attempt(retries_left: int = 10) -> None:
-        try:
-            resources = lovelace.resources
-
-            if not resources.loaded:
-                if retries_left > 0:
-                    _LOGGER.debug(
-                        "Family Hub: Lovelace resources not ready, retry in 5s (%d left)",
-                        retries_left,
-                    )
-                    async_call_later(
-                        hass,
-                        5,
-                        lambda _now: hass.async_create_task(_attempt(retries_left - 1)),
-                    )
-                else:
-                    _LOGGER.warning(
-                        "Family Hub: Lovelace resources never became available. "
-                        "Add the card manually — Settings → Dashboards → Resources  "
-                        "URL: %s  Type: JavaScript module",
-                        f"{CARD_JS_URL}?v={VERSION}",
-                    )
-                return
-
-            versioned_url = f"{CARD_JS_URL}?v={VERSION}"
-
-            # Find any existing registration for this card (match on base URL only,
-            # ignoring the ?v= query string so we catch outdated versions too).
-            existing = [
-                r for r in resources.async_items()
-                if r.get("url", "").split("?")[0] == CARD_JS_URL
-            ]
-
-            if existing:
-                resource = existing[0]
-                registered_url = resource.get("url", "")
-                if registered_url == versioned_url:
-                    _LOGGER.debug(
-                        "Family Hub: Lovelace resource already current (v%s)", VERSION
-                    )
-                    return
-                # Out of date — update in-place so the resource ID stays the same
-                await resources.async_update_item(
-                    resource["id"],
-                    {"res_type": "module", "url": versioned_url},
-                )
-                _LOGGER.info(
-                    "Family Hub: updated Lovelace resource → %s", versioned_url
-                )
-            else:
-                # First install — create a new resource entry
-                await resources.async_create_item(
-                    {"res_type": "module", "url": versioned_url}
-                )
-                _LOGGER.info(
-                    "Family Hub: registered Lovelace resource → %s  "
-                    "(family-hub-card now available in the card picker)",
-                    versioned_url,
-                )
-
-        except Exception as err:  # noqa: BLE001
-            _LOGGER.warning(
-                "Family Hub: Lovelace resource registration failed: %s  "
-                "Add manually — Settings → Dashboards → Resources  "
-                "URL: %s  Type: JavaScript module",
-                err,
-                f"{CARD_JS_URL}?v={VERSION}",
-            )
-
-    await _attempt()
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
