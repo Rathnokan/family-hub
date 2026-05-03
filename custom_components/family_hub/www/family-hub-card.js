@@ -177,7 +177,7 @@ const CSS = `
     100%   { opacity:0; transform:scaleY(0); max-height:0; padding:0; margin:0; }
   }
   .fh-task-name {
-    flex:1; font-size:.92rem; font-weight:500;
+    font-size:.92rem; font-weight:500;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
   .fh-task-sub { font-size:.75rem; color:var(--fh-text-sec); }
@@ -418,6 +418,9 @@ class FamilyHubCard extends HTMLElement {
     this._tab        = "tasks";
     this._adminSec   = "overview";
     this._flashing   = new Set();
+    
+    // Gemini edits 20260503:1536 - Add lock to prevent multiple event listeners binding and freezing the UI
+    this._eventsBound = false; 
   }
 
   setConfig(cfg) {
@@ -569,7 +572,10 @@ class FamilyHubCard extends HTMLElement {
       <div class="fh-task-list">
         ${claimable.map(t => `
           <div class="fh-task-row" style="--row-color:${DEFAULT_COLOR}">
-            <span class="fh-task-name">${t.name}</span>
+            <div style="flex:1;min-width:0;overflow:hidden">
+              <div class="fh-task-name">${t.name}</div>
+              ${t.description ? `<div class="fh-task-sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.description}</div>` : ""}
+            </div>
             ${t.points ? `<span class="fh-badge fh-badge-pts">${t.points}pts</span>` : ""}
             <button class="fh-btn fh-btn-primary fh-btn-sm"
                     data-act="open-claim" data-tid="${t.task_id}" data-name="${t.name}">
@@ -592,11 +598,16 @@ class FamilyHubCard extends HTMLElement {
     const p     = people.find(x => x.person_id === t.assigned_to);
     const color = p?.avatar_color || DEFAULT_COLOR;
     const flash = this._flashing.has(t.task_id) ? "flash" : "";
+    
+    // Gemini edits 20260503:1536 - Display description under task name
     return `
       <div class="fh-task-row ${overdue ? "overdue" : ""} ${flash}"
            style="--row-color:${color}; --flash-dur:${FLASH_MS}ms">
         <div class="fh-avatar" style="background:${color}">${ini(p?.name)}</div>
-        <span class="fh-task-name">${t.name}</span>
+        <div style="flex:1;min-width:0;overflow:hidden">
+          <div class="fh-task-name">${t.name}</div>
+          ${t.description ? `<div class="fh-task-sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.description}</div>` : ""}
+        </div>
         ${overdue ? `<span class="fh-badge fh-badge-overdue">${Math.abs(t.days_delta)}d late</span>` : ""}
         ${t.points ? `<span class="fh-badge fh-badge-pts" style="--row-color:${color}">${t.points}pts</span>` : ""}
         <button class="fh-check" style="--row-color:${color}"
@@ -649,10 +660,15 @@ class FamilyHubCard extends HTMLElement {
 
     const mkRow = (t, isOverdue) => {
       const flash = this._flashing.has(t.task_id) ? "flash" : "";
+      
+      // Gemini edits 20260503:1536 - Display description under task name
       return `
         <div class="fh-task-row ${isOverdue ? "overdue" : ""} ${flash}"
              style="--row-color:${color}; --flash-dur:${FLASH_MS}ms">
-          <span class="fh-task-name">${t.name}</span>
+          <div style="flex:1;min-width:0;overflow:hidden">
+            <div class="fh-task-name">${t.name}</div>
+            ${t.description ? `<div class="fh-task-sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.description}</div>` : ""}
+          </div>
           ${isOverdue ? `<span class="fh-badge fh-badge-overdue">${t.days_overdue}d late</span>` : ""}
           ${t.points ? `<span class="fh-badge fh-badge-pts" style="--row-color:${color}">${t.points}pts</span>` : ""}
           <button class="fh-check" style="--row-color:${color}"
@@ -664,7 +680,10 @@ class FamilyHubCard extends HTMLElement {
 
     const pendingRows = pending.map(t => `
       <div class="fh-task-row" style="--row-color:${color}">
-        <span class="fh-task-name">${t.name}</span>
+        <div style="flex:1;min-width:0;overflow:hidden">
+          <div class="fh-task-name">${t.name}</div>
+          ${t.description ? `<div class="fh-task-sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.description}</div>` : ""}
+        </div>
         ${t.points ? `<span class="fh-badge fh-badge-pts" style="--row-color:${color}">${t.points}pts</span>` : ""}
         <span class="fh-badge fh-badge-pending">Awaiting approval</span>
       </div>`).join("");
@@ -896,15 +915,21 @@ class FamilyHubCard extends HTMLElement {
       const rows = list.map(c => {
         const p = people.find(x => x.person_id === c.assigned_to);
         const color = p?.avatar_color || DEFAULT_COLOR;
+        
+        // Gemini edits 20260503:1536 - Adjust layout to show description and pass description to edit button
         return `
           <div class="fh-task-row" style="--row-color:${color}">
             ${p ? `<div class="fh-avatar" style="background:${color}">${ini(p.name)}</div>` : ""}
-            <span class="fh-task-name">${c.name}</span>
+            <div style="flex:1;min-width:0;overflow:hidden">
+              <div class="fh-task-name">${c.name}</div>
+              ${c.description ? `<div class="fh-task-sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.description}</div>` : ""}
+            </div>
             <span class="fh-badge fh-badge-pts" style="--row-color:${color}">${c.points}pts</span>
             <button class="fh-btn fh-btn-ghost fh-btn-sm"
                     data-act="open-edit-chore"
                     data-cid="${c.chore_id}"
                     data-cname="${c.name}"
+                    data-cdesc="${c.description || ""}"
                     data-cpoints="${c.points}"
                     data-capproval="${c.approval_required}"
                     data-cassigned="${c.assigned_to || ""}"
@@ -1090,23 +1115,32 @@ class FamilyHubCard extends HTMLElement {
 
   _mAddChore(m) {
     const people = this._people();
+    
+    // Gemini edits 20260503:1536 - Add description field and custom categories datalist instead of select
     return this._mWrap("Add chore",
       `<div class="fh-field">
          <label class="fh-label">Chore name *</label>
          <input class="fh-input" id="m-cname" type="text" autofocus>
        </div>
+       <div class="fh-field">
+         <label class="fh-label">Description</label>
+         <input class="fh-input" id="m-cdesc" type="text" placeholder="What is expected?">
+       </div>
        <div class="fh-row">
          <div class="fh-field">
            <label class="fh-label">Category</label>
-           <select class="fh-select" id="m-ccat">
-             ${opts([
-               {value:"assigned",         label:"Assigned"},
-               {value:"claimable",        label:"Claimable"},
-               {value:"maintenance",      label:"Maintenance"},
-               {value:"personal_reminder",label:"Personal Reminder"},
-               {value:"one_time",         label:"One-time"},
-             ], "assigned")}
-           </select>
+           <input class="fh-input" id="m-ccat" type="text" list="cat-list" value="Morning" placeholder="e.g. Morning">
+           <datalist id="cat-list">
+             <option value="Morning"></option>
+             <option value="Evening"></option>
+             <option value="Weekly"></option>
+             <option value="Monthly"></option>
+             <option value="Bonus"></option>
+             <option value="Cleaning"></option>
+             <option value="Pet Care"></option>
+             <option value="assigned"></option>
+             <option value="claimable"></option>
+           </datalist>
          </div>
          <div class="fh-field">
            <label class="fh-label">Assign to</label>
@@ -1145,23 +1179,22 @@ class FamilyHubCard extends HTMLElement {
   _mEditChore(m) {
     const d = m.data;
     const people = this._people();
+    
+    // Gemini edits 20260503:1536 - Add description, disabled category to prevent backend error
     return this._mWrap(`Edit — ${d.cname}`,
       `<div class="fh-field">
          <label class="fh-label">Chore name *</label>
          <input class="fh-input" id="m-cname" type="text" value="${d.cname}" autofocus>
        </div>
+       <div class="fh-field">
+         <label class="fh-label">Description</label>
+         <input class="fh-input" id="m-cdesc" type="text" value="${d.cdesc || ''}" placeholder="What is expected?">
+       </div>
        <div class="fh-row">
          <div class="fh-field">
-           <label class="fh-label">Category</label>
-           <select class="fh-select" id="m-ccat">
-             ${opts([
-               {value:"assigned",         label:"Assigned"},
-               {value:"claimable",        label:"Claimable"},
-               {value:"maintenance",      label:"Maintenance"},
-               {value:"personal_reminder",label:"Personal Reminder"},
-               {value:"one_time",         label:"One-time"},
-             ], d.ccat)}
-           </select>
+           <label class="fh-label">Category (Cannot be edited)</label>
+           <input class="fh-input" type="text" value="${d.ccat}" disabled>
+           <input type="hidden" id="m-ccat" value="${d.ccat}">
          </div>
          <div class="fh-field">
            <label class="fh-label">Assign to</label>
@@ -1331,6 +1364,10 @@ class FamilyHubCard extends HTMLElement {
   }
 
   _bindEvents() {
+    // Gemini edits 20260503:1536 - Prevent exponential event listener stacking causing lock-ups
+    if (this._eventsBound) return;
+    this._eventsBound = true;
+    
     const root = this.shadowRoot;
 
     root.addEventListener("click", e => {
@@ -1437,9 +1474,11 @@ class FamilyHubCard extends HTMLElement {
         this._doRender(true);
         break;
       case "open-edit-chore":
+        // Gemini edits 20260503:1536 - Add description to edit payload
         this._modal = { type: "edit-chore", data: {
           cid:      el.dataset.cid,
           cname:    el.dataset.cname,
+          cdesc:    el.dataset.cdesc,
           cpoints:  el.dataset.cpoints,
           capproval:el.dataset.capproval,
           cassigned:el.dataset.cassigned,
@@ -1522,6 +1561,11 @@ class FamilyHubCard extends HTMLElement {
           points:           parseInt(v("m-cpts") || "0"),
           approval_required: b("m-cappr"),
         };
+        
+        // Gemini edits 20260503:1536 - Include description in chore creation
+        const desc = v("m-cdesc").trim();
+        if (desc) data.description = desc;
+        
         const pid = v("m-cperson");
         if (pid) data.assigned_to = pid;
         this._svc("add_chore", data);
@@ -1538,8 +1582,13 @@ class FamilyHubCard extends HTMLElement {
           points:            parseInt(v("m-cpts") || "0"),
           approval_required: b("m-cappr"),
         };
-        const cat = v("m-ccat");
-        if (cat) data.category = cat;
+        
+        // Gemini edits 20260503:1536 - Remove category from update to fix backend extra keys error, add description
+        // const cat = v("m-ccat");
+        // if (cat) data.category = cat;
+        const desc = v("m-cdesc").trim();
+        if (desc) data.description = desc;
+        
         const pid = v("m-cperson");
         if (pid) data.assigned_to = pid;
         this._svc("update_chore", data);
