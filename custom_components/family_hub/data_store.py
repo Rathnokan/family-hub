@@ -3,7 +3,21 @@ Family Hub — data store.
 
 All family data lives in a single JSON file under the HA config directory.
 This module handles reading, writing, and all CRUD operations on that file.
-No HA entities are created here — that's sensor.py's job.
+
+v0.3.0 changes:
+  - assigned_to is now a list of person_ids (multi-person chore support)
+  - chore_type replaces category in UI; old category values migrated on load
+  - category_label (user-defined display grouping) added to chores
+  - sort_order added to chores for drag-to-reorder
+  - penalty_enabled / penalty_points added — deducted when cycle replaces incomplete chore
+  - Recurrence: weekdays (list) replaces weekday (single); day_filter for daily chores
+  - Daily tick now replaces incomplete instances (with penalty) instead of accumulating
+  - remove_person service / async_remove_person method
+  - add_task as canonical one-time task creator (add_one_time_task kept as alias)
+  - Store items: person_ids (list) replaces single person_id
+  - update_chore syncs pending task instances when assigned_to changes
+  - settings.category_labels — user-defined display groups
+  - Migration runs silently on load; data file version unchanged (backward compat)
 """
 
 from __future__ import annotations
@@ -25,7 +39,11 @@ from .const import (
     CATEGORY_MAINTENANCE,
     CATEGORY_ONE_TIME,
     CATEGORY_PERSONAL_REMINDER,
+    CHORE_TYPE_ASSIGNED,
+    CHORE_TYPE_CLAIMABLE,
+    CHORE_TYPE_REMINDER,
     CONF_SHOW_DOLLAR_VALUE_TO_KIDS,
+    DEFAULT_CATEGORY_LABELS,
     DEFAULT_FAMILY_NAME,
     DEFAULT_POINTS_PER_DOLLAR,
     DEFAULT_SHOW_DOLLAR_VALUE_TO_KIDS,
@@ -39,9 +57,8 @@ from .const import (
     HISTORY_TASK_APPROVED,
     HISTORY_TASK_COMPLETED,
     HISTORY_TASK_DENIED,
-    MAINTENANCE_CATEGORIES,
-    PERSON_TYPE_KID,
-    PERSON_TYPE_PARENT,
+    HISTORY_TASK_SKIPPED,
+    LEGACY_MAINTENANCE_CATEGORIES,
     RECURRENCE_DAILY,
     RECURRENCE_EVERY_N_DAYS,
     RECURRENCE_EVERY_N_WEEKS,
@@ -59,6 +76,7 @@ from .const import (
     STATUS_PENDING,
     STATUS_PENDING_APPROVAL,
     STATUS_SELF_REPORTED,
+    STATUS_SKIPPED,
     STORAGE_FILE,
     STORAGE_VERSION,
 )
@@ -78,13 +96,17 @@ def _new_id() -> str:
     return str(uuid.uuid4())
 
 
-def _empty_store(family_name: str = DEFAULT_FAMILY_NAME, points_per_dollar: int = DEFAULT_POINTS_PER_DOLLAR) -> dict:
-    """Return a fresh, empty data store with default settings."""
+def _empty_store(
+    family_name: str = DEFAULT_FAMILY_NAME,
+    points_per_dollar: int = DEFAULT_POINTS_PER_DOLLAR,
+) -> dict:
     return {
         "version": STORAGE_VERSION,
         "settings": {
             "family_name": family_name,
             "points_per_dollar": points_per_dollar,
+            "show_dollar_value_to_kids": DEFAULT_SHOW_DOLLAR_VALUE_TO_KIDS,
+            "category_labels": list(DEFAULT_CATEGORY_LABELS),
             "created_at": _now_iso(),
         },
         "people": [],
@@ -96,6 +118,75 @@ def _empty_store(family_name: str = DEFAULT_FAMILY_NAME, points_per_dollar: int 
     }
 
 
+# ---------------------------------------------------------------------------
+# Migration helpers — run silently on load, never raise
+# ---------------------------------------------------------------------------
+
+def _migrate_chore(chore: dict) -> dict:
+    """Migrate a single chore record to v0.3.0 shape."""
+    # assigned_to: string or None → list
+    at = chore.get("assigned_to")
+    if at is None:
+        chore["assigned_to"] = []
+    elif isinstance(at, str):
+        chore["assigned_to"] = [at] if at else []
+
+    # chore_type: derive from old category if missing
+    if "chore_type" not in chore:
+        old_cat = chore.get("category", CATEGORY_ASSIGNED)
+        if old_cat == CATEGORY_CLAIMABLE:
+            chore["chore_type"] = CHORE_TYPE_CLAIMABLE
+        elif old_cat in LEGACY_MAINTENANCE_CATEGORIES:
+            chore["chore_type"] = CHORE_TYPE_REMINDER
+        else:
+            chore["chore_type"] = CHORE_TYPE_ASSIGNED
+
+    # category_label: default to "Maintenance" for old maintenance chores
+    if "category_label" not in chore:
+        old_cat = chore.get("category", "")
+        if old_cat == CATEGORY_MAINTENANCE:
+            chore["category_label"] = "Maintenance"
+        elif old_cat == CATEGORY_PERSONAL_REMINDER:
+            chore["category_label"] = "Morning"
+        else:
+            chore["category_label"] = ""
+
+    # sort_order
+    if "sort_order" not in chore:
+        chore["sort_order"] = 0
+
+    # description
+    chore.setdefault("description", "")
+
+    # penalty fields
+    chore.setdefault("penalty_enabled", False)
+    chore.setdefault("penalty_points", 0)
+
+    # recurrence: weekday (int) → weekdays (list)
+    rec = chore.setdefault("recurrence", {})
+    if "weekday" in rec and "weekdays" not in rec:
+        rec["weekdays"] = [rec.pop("weekday")]
+    rec.setdefault("weekdays", [])
+    rec.setdefault("day_filter", [])   # day filter for daily chores
+    rec.setdefault("interval", 1)
+
+    return chore
+
+
+def _migrate_store_item(item: dict) -> dict:
+    """Migrate a store item to v0.3.0 shape (person_id → person_ids list)."""
+    if "person_ids" not in item:
+        pid = item.get("person_id")
+        item["person_ids"] = [pid] if pid else []
+    return item
+
+
+def _migrate_task_instance(instance: dict) -> dict:
+    """Ensure task instances have expected fields."""
+    instance.setdefault("penalty_applied", 0)
+    return instance
+
+
 class FamilyHubDataStore:
     """Manages reading and writing the Family Hub JSON data file."""
 
@@ -103,10 +194,7 @@ class FamilyHubDataStore:
         self._hass = hass
         self._path = storage_path
         self._data: dict[str, Any] = {}
-        # Protects all mutations to self._data and the subsequent async_save call.
-        # Without this, two simultaneous service calls (e.g. two kids checking off
-        # tasks at the same moment) can both read stale state, mutate it independently,
-        # and whichever saves last silently wins — corrupting the other's change.
+        # Serialises all mutations + saves so concurrent service calls don't race
         self._lock = asyncio.Lock()
 
     # ------------------------------------------------------------------
@@ -114,7 +202,7 @@ class FamilyHubDataStore:
     # ------------------------------------------------------------------
 
     async def async_load(self) -> None:
-        """Load data from disk. Creates a fresh store if file doesn't exist."""
+        """Load data from disk, migrate records, create fresh store if missing."""
         def _load() -> dict:
             if not os.path.exists(self._path):
                 _LOGGER.info("Family Hub: no data file found, creating fresh store at %s", self._path)
@@ -129,18 +217,27 @@ class FamilyHubDataStore:
                 return _empty_store()
 
         self._data = await self._hass.async_add_executor_job(_load)
-        await self._async_migrate()
+
+        # Ensure settings block has all v0.3.0 keys
+        s = self._data.setdefault("settings", {})
+        s.setdefault("family_name",              DEFAULT_FAMILY_NAME)
+        s.setdefault("points_per_dollar",         DEFAULT_POINTS_PER_DOLLAR)
+        s.setdefault("show_dollar_value_to_kids", DEFAULT_SHOW_DOLLAR_VALUE_TO_KIDS)
+        s.setdefault("category_labels",           list(DEFAULT_CATEGORY_LABELS))
+
+        # Migrate all records
+        self._data["chores"]         = [_migrate_chore(c)         for c in self._data.get("chores", [])]
+        self._data["store_items"]    = [_migrate_store_item(i)     for i in self._data.get("store_items", [])]
+        self._data["task_instances"] = [_migrate_task_instance(t)  for t in self._data.get("task_instances", [])]
+
+        # Back-fill sort_order in creation order
+        for idx, chore in enumerate(self._data["chores"]):
+            if chore["sort_order"] == 0 and idx > 0:
+                chore["sort_order"] = idx
 
     async def async_save(self) -> None:
-        """
-        Persist data to disk.
-
-        The lock is acquired here so that the full read-modify-write cycle in
-        any caller is atomic. Callers that mutate self._data must hold the lock
-        for the duration of their mutation + this save call. See each public
-        async method for the lock acquisition pattern.
-        """
-        def _save() -> None:
+        """Persist data to disk atomically. Lock acquired here."""
+        def _write() -> None:
             os.makedirs(os.path.dirname(self._path), exist_ok=True)
             tmp = self._path + ".tmp"
             with open(tmp, "w", encoding="utf-8") as f:
@@ -148,14 +245,7 @@ class FamilyHubDataStore:
             os.replace(tmp, self._path)
 
         async with self._lock:
-            await self._hass.async_add_executor_job(_save)
-
-    async def _async_migrate(self) -> None:
-        """Handle future schema migrations. No-op for version 1."""
-        current = self._data.get("version", 1)
-        if current == STORAGE_VERSION:
-            return
-        _LOGGER.warning("Family Hub: data store version %s, expected %s — migration may be needed", current, STORAGE_VERSION)
+            await self._hass.async_add_executor_job(_write)
 
     # ------------------------------------------------------------------
     # Settings
@@ -175,21 +265,28 @@ class FamilyHubDataStore:
 
     @property
     def show_dollar_value_to_kids(self) -> bool:
-        """Whether kids can see the dollar equivalent of their point balance."""
         return self.settings.get(CONF_SHOW_DOLLAR_VALUE_TO_KIDS, DEFAULT_SHOW_DOLLAR_VALUE_TO_KIDS)
+
+    @property
+    def category_labels(self) -> list[str]:
+        return self.settings.get("category_labels", list(DEFAULT_CATEGORY_LABELS))
 
     async def async_update_settings(
         self,
         family_name: str | None = None,
         points_per_dollar: int | None = None,
         show_dollar_value_to_kids: bool | None = None,
+        category_labels: list[str] | None = None,
     ) -> None:
+        s = self._data["settings"]
         if family_name is not None:
-            self._data["settings"]["family_name"] = family_name
+            s["family_name"] = family_name
         if points_per_dollar is not None:
-            self._data["settings"]["points_per_dollar"] = points_per_dollar
+            s["points_per_dollar"] = points_per_dollar
         if show_dollar_value_to_kids is not None:
-            self._data["settings"][CONF_SHOW_DOLLAR_VALUE_TO_KIDS] = show_dollar_value_to_kids
+            s[CONF_SHOW_DOLLAR_VALUE_TO_KIDS] = show_dollar_value_to_kids
+        if category_labels is not None:
+            s["category_labels"] = category_labels
         await self.async_save()
 
     # ------------------------------------------------------------------
@@ -203,13 +300,13 @@ class FamilyHubDataStore:
     def get_person(self, person_id: str) -> dict | None:
         return next((p for p in self.people if p["id"] == person_id), None)
 
-    def get_people_by_type(self, person_type: str) -> list[dict]:
-        return [p for p in self.people if p["type"] == person_type and p.get("active", True)]
+    def get_active_people(self) -> list[dict]:
+        return [p for p in self.people if p.get("active", True)]
 
     async def async_add_person(
         self,
         name: str,
-        person_type: str = PERSON_TYPE_KID,
+        person_type: str = "kid",
         ha_user_id: str | None = None,
         avatar_color: str | None = None,
     ) -> dict:
@@ -238,19 +335,38 @@ class FamilyHubDataStore:
         person = self.get_person(person_id)
         if not person:
             return None
-        allowed = {"name", "ha_user_id", "avatar_color", "active"}
+        allowed = {"name", "ha_user_id", "avatar_color", "active", "type"}
         for key, val in kwargs.items():
             if key in allowed:
                 person[key] = val
         await self.async_save()
         return person
 
-    async def async_award_points(self, person_id: str, points: int, reference_id: str, note: str = "") -> dict | None:
-        """Add points to a person's balance and lifetime total."""
+    async def async_remove_person(self, person_id: str) -> bool:
+        """
+        Deactivate a person. Historical data is preserved.
+        Pending task instances assigned to this person are removed — no new
+        ones will be generated since daily tick skips inactive people.
+        """
+        person = self.get_person(person_id)
+        if not person:
+            return False
+        person["active"] = False
+        # Remove pending task instances for this person
+        self._data["task_instances"] = [
+            t for t in self._data["task_instances"]
+            if not (t.get("assigned_to") == person_id and t["status"] in ACTIVE_STATUSES)
+        ]
+        await self.async_save()
+        return True
+
+    async def async_award_points(
+        self, person_id: str, points: int, reference_id: str, note: str = ""
+    ) -> dict | None:
         person = self.get_person(person_id)
         if not person:
             return None
-        person["points_balance"] = person.get("points_balance", 0) + points
+        person["points_balance"]  = person.get("points_balance", 0)  + points
         person["points_lifetime"] = person.get("points_lifetime", 0) + points
         self._append_history(
             event_type=HISTORY_POINTS_AWARDED,
@@ -263,8 +379,10 @@ class FamilyHubDataStore:
         await self.async_save()
         return person
 
-    async def async_deduct_points(self, person_id: str, points: int, reference_id: str, note: str = "") -> dict | None:
-        """Deduct points from a person's balance (redemption). Lifetime total unchanged."""
+    async def async_deduct_points(
+        self, person_id: str, points: int, reference_id: str, note: str = ""
+    ) -> dict | None:
+        """Deduct from spendable balance only — lifetime total unchanged."""
         person = self.get_person(person_id)
         if not person:
             return None
@@ -280,6 +398,36 @@ class FamilyHubDataStore:
         await self.async_save()
         return person
 
+    async def async_award_bonus_points(
+        self,
+        person_id: str,
+        points: int = 0,
+        reason: str = "",
+        dollar_amount: float | None = None,
+    ) -> dict | None:
+        if dollar_amount is not None:
+            points = round(dollar_amount * self.points_per_dollar)
+        if points <= 0:
+            _LOGGER.warning("Family Hub: award_bonus_points called with zero or negative value")
+            return None
+        note = f"Bonus (${dollar_amount:.2f}): {reason}".rstrip(": ") if dollar_amount else f"Bonus: {reason}"
+        return await self.async_award_points(person_id, points, _new_id(), note)
+
+    async def async_admin_deduct_points(
+        self,
+        person_id: str,
+        points: int = 0,
+        reason: str = "",
+        dollar_amount: float | None = None,
+    ) -> dict | None:
+        if dollar_amount is not None:
+            points = round(dollar_amount * self.points_per_dollar)
+        if points <= 0:
+            _LOGGER.warning("Family Hub: deduct_points called with zero or negative value")
+            return None
+        note = f"Deduction (${dollar_amount:.2f}): {reason}".rstrip(": ") if dollar_amount else f"Deduction: {reason}"
+        return await self.async_deduct_points(person_id, points, _new_id(), note)
+
     # ------------------------------------------------------------------
     # Chores (definitions)
     # ------------------------------------------------------------------
@@ -294,32 +442,55 @@ class FamilyHubDataStore:
     def get_active_chores(self) -> list[dict]:
         return [c for c in self.chores if c.get("active", True)]
 
+    def _chore_is_maintenance(self, chore: dict) -> bool:
+        """A chore belongs to the maintenance card if its label is 'Maintenance'."""
+        return chore.get("category_label", "") == "Maintenance"
+
     async def async_add_chore(
         self,
         name: str,
-        category: str = CATEGORY_ASSIGNED,
-        assigned_to: str | None = None,
+        chore_type: str = CHORE_TYPE_ASSIGNED,
+        assigned_to: list[str] | None = None,
         points: int = 10,
         approval_required: bool = True,
         recurrence_type: str = RECURRENCE_DAILY,
         recurrence_config: dict | None = None,
         description: str = "",
+        category_label: str = "",
+        sort_order: int | None = None,
+        penalty_enabled: bool = False,
+        penalty_points: int = 0,
         icon: str | None = None,
         created_by: str | None = None,
     ) -> dict:
+        # Determine next sort order if not provided
+        if sort_order is None:
+            existing = self.get_active_chores()
+            sort_order = max((c.get("sort_order", 0) for c in existing), default=-1) + 1
+
+        rec = {"type": recurrence_type}
+        if recurrence_config:
+            rec.update(recurrence_config)
+        rec.setdefault("weekdays", [])
+        rec.setdefault("day_filter", [])
+        rec.setdefault("interval", 1)
+
         chore = {
             "id": _new_id(),
             "name": name,
             "description": description,
             "icon": icon,
-            "category": category,
-            "assigned_to": assigned_to,
+            "chore_type": chore_type,
+            # Keep category for legacy compat — matches chore_type value
+            "category": chore_type,
+            "category_label": category_label,
+            "sort_order": sort_order,
+            "assigned_to": assigned_to or [],
             "points": points,
             "approval_required": approval_required,
-            "recurrence": {
-                "type": recurrence_type,
-                **(recurrence_config or {}),
-            },
+            "penalty_enabled": penalty_enabled,
+            "penalty_points": penalty_points,
+            "recurrence": rec,
             "active": True,
             "created_at": _now_iso(),
             "created_by": created_by,
@@ -331,19 +502,71 @@ class FamilyHubDataStore:
             person_id=created_by,
             note=f'Chore "{name}" created',
         )
-        # Generate the first task instance for all chore types
-        await self._async_create_task_instance(chore, due_date=date.today())
+
+        # Generate first task instance(s)
+        today = date.today()
+        if chore_type == CHORE_TYPE_CLAIMABLE:
+            # Claimable chores get one shared instance (no assigned_to)
+            await self._async_create_task_instance(chore, today, person_id=None)
+        else:
+            people_to_assign = assigned_to if assigned_to else []
+            if people_to_assign:
+                for pid in people_to_assign:
+                    await self._async_create_task_instance(chore, today, person_id=pid)
+            else:
+                await self._async_create_task_instance(chore, today, person_id=None)
+
         await self.async_save()
         return chore
 
     async def async_update_chore(self, chore_id: str, **kwargs: Any) -> dict | None:
+        """
+        Update a chore definition.
+
+        When assigned_to changes, all pending task instances for this chore
+        are updated to match the new assignment so they appear in the right
+        people's task lists immediately.
+        """
         chore = self.get_chore(chore_id)
         if not chore:
             return None
-        allowed = {"name", "description", "icon", "assigned_to", "points", "approval_required", "recurrence", "active"}
+
+        allowed = {
+            "name", "description", "icon", "chore_type", "category_label",
+            "sort_order", "assigned_to", "points", "approval_required",
+            "penalty_enabled", "penalty_points", "recurrence", "active",
+            "weekdays", "day_filter", "interval",
+        }
+        old_assigned = list(chore.get("assigned_to", []))
+
         for key, val in kwargs.items():
-            if key in allowed:
+            if key not in allowed:
+                continue
+            # Recurrence sub-fields can be passed at top level
+            if key in {"weekdays", "day_filter", "interval"}:
+                chore["recurrence"][key] = val
+            elif key == "assigned_to":
+                # Ensure it's always a list
+                chore["assigned_to"] = val if isinstance(val, list) else ([val] if val else [])
+            else:
                 chore[key] = val
+
+        # Keep legacy category field in sync with chore_type
+        if "chore_type" in kwargs:
+            chore["category"] = chore["chore_type"]
+
+        new_assigned = chore.get("assigned_to", [])
+
+        # Sync pending task instances to new assignment
+        if old_assigned != new_assigned:
+            for instance in self._data["task_instances"]:
+                if instance["chore_id"] != chore_id:
+                    continue
+                if instance["status"] not in ACTIVE_STATUSES:
+                    continue
+                # If assignment was cleared or changed, update instance
+                instance["assigned_to"] = new_assigned[0] if len(new_assigned) == 1 else None
+
         await self.async_save()
         return chore
 
@@ -352,13 +575,41 @@ class FamilyHubDataStore:
         if not chore:
             return False
         chore["active"] = False
-        # Remove pending task instances for this chore
         self._data["task_instances"] = [
             t for t in self._data["task_instances"]
             if not (t["chore_id"] == chore_id and t["status"] in ACTIVE_STATUSES)
         ]
         await self.async_save()
         return True
+
+    # ------------------------------------------------------------------
+    # One-time tasks (separated from recurring chores)
+    # ------------------------------------------------------------------
+
+    async def async_add_task(
+        self,
+        name: str,
+        assigned_to: list[str] | None = None,
+        points: int = 0,
+        description: str = "",
+        approval_required: bool = False,
+        created_by: str | None = None,
+    ) -> dict:
+        """
+        Create a one-time task. Does not appear in the chore management list.
+        Uses chore_type=assigned + recurrence=one_time internally.
+        """
+        return await self.async_add_chore(
+            name=name,
+            chore_type=CHORE_TYPE_ASSIGNED,
+            assigned_to=assigned_to or [],
+            points=points,
+            approval_required=approval_required,
+            recurrence_type=RECURRENCE_ONE_TIME,
+            description=description,
+            category_label="",
+            created_by=created_by,
+        )
 
     # ------------------------------------------------------------------
     # Task instances
@@ -377,40 +628,28 @@ class FamilyHubDataStore:
             tasks = [t for t in tasks if t.get("assigned_to") == person_id]
         return tasks
 
-    def get_tasks_due_today(self) -> list[dict]:
-        today = _today_str()
-        return [
-            t for t in self.task_instances
-            if t["due_date"] == today and t["status"] in ACTIVE_STATUSES
-        ]
-
-    def get_overdue_tasks(self) -> list[dict]:
-        today = _today_str()
-        return [
-            t for t in self.task_instances
-            if t["due_date"] < today and t["status"] in ACTIVE_STATUSES
-        ]
-
     def get_pending_approvals(self) -> list[dict]:
         return [t for t in self.task_instances if t["status"] == STATUS_PENDING_APPROVAL]
 
     def get_claimable_tasks(self) -> list[dict]:
-        """Return unassigned claimable tasks that are active/pending."""
         return [
             t for t in self.task_instances
-            if t["status"] == STATUS_PENDING and t.get("assigned_to") is None
+            if t["status"] == STATUS_PENDING
+            and t.get("assigned_to") is None
             and self._is_claimable_task(t)
         ]
 
     def _is_claimable_task(self, task: dict) -> bool:
         chore = self.get_chore(task["chore_id"])
-        return chore is not None and chore.get("category") == CATEGORY_CLAIMABLE
+        return chore is not None and chore.get("chore_type") == CHORE_TYPE_CLAIMABLE
 
-    async def _async_create_task_instance(self, chore: dict, due_date: date) -> dict:
+    async def _async_create_task_instance(
+        self, chore: dict, due_date: date, person_id: str | None = None
+    ) -> dict:
         instance = {
             "id": _new_id(),
             "chore_id": chore["id"],
-            "assigned_to": chore.get("assigned_to"),
+            "assigned_to": person_id,
             "status": STATUS_PENDING,
             "due_date": due_date.isoformat(),
             "claimed_by": None,
@@ -419,18 +658,16 @@ class FamilyHubDataStore:
             "approved_at": None,
             "approved_by": None,
             "points_awarded": 0,
+            "penalty_applied": 0,
             "created_at": _now_iso(),
         }
         self._data["task_instances"].append(instance)
         return instance
 
     async def async_complete_task(self, instance_id: str, completed_by: str) -> dict | None:
-        """Mark a task complete. Awards points immediately if self-reported."""
         instance = self.get_task_instance(instance_id)
         if not instance:
-            _LOGGER.warning("Family Hub: task instance %s not found", instance_id)
             return None
-
         chore = self.get_chore(instance["chore_id"])
         if not chore:
             return None
@@ -447,12 +684,11 @@ class FamilyHubDataStore:
                 note=f'"{chore["name"]}" marked complete, awaiting approval',
             )
         else:
-            # Self-reported — award immediately
             points = chore.get("points", 0)
-            instance["status"] = STATUS_SELF_REPORTED
+            instance["status"]        = STATUS_SELF_REPORTED
             instance["points_awarded"] = points
-            instance["approved_at"] = _now_iso()
-            instance["approved_by"] = "system"
+            instance["approved_at"]   = _now_iso()
+            instance["approved_by"]   = "system"
             self._append_history(
                 event_type=HISTORY_TASK_COMPLETED,
                 person_id=completed_by,
@@ -460,25 +696,25 @@ class FamilyHubDataStore:
                 note=f'"{chore["name"]}" self-reported complete',
             )
             if points > 0 and completed_by:
-                await self.async_award_points(completed_by, points, instance_id, f'Points for "{chore["name"]}"')
+                await self.async_award_points(
+                    completed_by, points, instance_id, f'Points for "{chore["name"]}"'
+                )
 
         await self.async_save()
         return instance
 
     async def async_approve_task(self, instance_id: str, approved_by: str) -> dict | None:
-        """Approve a pending task. Awards points to the completer."""
         instance = self.get_task_instance(instance_id)
         if not instance or instance["status"] != STATUS_PENDING_APPROVAL:
             return None
-
         chore = self.get_chore(instance["chore_id"])
         if not chore:
             return None
 
         points = chore.get("points", 0)
-        instance["status"] = STATUS_APPROVED
-        instance["approved_at"] = _now_iso()
-        instance["approved_by"] = approved_by
+        instance["status"]        = STATUS_APPROVED
+        instance["approved_at"]   = _now_iso()
+        instance["approved_by"]   = approved_by
         instance["points_awarded"] = points
 
         completed_by = instance.get("completed_by")
@@ -486,24 +722,25 @@ class FamilyHubDataStore:
             event_type=HISTORY_TASK_APPROVED,
             person_id=completed_by,
             reference_id=instance_id,
-            note=f'"{chore["name"]}" approved by {approved_by}',
+            note=f'"{chore["name"]}" approved',
         )
         if points > 0 and completed_by:
-            await self.async_award_points(completed_by, points, instance_id, f'Points for "{chore["name"]}"')
-
+            await self.async_award_points(
+                completed_by, points, instance_id, f'Points for "{chore["name"]}"'
+            )
         await self.async_save()
         return instance
 
-    async def async_deny_task(self, instance_id: str, denied_by: str, reason: str = "") -> dict | None:
-        """Deny a pending task. No points awarded."""
+    async def async_deny_task(
+        self, instance_id: str, denied_by: str, reason: str = ""
+    ) -> dict | None:
         instance = self.get_task_instance(instance_id)
         if not instance or instance["status"] != STATUS_PENDING_APPROVAL:
             return None
-
         chore = self.get_chore(instance["chore_id"])
         chore_name = chore["name"] if chore else "unknown"
 
-        instance["status"] = STATUS_DENIED
+        instance["status"]      = STATUS_DENIED
         instance["approved_at"] = _now_iso()
         instance["approved_by"] = denied_by
 
@@ -511,202 +748,181 @@ class FamilyHubDataStore:
             event_type=HISTORY_TASK_DENIED,
             person_id=instance.get("completed_by"),
             reference_id=instance_id,
-            note=f'"{chore_name}" denied by {denied_by}. {reason}'.strip(),
+            note=f'"{chore_name}" denied. {reason}'.strip(),
         )
         await self.async_save()
         return instance
 
     async def async_claim_task(self, instance_id: str, claimed_by: str) -> dict | None:
-        """Claim a claimable task."""
         instance = self.get_task_instance(instance_id)
         if not instance or instance["status"] != STATUS_PENDING:
             return None
         if not self._is_claimable_task(instance):
             return None
-        instance["status"] = STATUS_CLAIMED
+        instance["status"]      = STATUS_CLAIMED
         instance["assigned_to"] = claimed_by
-        instance["claimed_by"] = claimed_by
+        instance["claimed_by"]  = claimed_by
         await self.async_save()
         return instance
 
     # ------------------------------------------------------------------
-    # Recurrence — generate next task instance after completion
-    # ------------------------------------------------------------------
-
-    async def async_schedule_next_instance(self, chore_id: str) -> dict | None:
-        """Create the next task instance based on the chore's recurrence rule."""
-        chore = self.get_chore(chore_id)
-        if not chore or not chore.get("active", True):
-            return None
-
-        recurrence = chore.get("recurrence", {})
-        r_type = recurrence.get("type", RECURRENCE_DAILY)
-
-        if r_type == RECURRENCE_ONE_TIME:
-            return None  # No next instance for one-time tasks
-
-        next_date = self._calculate_next_date(recurrence)
-        if next_date is None:
-            return None
-
-        # Don't duplicate — check if an instance already exists for this date
-        existing = [
-            t for t in self.task_instances
-            if t["chore_id"] == chore_id
-            and t["due_date"] == next_date.isoformat()
-            and t["status"] in ACTIVE_STATUSES
-        ]
-        if existing:
-            return existing[0]
-
-        instance = await self._async_create_task_instance(chore, next_date)
-        await self.async_save()
-        return instance
-
-    def _calculate_next_date(self, recurrence: dict) -> date | None:
-        r_type = recurrence.get("type")
-        today = date.today()
-
-        if r_type == RECURRENCE_DAILY:
-            return today + timedelta(days=1)
-
-        if r_type == RECURRENCE_WEEKLY:
-            weekday = recurrence.get("weekday", 0)  # 0=Monday
-            days_ahead = weekday - today.weekday()
-            if days_ahead <= 0:
-                days_ahead += 7
-            return today + timedelta(days=days_ahead)
-
-        if r_type == RECURRENCE_EVERY_N_DAYS:
-            n = recurrence.get("interval", 1)
-            return today + timedelta(days=n)
-
-        if r_type == RECURRENCE_EVERY_N_WEEKS:
-            n = recurrence.get("interval", 1)
-            return today + timedelta(weeks=n)
-
-        if r_type == RECURRENCE_MONTHLY_ON_DATE:
-            day = recurrence.get("day_of_month", 1)
-            month = today.month + 1
-            year = today.year
-            if month > 12:
-                month = 1
-                year += 1
-            import calendar
-            max_day = calendar.monthrange(year, month)[1]
-            actual_day = min(day, max_day)
-            return date(year, month, actual_day)
-
-        return None
-
-    # ------------------------------------------------------------------
-    # Daily tick — called by the coordinator to generate due task instances
+    # Daily tick — persistent stateful, with catch-up and penalty/replace
     # ------------------------------------------------------------------
 
     async def async_daily_tick(self) -> None:
         """
-        Generate task instances for any days that haven't been processed yet.
-
-        Uses a persistent `last_tick_date` stored in the JSON file so that if HA
-        is offline for one or more days (power outage, maintenance, etc.), the
-        catch-up loop generates tasks for every missed day on the next boot.
-
-        Catch-up is capped at 7 days to avoid flooding the task list after a
-        long outage. Days older than the cap are skipped silently with a warning.
+        Generate task instances for all days since last tick.
+        Replaces incomplete instances (with penalty deduction) instead of
+        accumulating them. Persists last_tick_date in JSON settings.
         """
         today = date.today()
-        CATCH_UP_LIMIT_DAYS = 7
+        CATCH_UP_LIMIT = 7
 
-        # Read the last processed date from persistent storage
         last_tick_str = self._data["settings"].get("last_tick_date")
-
         if last_tick_str is None:
-            # First ever run — seed with yesterday so today gets processed
             last_tick = today - timedelta(days=1)
-            _LOGGER.info("Family Hub: first daily tick, seeding last_tick_date")
         else:
             try:
                 last_tick = date.fromisoformat(last_tick_str)
             except ValueError:
-                _LOGGER.warning(
-                    "Family Hub: invalid last_tick_date '%s', resetting to yesterday",
-                    last_tick_str,
-                )
                 last_tick = today - timedelta(days=1)
 
         days_missed = (today - last_tick).days
-
         if days_missed <= 0:
-            # Already ran today — nothing to do
-            _LOGGER.debug("Family Hub: daily tick already ran for %s, skipping", today)
             return
 
-        if days_missed > CATCH_UP_LIMIT_DAYS:
+        if days_missed > CATCH_UP_LIMIT:
             _LOGGER.warning(
-                "Family Hub: %d days of missed ticks detected (max catch-up is %d). "
-                "Tasks older than %d days will not be back-filled.",
-                days_missed,
-                CATCH_UP_LIMIT_DAYS,
-                CATCH_UP_LIMIT_DAYS,
+                "Family Hub: %d missed days, capping catch-up at %d",
+                days_missed, CATCH_UP_LIMIT,
             )
-            # Start catch-up from the cap limit, not the actual last tick
-            last_tick = today - timedelta(days=CATCH_UP_LIMIT_DAYS)
+            last_tick = today - timedelta(days=CATCH_UP_LIMIT)
 
-        # Process each missed day in chronological order
         current = last_tick + timedelta(days=1)
         while current <= today:
-            _LOGGER.debug("Family Hub: running daily tick for %s", current)
             await self._async_tick_for_date(current)
             current += timedelta(days=1)
 
-        # Persist the new last_tick_date so the next restart knows where we left off
         self._data["settings"]["last_tick_date"] = today.isoformat()
         await self.async_save()
 
     async def _async_tick_for_date(self, tick_date: date) -> None:
         """
-        Generate task instances for all active chores due on a specific date.
-        Called by async_daily_tick for each day in the catch-up window.
+        For each active chore due on tick_date:
+        1. Find any existing incomplete instance(s) for same chore+person.
+        2. Apply penalty and mark them skipped.
+        3. Create the new instance.
         """
         for chore in self.get_active_chores():
-            if chore["recurrence"]["type"] == RECURRENCE_ONE_TIME:
+            r_type = chore["recurrence"].get("type", RECURRENCE_DAILY)
+            if r_type == RECURRENCE_ONE_TIME:
+                continue
+            if not self._is_due_on_date(chore, tick_date):
                 continue
 
-            # Skip if an instance already exists for this date (idempotent)
-            existing = [
-                t for t in self.task_instances
-                if t["chore_id"] == chore["id"]
-                and t["due_date"] == tick_date.isoformat()
-            ]
-            if existing:
+            if chore.get("chore_type") == CHORE_TYPE_CLAIMABLE:
+                # Claimable: one shared instance, no person
+                existing = [
+                    t for t in self.task_instances
+                    if t["chore_id"] == chore["id"]
+                    and t["due_date"] == tick_date.isoformat()
+                ]
+                if existing:
+                    continue
+                # Skip/replace any still-pending instance from previous cycle
+                await self._skip_incomplete_instances(chore, person_id=None)
+                await self._async_create_task_instance(chore, tick_date, person_id=None)
+            else:
+                assigned_people = chore.get("assigned_to", [])
+                if assigned_people:
+                    for pid in assigned_people:
+                        # Skip if already have an instance for this date+person
+                        existing = [
+                            t for t in self.task_instances
+                            if t["chore_id"] == chore["id"]
+                            and t["due_date"] == tick_date.isoformat()
+                            and t.get("assigned_to") == pid
+                        ]
+                        if existing:
+                            continue
+                        await self._skip_incomplete_instances(chore, person_id=pid)
+                        await self._async_create_task_instance(chore, tick_date, person_id=pid)
+                else:
+                    # Unassigned reminder / maintenance — single instance
+                    existing = [
+                        t for t in self.task_instances
+                        if t["chore_id"] == chore["id"]
+                        and t["due_date"] == tick_date.isoformat()
+                    ]
+                    if existing:
+                        continue
+                    await self._skip_incomplete_instances(chore, person_id=None)
+                    await self._async_create_task_instance(chore, tick_date, person_id=None)
+
+    async def _skip_incomplete_instances(self, chore: dict, person_id: str | None) -> None:
+        """Mark any incomplete prior instances for this chore+person as skipped, applying penalty."""
+        for instance in self.task_instances:
+            if instance["chore_id"] != chore["id"]:
+                continue
+            if instance["status"] not in [STATUS_PENDING, STATUS_CLAIMED]:
+                continue
+            if person_id is not None and instance.get("assigned_to") != person_id:
+                continue
+            if person_id is None and instance.get("assigned_to") is not None:
                 continue
 
-            if self._is_due_on_date(chore, tick_date):
-                await self._async_create_task_instance(chore, tick_date)
+            instance["status"] = STATUS_SKIPPED
+            instance["approved_at"] = _now_iso()
+            instance["approved_by"] = "system"
+
+            # Apply penalty if configured
+            if chore.get("penalty_enabled") and chore.get("penalty_points", 0) > 0:
+                pid = instance.get("assigned_to") or person_id
+                if pid:
+                    penalty = chore["penalty_points"]
+                    instance["penalty_applied"] = penalty
+                    person = self.get_person(pid)
+                    if person:
+                        person["points_balance"] = max(0, person.get("points_balance", 0) - penalty)
+                        self._append_history(
+                            event_type=HISTORY_TASK_SKIPPED,
+                            person_id=pid,
+                            reference_id=instance["id"],
+                            points_delta=-penalty,
+                            balance_after=person["points_balance"],
+                            note=f'"{chore["name"]}" not completed — {penalty}pt penalty applied',
+                        )
 
     def _is_due_on_date(self, chore: dict, check_date: date) -> bool:
-        """Return True if the chore is scheduled to run on check_date."""
-        recurrence = chore.get("recurrence", {})
-        r_type = recurrence.get("type", RECURRENCE_DAILY)
+        """Return True if this chore should generate a task instance on check_date."""
+        rec    = chore.get("recurrence", {})
+        r_type = rec.get("type", RECURRENCE_DAILY)
 
         if r_type == RECURRENCE_DAILY:
+            # Optional day filter — if set, only generate on those weekdays
+            day_filter = rec.get("day_filter", [])
+            if day_filter:
+                return check_date.weekday() in day_filter
             return True
 
         if r_type == RECURRENCE_WEEKLY:
-            return check_date.weekday() == recurrence.get("weekday", 0)
+            weekdays = rec.get("weekdays", [])
+            if not weekdays:
+                return False
+            return check_date.weekday() in weekdays
 
         if r_type == RECURRENCE_EVERY_N_DAYS:
-            n = recurrence.get("interval", 1)
+            n = rec.get("interval", 1)
             created = date.fromisoformat(chore["created_at"][:10])
             return (check_date - created).days % n == 0
 
         if r_type == RECURRENCE_EVERY_N_WEEKS:
-            n = recurrence.get("interval", 1) * 7
+            n = rec.get("interval", 1) * 7
             created = date.fromisoformat(chore["created_at"][:10])
             return (check_date - created).days % n == 0
 
         if r_type == RECURRENCE_MONTHLY_ON_DATE:
-            return check_date.day == recurrence.get("day_of_month", 1)
+            return check_date.day == rec.get("day_of_month", 1)
 
         return False
 
@@ -722,12 +938,15 @@ class FamilyHubDataStore:
         return next((i for i in self.store_items if i["id"] == item_id), None)
 
     def get_store_items_for_person(self, person_id: str) -> list[dict]:
-        """Return common items + this person's personal items."""
+        """Return common items + items where person_id is in person_ids list."""
         return [
             i for i in self.store_items
             if i.get("active", True) and (
                 i.get("scope") == SCOPE_COMMON
-                or (i.get("scope") == SCOPE_PERSONAL and i.get("person_id") == person_id)
+                or (
+                    i.get("scope") == SCOPE_PERSONAL
+                    and person_id in (i.get("person_ids") or [])
+                )
             )
         ]
 
@@ -739,7 +958,7 @@ class FamilyHubDataStore:
         name: str,
         dollar_value: float,
         scope: str = SCOPE_COMMON,
-        person_id: str | None = None,
+        person_ids: list[str] | None = None,
         description: str = "",
     ) -> dict:
         item = {
@@ -749,7 +968,7 @@ class FamilyHubDataStore:
             "dollar_value": dollar_value,
             "points_cost": self._dollar_to_points(dollar_value),
             "scope": scope,
-            "person_id": person_id if scope == SCOPE_PERSONAL else None,
+            "person_ids": person_ids if scope == SCOPE_PERSONAL else [],
             "active": True,
             "created_at": _now_iso(),
         }
@@ -761,7 +980,7 @@ class FamilyHubDataStore:
         item = self.get_store_item(item_id)
         if not item:
             return None
-        allowed = {"name", "description", "dollar_value", "scope", "person_id", "active"}
+        allowed = {"name", "description", "dollar_value", "scope", "person_ids", "active"}
         for key, val in kwargs.items():
             if key in allowed:
                 item[key] = val
@@ -794,15 +1013,13 @@ class FamilyHubDataStore:
 
     async def async_request_redemption(self, person_id: str, item_id: str) -> dict | None:
         person = self.get_person(person_id)
-        item = self.get_store_item(item_id)
+        item   = self.get_store_item(item_id)
         if not person or not item:
             return None
-
         points_cost = item["points_cost"]
         if person["points_balance"] < points_cost:
-            _LOGGER.warning("Family Hub: %s has insufficient points for redemption", person["name"])
+            _LOGGER.warning("Family Hub: insufficient points for redemption")
             return None
-
         redemption = {
             "id": _new_id(),
             "store_item_id": item_id,
@@ -820,24 +1037,23 @@ class FamilyHubDataStore:
             event_type=HISTORY_REDEMPTION_REQUESTED,
             person_id=person_id,
             reference_id=redemption["id"],
-            note=f'{person["name"]} requested "{item["name"]}" ({points_cost} pts)',
+            note=f'{person["name"]} requested "{item["name"]}" ({points_cost}pts)',
         )
         await self.async_save()
         return redemption
 
-    async def async_approve_redemption(self, redemption_id: str, approved_by: str) -> dict | None:
+    async def async_approve_redemption(
+        self, redemption_id: str, approved_by: str
+    ) -> dict | None:
         redemption = self.get_redemption(redemption_id)
         if not redemption or redemption["status"] != REDEMPTION_PENDING:
             return None
-
         person = self.get_person(redemption["person_id"])
         if not person:
             return None
-
-        redemption["status"] = REDEMPTION_APPROVED
+        redemption["status"]      = REDEMPTION_APPROVED
         redemption["resolved_at"] = _now_iso()
         redemption["resolved_by"] = approved_by
-
         await self.async_deduct_points(
             redemption["person_id"],
             redemption["points_cost"],
@@ -850,26 +1066,26 @@ class FamilyHubDataStore:
             reference_id=redemption_id,
             points_delta=-redemption["points_cost"],
             balance_after=person.get("points_balance", 0),
-            note=f'Redemption approved by {approved_by}',
+            note=f"Approved by {approved_by}",
         )
         await self.async_save()
         return redemption
 
-    async def async_decline_redemption(self, redemption_id: str, declined_by: str, reason: str = "") -> dict | None:
+    async def async_decline_redemption(
+        self, redemption_id: str, declined_by: str, reason: str = ""
+    ) -> dict | None:
         redemption = self.get_redemption(redemption_id)
         if not redemption or redemption["status"] != REDEMPTION_PENDING:
             return None
-
-        redemption["status"] = REDEMPTION_DECLINED
+        redemption["status"]      = REDEMPTION_DECLINED
         redemption["resolved_at"] = _now_iso()
         redemption["resolved_by"] = declined_by
-        redemption["note"] = reason
-
+        redemption["note"]        = reason
         self._append_history(
             event_type=HISTORY_REDEMPTION_DECLINED,
             person_id=redemption["person_id"],
             reference_id=redemption_id,
-            note=f'Redemption declined by {declined_by}. {reason}'.strip(),
+            note=f"Declined by {declined_by}. {reason}".strip(),
         )
         await self.async_save()
         return redemption
@@ -909,109 +1125,32 @@ class FamilyHubDataStore:
         })
 
     # ------------------------------------------------------------------
-    # Bonus points (admin action)
-    # ------------------------------------------------------------------
-
-    async def async_award_bonus_points(
-        self,
-        person_id: str,
-        points: int = 0,
-        reason: str = "",
-        dollar_amount: float | None = None,
-    ) -> dict | None:
-        """
-        Award bonus points to a person (admin action).
-
-        Pass either `points` directly or `dollar_amount` — if dollar_amount is
-        provided it is automatically converted using the current points_per_dollar
-        rate and overrides the points value.
-        """
-        if dollar_amount is not None:
-            points = round(dollar_amount * self.points_per_dollar)
-        if points <= 0:
-            _LOGGER.warning("Family Hub: award_bonus_points called with zero or negative points")
-            return None
-        ref_id = _new_id()
-        note = f"Bonus: {reason}" if reason else "Bonus points"
-        if dollar_amount is not None:
-            note = f"Bonus (${dollar_amount:.2f}): {reason}".rstrip(": ")
-        return await self.async_award_points(person_id, points, ref_id, note)
-
-    async def async_admin_deduct_points(
-        self,
-        person_id: str,
-        points: int = 0,
-        reason: str = "",
-        dollar_amount: float | None = None,
-    ) -> dict | None:
-        """
-        Deduct points from a person as an admin action (penalty / correction).
-
-        Pass either `points` directly or `dollar_amount` — if dollar_amount is
-        provided it is automatically converted and overrides the points value.
-        Lifetime total is NOT reduced — only the spendable balance decreases.
-        """
-        if dollar_amount is not None:
-            points = round(dollar_amount * self.points_per_dollar)
-        if points <= 0:
-            _LOGGER.warning("Family Hub: deduct_points called with zero or negative value")
-            return None
-        ref_id = _new_id()
-        note = f"Deduction: {reason}" if reason else "Points deducted"
-        if dollar_amount is not None:
-            note = f"Deduction (${dollar_amount:.2f}): {reason}".rstrip(": ")
-        return await self.async_deduct_points(person_id, points, ref_id, note)
-
-    # ------------------------------------------------------------------
-    # Summary helpers (used by sensors and coordinator)
+    # Summary / coordinator
     # ------------------------------------------------------------------
 
     def get_summary(self) -> dict:
-        """Return a top-level summary dict used by sensors and the coordinator."""
         return {
-            "family_name": self.family_name,
-            "points_per_dollar": self.points_per_dollar,
-            "people": self.people,
-            "tasks_due_today": len(self.get_tasks_due_today()),
-            "tasks_overdue": len(self.get_overdue_tasks()),
-            "pending_approvals": len(self.get_pending_approvals()),
-            "pending_redemptions": len(self.get_pending_redemptions()),
-            "claimable_tasks": len(self.get_claimable_tasks()),
-            "active_chores": len(self.get_active_chores()),
+            "family_name":          self.family_name,
+            "points_per_dollar":    self.points_per_dollar,
+            "people":               self.people,
+            "tasks_due_today":      len([t for t in self.task_instances if t["due_date"] == _today_str() and t["status"] in ACTIVE_STATUSES]),
+            "tasks_overdue":        len([t for t in self.task_instances if t["due_date"] < _today_str()  and t["status"] in ACTIVE_STATUSES]),
+            "pending_approvals":    len(self.get_pending_approvals()),
+            "pending_redemptions":  len(self.get_pending_redemptions()),
+            "claimable_tasks":      len(self.get_claimable_tasks()),
+            "active_chores":        len(self.get_active_chores()),
         }
 
-    def get_personal_reminders(self, person_id: str) -> list[dict]:
-        """Return active personal_reminder task instances for one person."""
-        return [
-            t for t in self.task_instances
-            if t.get("assigned_to") == person_id
-            and t["status"] in ACTIVE_STATUSES
-            and self._get_chore_category(t) == CATEGORY_PERSONAL_REMINDER
-        ]
-
-    def _get_chore_category(self, task: dict) -> str | None:
-        chore = self.get_chore(task["chore_id"])
-        return chore.get("category") if chore else None
-
     # ------------------------------------------------------------------
-    # Card data helpers — rich list data for the Lovelace card
+    # Card data helpers
     # ------------------------------------------------------------------
 
     def get_tasks_for_card(self, person_id: str) -> dict:
-        """
-        Return all task data for a person needed by the dashboard card.
-
-        Returns a dict with keys:
-          due_today  — list of tasks due today (excludes maintenance categories)
-          overdue    — list of overdue tasks, sorted most overdue first
-          pending_approval — tasks this person submitted that await approval
-        """
-        today = date.today()
+        """Return due_today, overdue, and pending_approval task lists for one person."""
+        today     = date.today()
         today_str = today.isoformat()
-
-        # Collect active tasks assigned to this person (non-maintenance categories)
         due_today: list[dict] = []
-        overdue: list[dict] = []
+        overdue:   list[dict] = []
 
         for t in self.task_instances:
             if t.get("assigned_to") != person_id:
@@ -1021,31 +1160,31 @@ class FamilyHubDataStore:
             chore = self.get_chore(t["chore_id"])
             if not chore:
                 continue
-            # Maintenance / personal_reminder tasks belong on the maintenance dashboard
-            if chore.get("category") in MAINTENANCE_CATEGORIES:
+            # Maintenance items belong on the maintenance card
+            if self._chore_is_maintenance(chore):
                 continue
 
-            task_data = {
-                "task_id": t["id"],
-                "chore_id": t["chore_id"],
-                "name": chore["name"],
-                "description": chore.get("description", ""),
-                "points": chore.get("points", 0),
-                "due_date": t["due_date"],
-                "status": t["status"],
-                "category": chore.get("category"),
-                "icon": chore.get("icon"),
+            row = {
+                "task_id":         t["id"],
+                "chore_id":        t["chore_id"],
+                "name":            chore["name"],
+                "description":     chore.get("description", ""),
+                "points":          chore.get("points", 0),
+                "due_date":        t["due_date"],
+                "status":          t["status"],
+                "category_label":  chore.get("category_label", ""),
+                "penalty_enabled": chore.get("penalty_enabled", False),
+                "penalty_points":  chore.get("penalty_points", 0),
+                "is_one_time":     chore["recurrence"].get("type") == RECURRENCE_ONE_TIME,
             }
 
             if t["due_date"] == today_str:
-                due_today.append(task_data)
+                due_today.append(row)
             elif t["due_date"] < today_str:
-                days_overdue = (today - date.fromisoformat(t["due_date"])).days
-                task_data["days_overdue"] = days_overdue
-                overdue.append(task_data)
+                row["days_overdue"] = (today - date.fromisoformat(t["due_date"])).days
+                overdue.append(row)
 
-        # Tasks this person submitted and are awaiting parent approval
-        pending_approval: list[dict] = []
+        pending_approval = []
         for t in self.task_instances:
             if t.get("completed_by") != person_id:
                 continue
@@ -1053,135 +1192,117 @@ class FamilyHubDataStore:
                 continue
             chore = self.get_chore(t["chore_id"])
             pending_approval.append({
-                "task_id": t["id"],
-                "chore_id": t["chore_id"],
-                "name": chore["name"] if chore else t["chore_id"],
-                "points": chore.get("points", 0) if chore else 0,
+                "task_id":      t["id"],
+                "chore_id":     t["chore_id"],
+                "name":         chore["name"] if chore else t["chore_id"],
+                "description":  chore.get("description", "") if chore else "",
+                "points":       chore.get("points", 0) if chore else 0,
                 "completed_at": t.get("completed_at"),
-                "status": t["status"],
+                "status":       t["status"],
             })
 
         return {
-            "due_today": sorted(due_today, key=lambda x: x["name"]),
-            "overdue": sorted(overdue, key=lambda x: -x.get("days_overdue", 0)),
+            "due_today":        sorted(due_today, key=lambda x: x["name"]),
+            "overdue":          sorted(overdue, key=lambda x: -x.get("days_overdue", 0)),
             "pending_approval": pending_approval,
         }
 
     def get_store_items_for_card(self, person_id: str) -> list[dict]:
-        """Return store items visible to a person, formatted for the card."""
-        items = self.get_store_items_for_person(person_id)
         return [
             {
-                "item_id": i["id"],
-                "name": i["name"],
+                "item_id":     i["id"],
+                "name":        i["name"],
                 "description": i.get("description", ""),
-                "dollar_value": i.get("dollar_value", 0),
+                "dollar_value":i.get("dollar_value", 0),
                 "points_cost": i.get("points_cost", 0),
-                "scope": i.get("scope"),
+                "scope":       i.get("scope"),
+                "person_ids":  i.get("person_ids", []),
             }
-            for i in items
+            for i in self.get_store_items_for_person(person_id)
         ]
 
     def get_approval_queue_for_card(self) -> list[dict]:
-        """
-        Return pending approval tasks with full detail for the admin view.
-        Sorted by completion time, oldest first (most urgent at top).
-        """
         queue = []
         for t in self.get_pending_approvals():
-            chore = self.get_chore(t["chore_id"])
+            chore  = self.get_chore(t["chore_id"])
             person = self.get_person(t.get("completed_by", ""))
             queue.append({
-                "task_id": t["id"],
-                "chore_name": chore["name"] if chore else t["chore_id"],
+                "task_id":      t["id"],
+                "chore_name":   chore["name"] if chore else t["chore_id"],
                 "chore_points": chore.get("points", 0) if chore else 0,
-                "person_id": t.get("completed_by"),
-                "person_name": person["name"] if person else "Unknown",
+                "person_id":    t.get("completed_by"),
+                "person_name":  person["name"] if person else "Unknown",
                 "person_color": person.get("avatar_color", "#7F77DD") if person else "#7F77DD",
                 "completed_at": t.get("completed_at"),
             })
         return sorted(queue, key=lambda x: x.get("completed_at") or "")
 
     def get_redemption_queue_for_card(self) -> list[dict]:
-        """
-        Return pending redemptions with full detail for the admin view.
-        Sorted by request time, oldest first.
-        """
         queue = []
         for r in self.get_pending_redemptions():
             person = self.get_person(r["person_id"])
             queue.append({
                 "redemption_id": r["id"],
-                "item_name": r["item_name"],
-                "person_id": r["person_id"],
-                "person_name": person["name"] if person else "Unknown",
-                "person_color": person.get("avatar_color", "#7F77DD") if person else "#7F77DD",
-                "points_cost": r["points_cost"],
-                "requested_at": r.get("requested_at"),
+                "item_name":     r["item_name"],
+                "person_id":     r["person_id"],
+                "person_name":   person["name"] if person else "Unknown",
+                "person_color":  person.get("avatar_color", "#7F77DD") if person else "#7F77DD",
+                "points_cost":   r["points_cost"],
+                "requested_at":  r.get("requested_at"),
             })
         return sorted(queue, key=lambda x: x.get("requested_at") or "")
 
     def get_maintenance_items_for_card(self) -> list[dict]:
-        """
-        Return all maintenance + personal_reminder task instances with full
-        detail for the maintenance dashboard.
-        Sorted by days_delta ascending (most overdue first, then soonest due).
-        """
         today = date.today()
         items = []
-
         for task in self.task_instances:
             if task["status"] not in ACTIVE_STATUSES:
                 continue
             chore = self.get_chore(task["chore_id"])
-            if not chore or chore.get("category") not in MAINTENANCE_CATEGORIES:
+            if not chore:
                 continue
-
-            due_date = date.fromisoformat(task["due_date"])
-            # days_delta: negative = overdue by N days, 0 = due today, positive = due in N days
+            if not self._chore_is_maintenance(chore):
+                continue
+            due_date   = date.fromisoformat(task["due_date"])
             days_delta = (due_date - today).days
-
-            assigned_to = task.get("assigned_to")
-            person = self.get_person(assigned_to) if assigned_to else None
-
+            assigned   = task.get("assigned_to")
+            person     = self.get_person(assigned) if assigned else None
             items.append({
-                "task_id": task["id"],
-                "chore_id": task["chore_id"],
-                "name": chore["name"],
-                "category": chore.get("category"),
-                "due_date": task["due_date"],
-                "days_delta": days_delta,
-                "assigned_to": assigned_to,
-                "person_name": person["name"] if person else None,
+                "task_id":      task["id"],
+                "chore_id":     task["chore_id"],
+                "name":         chore["name"],
+                "description":  chore.get("description", ""),
+                "category_label": chore.get("category_label", ""),
+                "due_date":     task["due_date"],
+                "days_delta":   days_delta,
+                "assigned_to":  assigned,
+                "person_name":  person["name"] if person else None,
                 "person_color": person.get("avatar_color", "#7F77DD") if person else None,
             })
-
         return sorted(items, key=lambda x: x["days_delta"])
 
     def get_claimable_tasks_for_card(self) -> list[dict]:
-        """Return claimable tasks with chore details for the card."""
         items = []
         for task in self.get_claimable_tasks():
             chore = self.get_chore(task["chore_id"])
             items.append({
-                "task_id": task["id"],
-                "name": chore["name"] if chore else task["chore_id"],
+                "task_id":     task["id"],
+                "name":        chore["name"] if chore else task["chore_id"],
                 "description": chore.get("description", "") if chore else "",
-                "points": chore.get("points", 0) if chore else 0,
-                "due_date": task["due_date"],
-                "icon": chore.get("icon") if chore else None,
+                "points":      chore.get("points", 0) if chore else 0,
+                "due_date":    task["due_date"],
             })
         return items
 
     def get_all_tasks_for_command_center(self) -> list[dict]:
         """
-        Return all active, non-maintenance tasks for all people.
-        Used by the command center to show the full household task list.
-        Includes overdue tasks. Sorted: overdue first, then due today, then by person.
+        All active non-maintenance assigned tasks for all people.
+        Sorted: most overdue first, then today. Excludes maintenance and
+        unassigned claimable tasks (those appear in their own section).
         """
-        today = date.today()
+        today     = date.today()
         today_str = today.isoformat()
-        items = []
+        items     = []
 
         for task in self.task_instances:
             if task["status"] not in [STATUS_PENDING, STATUS_CLAIMED]:
@@ -1189,42 +1310,78 @@ class FamilyHubDataStore:
             chore = self.get_chore(task["chore_id"])
             if not chore:
                 continue
-            if chore.get("category") in MAINTENANCE_CATEGORIES:
+            if self._chore_is_maintenance(chore):
                 continue
-            if chore.get("category") == CATEGORY_CLAIMABLE and task.get("assigned_to") is None:
-                continue  # Claimable tasks show in their own section
+            if chore.get("chore_type") == CHORE_TYPE_CLAIMABLE and task.get("assigned_to") is None:
+                continue
 
-            assigned_to = task.get("assigned_to")
-            person = self.get_person(assigned_to) if assigned_to else None
-            due_date = date.fromisoformat(task["due_date"])
+            assigned   = task.get("assigned_to")
+            person     = self.get_person(assigned) if assigned else None
+            due_date   = date.fromisoformat(task["due_date"])
             days_delta = (due_date - today).days
 
             items.append({
-                "task_id": task["id"],
-                "chore_id": task["chore_id"],
-                "name": chore["name"],
-                "points": chore.get("points", 0),
-                "due_date": task["due_date"],
-                "days_delta": days_delta,
-                "status": task["status"],
-                "category": chore.get("category"),
-                "assigned_to": assigned_to,
-                "person_name": person["name"] if person else None,
-                "person_color": person.get("avatar_color", "#7F77DD") if person else "#7F77DD",
+                "task_id":         task["id"],
+                "chore_id":        task["chore_id"],
+                "name":            chore["name"],
+                "description":     chore.get("description", ""),
+                "points":          chore.get("points", 0),
+                "due_date":        task["due_date"],
+                "days_delta":      days_delta,
+                "status":          task["status"],
+                "category_label":  chore.get("category_label", ""),
+                "assigned_to":     assigned,
+                "person_name":     person["name"] if person else None,
+                "person_color":    person.get("avatar_color", "#7F77DD") if person else "#7F77DD",
                 "approval_required": chore.get("approval_required", True),
+                "penalty_enabled": chore.get("penalty_enabled", False),
+                "penalty_points":  chore.get("penalty_points", 0),
             })
 
-        # Sort: overdue first (most overdue at top), then due today, future tasks excluded
-        # We show today + overdue on the command center by default
-        today_and_overdue = [i for i in items if i["days_delta"] <= 0]
-        return sorted(today_and_overdue, key=lambda x: x["days_delta"])
+        # Show today + overdue only on command center
+        return sorted(
+            [i for i in items if i["days_delta"] <= 0],
+            key=lambda x: x["days_delta"],
+        )
+
+    def get_active_chores_for_card(self) -> list[dict]:
+        """
+        All active non-maintenance, non-one-time chores for the admin chore list.
+        Sorted by sort_order then name.
+        """
+        result = []
+        for c in self.get_active_chores():
+            if self._chore_is_maintenance(c):
+                continue
+            if c["recurrence"].get("type") == RECURRENCE_ONE_TIME:
+                continue
+            assigned_names = []
+            for pid in c.get("assigned_to", []):
+                p = self.get_person(pid)
+                if p:
+                    assigned_names.append(p["name"])
+            result.append({
+                "chore_id":        c["id"],
+                "name":            c["name"],
+                "description":     c.get("description", ""),
+                "chore_type":      c.get("chore_type", CHORE_TYPE_ASSIGNED),
+                "category_label":  c.get("category_label", ""),
+                "sort_order":      c.get("sort_order", 0),
+                "assigned_to":     c.get("assigned_to", []),
+                "assigned_names":  assigned_names,
+                "points":          c.get("points", 0),
+                "approval_required": c.get("approval_required", True),
+                "penalty_enabled": c.get("penalty_enabled", False),
+                "penalty_points":  c.get("penalty_points", 0),
+                "recurrence":      c.get("recurrence", {}),
+            })
+        return sorted(result, key=lambda x: (x["sort_order"], x["name"]))
 
     # ------------------------------------------------------------------
-    # Backup / export
+    # Backup
     # ------------------------------------------------------------------
 
     async def async_export_backup(self, export_path: str) -> bool:
-        """Write a timestamped backup copy of the data store."""
         def _write() -> None:
             os.makedirs(os.path.dirname(export_path), exist_ok=True)
             with open(export_path, "w", encoding="utf-8") as f:
@@ -1235,5 +1392,5 @@ class FamilyHubDataStore:
             _LOGGER.info("Family Hub: backup exported to %s", export_path)
             return True
         except OSError as err:
-            _LOGGER.error("Family Hub: backup export failed: %s", err)
+            _LOGGER.error("Family Hub: backup failed: %s", err)
             return False
