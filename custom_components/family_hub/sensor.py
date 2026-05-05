@@ -36,6 +36,7 @@ from .const import (
     ACTIVE_STATUSES,
     DOMAIN,
     MAINTENANCE_DUE_SOON_DAYS,
+    REDEMPTION_PENDING,
     STATUS_PENDING_APPROVAL,
 )
 from .coordinator import FamilyHubCoordinator
@@ -134,7 +135,7 @@ class FamilyHubPersonSensor(FamilyHubBaseSensor):
         pending_appr_count   = len([t for t in all_tasks if t.get("completed_by") == self._person_id and t["status"] == STATUS_PENDING_APPROVAL])
         completed_total      = [t for t in all_tasks if t.get("completed_by") == self._person_id and t.get("completed_at")]
         completed_this_week  = [t for t in completed_total if t.get("completed_at", "")[:10] >= week_ago]
-        pending_redeem_count = len([r for r in store.redemptions if r["person_id"] == self._person_id and r["status"] == "pending"])
+        pending_redeem_count = len([r for r in store.redemptions if r["person_id"] == self._person_id and r["status"] == REDEMPTION_PENDING])
 
         balance  = person.get("points_balance", 0)
         ppdollar = store.points_per_dollar
@@ -210,7 +211,6 @@ def _get_maintenance_tasks(store, overdue_only: bool = False) -> list[dict]:
 class FamilyHubMaintenanceDueSensor(FamilyHubBaseSensor):
     """Maintenance items due within 14 days."""
 
-    _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_native_unit_of_measurement = "items"
     _attr_icon       = "mdi:home-alert"
     _attr_unique_id  = f"{DOMAIN}_maintenance_due"
@@ -259,7 +259,6 @@ class FamilyHubMaintenanceDueSensor(FamilyHubBaseSensor):
 class FamilyHubMaintenanceOverdueSensor(FamilyHubBaseSensor):
     """Overdue maintenance items only."""
 
-    _attr_state_class = SensorStateClass.MEASUREMENT
     _attr_native_unit_of_measurement = "items"
     _attr_icon      = "mdi:alert-circle"
     _attr_unique_id = f"{DOMAIN}_maintenance_overdue"
