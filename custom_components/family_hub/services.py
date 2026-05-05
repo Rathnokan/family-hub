@@ -266,7 +266,7 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
         Update chore — accepts all fields including the new v0.3.0 ones.
         Fixes the "extra keys not allowed" error from v0.2.x.
         """
-        # assigned_to: normalise to list
+        # assigned_to: normalise to list; strip any empty strings from either branch
         data = dict(call.data)
         chore_id = data.pop("chore_id")
         if "assigned_to" in data:
@@ -274,7 +274,7 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             if isinstance(at, str):
                 data["assigned_to"] = [at] if at else []
             else:
-                data["assigned_to"] = list(at)
+                data["assigned_to"] = [v for v in at if v]
 
         await store.async_update_chore(chore_id, **data)
         await coordinator.async_refresh()
