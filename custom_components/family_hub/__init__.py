@@ -187,6 +187,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             "request_redemption", "approve_redemption", "decline_redemption",
             "add_store_item", "update_store_item", "delete_store_item",
             "award_bonus_points", "deduct_points", "update_settings", "export_backup",
+            "remove_person", "add_task",
         ]:
             hass.services.async_remove(DOMAIN, service)
 
