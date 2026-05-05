@@ -180,16 +180,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     if unload_ok:
-        for service in [
-            "complete_task", "claim_task", "approve_task", "deny_task",
-            "add_one_time_task", "add_person", "update_person",
-            "add_chore", "update_chore", "delete_chore",
-            "request_redemption", "approve_redemption", "decline_redemption",
-            "add_store_item", "update_store_item", "delete_store_item",
-            "award_bonus_points", "deduct_points", "update_settings", "export_backup",
-            "remove_person", "add_task",
-        ]:
-            hass.services.async_remove(DOMAIN, service)
+        # Dynamically remove all services registered under the DOMAIN rather than
+        # maintaining a brittle hardcoded list. This automatically handles any
+        # services added or renamed in future versions without needing a code change here.
+        for service_name in list(hass.services.async_services_for_domain(DOMAIN)):
+            hass.services.async_remove(DOMAIN, service_name)
 
         hass.data[DOMAIN].pop(entry.entry_id)
 
