@@ -453,7 +453,15 @@ const fPts     = n => (n || 0).toLocaleString();
 const fUSD     = n => `$${(n || 0).toFixed(2)}`;
 const cap      = s => s ? s[0].toUpperCase() + s.slice(1) : "";
 const slug     = s => (s || "").toLowerCase().replace(/\s+/g, "_");
-const escAttr  = s => String(s || "").replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+/**
+ * Escape all five HTML special characters for safe innerHTML injection.
+ * Use this for ALL user-supplied text rendered into the DOM to prevent XSS.
+ */
+const escHTML  = s => String(s || "").replace(/[&<>'"]/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[c]));
+
+/** Alias kept for HTML attribute contexts (values inside quotes) */
+const escAttr  = escHTML;
 
 /** Convert days_delta integer to a human label */
 function daysLabel(d) {
@@ -616,18 +624,39 @@ class FamilyHubCard extends HTMLElement {
             this._dragId = this._dragOverId = null;
             if (!dragId || !overId || dragId === overId) return;
 
-            // Compute new sort_order: midpoint between drop target's predecessor and itself
-            const sorted   = this._sortedChores;
-            const overIdx  = sorted.findIndex(c => c.chore_id === overId);
+            const sorted  = this._sortedChores;
+            const overIdx = sorted.findIndex(c => c.chore_id === overId);
             if (overIdx < 0) return;
-            const overChore= sorted[overIdx];
-            // Skip the dragged chore itself when looking for predecessor
-            const prevIdx  = sorted.slice(0, overIdx).findLastIndex(c => c.chore_id !== dragId);
-            const prevOrder = prevIdx >= 0 ? sorted[prevIdx].sort_order : overChore.sort_order - 20;
-            let newOrder   = Math.round((prevOrder + overChore.sort_order) / 2);
-            // Guard against equal values when adjacent integers
-            if (newOrder >= overChore.sort_order) newOrder = overChore.sort_order - 1;
-            if (newOrder <= prevOrder)            newOrder = prevOrder + 1;
+
+            // Build the list as it will look after the drop (dragged item removed,
+            // then inserted before the drop target).
+            const without  = sorted.filter(c => c.chore_id !== dragId);
+            const insertAt = without.findIndex(c => c.chore_id === overId);
+
+            const before   = without[insertAt - 1]?.sort_order ?? (without[insertAt].sort_order - 20);
+            const after    = without[insertAt].sort_order;
+
+            // Use float midpoint — avoids integer collision entirely for normal use.
+            let newOrder = (before + after) / 2;
+
+            // If the gap has compressed below a useful threshold (repeated drags into
+            // the same slot), reindex the whole list with spacing of 10 and then place
+            // the dragged item at the calculated midpoint of the reindexed values.
+            const GAP_THRESHOLD = 0.01;
+            if (Math.abs(after - newOrder) < GAP_THRESHOLD || Math.abs(newOrder - before) < GAP_THRESHOLD) {
+                // Reindex without the dragged item, then recalculate
+                const reindexed = without.map((c, i) => ({ ...c, sort_order: (i + 1) * 10 }));
+                const rBefore   = reindexed[insertAt - 1]?.sort_order ?? 0;
+                const rAfter    = reindexed[insertAt]?.sort_order ?? (rBefore + 20);
+                newOrder        = (rBefore + rAfter) / 2;
+                // Persist reindexed orders for all other chores so future drags have room
+                reindexed.forEach(c => {
+                    if (c.chore_id !== dragId) {
+                        this._svc("update_chore", { chore_id: c.chore_id, sort_order: c.sort_order });
+                    }
+                });
+            }
+
             this._svc("update_chore", { chore_id: dragId, sort_order: newOrder });
         }, { signal });
 
@@ -673,15 +702,18 @@ class FamilyHubCard extends HTMLElement {
         const states  = this._hass.states;
         let changed   = false;
 
+        // Use last_updated (not last_changed): last_changed only ticks when the
+        // primary state string changes. Family Hub data lives in attributes, so
+        // only last_updated fires when tasks/points/approvals change.
         for (const id of FH_SENSORS) {
-            const ts = states[id]?.last_changed;
+            const ts = states[id]?.last_updated;
             if (ts !== this._lastKeys[id]) { this._lastKeys[id] = ts; changed = true; }
         }
 
         // Also track per-person sensors
         for (const p of (states["sensor.family_hub_needs_attention"]?.attributes?.people || [])) {
             const id = `sensor.family_hub_${slug(p.name)}`;
-            const ts = states[id]?.last_changed;
+            const ts = states[id]?.last_updated;
             if (ts !== this._lastKeys[id]) { this._lastKeys[id] = ts; changed = true; }
         }
 
@@ -767,7 +799,7 @@ class FamilyHubCard extends HTMLElement {
       <div class="fh-chip ${this._filter === p.person_id ? "active" : ""}"
            style="--chip-color:${p.avatar_color || DEFAULT_COLOR}"
            data-act="filter" data-pid="${p.person_id}">
-        <span class="fh-chip-dot"></span>${p.name}
+        <span class="fh-chip-dot"></span>${escHTML(p.name)}
       </div>`).join("");
 
         const filtered = this._filter
@@ -784,7 +816,7 @@ class FamilyHubCard extends HTMLElement {
       <div class="fh-task-list">
         ${claimable.map(t => `
           <div class="fh-task-row" style="--row-color:${DEFAULT_COLOR}">
-            <span class="fh-task-name">${t.name}</span>
+            <span class="fh-task-name">${escHTML(t.name)}</span>
             ${t.points ? `<span class="fh-badge fh-badge-pts">${t.points}pts</span>` : ""}
             <button class="fh-btn fh-btn-primary fh-btn-sm"
                     data-act="open-claim" data-tid="${t.task_id}"
@@ -794,7 +826,7 @@ class FamilyHubCard extends HTMLElement {
 
         return `
       <div class="fh-hdr">
-        <span class="fh-title" style="margin:0">${famName}</span>
+        <span class="fh-title" style="margin:0">${escHTML(famName)}</span>
         <button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="open-add-task">
           ${I.plus} Add task
         </button>
@@ -812,7 +844,7 @@ class FamilyHubCard extends HTMLElement {
       <div class="fh-task-row ${isOverdue ? "overdue" : ""} ${flash}"
            style="--row-color:${color}; --flash-dur:${FLASH_MS}ms">
         <div class="fh-avatar" style="background:${color}">${ini(p?.name)}</div>
-        <span class="fh-task-name">${t.name}</span>
+        <span class="fh-task-name">${escHTML(t.name)}</span>
         ${isOverdue ? `<span class="fh-badge fh-badge-overdue">${Math.abs(t.days_delta)}d late</span>` : ""}
         ${t.points ? `<span class="fh-badge fh-badge-pts" style="--row-color:${color}">${t.points}pts</span>` : ""}
         <button class="fh-check" style="--row-color:${color}"
@@ -870,8 +902,8 @@ class FamilyHubCard extends HTMLElement {
         <div class="fh-task-row ${isOverdue ? "overdue" : ""} ${flash}"
              style="--row-color:${color}; --flash-dur:${FLASH_MS}ms">
           <div class="fh-task-body">
-            <span class="fh-task-name">${t.name}</span>
-            ${descExp && t.description ? `<span class="fh-desc-inline">${t.description}</span>` : ""}
+            <span class="fh-task-name">${escHTML(t.name)}</span>
+            ${descExp && t.description ? `<span class="fh-desc-inline">${escHTML(t.description)}</span>` : ""}
           </div>
           ${t.description
               ? `<button class="fh-desc-btn" data-act="toggle-desc" data-id="${t.task_id}"
@@ -891,7 +923,7 @@ class FamilyHubCard extends HTMLElement {
 
         const pendingRows = pending.map(t => `
       <div class="fh-task-row" style="--row-color:${color}">
-        <span class="fh-task-name">${t.name}</span>
+        <span class="fh-task-name">${escHTML(t.name)}</span>
         ${t.points ? `<span class="fh-badge fh-badge-pts" style="--row-color:${color}">${t.points}pts</span>` : ""}
         <span class="fh-badge fh-badge-pending">Awaiting approval</span>
       </div>`).join("");
@@ -923,8 +955,8 @@ class FamilyHubCard extends HTMLElement {
             const can = balance >= item.points_cost;
             return `
             <div class="fh-store-item">
-              <div class="fh-store-name">${item.name}</div>
-              ${item.description ? `<div class="fh-store-desc">${item.description}</div>` : ""}
+              <div class="fh-store-name">${escHTML(item.name)}</div>
+              ${item.description ? `<div class="fh-store-desc">${escHTML(item.description)}</div>` : ""}
               <div class="fh-store-price" style="color:${color}">${fPts(item.points_cost)}pts</div>
               <button class="fh-btn fh-btn-sm ${can ? "fh-btn-primary" : "fh-btn-ghost"}"
                       style="${can ? `background:${color}` : ""}"
@@ -953,13 +985,13 @@ class FamilyHubCard extends HTMLElement {
                    ${ini(item.person_name)}
                  </div>`
               : ""}
-          <span class="fh-task-name">${item.name}</span>
+          <span class="fh-task-name">${escHTML(item.name)}</span>
           ${item.description
               ? `<button class="fh-desc-btn" data-act="toggle-desc" data-id="${item.task_id}"
                          title="Toggle description">?</button>`
               : ""}
           ${this._expandedDescs.has(item.task_id)
-              ? `<span class="fh-desc-inline" style="flex-basis:100%">${item.description}</span>`
+              ? `<span class="fh-desc-inline" style="flex-basis:100%">${escHTML(item.description)}</span>`
               : ""}
           <span style="font-size:.8rem;font-weight:700;color:${daysLabelColor(item.days_delta)};white-space:nowrap">
             ${daysLabel(item.days_delta)}
@@ -1021,7 +1053,7 @@ class FamilyHubCard extends HTMLElement {
 
         return `
       <div class="fh-hdr">
-        <span class="fh-title" style="margin:0">${famName} — Admin</span>
+        <span class="fh-title" style="margin:0">${escHTML(famName)} — Admin</span>
         ${actionCount ? `<span class="fh-badge fh-badge-overdue">${actionCount} need action</span>` : ""}
       </div>
       ${nav}
@@ -1037,7 +1069,7 @@ class FamilyHubCard extends HTMLElement {
         <div class="fh-point-row">
           <div class="fh-avatar" style="background:${color}">${ini(p.name)}</div>
           <div style="flex:1;min-width:0">
-            <div style="font-weight:700;font-size:.9rem">${p.name}
+            <div style="font-weight:700;font-size:.9rem">${escHTML(p.name)}
               <span style="font-size:.75rem;color:var(--fh-text-sec);font-weight:400">
                 (${cap(p.type)})
               </span>
@@ -1096,8 +1128,8 @@ class FamilyHubCard extends HTMLElement {
             <div class="fh-queue-row">
               <div class="fh-avatar" style="background:${color}">${ini(a.person_name)}</div>
               <div class="fh-queue-info">
-                <div class="fh-queue-name">${a.chore_name}</div>
-                <div class="fh-queue-meta">${a.person_name} · ${a.chore_points}pts</div>
+                <div class="fh-queue-name">${escHTML(a.chore_name)}</div>
+                <div class="fh-queue-meta">${escHTML(a.person_name)} · ${a.chore_points}pts</div>
               </div>
               <div class="fh-queue-btns">
                 <button class="fh-btn fh-btn-success fh-btn-sm"
@@ -1120,8 +1152,8 @@ class FamilyHubCard extends HTMLElement {
             <div class="fh-queue-row">
               <div class="fh-avatar" style="background:${color}">${ini(r.person_name)}</div>
               <div class="fh-queue-info">
-                <div class="fh-queue-name">${r.item_name}</div>
-                <div class="fh-queue-meta">${r.person_name} · ${fPts(r.points_cost)}pts</div>
+                <div class="fh-queue-name">${escHTML(r.item_name)}</div>
+                <div class="fh-queue-meta">${escHTML(r.person_name)} · ${fPts(r.points_cost)}pts</div>
               </div>
               <div class="fh-queue-btns">
                 <button class="fh-btn fh-btn-success fh-btn-sm"
@@ -1181,9 +1213,9 @@ class FamilyHubCard extends HTMLElement {
             <span class="fh-drag-handle" title="Drag to reorder">⠿</span>
             ${avatarHtml}
             <div class="fh-task-body">
-              <span class="fh-task-name">${c.name}</span>
+              <span class="fh-task-name">${escHTML(c.name)}</span>
               ${descExp && c.description
-                  ? `<span class="fh-desc-inline">${c.description}</span>`
+                  ? `<span class="fh-desc-inline">${escHTML(c.description)}</span>`
                   : ""}
               <span class="fh-task-sub">${recLabel}${c.penalty_enabled ? ` · -${c.penalty_points}pts penalty` : ""}</span>
             </div>
@@ -1203,7 +1235,7 @@ class FamilyHubCard extends HTMLElement {
             }).join("");
 
             return `
-        <div class="fh-section-title">${label}</div>
+        <div class="fh-section-title">${escHTML(label)}</div>
         <div class="fh-task-list">${rows}</div>`;
         }).join("");
 
@@ -1224,7 +1256,7 @@ class FamilyHubCard extends HTMLElement {
 
         const labelChips = catLabels.map(l => `
       <div class="fh-cat-chip">
-        <span>${l}</span>
+        <span>${escHTML(l)}</span>
         <button class="fh-cat-chip-del" data-act="remove-cat-label"
                 data-label="${escAttr(l)}" title="Remove">×</button>
       </div>`).join("");
@@ -1241,7 +1273,7 @@ class FamilyHubCard extends HTMLElement {
 
         <div class="fh-point-row">
           <div style="flex:1;min-width:0">
-            <div style="font-size:.9rem;font-weight:600">${famName}</div>
+            <div style="font-size:.9rem;font-weight:600">${escHTML(famName)}</div>
             <div style="font-size:.75rem;color:var(--fh-text-sec)">${ppdollar} points per dollar</div>
           </div>
           <button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="open-edit-settings"
@@ -1610,7 +1642,7 @@ class FamilyHubCard extends HTMLElement {
             `<div class="fh-field">
          <label class="fh-label">Who is claiming?</label>
          <select class="fh-select" id="m-clperson">
-           ${people.map(p => `<option value="${p.person_id}">${p.name}</option>`).join("")}
+           ${people.map(p => `<option value="${p.person_id}">${escHTML(p.name)}</option>`).join("")}
          </select>
        </div>
        <input type="hidden" id="m-cltid" value="${m.data.tid}">`,
@@ -1631,7 +1663,7 @@ class FamilyHubCard extends HTMLElement {
            <select class="fh-select" id="m-rperson">
              ${people.map(p =>
                  `<option value="${p.person_id}"
-                          ${m.data?.pid === p.person_id ? "selected" : ""}>${p.name}</option>`
+                          ${m.data?.pid === p.person_id ? "selected" : ""}>${escHTML(p.name)}</option>`
              ).join("")}
            </select>
          </div>
@@ -1690,7 +1722,7 @@ class FamilyHubCard extends HTMLElement {
                 <span class="fh-avatar" style="background:${color};width:18px;height:18px;font-size:.6rem">
                   ${ini(p.name)}
                 </span>
-                ${p.name}
+                ${escHTML(p.name)}
               </label>`;
           }).join("")}
         </div>`;
@@ -1975,15 +2007,41 @@ class FamilyHubCard extends HTMLElement {
                     assigned_to:       assigned,
                     points:            int("m-cpts"),
                     approval_required: b("m-cappr"),
-                    recurrence_type:   recType,
                     penalty_enabled:   b("m-cpenalty"),
                     penalty_points:    int("m-cpenalty-pts"),
                 };
-                if (weekdays.length)           data.weekdays      = weekdays;
-                if (dayFilter.length)          data.day_filter    = dayFilter;
-                if (recType === "every_n_days"  || recType === "every_n_weeks") data.interval = Math.max(1, int("m-interval"));
-                if (recType === "monthly_on_date") data.day_of_month = Math.max(1, Math.min(31, int("m-dom")));
-                if (isEdit) data.chore_id = v("m-cid");
+
+                if (isEdit) {
+                    // update_chore does not accept recurrence_type at the top level.
+                    // Pass recurrence sub-fields individually — the backend merges them
+                    // into the existing recurrence dict via async_update_chore.
+                    data.chore_id  = v("m-cid");
+                    data.weekdays  = weekdays;
+                    data.day_filter= dayFilter;
+                    if (recType === "every_n_days" || recType === "every_n_weeks")
+                        data.interval = Math.max(1, int("m-interval"));
+                    // Persist the recurrence type by passing a full recurrence object
+                    // through the allowed 'recurrence' key in update_chore.
+                    data.recurrence = {
+                        type:       recType,
+                        weekdays,
+                        day_filter: dayFilter,
+                        interval:   (recType === "every_n_days" || recType === "every_n_weeks")
+                                        ? Math.max(1, int("m-interval")) : 1,
+                        ...(recType === "monthly_on_date"
+                                ? { day_of_month: Math.max(1, Math.min(31, int("m-dom"))) }
+                                : {}),
+                    };
+                } else {
+                    // add_chore accepts recurrence_type as a top-level key
+                    data.recurrence_type = recType;
+                    if (weekdays.length)  data.weekdays   = weekdays;
+                    if (dayFilter.length) data.day_filter = dayFilter;
+                    if (recType === "every_n_days" || recType === "every_n_weeks")
+                        data.interval = Math.max(1, int("m-interval"));
+                    if (recType === "monthly_on_date")
+                        data.day_of_month = Math.max(1, Math.min(31, int("m-dom")));
+                }
 
                 this._svc(isEdit ? "update_chore" : "add_chore", data);
                 this._closeModal();
