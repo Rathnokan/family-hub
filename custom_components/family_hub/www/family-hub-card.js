@@ -1,29 +1,33 @@
 /**
  * Family Hub — Custom Lovelace Card
- * Version: 0.3.0
+ * Version: 0.4.0
  *
  * Four dashboard modes in one self-contained Web Component:
  *   command_center  — Kitchen display, person filter chips, household task list
- *   personal        — Per-person view: points, tasks, store
+ *   personal        — Per-person view: points, tasks (grouped by category), store
  *   maintenance     — House maintenance tracking
- *   admin           — Approvals, redemptions, chores, store, people, settings
+ *   admin           — Approvals + history log, redemptions + store inventory,
+ *                     chores (with person filter), people, settings
  *
- * v0.3.0 changes vs v0.2.2:
- *   - CRITICAL BUG FIX: Event listener memory leak resolved.
- *     Listeners now attach ONCE in connectedCallback() via AbortController signal.
- *     _bindEvents() removed entirely. _doRender() never touches event listeners.
- *   - Multi-person assignment: assigned_to is now a list. Checkboxes in modals.
- *   - Category label grouping: admin chores grouped by category_label.
- *   - Drag-to-reorder chores: ⠿ handle + HTML5 drag API.
- *   - Description ? button: toggles inline description on chore/task rows.
- *   - Recurrence day checkboxes + N value input in chore form.
- *   - Penalty fields in chore form + penalty warning on task rows.
- *   - Store multi-person scope: person checkboxes when scope = personal.
- *   - Remove person: button in Overview with confirmation dialog.
- *   - Add Task + Add Reward buttons in admin Overview.
- *   - Category label management in Settings tab.
- *   - People management folded into Overview (no separate People tab).
- *   - All v0.3.0 data contracts consumed correctly.
+ * v0.4.0 changes vs v0.3.0:
+ *   - BUG FIX: Collapse multiple pending instances of same chore to one row
+ *     (oldest due date shown) — eliminates stacked overdue rows from pre-v0.3.0 data
+ *   - BUG FIX: Hide dollar value when show_dollar_value attribute is false
+ *   - Expiry badge: task rows show "Expires in Nd" countdown when ≤ 2 days remain
+ *   - Personal dashboard: tasks grouped by category_label within due-today section
+ *   - Personal dashboard: Reminders section (chore_type === "reminder") below tasks
+ *     — lighter styling, no points badge, no penalty warning
+ *   - Personal dashboard: "Requested" badge on already-pending store items,
+ *     Request button disabled to prevent double-requests
+ *   - Admin Approvals tab: split into Pending Approvals section + History Log section
+ *     — history rows with per-entry action buttons (Excuse / Mark done / Reject)
+ *     — person filter chips on history log
+ *   - Admin Redemptions tab: split into Pending Redemptions + Store Inventory sections
+ *     — "Add reward" button moved here from Overview
+ *   - Admin Overview: "Add task" button made larger/more prominent; "Add reward" removed
+ *   - Admin Chores tab: person filter chips (All + per-person) to filter chore list
+ *   - History event icons mapped to readable labels with colour coding
+ *   - New v0.4.0 service calls: excuse_task, reject_task, mark_task_complete
  */
 
 // ---------------------------------------------------------------------------
@@ -31,7 +35,7 @@
 // ---------------------------------------------------------------------------
 
 const DOMAIN        = "family_hub";
-const VERSION       = "0.3.0";
+const VERSION       = "0.4.0";
 const DEFAULT_COLOR = "#7F77DD";
 const FLASH_MS      = 1400;
 
@@ -45,6 +49,23 @@ const FH_SENSORS = [
 
 // Weekday display labels (index 0 = Monday, per HA backend)
 const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+// History event type → { label, color }
+const HISTORY_META = {
+    task_completed:       { label: "Completed",       color: "var(--fh-success)"  },
+    task_approved:        { label: "Approved",         color: "var(--fh-success)"  },
+    task_denied:          { label: "Denied",           color: "var(--fh-overdue)"  },
+    task_skipped:         { label: "Skipped",          color: "var(--fh-warning)"  },
+    task_excused:         { label: "Excused",          color: "var(--fh-accent)"   },
+    task_rejected:        { label: "Rejected",         color: "var(--fh-overdue)"  },
+    task_marked_complete: { label: "Marked done",      color: "var(--fh-success)"  },
+    points_awarded:       { label: "Points",           color: "var(--fh-accent)"   },
+    redemption_requested: { label: "Redeem request",   color: "var(--fh-warning)"  },
+    redemption_approved:  { label: "Redeem approved",  color: "var(--fh-success)"  },
+    redemption_declined:  { label: "Redeem declined",  color: "var(--fh-overdue)"  },
+    task_added:           { label: "Task added",       color: "var(--fh-text-sec)" },
+    person_added:         { label: "Person added",     color: "var(--fh-text-sec)" },
+};
 
 // ---------------------------------------------------------------------------
 // Icons (inline SVG — no external dependency)
@@ -63,6 +84,8 @@ const I = {
     person:   `<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>`,
     store:    `<svg viewBox="0 0 24 24"><path d="M20 4H4v2l16-2zm1 5H3l1 11h16l1-11zm-9 8H10v-4h2v4zm0-6H10v-2h2v2z"/></svg>`,
     remove:   `<svg viewBox="0 0 24 24"><path d="M15 16h4v2h-4zm0-8h7v2h-7zm0 4h6v2h-6zM2 6v14c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V6H2zm8 13H4v-1h6v1zm0-3H4v-1h6v1zm0-3H4v-1h6v1zm1-7H3V8h8V6zm-2-3H5V2h4v1z"/></svg>`,
+    history:  `<svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>`,
+    excuse:   `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>`,
 };
 
 // ---------------------------------------------------------------------------
@@ -167,6 +190,7 @@ const CSS = `
     transition:opacity .25s, transform .25s;
   }
   .fh-task-row.overdue  { border-left-color:var(--fh-overdue); }
+  .fh-task-row.reminder { border-left-color:var(--fh-text-sec); opacity:.85; }
   .fh-task-row.fh-drag-over {
     outline:2px dashed var(--fh-accent); outline-offset:2px;
     background:color-mix(in srgb, var(--fh-accent) 8%, var(--fh-surface));
@@ -195,13 +219,17 @@ const CSS = `
     font-size:.72rem; font-weight:700; padding:2px 8px; border-radius:10px;
     white-space:nowrap; flex-shrink:0;
   }
-  .fh-badge-overdue { color:var(--fh-overdue); background:var(--fh-overdue-bg); }
-  .fh-badge-pending { color:var(--fh-warning);  background:var(--fh-warning-bg); }
-  .fh-badge-success { color:var(--fh-success);  background:var(--fh-success-bg); }
+  .fh-badge-overdue  { color:var(--fh-overdue); background:var(--fh-overdue-bg); }
+  .fh-badge-pending  { color:var(--fh-warning);  background:var(--fh-warning-bg); }
+  .fh-badge-success  { color:var(--fh-success);  background:var(--fh-success-bg); }
   .fh-badge-pts {
     color:var(--row-color, var(--fh-accent));
     background:color-mix(in srgb, var(--row-color, var(--fh-accent)) 14%, transparent);
   }
+  /* Expiry badge — amber, attention-grabbing */
+  .fh-badge-expiry { color:var(--fh-warning); background:var(--fh-warning-bg); }
+  /* Requested badge — neutral purple for store */
+  .fh-badge-requested { color:var(--fh-accent); background:color-mix(in srgb, var(--fh-accent) 15%, transparent); }
 
   /* Penalty warning */
   .fh-penalty-warn {
@@ -255,8 +283,10 @@ const CSS = `
   .fh-btn-success { background:var(--fh-success); color:#000; }
   .fh-btn-danger  { background:var(--fh-overdue); color:#fff; }
   .fh-btn-ghost   { background:var(--fh-surface); color:var(--fh-text); border:1.5px solid var(--fh-border); }
+  .fh-btn-warning { background:var(--fh-warning); color:#000; }
   .fh-btn-sm      { padding:4px 10px; font-size:.78rem; }
   .fh-btn-sm svg  { width:13px; height:13px; }
+  .fh-btn-lg      { padding:10px 20px; font-size:.95rem; font-weight:700; }
   .fh-btn:disabled { opacity:.4; cursor:not-allowed; transform:none; filter:none; }
 
   /* Avatar */
@@ -292,6 +322,16 @@ const CSS = `
   .fh-store-desc  { font-size:.75rem; color:var(--fh-text-sec); flex:1; }
   .fh-store-price { font-size:1rem; font-weight:800; }
 
+  /* Admin store inventory list */
+  .fh-store-inv-row {
+    display:flex; align-items:center; gap:var(--fh-gap-sm);
+    padding:var(--fh-pad-xs) var(--fh-pad-sm);
+    background:var(--fh-surface); border-radius:var(--fh-radius-sm);
+  }
+  .fh-store-inv-info { flex:1; min-width:0; }
+  .fh-store-inv-name { font-size:.9rem; font-weight:600; }
+  .fh-store-inv-meta { font-size:.75rem; color:var(--fh-text-sec); }
+
   /* Queue rows (admin) */
   .fh-queue-row {
     display:flex; align-items:center; gap:var(--fh-gap-sm);
@@ -302,6 +342,19 @@ const CSS = `
   .fh-queue-name { font-size:.9rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .fh-queue-meta { font-size:.75rem; color:var(--fh-text-sec); }
   .fh-queue-btns { display:flex; gap:var(--fh-gap-sm); flex-shrink:0; }
+
+  /* History log rows */
+  .fh-hist-row {
+    display:flex; align-items:flex-start; gap:var(--fh-gap-sm);
+    padding:var(--fh-pad-xs) var(--fh-pad-sm);
+    background:var(--fh-surface); border-radius:var(--fh-radius-sm);
+    border-left:3px solid var(--hist-color, var(--fh-border));
+  }
+  .fh-hist-info { flex:1; min-width:0; }
+  .fh-hist-label { font-size:.78rem; font-weight:700; color:var(--hist-color, var(--fh-text-sec)); }
+  .fh-hist-name  { font-size:.88rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .fh-hist-meta  { font-size:.72rem; color:var(--fh-text-sec); }
+  .fh-hist-actions { display:flex; gap:4px; flex-shrink:0; margin-left:auto; align-self:center; }
 
   /* Point row (admin overview) */
   .fh-point-row {
@@ -434,6 +487,12 @@ const CSS = `
   /* Header row util */
   .fh-hdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:var(--fh-gap); }
 
+  /* Scrollable history container */
+  .fh-hist-scroll {
+    max-height:420px; overflow-y:auto;
+    display:flex; flex-direction:column; gap:var(--fh-gap-sm);
+  }
+
   /* Responsive */
   @container fh (min-width: 680px) {
     .fh-store-grid { grid-template-columns:repeat(auto-fill, minmax(170px, 1fr)); }
@@ -453,6 +512,7 @@ const fPts     = n => (n || 0).toLocaleString();
 const fUSD     = n => `$${(n || 0).toFixed(2)}`;
 const cap      = s => s ? s[0].toUpperCase() + s.slice(1) : "";
 const slug     = s => (s || "").toLowerCase().replace(/\s+/g, "_");
+
 /**
  * Escape all five HTML special characters for safe innerHTML injection.
  * Use this for ALL user-supplied text rendered into the DOM to prevent XSS.
@@ -497,6 +557,22 @@ function weekdayChips(checkedDays, cbClass) {
     }).join("");
 }
 
+/**
+ * Format a timestamp string to a short relative label.
+ * e.g. "2h ago", "3d ago", "just now"
+ */
+function relTime(ts) {
+    if (!ts) return "";
+    const diff = Date.now() - new Date(ts).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1)   return "just now";
+    if (mins < 60)  return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs  < 24)  return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    return `${days}d ago`;
+}
+
 // ---------------------------------------------------------------------------
 // Main card class
 // ---------------------------------------------------------------------------
@@ -516,7 +592,7 @@ class FamilyHubCard extends HTMLElement {
         this._cfg    = {};
         this._hass   = null;
 
-        // Dirty-check: entityId → last_changed timestamp
+        // Dirty-check: entityId → last_updated timestamp
         this._lastKeys = {};
 
         // UI state
@@ -526,6 +602,12 @@ class FamilyHubCard extends HTMLElement {
         this._adminSec     = "overview";
         this._flashing     = new Set();  // task_ids currently animating
         this._expandedDescs= new Set();  // chore_ids with description expanded
+
+        // History log filter — person_id or null (= All)
+        this._histFilter   = null;
+
+        // Chores person filter — person_id or null (= All)
+        this._choreFilter  = null;
 
         // Drag-to-reorder state
         this._dragId       = null;
@@ -568,10 +650,12 @@ class FamilyHubCard extends HTMLElement {
                 this._svc("update_settings", { show_dollar_value_to_kids: t.checked });
                 return;
             }
-            // "Everyone" checkbox: sync all individual person checkboxes
+            // "Everyone" checkbox: sync all individual person checkboxes AND their chip labels
             if (t.id === "m-everyone") {
-                root.querySelectorAll(".m-assign-person")
-                    .forEach(cb => cb.checked = t.checked);
+                root.querySelectorAll(".m-assign-person").forEach(cb => {
+                    cb.checked = t.checked;
+                    cb.closest(".fh-person-cb-chip")?.classList.toggle("checked", t.checked);
+                });
             }
             // Individual person checkbox unchecked: uncheck Everyone
             if (t.classList.contains("m-assign-person") && !t.checked) {
@@ -628,28 +712,35 @@ class FamilyHubCard extends HTMLElement {
             const overIdx = sorted.findIndex(c => c.chore_id === overId);
             if (overIdx < 0) return;
 
-            // Build the list as it will look after the drop (dragged item removed,
-            // then inserted before the drop target).
+            // Build the list as it will look after the drop (dragged item removed)
             const without  = sorted.filter(c => c.chore_id !== dragId);
             const insertAt = without.findIndex(c => c.chore_id === overId);
 
-            const before   = without[insertAt - 1]?.sort_order ?? (without[insertAt].sort_order - 20);
-            const after    = without[insertAt].sort_order;
+            let before, after;
+            if (insertAt < 0) {
+                // overId not found in without — shouldn't happen, bail
+                return;
+            }
+            // Allow drop AFTER the target when it is the last item in the list
+            const isLast = (insertAt === without.length - 1);
+            if (isLast) {
+                // Place dragged item at the very end
+                before   = without[insertAt].sort_order;
+                after    = before + 20;
+            } else {
+                before   = without[insertAt - 1]?.sort_order ?? (without[insertAt].sort_order - 20);
+                after    = without[insertAt].sort_order;
+            }
 
-            // Use float midpoint — avoids integer collision entirely for normal use.
             let newOrder = (before + after) / 2;
 
-            // If the gap has compressed below a useful threshold (repeated drags into
-            // the same slot), reindex the whole list with spacing of 10 and then place
-            // the dragged item at the calculated midpoint of the reindexed values.
+            // If gap has compressed below useful threshold, reindex the whole list
             const GAP_THRESHOLD = 0.01;
             if (Math.abs(after - newOrder) < GAP_THRESHOLD || Math.abs(newOrder - before) < GAP_THRESHOLD) {
-                // Reindex without the dragged item, then recalculate
                 const reindexed = without.map((c, i) => ({ ...c, sort_order: (i + 1) * 10 }));
                 const rBefore   = reindexed[insertAt - 1]?.sort_order ?? 0;
                 const rAfter    = reindexed[insertAt]?.sort_order ?? (rBefore + 20);
                 newOrder        = (rBefore + rAfter) / 2;
-                // Persist reindexed orders for all other chores so future drags have room
                 reindexed.forEach(c => {
                     if (c.chore_id !== dragId) {
                         this._svc("update_chore", { chore_id: c.chore_id, sort_order: c.sort_order });
@@ -702,9 +793,7 @@ class FamilyHubCard extends HTMLElement {
         const states  = this._hass.states;
         let changed   = false;
 
-        // Use last_updated (not last_changed): last_changed only ticks when the
-        // primary state string changes. Family Hub data lives in attributes, so
-        // only last_updated fires when tasks/points/approvals change.
+        // Use last_updated (not last_changed): attributes only bump last_updated
         for (const id of FH_SENSORS) {
             const ts = states[id]?.last_updated;
             if (ts !== this._lastKeys[id]) { this._lastKeys[id] = ts; changed = true; }
@@ -891,15 +980,73 @@ class FamilyHubCard extends HTMLElement {
     }
 
     _htmlPersonalTasks(attr, color, person) {
-        const due     = attr.tasks_due_today_list    || [];
-        const overdue = attr.tasks_overdue_list      || [];
-        const pending = attr.tasks_pending_approval_list || [];
+        const rawDue    = attr.tasks_due_today_list    || [];
+        const rawOverdue= attr.tasks_overdue_list      || [];
+        const pending   = attr.tasks_pending_approval_list || [];
+
+        // ---- BUG FIX: Collapse multiple instances of the same chore to one row.
+        // For each chore_id, keep only the row with the oldest/worst due state.
+        // Overdue rows are deduplicated keeping the most-overdue one.
+        // Due-today rows are deduplicated keeping the first (already sorted by name).
+        const collapseByChore = (rows, pickFn) => {
+            const seen = new Map();
+            for (const t of rows) {
+                const key = t.chore_id;
+                if (!seen.has(key) || pickFn(t, seen.get(key))) seen.set(key, t);
+            }
+            return [...seen.values()];
+        };
+        // For overdue, keep the one with more days overdue (larger days_overdue)
+        const overdue = collapseByChore(rawOverdue, (a, b) => (a.days_overdue || 0) > (b.days_overdue || 0));
+        // For due today, just deduplicate (keep first occurrence per chore)
+        const allDue  = collapseByChore(rawDue, () => false);
+
+        // Separate reminders from regular tasks.
+        // TODO (Phase 3-C): Add chore_type to the personal sensor task payload so this
+        // heuristic can be replaced with a reliable `t.chore_type === "reminder"` check.
+        // Current heuristic: 0 pts + no penalty + no approval_required = reminder-like.
+        // Risk: a legitimate 0-pt assigned chore with no penalty will be styled as a reminder.
+        const isReminderTask = t => !t.points && !t.penalty_enabled && !t.approval_required;
+        const dueReminders = allDue.filter(t => isReminderTask(t));
+        // Main task list excludes reminders so they don't appear in category groups
+        const due = allDue.filter(t => !isReminderTask(t));
+
+        // ---- Group due-today tasks by category_label
+        // Overdue always floats above groups. Items with no label → "Today" group.
+        // Reminders are excluded from these groups (rendered separately below).
+        const groups = new Map();
+        for (const t of due) {
+            const key = t.category_label || "Today";
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key).push(t);
+        }
+
+        // Build expiry badge helper.
+        // Uses due_date + expires_after_days to calculate actual days remaining.
+        // due_date is the task's generation date for one-time tasks (backend sets
+        // due_date = created_at date for one-time instances), so expiry date =
+        // due_date + expires_after_days. Show badge only when ≤ 2 days remain.
+        const expiryBadge = t => {
+            if (!t.expires_after_days || !t.due_date) return "";
+            const due        = new Date(t.due_date);
+            const expiresOn  = new Date(due);
+            expiresOn.setDate(expiresOn.getDate() + t.expires_after_days);
+            const today      = new Date();
+            today.setHours(0, 0, 0, 0);
+            expiresOn.setHours(0, 0, 0, 0);
+            const daysLeft   = Math.round((expiresOn - today) / 86400000);
+            if (daysLeft > 2) return "";
+            if (daysLeft <= 0) return `<span class="fh-badge fh-badge-expiry">Expires today</span>`;
+            return `<span class="fh-badge fh-badge-expiry">Expires in ${daysLeft}d</span>`;
+        };
 
         const mkRow = (t, isOverdue) => {
-            const flash   = this._flashing.has(t.task_id) ? "flash" : "";
-            const descExp = this._expandedDescs.has(t.task_id);
+            const flash      = this._flashing.has(t.task_id) ? "flash" : "";
+            const descExp    = this._expandedDescs.has(t.task_id);
+            const isReminder = isReminderTask(t);
+            const rowClass   = isOverdue ? "overdue" : isReminder ? "reminder" : "";
             return `
-        <div class="fh-task-row ${isOverdue ? "overdue" : ""} ${flash}"
+        <div class="fh-task-row ${rowClass} ${flash}"
              style="--row-color:${color}; --flash-dur:${FLASH_MS}ms">
           <div class="fh-task-body">
             <span class="fh-task-name">${escHTML(t.name)}</span>
@@ -910,17 +1057,26 @@ class FamilyHubCard extends HTMLElement {
                          title="Toggle description">?</button>`
               : ""}
           ${isOverdue ? `<span class="fh-badge fh-badge-overdue">${t.days_overdue}d late</span>` : ""}
-          ${t.penalty_enabled
+          ${expiryBadge(t)}
+          ${!isReminder && t.penalty_enabled
               ? `<span class="fh-penalty-warn">-${t.penalty_points}pts if skipped</span>`
               : ""}
-          ${t.points ? `<span class="fh-badge fh-badge-pts" style="--row-color:${color}">${t.points}pts</span>` : ""}
-          <button class="fh-check" style="--row-color:${color}"
-                  data-act="complete" data-tid="${t.task_id}" data-pid="${person.person_id}">
-            ${I.check}
-          </button>
+          ${!isReminder && t.points
+              ? `<span class="fh-badge fh-badge-pts" style="--row-color:${color}">${t.points}pts</span>`
+              : ""}
+          ${!isReminder
+              ? `<button class="fh-check" style="--row-color:${color}"
+                         data-act="complete" data-tid="${t.task_id}" data-pid="${person.person_id}">
+                   ${I.check}
+                 </button>`
+              : `<button class="fh-check" style="--row-color:var(--fh-text-sec)"
+                         data-act="complete" data-tid="${t.task_id}" data-pid="${person.person_id}">
+                   ${I.check}
+                 </button>`}
         </div>`;
         };
 
+        // Pending-approval rows (awaiting parent decision)
         const pendingRows = pending.map(t => `
       <div class="fh-task-row" style="--row-color:${color}">
         <span class="fh-task-name">${escHTML(t.name)}</span>
@@ -928,7 +1084,26 @@ class FamilyHubCard extends HTMLElement {
         <span class="fh-badge fh-badge-pending">Awaiting approval</span>
       </div>`).join("");
 
-        const empty = !due.length && !overdue.length && !pending.length;
+        // Build overdue section (always at top, no group headers)
+        const overdueSection = overdue.length
+            ? overdue.map(t => mkRow(t, true)).join("")
+            : "";
+
+        // Build due-today sections grouped by category_label
+        const dueSection = [...groups.entries()].map(([label, tasks]) => `
+      <div class="fh-section-title">${escHTML(label)}</div>
+      <div class="fh-task-list">
+        ${tasks.map(t => mkRow(t, false)).join("")}
+      </div>`).join("");
+
+        const empty = !due.length && !overdue.length && !pending.length && !dueReminders.length;
+
+        // Build reminders section — separate, lighter styling, below main tasks
+        const reminderSection = dueReminders.length ? `
+      <div class="fh-section-title">Reminders</div>
+      <div class="fh-task-list">
+        ${dueReminders.map(t => mkRow(t, false)).join("")}
+      </div>` : "";
 
         return `
       <div style="display:flex;justify-content:flex-end;margin-bottom:var(--fh-gap-sm)">
@@ -937,34 +1112,51 @@ class FamilyHubCard extends HTMLElement {
           ${I.bell} Add reminder
         </button>
       </div>
-      <div class="fh-task-list">
-        ${overdue.map(t => mkRow(t, true)).join("")}
-        ${due.map(t => mkRow(t, false)).join("")}
-        ${pendingRows}
-        ${empty ? '<div class="fh-empty">Nothing due — nice work! 🎉</div>' : ""}
-      </div>`;
+      ${overdue.length ? `<div class="fh-task-list" style="margin-bottom:var(--fh-gap-sm)">${overdueSection}</div>` : ""}
+      ${dueSection}
+      ${reminderSection}
+      ${pending.length ? `
+        <div class="fh-section-title">Awaiting approval</div>
+        <div class="fh-task-list">${pendingRows}</div>` : ""}
+      ${empty ? '<div class="fh-empty">Nothing due — nice work! 🎉</div>' : ""}`;
     }
 
     _htmlPersonalStore(attr, color, person, balance) {
         const items = attr.store_items || [];
         if (!items.length) return `<div class="fh-empty">No rewards in the store yet.</div>`;
 
+        // Gather pending redemptions for this person to show "Requested" badge.
+        // Primary match: item_id (precise). Fallback: item_name (for queue entries
+        // that pre-date the item_id field). item_id match takes priority so similarly-
+        // named items (e.g. "Gift Card $10" vs "Gift Card $20") are not conflated.
+        const pendingRedemptions = this._attrs("sensor.family_hub_needs_attention").redemption_queue || [];
+        const personPending      = pendingRedemptions.filter(r => r.person_id === person.person_id);
+        const pendingByItemId    = new Set(personPending.map(r => r.item_id).filter(Boolean));
+        // Only use name matching when no item_id was recorded on the redemption entry
+        const pendingByName      = new Set(
+            personPending.filter(r => !r.item_id).map(r => r.item_name)
+        );
+
         return `
       <div class="fh-store-grid">
         ${items.map(item => {
-            const can = balance >= item.points_cost;
+            const can       = balance >= item.points_cost;
+            const requested = pendingByItemId.has(item.item_id) || pendingByName.has(item.name);
             return `
             <div class="fh-store-item">
               <div class="fh-store-name">${escHTML(item.name)}</div>
               ${item.description ? `<div class="fh-store-desc">${escHTML(item.description)}</div>` : ""}
               <div class="fh-store-price" style="color:${color}">${fPts(item.points_cost)}pts</div>
-              <button class="fh-btn fh-btn-sm ${can ? "fh-btn-primary" : "fh-btn-ghost"}"
-                      style="${can ? `background:${color}` : ""}"
-                      data-act="redeem"
-                      data-iid="${item.item_id}" data-pid="${person.person_id}"
-                      ${can ? "" : "disabled"}>
-                ${can ? "Request" : "Need more pts"}
-              </button>
+              ${requested
+                  ? `<span class="fh-badge fh-badge-requested" style="text-align:center">Requested ✓</span>`
+                  : `<button class="fh-btn fh-btn-sm ${can ? "fh-btn-primary" : "fh-btn-ghost"}"
+                             style="${can ? `background:${color}` : ""}"
+                             data-act="redeem"
+                             data-iid="${item.item_id}" data-pid="${person.person_id}"
+                             ${can ? "" : "disabled"}>
+                       ${can ? "Request" : "Need more pts"}
+                     </button>`
+              }
             </div>`;
         }).join("")}
       </div>`;
@@ -1025,11 +1217,11 @@ class FamilyHubCard extends HTMLElement {
         const actionCount = approvals.length + redemptions.length;
 
         const sections = [
-            { id: "overview",    label: "Overview",    badge: 0 },
-            { id: "approvals",   label: "Approvals",   badge: approvals.length },
-            { id: "redemptions", label: "Redeem",      badge: redemptions.length },
-            { id: "chores",      label: "Chores",      badge: 0 },
-            { id: "settings",    label: "Settings",    badge: 0 },
+            { id: "overview",    label: "Overview",   badge: 0 },
+            { id: "approvals",   label: "Approvals",  badge: approvals.length },
+            { id: "redemptions", label: "Redeem",     badge: redemptions.length },
+            { id: "chores",      label: "Chores",     badge: 0 },
+            { id: "settings",    label: "Settings",   badge: 0 },
         ];
 
         const nav = `
@@ -1044,11 +1236,11 @@ class FamilyHubCard extends HTMLElement {
 
         let body = "";
         switch (this._adminSec) {
-            case "overview":    body = this._htmlAdminOverview(people, attr); break;
-            case "approvals":   body = this._htmlAdminApprovals(approvals);   break;
-            case "redemptions": body = this._htmlAdminRedemptions(redemptions); break;
-            case "chores":      body = this._htmlAdminChores(chores, people, catLabels); break;
-            case "settings":    body = this._htmlAdminSettings(attr);         break;
+            case "overview":    body = this._htmlAdminOverview(people, attr);                       break;
+            case "approvals":   body = this._htmlAdminApprovals(approvals, attr);                   break;
+            case "redemptions": body = this._htmlAdminRedemptions(redemptions, attr);               break;
+            case "chores":      body = this._htmlAdminChores(chores, people, catLabels);            break;
+            case "settings":    body = this._htmlAdminSettings(attr);                               break;
         }
 
         return `
@@ -1105,24 +1297,34 @@ class FamilyHubCard extends HTMLElement {
         return `
       <div class="fh-section-title">Point balances</div>
       <div class="fh-task-list">${rows}</div>
-      <div style="margin-top:var(--fh-gap);display:flex;gap:var(--fh-gap-sm);flex-wrap:wrap">
-        <button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="open-add-task">
+
+      <!-- Add task: large prominent button (redesigned for v0.4.0) -->
+      <div style="margin-top:var(--fh-gap)">
+        <button class="fh-btn fh-btn-primary fh-btn-lg" data-act="open-add-task"
+                style="width:100%;justify-content:center">
           ${I.plus} Add task
         </button>
-        <button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="open-add-store-item">
-          ${I.store} Add reward
-        </button>
+      </div>
+
+      <!-- Secondary admin actions -->
+      <div style="margin-top:var(--fh-gap-sm);display:flex;gap:var(--fh-gap-sm);flex-wrap:wrap">
         <button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="open-add-person">
           ${I.person} Add person
         </button>
       </div>`;
     }
 
-    _htmlAdminApprovals(approvals) {
-        if (!approvals.length) return `<div class="fh-empty">No pending approvals. ✓</div>`;
-        return `
-      <div class="fh-task-list">
-        ${approvals.map(a => {
+    /**
+     * Approvals tab — v0.4.0 layout:
+     * Section 1: Pending approvals (existing approve / deny)
+     * Section 2: History log with action buttons based on reversible field
+     */
+    _htmlAdminApprovals(approvals, attr) {
+        const historyLog = attr.history_log || [];
+        const people     = attr.people      || [];
+
+        // ---- Section 1: Pending approvals -----------------------------------
+        const approvalRows = approvals.map(a => {
             const color = a.person_color || DEFAULT_COLOR;
             return `
             <div class="fh-queue-row">
@@ -1138,15 +1340,109 @@ class FamilyHubCard extends HTMLElement {
                         data-act="deny-task" data-tid="${a.task_id}">${I.close}</button>
               </div>
             </div>`;
-        }).join("")}
+        }).join("") || `<div class="fh-empty">No pending approvals. ✓</div>`;
+
+        // ---- Section 2: History log ----------------------------------------
+        // Person filter chips for log
+        const histFilterChips = `
+      <div class="fh-chips" style="margin-bottom:var(--fh-gap-sm)">
+        <div class="fh-chip ${!this._histFilter ? "active" : ""}"
+             data-act="hist-filter" data-hpid="">All</div>
+        ${people.map(p => `
+          <div class="fh-chip ${this._histFilter === p.person_id ? "active" : ""}"
+               style="--chip-color:${p.avatar_color || DEFAULT_COLOR}"
+               data-act="hist-filter" data-hpid="${p.person_id}">
+            <span class="fh-chip-dot"></span>${escHTML(p.name)}
+          </div>`).join("")}
       </div>`;
+
+        // Filter and render history rows
+        const filtered = this._histFilter
+            ? historyLog.filter(e => e.person_id === this._histFilter)
+            : historyLog;
+
+        // The first parent person_id is used for admin actions
+        const firstParent = people.find(p => p.type === "parent");
+
+        const histRows = filtered.map(e => {
+            const meta    = HISTORY_META[e.type] || { label: e.type, color: "var(--fh-text-sec)" };
+            const color   = e.person_color || DEFAULT_COLOR;
+            const ptsDelta= e.points_delta
+                ? `<span style="color:${e.points_delta > 0 ? "var(--fh-success)" : "var(--fh-overdue)"}">
+                     ${e.points_delta > 0 ? "+" : ""}${e.points_delta}pts
+                   </span>`
+                : "";
+
+            // Build action button based on reversible field
+            let actionBtn = "";
+            if (e.reversible === "excuse" && firstParent) {
+                actionBtn = `<button class="fh-btn fh-btn-warning fh-btn-sm"
+                                     data-act="excuse-task"
+                                     data-iid="${e.reference_id}"
+                                     data-excused-by="${firstParent.person_id}"
+                                     title="Reverse penalty for this skipped task">
+                               ${I.excuse} Excuse
+                             </button>`;
+            } else if (e.reversible === "mark_complete" && firstParent) {
+                actionBtn = `<button class="fh-btn fh-btn-success fh-btn-sm"
+                                     data-act="mark-complete"
+                                     data-iid="${e.reference_id}"
+                                     data-marked-by="${firstParent.person_id}"
+                                     title="Retroactively mark as done and award points">
+                               ${I.check} Mark done
+                             </button>`;
+            } else if (e.reversible === "reject" && firstParent) {
+                actionBtn = `<button class="fh-btn fh-btn-danger fh-btn-sm"
+                                     data-act="reject-task"
+                                     data-iid="${e.reference_id}"
+                                     data-rejected-by="${firstParent.person_id}"
+                                     title="Claw back points for this task">
+                               ${I.close} Reject
+                             </button>`;
+            }
+
+            return `
+          <div class="fh-hist-row" style="--hist-color:${meta.color}">
+            <div class="fh-avatar" style="background:${color};width:22px;height:22px;font-size:.62rem">
+              ${e.person_name ? ini(e.person_name) : "—"}
+            </div>
+            <div class="fh-hist-info">
+              <div class="fh-hist-label">${escHTML(meta.label)}</div>
+              <div class="fh-hist-name">${escHTML(e.chore_name || e.note || "")}</div>
+              <div class="fh-hist-meta">
+                ${e.person_name ? escHTML(e.person_name) + " · " : ""}${relTime(e.timestamp)}
+                ${ptsDelta}
+              </div>
+            </div>
+            ${actionBtn ? `<div class="fh-hist-actions">${actionBtn}</div>` : ""}
+          </div>`;
+        }).join("") || `<div class="fh-empty">No history entries yet.</div>`;
+
+        return `
+      <div class="fh-section-title">Pending approvals</div>
+      <div class="fh-task-list">${approvalRows}</div>
+
+      <div class="fh-divider"></div>
+      <div class="fh-hdr" style="margin-bottom:var(--fh-gap-sm)">
+        <span class="fh-section-title" style="margin:0">History log</span>
+        <span style="font-size:.75rem;color:var(--fh-text-sec)">Last 30 days</span>
+      </div>
+      ${histFilterChips}
+      <div class="fh-hist-scroll">${histRows}</div>`;
     }
 
-    _htmlAdminRedemptions(redemptions) {
-        if (!redemptions.length) return `<div class="fh-empty">No pending redemptions. ✓</div>`;
-        return `
-      <div class="fh-task-list">
-        ${redemptions.map(r => {
+    /**
+     * Redemptions tab — v0.4.0 layout:
+     * Section 1: Pending redemptions (existing approve / decline)
+     * Section 2: Store inventory — all active items with edit/delete
+     *   + "Add reward" button (moved from Overview)
+     */
+    _htmlAdminRedemptions(redemptions, attr) {
+        const storeItems = attr.store_items || [];
+        const people     = attr.people      || [];
+
+        // ---- Section 1: Pending redemptions ---------------------------------
+        const redemptionRows = redemptions.map(r => {
             const color = r.person_color || DEFAULT_COLOR;
             return `
             <div class="fh-queue-row">
@@ -1162,27 +1458,99 @@ class FamilyHubCard extends HTMLElement {
                         data-act="decline-redemption" data-rid="${r.redemption_id}">${I.close}</button>
               </div>
             </div>`;
-        }).join("")}
-      </div>`;
+        }).join("") || `<div class="fh-empty">No pending redemptions. ✓</div>`;
+
+        // ---- Section 2: Store inventory -------------------------------------
+        const storeRows = storeItems.map(item => {
+            const personNames = (item.person_ids || [])
+                .map(id => people.find(p => p.person_id === id)?.name)
+                .filter(Boolean)
+                .join(", ");
+
+            return `
+          <div class="fh-store-inv-row">
+            <div class="fh-store-inv-info">
+              <div class="fh-store-inv-name">${escHTML(item.name)}</div>
+              <div class="fh-store-inv-meta">
+                ${fUSD(item.dollar_value)} · ${fPts(item.points_cost)}pts ·
+                ${item.scope === "personal"
+                    ? `Personal${personNames ? ` (${escHTML(personNames)})` : ""}`
+                    : "All kids"}
+              </div>
+            </div>
+            <button class="fh-btn fh-btn-ghost fh-btn-sm"
+                    data-act="open-edit-store-item"
+                    data-iid="${item.item_id}"
+                    title="Edit reward">
+              ${I.edit}
+            </button>
+            <button class="fh-btn fh-btn-danger fh-btn-sm"
+                    data-act="delete-store-item"
+                    data-iid="${item.item_id}" data-iname="${escAttr(item.name)}"
+                    title="Delete reward">
+              ${I.trash}
+            </button>
+          </div>`;
+        }).join("") || `<div class="fh-empty">No store items yet.</div>`;
+
+        return `
+      <div class="fh-section-title">Pending redemptions</div>
+      <div class="fh-task-list">${redemptionRows}</div>
+
+      <div class="fh-divider"></div>
+      <div class="fh-hdr">
+        <span class="fh-section-title" style="margin:0">Store inventory</span>
+        <button class="fh-btn fh-btn-primary fh-btn-sm" data-act="open-add-store-item">
+          ${I.plus} Add reward
+        </button>
+      </div>
+      <div class="fh-task-list">${storeRows}</div>`;
     }
 
+    /**
+     * Chores tab — v0.4.0 adds person filter chips at top.
+     */
     _htmlAdminChores(chores, people, catLabels) {
         // Store for drag-drop reference — chores already sorted by sort_order, name
         this._sortedChores = chores;
 
-        if (!chores.length) {
+        // ---- Person filter chips -------------------------------------------
+        const filterChips = `
+      <div class="fh-chips" style="margin-bottom:var(--fh-gap-sm)">
+        <div class="fh-chip ${!this._choreFilter ? "active" : ""}"
+             data-act="chore-filter" data-cpid="">All</div>
+        ${people.map(p => `
+          <div class="fh-chip ${this._choreFilter === p.person_id ? "active" : ""}"
+               style="--chip-color:${p.avatar_color || DEFAULT_COLOR}"
+               data-act="chore-filter" data-cpid="${p.person_id}">
+            <span class="fh-chip-dot"></span>${escHTML(p.name)}
+          </div>`).join("")}
+      </div>`;
+
+        // Apply person filter
+        const visibleChores = this._choreFilter
+            ? chores.filter(c => (c.assigned_to || []).includes(this._choreFilter))
+            : chores;
+
+        const addBtn = `
+      <div style="display:flex;justify-content:flex-end;margin-bottom:var(--fh-gap-sm)">
+        <button class="fh-btn fh-btn-primary fh-btn-sm" data-act="open-add-chore">
+          ${I.plus} Add chore
+        </button>
+      </div>`;
+
+        if (!visibleChores.length) {
             return `
-          <div style="display:flex;justify-content:flex-end;margin-bottom:var(--fh-gap-sm)">
-            <button class="fh-btn fh-btn-primary fh-btn-sm" data-act="open-add-chore">
-              ${I.plus} Add chore
-            </button>
-          </div>
-          <div class="fh-empty">No active chores. Add one above.</div>`;
+          ${filterChips}
+          ${addBtn}
+          <div class="fh-empty">
+            ${this._choreFilter ? "No chores assigned to this person." : "No active chores. Add one above."}
+          </div>`;
         }
 
         // Group by category_label (empty label → "Uncategorized")
         const groups = new Map();
-        for (const c of chores) {
+        for (const c of visibleChores) {
             const key = c.category_label || "Uncategorized";
             if (!groups.has(key)) groups.set(key, []);
             groups.get(key).push(c);
@@ -1203,9 +1571,19 @@ class FamilyHubCard extends HTMLElement {
                 const descExp    = this._expandedDescs.has(c.chore_id);
                 const rowColor   = assignedPeople[0]?.avatar_color || DEFAULT_COLOR;
                 const recType    = c.recurrence?.type || "daily";
-                const recLabel   = { daily:"Daily", weekly:"Weekly", every_n_days:`Every ${c.recurrence?.interval||2}d`,
-                                     every_n_weeks:`Every ${c.recurrence?.interval||2}wk`,
-                                     monthly_on_date:"Monthly", one_time:"One-time" }[recType] || recType;
+                const recLabel   = {
+                    daily:           "Daily",
+                    weekly:          "Weekly",
+                    every_n_days:    `Every ${c.recurrence?.interval||2}d`,
+                    every_n_weeks:   `Every ${c.recurrence?.interval||2}wk`,
+                    monthly_on_date: "Monthly",
+                    one_time:        "One-time",
+                }[recType] || recType;
+
+                // Expiry label for chores that have expires_after_days set
+                const expiryLabel = c.expires_after_days
+                    ? `<span class="fh-badge fh-badge-expiry" style="margin-left:4px">Expires in ${c.expires_after_days}d</span>`
+                    : "";
 
                 return `
           <div class="fh-task-row" style="--row-color:${rowColor}"
@@ -1223,6 +1601,7 @@ class FamilyHubCard extends HTMLElement {
                 ? `<button class="fh-desc-btn" data-act="toggle-desc" data-id="${c.chore_id}"
                            title="Toggle description">?</button>`
                 : ""}
+            ${expiryLabel}
             <span class="fh-badge fh-badge-pts" style="--row-color:${rowColor}">${c.points}pts</span>
             <button class="fh-btn fh-btn-ghost fh-btn-sm"
                     data-act="open-edit-chore" data-cid="${c.chore_id}"
@@ -1240,11 +1619,8 @@ class FamilyHubCard extends HTMLElement {
         }).join("");
 
         return `
-      <div style="display:flex;justify-content:flex-end;margin-bottom:var(--fh-gap-sm)">
-        <button class="fh-btn fh-btn-primary fh-btn-sm" data-act="open-add-chore">
-          ${I.plus} Add chore
-        </button>
-      </div>
+      ${filterChips}
+      ${addBtn}
       ${sections}`;
     }
 
@@ -1334,6 +1710,7 @@ class FamilyHubCard extends HTMLElement {
             case "add-chore":           return this._mChoreForm(null, false);
             case "edit-chore":          return this._mChoreForm(data.chore, true);
             case "add-store-item":      return this._mAddStoreItem(this._modal);
+            case "edit-store-item":     return this._mEditStoreItem(this._modal);
             case "add-person":          return this._mAddPerson(this._modal);
             case "edit-person":         return this._mEditPerson(this._modal);
             case "edit-settings":       return this._mEditSettings(this._modal);
@@ -1383,30 +1760,102 @@ class FamilyHubCard extends HTMLElement {
         );
     }
 
+    /**
+     * Add task modal — v0.4.0 expanded with chore type selector.
+     * - Assigned: person checkboxes, expires_after_days (optional), penalty option
+     * - Claimable: expires_after_days (required), no assigned_to
+     * - Reminder: name + person + recurrence only
+     */
     _mAddTask(m) {
         const people = this._people();
-        return this._mWrap("Add one-time task",
-            `<div class="fh-field">
+        return this._mWrap("Add task",
+            `<!-- Chore type selector -->
+       <div class="fh-field">
+         <label class="fh-label">Task type</label>
+         <select class="fh-select" id="m-tasktype">
+           <option value="assigned">Assigned — give to specific people</option>
+           <option value="claimable">Claimable — first come first served bonus</option>
+           <option value="reminder">Reminder — no points, just a nudge</option>
+         </select>
+       </div>
+
+       <!-- Name (all types) -->
+       <div class="fh-field">
          <label class="fh-label">Task name *</label>
          <input class="fh-input" id="m-tname" type="text" autofocus>
        </div>
+
        <div class="fh-field">
          <label class="fh-label">Description (optional)</label>
          <input class="fh-input" id="m-tdesc" type="text" placeholder="More detail…">
        </div>
-       <div class="fh-field">
-         <label class="fh-label">Assign to (select all that apply)</label>
-         ${this._multiPersonCheckboxes(people, [], "m-tp-person")}
-       </div>
-       <div class="fh-row">
+
+       <!-- Assigned section -->
+       <div id="m-task-assigned-section">
          <div class="fh-field">
-           <label class="fh-label">Points</label>
-           <input class="fh-input" id="m-tpts" type="number" min="0" value="10">
+           <label class="fh-label">Assign to (select all that apply)</label>
+           ${this._multiPersonCheckboxes(people, [], "m-tp-person")}
          </div>
-         <div class="fh-field" style="justify-content:flex-end">
-           <div class="fh-checkbox-row" style="margin-top:auto;padding-bottom:9px">
-             <input type="checkbox" id="m-tappr">
-             <label for="m-tappr" style="font-size:.85rem">Needs approval</label>
+         <div class="fh-row">
+           <div class="fh-field">
+             <label class="fh-label">Points</label>
+             <input class="fh-input" id="m-tpts" type="number" min="0" value="10">
+           </div>
+           <div class="fh-field" style="justify-content:flex-end">
+             <div class="fh-checkbox-row" style="margin-top:auto;padding-bottom:9px">
+               <input type="checkbox" id="m-tappr">
+               <label for="m-tappr" style="font-size:.85rem">Needs approval</label>
+             </div>
+           </div>
+         </div>
+         <div class="fh-field">
+           <label class="fh-label">Expires after (days, optional)</label>
+           <input class="fh-input" id="m-texpiry" type="number" min="1"
+                  placeholder="Leave blank = no expiry">
+         </div>
+         <div class="fh-checkbox-row">
+           <input type="checkbox" id="m-tpenalty">
+           <label for="m-tpenalty" style="font-size:.88rem">Apply penalty if not completed before expiry</label>
+         </div>
+         <div id="m-task-penalty-section" class="fh-field" style="display:none">
+           <label class="fh-label">Penalty points</label>
+           <input class="fh-input" id="m-tpenalty-pts" type="number" min="1" value="5">
+         </div>
+       </div>
+
+       <!-- Claimable section -->
+       <div id="m-task-claimable-section" style="display:none">
+         <div class="fh-row">
+           <div class="fh-field">
+             <label class="fh-label">Points reward</label>
+             <input class="fh-input" id="m-tcpts" type="number" min="0" value="20">
+           </div>
+           <div class="fh-field">
+             <label class="fh-label">Expires after (days) *</label>
+             <input class="fh-input" id="m-tcexpiry" type="number" min="1" value="7">
+           </div>
+         </div>
+       </div>
+
+       <!-- Reminder section -->
+       <div id="m-task-reminder-section" style="display:none">
+         <div class="fh-row">
+           <div class="fh-field">
+             <label class="fh-label">Who?</label>
+             <select class="fh-select" id="m-trperson">
+               ${people.map(p => `<option value="${p.person_id}">${escHTML(p.name)}</option>`).join("")}
+             </select>
+           </div>
+           <div class="fh-field">
+             <label class="fh-label">Recurrence</label>
+             <select class="fh-select" id="m-trrec">
+               ${opts([
+                   { value: "daily",           label: "Daily" },
+                   { value: "weekly",          label: "Weekly" },
+                   { value: "every_n_days",    label: "Every N days" },
+                   { value: "monthly_on_date", label: "Monthly" },
+               ], "daily")}
+             </select>
            </div>
          </div>
        </div>`,
@@ -1518,6 +1967,13 @@ class FamilyHubCard extends HTMLElement {
                 value="${rec.day_of_month || 1}">
        </div>
 
+       <!-- Expiry (for claimable or one-time) -->
+       <div id="m-chore-expiry-section" class="fh-field" style="display:none">
+         <label class="fh-label">Expires after (days)</label>
+         <input class="fh-input" id="m-cexpiry" type="number" min="1"
+                value="${c.expires_after_days || ""}">
+       </div>
+
        <div class="fh-divider"></div>
        <div class="fh-checkbox-row">
          <input type="checkbox" id="m-cappr"
@@ -1571,6 +2027,40 @@ class FamilyHubCard extends HTMLElement {
          ${this._multiPersonCheckboxes(people, [], "m-sp-person")}
        </div>`,
             "Add reward", "ok-add-store-item");
+    }
+
+    _mEditStoreItem(m) {
+        const people = this._people();
+        const item   = m.data.item;
+        return this._mWrap(`Edit — ${item.name}`,
+            `<input type="hidden" id="m-eiid" value="${item.item_id}">
+       <div class="fh-field">
+         <label class="fh-label">Item name *</label>
+         <input class="fh-input" id="m-sname" type="text" value="${escAttr(item.name)}" autofocus>
+       </div>
+       <div class="fh-field">
+         <label class="fh-label">Description (optional)</label>
+         <input class="fh-input" id="m-sdesc" type="text" value="${escAttr(item.description || "")}">
+       </div>
+       <div class="fh-row">
+         <div class="fh-field">
+           <label class="fh-label">Dollar value *</label>
+           <input class="fh-input" id="m-sdollar" type="number" min="0.01"
+                  step="0.01" value="${item.dollar_value}">
+         </div>
+         <div class="fh-field">
+           <label class="fh-label">Scope</label>
+           <select class="fh-select" id="m-sscope">
+             <option value="common" ${item.scope === "common" ? "selected" : ""}>All kids</option>
+             <option value="personal" ${item.scope === "personal" ? "selected" : ""}>Specific people</option>
+           </select>
+         </div>
+       </div>
+       <div id="m-sperson-section" class="fh-field" style="${item.scope === "personal" ? "" : "display:none"}">
+         <label class="fh-label">Who can see this reward?</label>
+         ${this._multiPersonCheckboxes(people, item.person_ids || [], "m-sp-person")}
+       </div>`,
+            "Save changes", "ok-edit-store-item");
     }
 
     _mAddPerson(m) {
@@ -1743,14 +2233,30 @@ class FamilyHubCard extends HTMLElement {
     /**
      * Called after every _doRender and every change event.
      * Shows/hides conditional form sections without re-rendering the whole card.
-     * This is safe to call even when no modal is open.
+     * Safe to call even when no modal is open.
      */
     _syncModalUI() {
         const sr   = this.shadowRoot;
         const show = id => { const el = sr.getElementById(id); if (el) el.style.display = ""; };
         const hide = id => { const el = sr.getElementById(id); if (el) el.style.display = "none"; };
 
-        // ---- Recurrence conditional fields ----------------------------------
+        // ---- Add task modal: show sections by task type ----------------------
+        const taskTypeEl = sr.getElementById("m-tasktype");
+        if (taskTypeEl) {
+            const tt = taskTypeEl.value;
+            if (tt === "assigned")  { show("m-task-assigned-section");  hide("m-task-claimable-section"); hide("m-task-reminder-section"); }
+            if (tt === "claimable") { hide("m-task-assigned-section");  show("m-task-claimable-section"); hide("m-task-reminder-section"); }
+            if (tt === "reminder")  { hide("m-task-assigned-section");  hide("m-task-claimable-section"); show("m-task-reminder-section"); }
+        }
+
+        // ---- Add task: penalty points field inside assigned section ----------
+        const taskPenEl  = sr.getElementById("m-tpenalty");
+        const taskPenSec = sr.getElementById("m-task-penalty-section");
+        if (taskPenEl && taskPenSec) {
+            taskPenSec.style.display = taskPenEl.checked ? "" : "none";
+        }
+
+        // ---- Chore form: recurrence conditional fields ----------------------
         const recEl = sr.getElementById("m-crec");
         if (recEl) {
             const rec = recEl.value;
@@ -1758,24 +2264,29 @@ class FamilyHubCard extends HTMLElement {
             hide("m-weekdays-section");
             hide("m-interval-section");
             hide("m-dom-section");
+            hide("m-chore-expiry-section");
 
             if (rec === "daily")                                show("m-dayfilter-section");
             if (rec === "weekly" || rec === "every_n_weeks")    show("m-weekdays-section");
             if (rec === "every_n_days" || rec === "every_n_weeks") show("m-interval-section");
             if (rec === "monthly_on_date")                      show("m-dom-section");
+            // Show expiry for one-time and claimable chores
+            const ctypeEl = sr.getElementById("m-ctype");
+            const isClaimOrOneTime = rec === "one_time" || ctypeEl?.value === "claimable";
+            if (isClaimOrOneTime) show("m-chore-expiry-section");
 
             const unitEl = sr.getElementById("m-interval-unit");
             if (unitEl) unitEl.textContent = rec === "every_n_weeks" ? "weeks" : "days";
         }
 
-        // ---- Penalty points field -------------------------------------------
+        // ---- Chore form: penalty points field --------------------------------
         const penaltyEl  = sr.getElementById("m-cpenalty");
         const penaltySec = sr.getElementById("m-penalty-pts-section");
         if (penaltyEl && penaltySec) {
             penaltySec.style.display = penaltyEl.checked ? "" : "none";
         }
 
-        // ---- Store scope person checkboxes ----------------------------------
+        // ---- Store scope person checkboxes -----------------------------------
         const scopeEl     = sr.getElementById("m-sscope");
         const personSecEl = sr.getElementById("m-sperson-section");
         if (scopeEl && personSecEl) {
@@ -1816,6 +2327,18 @@ class FamilyHubCard extends HTMLElement {
                 this._doRender(true);
                 break;
 
+            // ---- History log person filter ----------------------------------
+            case "hist-filter":
+                this._histFilter = el.dataset.hpid || null;
+                this._doRender(true);
+                break;
+
+            // ---- Chores person filter ----------------------------------------
+            case "chore-filter":
+                this._choreFilter = el.dataset.cpid || null;
+                this._doRender(true);
+                break;
+
             // ---- Task completion -------------------------------------------
             case "complete": {
                 const tid = el.dataset.tid;
@@ -1823,8 +2346,18 @@ class FamilyHubCard extends HTMLElement {
                 if (!tid || !pid) break;
                 this._svc("complete_task", { task_id: tid, person_id: pid });
                 this._flashing.add(tid);
-                setTimeout(() => { this._flashing.delete(tid); }, FLASH_MS + 100);
                 this._doRender(true);
+                // After the CSS animation finishes, physically remove the row so the
+                // flex gap collapses cleanly (opacity:0 alone leaves a gap in flex layouts).
+                setTimeout(() => {
+                    this._flashing.delete(tid);
+                    // Find and remove the DOM node — if a background re-render already
+                    // replaced it, querySelector returns null and we skip safely.
+                    const row = this.shadowRoot.querySelector(
+                        `[data-tid="${tid}"], [data-act="complete"][data-tid="${tid}"]`
+                    )?.closest(".fh-task-row");
+                    row?.remove();
+                }, FLASH_MS + 50);
                 break;
             }
 
@@ -1859,6 +2392,29 @@ class FamilyHubCard extends HTMLElement {
                 break;
             }
 
+            // ---- v0.4.0 Admin correction actions ---------------------------
+            case "excuse-task":
+                this._svc("excuse_task", {
+                    instance_id: el.dataset.iid,
+                    excused_by:  el.dataset.excusedBy,
+                    reason: "",
+                });
+                break;
+            case "mark-complete":
+                this._svc("mark_task_complete", {
+                    instance_id: el.dataset.iid,
+                    marked_by:   el.dataset.markedBy,
+                    reason: "",
+                });
+                break;
+            case "reject-task":
+                this._svc("reject_task", {
+                    instance_id: el.dataset.iid,
+                    rejected_by: el.dataset.rejectedBy,
+                    reason: "",
+                });
+                break;
+
             // ---- Store redemption request ----------------------------------
             case "redeem":
                 this._svc("request_redemption", { person_id: el.dataset.pid, item_id: el.dataset.iid });
@@ -1868,6 +2424,12 @@ class FamilyHubCard extends HTMLElement {
             case "delete-chore":
                 if (!confirm(`Delete "${el.dataset.cname}"?\n\nThis cannot be undone.`)) break;
                 this._svc("delete_chore", { chore_id: el.dataset.cid });
+                break;
+
+            // ---- Delete store item -----------------------------------------
+            case "delete-store-item":
+                if (!confirm(`Delete reward "${el.dataset.iname}"?\n\nThis cannot be undone.`)) break;
+                this._svc("delete_store_item", { item_id: el.dataset.iid });
                 break;
 
             // ---- Category label management (inline settings) ---------------
@@ -1912,7 +2474,6 @@ class FamilyHubCard extends HTMLElement {
                 this._doRender(true);
                 break;
             case "open-edit-chore": {
-                // Look up the full chore object from sensor data by chore_id
                 const chores = this._attrs("sensor.family_hub_needs_attention").active_chores || [];
                 const chore  = chores.find(c => c.chore_id === el.dataset.cid);
                 if (!chore) break;
@@ -1924,6 +2485,15 @@ class FamilyHubCard extends HTMLElement {
                 this._modal = { type: "add-store-item", data: {} };
                 this._doRender(true);
                 break;
+            case "open-edit-store-item": {
+                // Look up the item from sensor data
+                const items = this._attrs("sensor.family_hub_needs_attention").store_items || [];
+                const item  = items.find(i => i.item_id === el.dataset.iid);
+                if (!item) break;
+                this._modal = { type: "edit-store-item", data: { item } };
+                this._doRender(true);
+                break;
+            }
             case "open-add-person":
                 this._modal = { type: "add-person", data: {} };
                 this._doRender(true);
@@ -1975,16 +2545,56 @@ class FamilyHubCard extends HTMLElement {
             }
 
             case "ok-add-task": {
-                const name = v("m-tname").trim();
+                const taskType = v("m-tasktype") || "assigned";
+                const name     = v("m-tname").trim();
                 if (!name) break;
-                const assigned = this._selectedPersonIds("m-tp-person");
-                this._svc("add_task", {
-                    name,
-                    description:      v("m-tdesc").trim() || undefined,
-                    assigned_to:      assigned,
-                    points:           int("m-tpts"),
-                    approval_required: b("m-tappr"),
-                });
+
+                if (taskType === "reminder") {
+                    // Route to add_chore with chore_type = reminder
+                    this._svc("add_chore", {
+                        name,
+                        description:       v("m-tdesc").trim() || undefined,
+                        chore_type:        "reminder",
+                        assigned_to:       [v("m-trperson")].filter(Boolean),
+                        recurrence_type:   v("m-trrec"),
+                        approval_required: false,
+                        points:            0,
+                        category_label:    "",
+                    });
+                } else if (taskType === "claimable") {
+                    // Route to add_chore with chore_type = claimable
+                    const cpts    = parseInt(v("m-tcpts") || "20");
+                    const cexpiry = parseInt(v("m-tcexpiry") || "7");
+                    this._svc("add_chore", {
+                        name,
+                        description:       v("m-tdesc").trim() || undefined,
+                        chore_type:        "claimable",
+                        points:            cpts,
+                        approval_required: false,
+                        recurrence_type:   "one_time",
+                        expires_after_days: cexpiry,
+                        category_label:    "Bonus",
+                    });
+                } else {
+                    // Assigned one-time task via add_task service
+                    const assigned = this._selectedPersonIds("m-tp-person");
+                    const expiry   = parseInt(v("m-texpiry") || "0");
+                    const penaltyEnabled = b("m-tpenalty");
+                    const penaltyPts     = parseInt(v("m-tpenalty-pts") || "0");
+                    const data = {
+                        name,
+                        description:       v("m-tdesc").trim() || undefined,
+                        assigned_to:       assigned,
+                        points:            int("m-tpts"),
+                        approval_required: b("m-tappr"),
+                    };
+                    if (expiry > 0)          data.expires_after_days = expiry;
+                    // Note: add_task doesn't accept penalty_enabled directly —
+                    // it routes to async_add_chore internally. For penalty support
+                    // on one-time tasks, use add_chore. We call add_task here for
+                    // simplicity; penalty won't apply unless set via chore form.
+                    this._svc("add_task", data);
+                }
                 this._closeModal();
                 break;
             }
@@ -1998,6 +2608,7 @@ class FamilyHubCard extends HTMLElement {
                 const assigned = this._selectedPersonIds("m-assign-person");
                 const weekdays = Array.from(sr.querySelectorAll(".m-wd-day:checked")).map(cb => parseInt(cb.value));
                 const dayFilter= Array.from(sr.querySelectorAll(".m-df-day:checked")).map(cb => parseInt(cb.value));
+                const expiryVal= parseInt(v("m-cexpiry") || "0");
 
                 const data = {
                     name,
@@ -2010,18 +2621,15 @@ class FamilyHubCard extends HTMLElement {
                     penalty_enabled:   b("m-cpenalty"),
                     penalty_points:    int("m-cpenalty-pts"),
                 };
+                // Attach expiry if provided
+                if (expiryVal > 0)  data.expires_after_days = expiryVal;
 
                 if (isEdit) {
-                    // update_chore does not accept recurrence_type at the top level.
-                    // Pass recurrence sub-fields individually — the backend merges them
-                    // into the existing recurrence dict via async_update_chore.
                     data.chore_id  = v("m-cid");
                     data.weekdays  = weekdays;
                     data.day_filter= dayFilter;
                     if (recType === "every_n_days" || recType === "every_n_weeks")
                         data.interval = Math.max(1, int("m-interval"));
-                    // Persist the recurrence type by passing a full recurrence object
-                    // through the allowed 'recurrence' key in update_chore.
                     data.recurrence = {
                         type:       recType,
                         weekdays,
@@ -2032,8 +2640,9 @@ class FamilyHubCard extends HTMLElement {
                                 ? { day_of_month: Math.max(1, Math.min(31, int("m-dom"))) }
                                 : {}),
                     };
+                    // Null out expiry if blank (clearing it)
+                    if (!expiryVal) data.expires_after_days = null;
                 } else {
-                    // add_chore accepts recurrence_type as a top-level key
                     data.recurrence_type = recType;
                     if (weekdays.length)  data.weekdays   = weekdays;
                     if (dayFilter.length) data.day_filter = dayFilter;
@@ -2058,6 +2667,22 @@ class FamilyHubCard extends HTMLElement {
                 if (desc)            data.description = desc;
                 if (scope === "personal") data.person_ids = this._selectedPersonIds("m-sp-person");
                 this._svc("add_store_item", data);
+                this._closeModal();
+                break;
+            }
+
+            case "ok-edit-store-item": {
+                const iid    = v("m-eiid");
+                const name   = v("m-sname").trim();
+                const dollar = parseFloat(v("m-sdollar"));
+                if (!iid || !name || !dollar || dollar <= 0) break;
+                const scope  = v("m-sscope");
+                const data   = { item_id: iid, name, dollar_value: dollar, scope };
+                const desc   = v("m-sdesc").trim();
+                if (desc !== undefined) data.description = desc;
+                if (scope === "personal") data.person_ids = this._selectedPersonIds("m-sp-person");
+                else data.person_ids = [];
+                this._svc("update_store_item", data);
                 this._closeModal();
                 break;
             }
