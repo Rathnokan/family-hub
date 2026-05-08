@@ -6,8 +6,9 @@ A private, self-hosted family task management system:
   • Points, rewards store, and redemption approval flow
   • Home maintenance tracking
   • Personal reminders (per-person recurring reminders)
-  • One-time tasks for anyone
+  • One-time tasks with optional expiry and penalties
   • Four dashboard modes via the custom family-hub-card Lovelace card
+  • Admin correction services: excuse, reject, mark-complete, force tick
 
 All data lives in a single JSON file — no cloud, no third-party accounts.
 
