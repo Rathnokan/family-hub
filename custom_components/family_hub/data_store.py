@@ -18,6 +18,20 @@ v0.3.0 changes:
   - update_chore syncs pending task instances when assigned_to changes
   - settings.category_labels — user-defined display groups
   - Migration runs silently on load; data file version unchanged (backward compat)
+
+v0.4.0 changes:
+  - expires_after_days field on chores/tasks — one-time and claimable tasks auto-expire
+  - Daily tick now also processes expirations
+  - History trimming — entries older than HISTORY_RETENTION_DAYS (30 days) are pruned
+    on each daily tick to keep the data file size bounded
+  - STATUS_EXCUSED — skipped task with penalty reversed by parent (sick day etc.)
+  - STATUS_REJECTED — approved/self-reported task with points clawed back
+  - async_excuse_task — reverse penalty on a skipped instance
+  - async_reject_task — claw back points on an approved/self-reported instance
+  - async_mark_task_complete — retroactively mark a skipped instance as done, award points
+  - async_force_daily_tick — trigger tick immediately (admin/debug service)
+  - get_history_for_card — enriched history log for admin log UI
+  - History entries now include chore_name for easier log display
 """
 
 from __future__ import annotations
@@ -53,10 +67,14 @@ from .const import (
     HISTORY_REDEMPTION_APPROVED,
     HISTORY_REDEMPTION_DECLINED,
     HISTORY_REDEMPTION_REQUESTED,
+    HISTORY_RETENTION_DAYS,
     HISTORY_TASK_ADDED,
     HISTORY_TASK_APPROVED,
     HISTORY_TASK_COMPLETED,
     HISTORY_TASK_DENIED,
+    HISTORY_TASK_EXCUSED,
+    HISTORY_TASK_MARKED_COMPLETE,
+    HISTORY_TASK_REJECTED,
     HISTORY_TASK_SKIPPED,
     LEGACY_MAINTENANCE_CATEGORIES,
     RECURRENCE_DAILY,
@@ -73,8 +91,10 @@ from .const import (
     STATUS_APPROVED,
     STATUS_CLAIMED,
     STATUS_DENIED,
+    STATUS_EXCUSED,
     STATUS_PENDING,
     STATUS_PENDING_APPROVAL,
+    STATUS_REJECTED,
     STATUS_SELF_REPORTED,
     STATUS_SKIPPED,
     STORAGE_FILE,
@@ -123,7 +143,7 @@ def _empty_store(
 # ---------------------------------------------------------------------------
 
 def _migrate_chore(chore: dict) -> dict:
-    """Migrate a single chore record to v0.3.0 shape."""
+    """Migrate a single chore record to v0.3.0/v0.4.0 shape."""
     # assigned_to: string or None → list
     at = chore.get("assigned_to")
     if at is None:
@@ -161,6 +181,9 @@ def _migrate_chore(chore: dict) -> dict:
     # penalty fields
     chore.setdefault("penalty_enabled", False)
     chore.setdefault("penalty_points", 0)
+
+    # v0.4.0: expiry — None means no expiry (recurring chores never expire)
+    chore.setdefault("expires_after_days", None)
 
     # recurrence: weekday (int) → weekdays (list)
     rec = chore.setdefault("recurrence", {})
@@ -460,6 +483,7 @@ class FamilyHubDataStore:
         sort_order: int | None = None,
         penalty_enabled: bool = False,
         penalty_points: int = 0,
+        expires_after_days: int | None = None,
         icon: str | None = None,
         created_by: str | None = None,
     ) -> dict:
@@ -490,6 +514,7 @@ class FamilyHubDataStore:
             "approval_required": approval_required,
             "penalty_enabled": penalty_enabled,
             "penalty_points": penalty_points,
+            "expires_after_days": expires_after_days,  # None = no expiry
             "recurrence": rec,
             "active": True,
             "created_at": _now_iso(),
@@ -534,8 +559,8 @@ class FamilyHubDataStore:
         allowed = {
             "name", "description", "icon", "chore_type", "category_label",
             "sort_order", "assigned_to", "points", "approval_required",
-            "penalty_enabled", "penalty_points", "recurrence", "active",
-            "weekdays", "day_filter", "interval",
+            "penalty_enabled", "penalty_points", "expires_after_days",
+            "recurrence", "active", "weekdays", "day_filter", "interval",
         }
         old_assigned = list(chore.get("assigned_to", []))
 
@@ -593,11 +618,14 @@ class FamilyHubDataStore:
         points: int = 0,
         description: str = "",
         approval_required: bool = False,
+        expires_after_days: int | None = None,
         created_by: str | None = None,
     ) -> dict:
         """
         Create a one-time task. Does not appear in the chore management list.
         Uses chore_type=assigned + recurrence=one_time internally.
+        expires_after_days: if set, the pending instance is auto-skipped after
+        this many days (with penalty if penalty_enabled on the chore).
         """
         return await self.async_add_chore(
             name=name,
@@ -608,6 +636,7 @@ class FamilyHubDataStore:
             recurrence_type=RECURRENCE_ONE_TIME,
             description=description,
             category_label="",
+            expires_after_days=expires_after_days,
             created_by=created_by,
         )
 
@@ -682,6 +711,7 @@ class FamilyHubDataStore:
                 person_id=completed_by,
                 reference_id=instance_id,
                 note=f'"{chore["name"]}" marked complete, awaiting approval',
+                chore_name=chore["name"],
             )
         else:
             points = chore.get("points", 0)
@@ -694,6 +724,7 @@ class FamilyHubDataStore:
                 person_id=completed_by,
                 reference_id=instance_id,
                 note=f'"{chore["name"]}" self-reported complete',
+                chore_name=chore["name"],
             )
             if points > 0 and completed_by:
                 await self.async_award_points(
@@ -723,6 +754,7 @@ class FamilyHubDataStore:
             person_id=completed_by,
             reference_id=instance_id,
             note=f'"{chore["name"]}" approved',
+            chore_name=chore["name"],
         )
         if points > 0 and completed_by:
             await self.async_award_points(
@@ -749,6 +781,7 @@ class FamilyHubDataStore:
             person_id=instance.get("completed_by"),
             reference_id=instance_id,
             note=f'"{chore_name}" denied. {reason}'.strip(),
+            chore_name=chore_name,
         )
         await self.async_save()
         return instance
@@ -774,6 +807,10 @@ class FamilyHubDataStore:
         Generate task instances for all days since last tick.
         Replaces incomplete instances (with penalty deduction) instead of
         accumulating them. Persists last_tick_date in JSON settings.
+
+        v0.4.0 additions run after instance generation:
+          - Expire pending one-time/claimable instances past their deadline
+          - Trim history entries older than HISTORY_RETENTION_DAYS
         """
         today = date.today()
         CATCH_UP_LIMIT = 7
@@ -802,6 +839,12 @@ class FamilyHubDataStore:
         while current <= today:
             await self._async_tick_for_date(current)
             current += timedelta(days=1)
+
+        # --- Expire overdue one-time / claimable instances -------------------
+        await self._async_expire_tasks(today)
+
+        # --- Trim history to rolling window ----------------------------------
+        self._trim_history(today)
 
         self._data["settings"]["last_tick_date"] = today.isoformat()
         await self.async_save()
@@ -891,6 +934,7 @@ class FamilyHubDataStore:
                             points_delta=-penalty,
                             balance_after=person["points_balance"],
                             note=f'"{chore["name"]}" not completed — {penalty}pt penalty applied',
+                            chore_name=chore["name"],
                         )
 
     def _is_due_on_date(self, chore: dict, check_date: date) -> bool:
@@ -925,6 +969,97 @@ class FamilyHubDataStore:
             return check_date.day == rec.get("day_of_month", 1)
 
         return False
+
+    async def _async_expire_tasks(self, today: date) -> None:
+        """
+        Auto-expire pending one-time task instances that have passed their
+        deadline (created_at + expires_after_days).
+
+        Rules:
+          - Recurring chores: never expired here (tick handles them).
+          - One-time assigned tasks: expire with penalty if penalty_enabled.
+          - Claimable bonus tasks: expire silently — no penalty (nobody claimed it).
+        """
+        for instance in self.task_instances:
+            if instance["status"] not in [STATUS_PENDING, STATUS_CLAIMED]:
+                continue
+
+            chore = self.get_chore(instance["chore_id"])
+            if not chore:
+                continue
+
+            # Only process one-time recurrence or claimable
+            r_type      = chore["recurrence"].get("type", RECURRENCE_DAILY)
+            is_one_time = r_type == RECURRENCE_ONE_TIME
+            is_claimable = chore.get("chore_type") == CHORE_TYPE_CLAIMABLE
+            if not (is_one_time or is_claimable):
+                continue
+
+            expires_after = chore.get("expires_after_days")
+            if not expires_after:
+                continue
+
+            created  = date.fromisoformat(instance["created_at"][:10])
+            age_days = (today - created).days
+            if age_days < expires_after:
+                continue
+
+            # Mark expired / skipped
+            instance["status"]      = STATUS_SKIPPED
+            instance["approved_at"] = _now_iso()
+            instance["approved_by"] = "system"
+
+            if is_claimable:
+                # No penalty for unclaimed bonus tasks
+                self._append_history(
+                    event_type=HISTORY_TASK_SKIPPED,
+                    person_id=None,
+                    reference_id=instance["id"],
+                    note=f'"{chore["name"]}" claimable task expired unclaimed',
+                )
+            else:
+                # One-time assigned task — apply penalty if configured
+                pid = instance.get("assigned_to")
+                if pid and chore.get("penalty_enabled") and chore.get("penalty_points", 0) > 0:
+                    penalty = chore["penalty_points"]
+                    instance["penalty_applied"] = penalty
+                    person = self.get_person(pid)
+                    if person:
+                        person["points_balance"] = max(0, person.get("points_balance", 0) - penalty)
+                        self._append_history(
+                            event_type=HISTORY_TASK_SKIPPED,
+                            person_id=pid,
+                            reference_id=instance["id"],
+                            points_delta=-penalty,
+                            balance_after=person["points_balance"],
+                            note=f'"{chore["name"]}" one-time task expired — {penalty}pt penalty applied',
+                        )
+                else:
+                    self._append_history(
+                        event_type=HISTORY_TASK_SKIPPED,
+                        person_id=pid,
+                        reference_id=instance["id"],
+                        note=f'"{chore["name"]}" one-time task expired',
+                    )
+
+    def _trim_history(self, today: date) -> None:
+        """
+        Remove history entries older than HISTORY_RETENTION_DAYS.
+        Called once per daily tick to keep the data file size bounded.
+        Entries without a parseable timestamp are preserved (defensive).
+        """
+        cutoff = (today - timedelta(days=HISTORY_RETENTION_DAYS)).isoformat()
+        before = len(self._data["history"])
+        self._data["history"] = [
+            e for e in self._data["history"]
+            if e.get("timestamp", "9999")[:10] >= cutoff[:10]
+        ]
+        removed = before - len(self._data["history"])
+        if removed:
+            _LOGGER.debug(
+                "Family Hub: trimmed %d history entries older than %d days",
+                removed, HISTORY_RETENTION_DAYS,
+            )
 
     # ------------------------------------------------------------------
     # Store items
@@ -1104,6 +1239,57 @@ class FamilyHubDataStore:
             entries = [e for e in entries if e.get("person_id") == person_id]
         return entries[:limit]
 
+    def get_history_for_card(self, person_id: str | None = None, limit: int = 150) -> list[dict]:
+        """
+        Enriched history log for the admin card log UI.
+        Returns at most `limit` entries sorted newest-first, optionally filtered
+        to one person. Each entry is augmented with person name/color for display
+        and a `reversible` action hint so the card knows which action buttons to show:
+
+          reversible actions:
+            "excuse"          — skipped instance with a penalty, can be excused
+            "mark_complete"   — skipped/excused instance, can be retroactively completed
+            "reject"          — approved/self-reported instance, points can be clawed back
+            None              — no further parent action available
+        """
+        entries = sorted(self.history, key=lambda e: e["timestamp"], reverse=True)
+        if person_id:
+            entries = [e for e in entries if e.get("person_id") == person_id]
+        entries = entries[:limit]
+
+        result = []
+        for e in entries:
+            person = self.get_person(e.get("person_id", "")) if e.get("person_id") else None
+            # Find the task instance for action eligibility
+            instance    = self.get_task_instance(e.get("reference_id", ""))
+            inst_status = instance["status"] if instance else None
+
+            # Determine what reversible action (if any) is still available
+            reversible = None
+            if inst_status == STATUS_SKIPPED:
+                reversible = "excuse"      # can excuse or mark complete
+            elif inst_status == STATUS_EXCUSED:
+                reversible = "mark_complete"
+            elif inst_status in [STATUS_APPROVED, STATUS_SELF_REPORTED]:
+                reversible = "reject"
+
+            result.append({
+                "history_id":    e["id"],
+                "type":          e["type"],
+                "person_id":     e.get("person_id"),
+                "person_name":   person["name"] if person else None,
+                "person_color":  person.get("avatar_color", "#7F77DD") if person else "#7F77DD",
+                "reference_id":  e.get("reference_id"),
+                "chore_name":    e.get("chore_name", ""),
+                "points_delta":  e.get("points_delta", 0),
+                "balance_after": e.get("balance_after", 0),
+                "timestamp":     e["timestamp"],
+                "note":          e.get("note", ""),
+                "reversible":    reversible,
+                "instance_status": inst_status,
+            })
+        return result
+
     def _append_history(
         self,
         event_type: str,
@@ -1112,17 +1298,192 @@ class FamilyHubDataStore:
         points_delta: int = 0,
         balance_after: int = 0,
         note: str = "",
+        chore_name: str = "",
     ) -> None:
         self._data["history"].append({
-            "id": _new_id(),
-            "type": event_type,
-            "person_id": person_id,
+            "id":           _new_id(),
+            "type":         event_type,
+            "person_id":    person_id,
             "reference_id": reference_id,
             "points_delta": points_delta,
-            "balance_after": balance_after,
-            "timestamp": _now_iso(),
-            "note": note,
+            "balance_after":balance_after,
+            "timestamp":    _now_iso(),
+            "note":         note,
+            "chore_name":   chore_name,  # v0.4.0: populated for task events
         })
+
+    # ------------------------------------------------------------------
+    # v0.4.0 — Admin correction services
+    # ------------------------------------------------------------------
+
+    async def async_excuse_task(
+        self, instance_id: str, excused_by: str, reason: str = ""
+    ) -> dict | None:
+        """
+        Reverse the penalty on a skipped task instance (sick day, sleep-over, etc.).
+        Restores penalty points to the person's balance and marks the instance
+        STATUS_EXCUSED. Cannot be applied to instances that weren't skipped.
+        """
+        instance = self.get_task_instance(instance_id)
+        if not instance or instance["status"] != STATUS_SKIPPED:
+            _LOGGER.warning("Family Hub: excuse_task — instance %s not found or not skipped", instance_id)
+            return None
+
+        chore  = self.get_chore(instance["chore_id"])
+        chore_name = chore["name"] if chore else "unknown"
+        pid    = instance.get("assigned_to") or instance.get("completed_by")
+        penalty= instance.get("penalty_applied", 0)
+
+        instance["status"] = STATUS_EXCUSED
+        instance["excused_by"]  = excused_by
+        instance["excused_at"]  = _now_iso()
+        instance["excuse_reason"] = reason
+
+        if penalty > 0 and pid:
+            person = self.get_person(pid)
+            if person:
+                person["points_balance"] = person.get("points_balance", 0) + penalty
+                # Lifetime total not adjusted — excused penalties never earned points
+                self._append_history(
+                    event_type=HISTORY_TASK_EXCUSED,
+                    person_id=pid,
+                    reference_id=instance_id,
+                    points_delta=penalty,
+                    balance_after=person["points_balance"],
+                    note=f'"{chore_name}" penalty reversed — {reason}'.rstrip(" —"),
+                    chore_name=chore_name,
+                )
+        else:
+            self._append_history(
+                event_type=HISTORY_TASK_EXCUSED,
+                person_id=pid,
+                reference_id=instance_id,
+                note=f'"{chore_name}" excused — {reason}'.rstrip(" —"),
+                chore_name=chore_name,
+            )
+
+        await self.async_save()
+        return instance
+
+    async def async_reject_task(
+        self, instance_id: str, rejected_by: str, reason: str = ""
+    ) -> dict | None:
+        """
+        Claw back points for a task that was already approved or self-reported.
+        Deducts points_awarded from the person's spendable balance and marks
+        the instance STATUS_REJECTED. Lifetime total is not changed.
+        """
+        instance = self.get_task_instance(instance_id)
+        if not instance or instance["status"] not in [STATUS_APPROVED, STATUS_SELF_REPORTED]:
+            _LOGGER.warning(
+                "Family Hub: reject_task — instance %s not found or not in approved/self-reported state",
+                instance_id,
+            )
+            return None
+
+        chore     = self.get_chore(instance["chore_id"])
+        chore_name= chore["name"] if chore else "unknown"
+        pid       = instance.get("completed_by")
+        points    = instance.get("points_awarded", 0)
+
+        instance["status"]      = STATUS_REJECTED
+        instance["rejected_by"] = rejected_by
+        instance["rejected_at"] = _now_iso()
+        instance["reject_reason"] = reason
+
+        if points > 0 and pid:
+            person = self.get_person(pid)
+            if person:
+                person["points_balance"] = max(0, person.get("points_balance", 0) - points)
+                self._append_history(
+                    event_type=HISTORY_TASK_REJECTED,
+                    person_id=pid,
+                    reference_id=instance_id,
+                    points_delta=-points,
+                    balance_after=person["points_balance"],
+                    note=f'"{chore_name}" rejected — {reason}'.rstrip(" —"),
+                    chore_name=chore_name,
+                )
+        else:
+            self._append_history(
+                event_type=HISTORY_TASK_REJECTED,
+                person_id=pid,
+                reference_id=instance_id,
+                note=f'"{chore_name}" rejected — {reason}'.rstrip(" —"),
+                chore_name=chore_name,
+            )
+
+        await self.async_save()
+        return instance
+
+    async def async_mark_task_complete(
+        self, instance_id: str, marked_by: str, reason: str = ""
+    ) -> dict | None:
+        """
+        Retroactively mark a skipped or excused task as completed by a parent.
+        Awards the chore's points, reverses any penalty that was applied, and
+        marks the instance STATUS_APPROVED.
+        """
+        instance = self.get_task_instance(instance_id)
+        if not instance or instance["status"] not in [STATUS_SKIPPED, STATUS_EXCUSED]:
+            _LOGGER.warning(
+                "Family Hub: mark_task_complete — instance %s not found or not skipped/excused",
+                instance_id,
+            )
+            return None
+
+        chore     = self.get_chore(instance["chore_id"])
+        if not chore:
+            return None
+        chore_name= chore["name"]
+        pid       = instance.get("assigned_to") or instance.get("completed_by")
+        points    = chore.get("points", 0)
+        penalty   = instance.get("penalty_applied", 0)
+
+        instance["status"]        = STATUS_APPROVED
+        instance["approved_at"]   = _now_iso()
+        instance["approved_by"]   = marked_by
+        instance["points_awarded"] = points
+        instance["completed_by"]  = instance.get("completed_by") or marked_by
+        instance["completed_at"]  = instance.get("completed_at") or _now_iso()
+
+        total_awarded = points + penalty  # restore penalty AND award points
+        if total_awarded > 0 and pid:
+            person = self.get_person(pid)
+            if person:
+                person["points_balance"]  = person.get("points_balance", 0) + total_awarded
+                person["points_lifetime"] = person.get("points_lifetime", 0) + points
+                self._append_history(
+                    event_type=HISTORY_TASK_MARKED_COMPLETE,
+                    person_id=pid,
+                    reference_id=instance_id,
+                    points_delta=total_awarded,
+                    balance_after=person["points_balance"],
+                    note=f'"{chore_name}" retroactively marked complete — {reason}'.rstrip(" —"),
+                    chore_name=chore_name,
+                )
+        else:
+            self._append_history(
+                event_type=HISTORY_TASK_MARKED_COMPLETE,
+                person_id=pid,
+                reference_id=instance_id,
+                note=f'"{chore_name}" retroactively marked complete — {reason}'.rstrip(" —"),
+                chore_name=chore_name,
+            )
+
+        await self.async_save()
+        return instance
+
+    async def async_force_daily_tick(self) -> None:
+        """
+        Force the daily tick to run immediately, regardless of last_tick_date.
+        Resets last_tick_date to yesterday so the full today tick fires.
+        Useful for admin/debug and for cleaning up stale instances after deploy.
+        """
+        yesterday = (date.today() - timedelta(days=1)).isoformat()
+        self._data["settings"]["last_tick_date"] = yesterday
+        _LOGGER.info("Family Hub: force_daily_tick called — running tick now")
+        await self.async_daily_tick()
 
     # ------------------------------------------------------------------
     # Summary / coordinator
@@ -1373,6 +1734,7 @@ class FamilyHubDataStore:
                 "approval_required": c.get("approval_required", True),
                 "penalty_enabled": c.get("penalty_enabled", False),
                 "penalty_points":  c.get("penalty_points", 0),
+                "expires_after_days": c.get("expires_after_days"),
                 "recurrence":      c.get("recurrence", {}),
             })
         return sorted(result, key=lambda x: (x["sort_order"], x["name"]))
