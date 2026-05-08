@@ -133,6 +133,7 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             points=call.data.get("points", 0),
             description=call.data.get("description", ""),
             approval_required=call.data.get("approval_required", False),
+            expires_after_days=call.data.get("expires_after_days"),
             created_by=call.data.get("created_by"),
         )
         await coordinator.async_refresh()
@@ -143,12 +144,12 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
         vol.Optional("assigned_to", default=[]):     vol.Any(cv.string, [cv.string]),
         vol.Optional("points", default=0):           vol.Coerce(int),
         vol.Optional("approval_required", default=False): cv.boolean,
+        vol.Optional("expires_after_days"):          vol.All(vol.Coerce(int), vol.Range(min=1)),
         vol.Optional("created_by"):                  cv.string,
     })
 
-    hass.services.async_register(DOMAIN, "add_task",           _do_add_task, schema=_task_schema)
-    # Backward-compat alias
-    hass.services.async_register(DOMAIN, "add_one_time_task",  _do_add_task, schema=_task_schema)
+    hass.services.async_register(DOMAIN, "add_task",          _do_add_task, schema=_task_schema)
+    hass.services.async_register(DOMAIN, "add_one_time_task", _do_add_task, schema=_task_schema)
 
     # ------------------------------------------------------------------
     # People management
@@ -233,6 +234,7 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             sort_order=call.data.get("sort_order"),
             penalty_enabled=call.data.get("penalty_enabled", False),
             penalty_points=call.data.get("penalty_points", 0),
+            expires_after_days=call.data.get("expires_after_days"),
             icon=call.data.get("icon"),
             created_by=call.data.get("created_by"),
         )
@@ -256,6 +258,7 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             vol.Optional("sort_order"):                      vol.Coerce(int),
             vol.Optional("penalty_enabled", default=False):  cv.boolean,
             vol.Optional("penalty_points", default=0):       vol.Coerce(int),
+            vol.Optional("expires_after_days"):              vol.All(vol.Coerce(int), vol.Range(min=1)),
             vol.Optional("icon"):                            cv.string,
             vol.Optional("created_by"):                      cv.string,
         }),
@@ -293,12 +296,13 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             vol.Optional("approval_required"):               cv.boolean,
             vol.Optional("penalty_enabled"):                 cv.boolean,
             vol.Optional("penalty_points"):                  vol.Coerce(int),
-            # Individual recurrence sub-fields (legacy / direct)
+            vol.Optional("expires_after_days"):              vol.Any(
+                None, vol.All(vol.Coerce(int), vol.Range(min=1))
+            ),
             vol.Optional("weekdays"):                        [vol.All(vol.Coerce(int), vol.Range(min=0, max=6))],
             vol.Optional("day_filter"):                      [vol.All(vol.Coerce(int), vol.Range(min=0, max=6))],
             vol.Optional("interval"):                        vol.All(vol.Coerce(int), vol.Range(min=1)),
             vol.Optional("day_of_month"):                    vol.All(vol.Coerce(int), vol.Range(min=1, max=31)),
-            # Full recurrence object — sent by card on chore edit to persist type change
             vol.Optional("recurrence"):                      dict,
             vol.Optional("active"):                          cv.boolean,
             vol.Optional("icon"):                            cv.string,
@@ -492,6 +496,84 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             vol.Optional("show_dollar_value_to_kids"): cv.boolean,
             vol.Optional("category_labels"):            [cv.string],
         }),
+    )
+
+    # ------------------------------------------------------------------
+    # v0.4.0 Admin correction services
+    # ------------------------------------------------------------------
+
+    async def handle_excuse_task(call: ServiceCall) -> None:
+        """Reverse penalty on a skipped task — kid was sick, at a sleepover, etc."""
+        result = await store.async_excuse_task(
+            call.data["instance_id"],
+            call.data["excused_by"],
+            call.data.get("reason", ""),
+        )
+        if result:
+            await coordinator.async_refresh()
+        else:
+            _LOGGER.warning("Family Hub: excuse_task failed for %s", call.data["instance_id"])
+
+    hass.services.async_register(
+        DOMAIN, "excuse_task", handle_excuse_task,
+        schema=vol.Schema({
+            vol.Required("instance_id"):            cv.string,
+            vol.Required("excused_by"):             cv.string,
+            vol.Optional("reason", default=""):     cv.string,
+        }),
+    )
+
+    async def handle_reject_task(call: ServiceCall) -> None:
+        """Claw back points on an already-approved task."""
+        result = await store.async_reject_task(
+            call.data["instance_id"],
+            call.data["rejected_by"],
+            call.data.get("reason", ""),
+        )
+        if result:
+            await coordinator.async_refresh()
+        else:
+            _LOGGER.warning("Family Hub: reject_task failed for %s", call.data["instance_id"])
+
+    hass.services.async_register(
+        DOMAIN, "reject_task", handle_reject_task,
+        schema=vol.Schema({
+            vol.Required("instance_id"):            cv.string,
+            vol.Required("rejected_by"):            cv.string,
+            vol.Optional("reason", default=""):     cv.string,
+        }),
+    )
+
+    async def handle_mark_task_complete(call: ServiceCall) -> None:
+        """Retroactively mark a skipped task as done and award points."""
+        result = await store.async_mark_task_complete(
+            call.data["instance_id"],
+            call.data["marked_by"],
+            call.data.get("reason", ""),
+        )
+        if result:
+            await coordinator.async_refresh()
+        else:
+            _LOGGER.warning("Family Hub: mark_task_complete failed for %s", call.data["instance_id"])
+
+    hass.services.async_register(
+        DOMAIN, "mark_task_complete", handle_mark_task_complete,
+        schema=vol.Schema({
+            vol.Required("instance_id"):            cv.string,
+            vol.Required("marked_by"):              cv.string,
+            vol.Optional("reason", default=""):     cv.string,
+        }),
+    )
+
+    async def handle_force_daily_tick(call: ServiceCall) -> None:
+        """Force tick to run immediately. Useful for testing or cleaning up stale instances."""
+        _LOGGER.info("Family Hub: force_daily_tick service called")
+        await store.async_force_daily_tick()
+        await coordinator.async_refresh()
+
+    hass.services.async_register(
+        DOMAIN, "force_daily_tick", handle_force_daily_tick,
+        schema=vol.Schema({}),
     )
 
     # ------------------------------------------------------------------
