@@ -372,7 +372,7 @@ class FamilyHubNeedsAttentionSensor(FamilyHubBaseSensor):
 
             # All active chores (non-maintenance, non-one-time) for admin chore list
             # Includes all v0.3.0 fields: chore_type, category_label, sort_order,
-            # assigned_to (list), penalty fields, recurrence details
+            # assigned_to (list), penalty fields, recurrence details, expires_after_days
             "active_chores": store.get_active_chores_for_card(),
 
             # All active store items for admin store management
@@ -383,6 +383,11 @@ class FamilyHubNeedsAttentionSensor(FamilyHubBaseSensor):
             "points_per_dollar":        store.points_per_dollar,
             "show_dollar_value_to_kids":store.show_dollar_value_to_kids,
             "category_labels":          store.category_labels,
+
+            # v0.4.0: enriched history log for admin log/approvals UI
+            # Includes person name/color, chore_name, reversible action hint.
+            # Trimmed to 30-day rolling window by daily tick.
+            "history_log": store.get_history_for_card(),
         }
 
 
