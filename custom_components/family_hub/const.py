@@ -1,7 +1,7 @@
 """Constants for Family Hub integration."""
 
 DOMAIN = "family_hub"
-VERSION = "0.3.0"
+VERSION = "0.4.0"
 
 # Config entry keys
 CONF_FAMILY_NAME = "family_name"
@@ -84,10 +84,13 @@ STATUS_SELF_REPORTED    = "self_reported"
 STATUS_PENDING_APPROVAL = "pending_approval"
 STATUS_APPROVED         = "approved"
 STATUS_DENIED           = "denied"
-STATUS_SKIPPED          = "skipped"  # Replaced by next cycle (penalty may have applied)
+STATUS_SKIPPED          = "skipped"   # Replaced by next cycle (penalty may have applied)
+STATUS_EXCUSED          = "excused"   # Skipped but parent reversed the penalty (sick day, etc.)
+STATUS_REJECTED         = "rejected"  # Approved/self-reported but parent clawed back the points
 
 ACTIVE_STATUSES    = [STATUS_PENDING, STATUS_CLAIMED, STATUS_PENDING_APPROVAL]
-COMPLETED_STATUSES = [STATUS_SELF_REPORTED, STATUS_APPROVED, STATUS_DENIED, STATUS_SKIPPED]
+COMPLETED_STATUSES = [STATUS_SELF_REPORTED, STATUS_APPROVED, STATUS_DENIED, STATUS_SKIPPED,
+                      STATUS_EXCUSED, STATUS_REJECTED]
 
 # ---------------------------------------------------------------------------
 # Store item scope
@@ -111,12 +114,19 @@ HISTORY_TASK_COMPLETED        = "task_completed"
 HISTORY_TASK_APPROVED         = "task_approved"
 HISTORY_TASK_DENIED           = "task_denied"
 HISTORY_TASK_SKIPPED          = "task_skipped"
+HISTORY_TASK_EXCUSED          = "task_excused"          # Penalty reversed — kid was excused
+HISTORY_TASK_REJECTED         = "task_rejected"         # Points clawed back after approval
+HISTORY_TASK_MARKED_COMPLETE  = "task_marked_complete"  # Parent retroactively marked done
 HISTORY_POINTS_AWARDED        = "points_awarded"
 HISTORY_REDEMPTION_REQUESTED  = "redemption_requested"
 HISTORY_REDEMPTION_APPROVED   = "redemption_approved"
 HISTORY_REDEMPTION_DECLINED   = "redemption_declined"
 HISTORY_TASK_ADDED            = "task_added"
 HISTORY_PERSON_ADDED          = "person_added"
+
+# Rolling retention window — history entries older than this are trimmed on each
+# daily tick to keep the data file from growing unbounded.
+HISTORY_RETENTION_DAYS = 30
 
 # ---------------------------------------------------------------------------
 # Sensor names
@@ -155,6 +165,11 @@ SERVICE_AWARD_BONUS_POINTS  = "award_bonus_points"
 SERVICE_DEDUCT_POINTS       = "deduct_points"
 SERVICE_UPDATE_SETTINGS     = "update_settings"
 SERVICE_EXPORT_BACKUP       = "export_backup"
+# v0.4.0 admin correction services
+SERVICE_EXCUSE_TASK         = "excuse_task"         # Reverse penalty on a skipped task
+SERVICE_REJECT_TASK         = "reject_task"         # Claw back points on an approved task
+SERVICE_MARK_TASK_COMPLETE  = "mark_task_complete"  # Retroactively mark skipped task done
+SERVICE_FORCE_DAILY_TICK    = "force_daily_tick"    # Trigger tick immediately (admin/debug)
 
 # Coordinator update interval (seconds)
 UPDATE_INTERVAL = 30
