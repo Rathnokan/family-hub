@@ -916,9 +916,6 @@ class FamilyHubCard extends HTMLElement {
         return `
       <div class="fh-hdr">
         <span class="fh-title" style="margin:0">${escHTML(famName)}</span>
-        <button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="open-add-task">
-          ${I.plus} Add task
-        </button>
       </div>
       <div class="fh-chips">${chips}</div>
       <div class="fh-task-list">${taskRows}</div>
@@ -1461,6 +1458,8 @@ class FamilyHubCard extends HTMLElement {
         }).join("") || `<div class="fh-empty">No pending redemptions. ✓</div>`;
 
         // ---- Section 2: Store inventory -------------------------------------
+        // Note: store items do not have a sort_order field in the backend (Phase 3-C).
+        // Items are shown in creation order. Drag-to-reorder is not available here.
         const storeRows = storeItems.map(item => {
             const personNames = (item.person_ids || [])
                 .map(id => people.find(p => p.person_id === id)?.name)
@@ -2621,8 +2620,14 @@ class FamilyHubCard extends HTMLElement {
                     penalty_enabled:   b("m-cpenalty"),
                     penalty_points:    int("m-cpenalty-pts"),
                 };
-                // Attach expiry if provided
-                if (expiryVal > 0)  data.expires_after_days = expiryVal;
+                // Only attach expires_after_days when the expiry section is visible
+                // AND the user has entered a value. Never send null — the backend
+                // schema rejects it via the service call layer even though vol.Any(None,...)
+                // appears to allow it. Omitting the key entirely leaves the existing
+                // value unchanged, which is the correct behaviour for recurring chores.
+                const expirySection = sr.getElementById("m-chore-expiry-section");
+                const expiryVisible = expirySection && expirySection.style.display !== "none";
+                if (expiryVisible && expiryVal > 0) data.expires_after_days = expiryVal;
 
                 if (isEdit) {
                     data.chore_id  = v("m-cid");
@@ -2640,8 +2645,7 @@ class FamilyHubCard extends HTMLElement {
                                 ? { day_of_month: Math.max(1, Math.min(31, int("m-dom"))) }
                                 : {}),
                     };
-                    // Null out expiry if blank (clearing it)
-                    if (!expiryVal) data.expires_after_days = null;
+                    // Do not send expires_after_days: null — see comment above.
                 } else {
                     data.recurrence_type = recType;
                     if (weekdays.length)  data.weekdays   = weekdays;
