@@ -289,6 +289,7 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             vol.Optional("name"):                            cv.string,
             vol.Optional("description"):                     cv.string,
             vol.Optional("chore_type"):                      vol.In(CHORE_TYPES),
+            vol.Optional("category"):                        cv.string,  # <-- Added to fix the frontend error
             vol.Optional("category_label"):                  cv.string,
             vol.Optional("sort_order"):                      vol.Coerce(float),
             vol.Optional("assigned_to"):                     vol.Any(cv.string, [cv.string]),

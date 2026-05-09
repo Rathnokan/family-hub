@@ -137,6 +137,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # --- Stale entity cleanup ---
     await _async_cleanup_stale_entities(hass, entry, store)
 
+    # Register the update listener to reload the integration when options change
+    entry.async_on_unload(entry.add_update_listener(async_reload_entry))
+
     _LOGGER.info(
         "Family Hub: ready — %s, %d people, %d active chores",
         family_name,
@@ -198,3 +201,7 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
         "Family Hub: entry removed. Data file kept at %s",
         entry.data.get("storage_path"),
     )
+
+async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Reload config entry when options are updated."""
+    await hass.config_entries.async_reload(entry.entry_id)
