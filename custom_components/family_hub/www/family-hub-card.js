@@ -1312,7 +1312,7 @@ This cannot be undone.`)) break;
 This cannot be undone.`)) break;
         card._svc("delete_store_item", { item_id: el.dataset.iid });
         break;
-      // ---- Category label management (inline settings) ------------------
+      // ---- Category label management ------------------------------------
       case "remove-cat-label": {
         const labelToRemove = el.dataset.label;
         const current = card._attrs("sensor.family_hub_needs_attention").category_labels || [];
@@ -1475,10 +1475,8 @@ This cannot be undone.`)) break;
         const assigned = _selectedPersonIds("m-assign-person", sr);
         const weekdays = Array.from(sr.querySelectorAll(".m-wd-day:checked")).map((cb) => parseInt(cb.value));
         const dayFilter = Array.from(sr.querySelectorAll(".m-df-day:checked")).map((cb) => parseInt(cb.value));
-        const expiryVal = parseInt(v("m-cexpiry") || "0");
         const data = {
           name,
-          description: v("m-cdesc").trim() || void 0,
           chore_type: v("m-ctype"),
           category_label: v("m-clabel"),
           assigned_to: assigned,
@@ -1487,9 +1485,14 @@ This cannot be undone.`)) break;
           penalty_enabled: b("m-cpenalty"),
           penalty_points: int("m-cpenalty-pts")
         };
+        const desc = v("m-cdesc").trim();
+        if (desc) data.description = desc;
         const expirySection = sr.getElementById("m-chore-expiry-section");
         const expiryVisible = expirySection && expirySection.style.display !== "none";
-        if (expiryVisible && expiryVal > 0) data.expires_after_days = expiryVal;
+        if (expiryVisible) {
+          const expiryVal = parseInt(v("m-cexpiry") || "0");
+          if (expiryVal > 0) data.expires_after_days = expiryVal;
+        }
         if (isEdit) {
           data.chore_id = v("m-cid");
           data.weekdays = weekdays;

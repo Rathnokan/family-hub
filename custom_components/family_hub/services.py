@@ -1,5 +1,5 @@
 """
-Family Hub — services (v0.3.0).
+Family Hub — services (v0.3.0 / v0.4.1).
 
 All actions that modify data are exposed as HA services under the family_hub domain.
 
@@ -15,6 +15,16 @@ Changes in v0.3.0:
   - update_settings: now accepts category_labels list.
   - award_bonus_points / deduct_points: unchanged (already accept dollar_amount).
   - All persistent_notification calls use hass.services.async_call (not deprecated pattern).
+
+Changes in v0.4.1:
+  - handle_add_person: after the store creates the person, calls add_person_sensor
+    (stored in hass.data by sensor.py) so the new person's sensor entity is
+    registered immediately — no restart required.
+  - handle_remove_person: after the store deactivates the person, calls
+    remove_person_sensor so HA is notified immediately.
+  - Both callbacks are retrieved from hass.data[DOMAIN][entry_id] via the
+    coordinator's entry_id. If the callbacks aren't set yet (race on first
+    startup) the services fall back gracefully and log a warning.
 """
 
 from __future__ import annotations
@@ -45,6 +55,20 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
     """Register all Family Hub services."""
 
     store = coordinator.store
+
+    # ------------------------------------------------------------------
+    # Helper: retrieve the dynamic sensor registration callbacks.
+    # These are set by sensor.py after the platform forward completes.
+    # We look them up at call time (not at setup time) so we always get
+    # the live values even if setup order varies.
+    # ------------------------------------------------------------------
+
+    def _get_entry_data() -> dict:
+        """Return the hass.data entry dict for this coordinator's config entry."""
+        for entry_id, entry_data in hass.data.get(DOMAIN, {}).items():
+            if isinstance(entry_data, dict) and entry_data.get("coordinator") is coordinator:
+                return entry_data
+        return {}
 
     # ------------------------------------------------------------------
     # Task completion
@@ -156,13 +180,23 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
     # ------------------------------------------------------------------
 
     async def handle_add_person(call: ServiceCall) -> None:
-        await store.async_add_person(
+        person = await store.async_add_person(
             name=call.data["name"],
             person_type=call.data.get("person_type", "kid"),
             ha_user_id=call.data.get("ha_user_id"),
             avatar_color=call.data.get("avatar_color"),
         )
         await coordinator.async_refresh()
+        # Register the new person's sensor entity immediately so the dashboard
+        # shows them without requiring an HA restart.
+        add_sensor = _get_entry_data().get("add_person_sensor")
+        if add_sensor:
+            add_sensor(person["id"])
+        else:
+            _LOGGER.warning(
+                "Family Hub: add_person_sensor callback not available yet; "
+                "restart HA to see the new sensor for %s", call.data["name"]
+            )
 
     hass.services.async_register(
         DOMAIN, "add_person", handle_add_person,
@@ -193,11 +227,16 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
     )
 
     async def handle_remove_person(call: ServiceCall) -> None:
-        success = await store.async_remove_person(call.data["person_id"])
+        person_id = call.data["person_id"]
+        success = await store.async_remove_person(person_id)
         if success:
             await coordinator.async_refresh()
+            # Notify HA that this person's sensor should be considered inactive.
+            remove_sensor = _get_entry_data().get("remove_person_sensor")
+            if remove_sensor:
+                remove_sensor(person_id)
         else:
-            _LOGGER.warning("Family Hub: remove_person — person not found: %s", call.data["person_id"])
+            _LOGGER.warning("Family Hub: remove_person — person not found: %s", person_id)
 
     hass.services.async_register(
         DOMAIN, "remove_person", handle_remove_person,
@@ -289,7 +328,6 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             vol.Optional("name"):                            cv.string,
             vol.Optional("description"):                     cv.string,
             vol.Optional("chore_type"):                      vol.In(CHORE_TYPES),
-            vol.Optional("category"):                        cv.string,  # <-- Added to fix the frontend error
             vol.Optional("category_label"):                  cv.string,
             vol.Optional("sort_order"):                      vol.Coerce(float),
             vol.Optional("assigned_to"):                     vol.Any(cv.string, [cv.string]),

@@ -54,8 +54,6 @@ export function dispatch(act, el, card) {
             card._svc("complete_task", { task_id: tid, person_id: pid });
             card._flashing.add(tid);
             card._doRender(true);
-            // After the CSS animation finishes, physically remove the row so the
-            // flex gap collapses cleanly (opacity:0 alone leaves a visual gap).
             setTimeout(() => {
                 card._flashing.delete(tid);
                 const row = card.shadowRoot.querySelector(
@@ -137,7 +135,7 @@ export function dispatch(act, el, card) {
             card._svc("delete_store_item", { item_id: el.dataset.iid });
             break;
 
-        // ---- Category label management (inline settings) ------------------
+        // ---- Category label management ------------------------------------
         case "remove-cat-label": {
             const labelToRemove = el.dataset.label;
             const current = card._attrs("sensor.family_hub_needs_attention").category_labels || [];
@@ -283,7 +281,6 @@ export function dispatch(act, el, card) {
                     category_label:     "Bonus",
                 });
             } else {
-                // Assigned one-time task
                 const assigned = _selectedPersonIds("m-tp-person", sr);
                 const expiry   = parseInt(v("m-texpiry") || "0");
                 const data = {
@@ -309,11 +306,9 @@ export function dispatch(act, el, card) {
             const assigned  = _selectedPersonIds("m-assign-person", sr);
             const weekdays  = Array.from(sr.querySelectorAll(".m-wd-day:checked")).map(cb => parseInt(cb.value));
             const dayFilter = Array.from(sr.querySelectorAll(".m-df-day:checked")).map(cb => parseInt(cb.value));
-            const expiryVal = parseInt(v("m-cexpiry") || "0");
 
             const data = {
                 name,
-                description:       v("m-cdesc").trim() || undefined,
                 chore_type:        v("m-ctype"),
                 category_label:    v("m-clabel"),
                 assigned_to:       assigned,
@@ -323,12 +318,19 @@ export function dispatch(act, el, card) {
                 penalty_points:    int("m-cpenalty-pts"),
             };
 
-            // Only attach expires_after_days when the expiry section is visible
-            // and the user entered a value. Never send null — omitting the key
-            // leaves the existing value unchanged (correct for recurring chores).
+            // Only include description if non-empty — avoids sending undefined
+            const desc = v("m-cdesc").trim();
+            if (desc) data.description = desc;
+
+            // expires_after_days: ONLY include when expiry section is visible
+            // AND user entered a positive integer. Never send 0, null, or undefined —
+            // add_chore rejects it, and omitting on update_chore leaves existing value intact.
             const expirySection = sr.getElementById("m-chore-expiry-section");
             const expiryVisible = expirySection && expirySection.style.display !== "none";
-            if (expiryVisible && expiryVal > 0) data.expires_after_days = expiryVal;
+            if (expiryVisible) {
+                const expiryVal = parseInt(v("m-cexpiry") || "0");
+                if (expiryVal > 0) data.expires_after_days = expiryVal;
+            }
 
             if (isEdit) {
                 data.chore_id   = v("m-cid");

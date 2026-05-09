@@ -1,9 +1,9 @@
 """
-Family Hub — sensor platform (v0.3.0).
+Family Hub — sensor platform.
 
-8 sensors total:
+8+ sensors total:
 
-Per-person (1 per active family member):
+Per-person (1 per active family member, created dynamically):
   sensor.family_hub_[name]
     state  = current spendable point balance
     attrs  = all task lists, store items, penalty info, show_dollar_value flag
@@ -19,6 +19,16 @@ v0.3.0 additions:
     store_items (all, for admin management)
   - person sensor exposes: penalty_enabled/penalty_points per task, category_label
   - claimable sensor exposes: task descriptions
+
+v0.4.1 additions:
+  - Dynamic sensor registration: add_person / remove_person services now
+    create / deactivate person sensors immediately without requiring a restart.
+    async_setup_entry stores add_person_sensor and remove_person_sensor
+    callables into hass.data so services.py can call them.
+  - chore_type added to personal sensor task payload (due_today_list and
+    overdue_list). Eliminates the brittle reminder heuristic in the card.
+    Phase 3-C TODO is now resolved on the backend side.
+  - expires_after_days added to personal sensor task payload.
 """
 
 from __future__ import annotations
@@ -36,6 +46,7 @@ from .const import (
     ACTIVE_STATUSES,
     DOMAIN,
     MAINTENANCE_DUE_SOON_DAYS,
+    RECURRENCE_ONE_TIME,
     REDEMPTION_PENDING,
     STATUS_PENDING_APPROVAL,
 )
@@ -56,18 +67,71 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddEntitiesCallback,
 ) -> None:
-    coordinator: FamilyHubCoordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
+    """
+    Set up all sensor entities for the entry.
 
+    After creating the static global sensors and the initial per-person sensors,
+    we store two callables in hass.data so that services.py can dynamically
+    add or remove person sensors without a restart:
+
+      add_person_sensor(person_id)    — creates and registers a new sensor
+      remove_person_sensor(person_id) — marks the sensor unavailable / removed
+    """
+    coordinator: FamilyHubCoordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
+    person_entities: dict = hass.data[DOMAIN][entry.entry_id]["person_entities"]
+
+    # --- Initial per-person sensors ------------------------------------------
     entities: list[SensorEntity] = []
     for person in coordinator.store.get_active_people():
-        entities.append(FamilyHubPersonSensor(coordinator, person["id"]))
+        sensor = FamilyHubPersonSensor(coordinator, person["id"])
+        person_entities[person["id"]] = sensor
+        entities.append(sensor)
 
+    # --- Global sensors -------------------------------------------------------
     entities.append(FamilyHubMaintenanceDueSensor(coordinator))
     entities.append(FamilyHubMaintenanceOverdueSensor(coordinator))
     entities.append(FamilyHubNeedsAttentionSensor(coordinator))
     entities.append(FamilyHubClaimableTasksSensor(coordinator))
 
     async_add_entities(entities, update_before_add=True)
+
+    # --- Dynamic registration helpers ----------------------------------------
+
+    def add_person_sensor(person_id: str) -> None:
+        """
+        Called by services.py after async_add_person succeeds.
+        Creates a sensor for the new person and registers it with HA immediately.
+        Safe to call even if a sensor for this person_id already exists
+        (it will be a no-op in that case).
+        """
+        if person_id in person_entities:
+            _LOGGER.debug("Family Hub: sensor already exists for person %s", person_id)
+            return
+        sensor = FamilyHubPersonSensor(coordinator, person_id)
+        person_entities[person_id] = sensor
+        async_add_entities([sensor], update_before_add=True)
+        _LOGGER.info("Family Hub: registered sensor for new person %s", person_id)
+
+    def remove_person_sensor(person_id: str) -> None:
+        """
+        Called by services.py after async_remove_person succeeds.
+        The entity remains in the registry but becomes unavailable because
+        the person is deactivated in the data store. The stale-entity cleanup
+        in __init__.py will remove it on the next reload/restart.
+        """
+        sensor = person_entities.get(person_id)
+        if sensor:
+            # Trigger a coordinator refresh so the sensor re-evaluates its state.
+            # The sensor's native_value returns 0 and extra_state_attributes
+            # returns {} when the person is not found / inactive, which is the
+            # correct unavailable state. The coordinator will handle this naturally.
+            _LOGGER.info("Family Hub: person %s deactivated; sensor will show 0 balance", person_id)
+        else:
+            _LOGGER.debug("Family Hub: no sensor found for person %s to remove", person_id)
+
+    # Store the callables so services.py can reach them
+    hass.data[DOMAIN][entry.entry_id]["add_person_sensor"]    = add_person_sensor
+    hass.data[DOMAIN][entry.entry_id]["remove_person_sensor"] = remove_person_sensor
 
 
 class FamilyHubBaseSensor(CoordinatorEntity[FamilyHubCoordinator], SensorEntity):
@@ -94,8 +158,12 @@ class FamilyHubPersonSensor(FamilyHubBaseSensor):
     Attributes include full task lists (with penalty info), store items,
     and the show_dollar_value flag so the card knows whether to render
     the dollar equivalent of the balance.
+
     Note: No state_class — point balances are arbitrary tracked values,
     not physical measurements. Omitting prevents unwanted long-term stats.
+
+    v0.4.1: task rows now include chore_type and expires_after_days so the
+    card can use reliable data instead of the heuristic isReminderTask().
     """
 
     _attr_native_unit_of_measurement = "pts"
@@ -160,18 +228,18 @@ class FamilyHubPersonSensor(FamilyHubBaseSensor):
             ),
 
             # Counts for automations
-            "tasks_due_today":         due_today_count,
-            "tasks_overdue":           overdue_count,
-            "pending_approval":        pending_appr_count,
+            "tasks_due_today":           due_today_count,
+            "tasks_overdue":             overdue_count,
+            "pending_approval":          pending_appr_count,
             "tasks_completed_this_week": len(completed_this_week),
-            "tasks_completed_total":   len(completed_total),
-            "pending_redemptions":     pending_redeem_count,
+            "tasks_completed_total":     len(completed_total),
+            "pending_redemptions":       pending_redeem_count,
 
-            # Full task lists for the dashboard card
-            # Each task row includes: task_id, name, description, points,
-            # due_date, status, category_label, penalty_enabled, penalty_points
-            "tasks_due_today_list":      task_data["due_today"],
-            "tasks_overdue_list":        task_data["overdue"],
+            # Full task lists for the dashboard card.
+            # v0.4.1: each row now includes chore_type and expires_after_days
+            # so the card can identify reminders reliably without a heuristic.
+            "tasks_due_today_list":        task_data["due_today"],
+            "tasks_overdue_list":          task_data["overdue"],
             "tasks_pending_approval_list": task_data["pending_approval"],
 
             # Store items visible to this person

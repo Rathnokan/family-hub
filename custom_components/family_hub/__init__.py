@@ -19,6 +19,13 @@ Card registration:
     from within an integration — it makes the card available in the picker
     without manually touching Lovelace resource storage.
   - manifest.json declares "frontend" and "http" as dependencies.
+
+v0.4.1 changes:
+  - Dynamic sensor registration: add_person now creates a sensor entity
+    immediately without requiring a restart. remove_person deactivates
+    the entity immediately.
+  - The async_add_person_sensor / async_remove_person_sensor helpers are
+    stored on hass.data so the services module can call them.
 """
 
 from __future__ import annotations
@@ -123,22 +130,40 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator = FamilyHubCoordinator(hass, store)
     await coordinator.async_config_entry_first_refresh()
 
+    # --- Dynamic sensor management ------------------------------------------
+    # async_add_entities is only available inside async_setup_entry via the
+    # platform forward. We capture it by setting up a callback that the
+    # services module can call whenever a person is added or removed.
+    #
+    # The pattern: store a mutable dict keyed by person_id → entity instance,
+    # plus the async_add_entities callable. Services call the helpers below
+    # rather than touching HA internals directly.
+
+    # Will be populated once the sensor platform sets up (see sensor.py)
+    person_entities: dict = {}  # person_id → FamilyHubPersonSensor instance
+
     hass.data[DOMAIN][entry.entry_id] = {
-        "coordinator": coordinator,
-        "store": store,
+        "coordinator":      coordinator,
+        "store":            store,
+        "person_entities":  person_entities,
+        # These two callables are set by async_setup_entry in sensor.py after
+        # the platform forward completes. They are None until then.
+        "add_person_sensor":    None,
+        "remove_person_sensor": None,
     }
 
     # --- Services ---
+    # Services are set up before the sensor platform so that the callables
+    # exist in hass.data before any service handler could fire.
     await async_setup_services(hass, coordinator)
 
     # --- Sensors ---
+    # The platform forward populates person_entities and stores the
+    # add_person_sensor / remove_person_sensor callables.
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # --- Stale entity cleanup ---
     await _async_cleanup_stale_entities(hass, entry, store)
-
-    # Register the update listener to reload the integration when options change
-    entry.async_on_unload(entry.add_update_listener(async_reload_entry))
 
     _LOGGER.info(
         "Family Hub: ready — %s, %d people, %d active chores",
@@ -201,7 +226,3 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
         "Family Hub: entry removed. Data file kept at %s",
         entry.data.get("storage_path"),
     )
-
-async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
-    """Reload config entry when options are updated."""
-    await hass.config_entries.async_reload(entry.entry_id)

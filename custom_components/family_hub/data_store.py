@@ -32,6 +32,18 @@ v0.4.0 changes:
   - async_force_daily_tick — trigger tick immediately (admin/debug service)
   - get_history_for_card — enriched history log for admin log UI
   - History entries now include chore_name for easier log display
+
+v0.4.1 bug fixes:
+  - async_update_chore: assignment sync now correctly creates per-person instances
+    when assigned_to changes to a multi-person list, instead of collapsing all
+    existing instances to assigned_to=None (which caused chores to vanish from
+    every personal dashboard)
+  - get_tasks_for_card: row dict now includes chore_type and expires_after_days
+    so the card can identify reminder chores reliably without the brittle
+    0-pts/no-penalty heuristic
+  - get_all_tasks_for_command_center: ghost instances (assigned_to=None on a
+    non-claimable chore) are now excluded; they have no owner to display and
+    previously appeared on the command center as nameless tasks
 """
 
 from __future__ import annotations
@@ -582,15 +594,54 @@ class FamilyHubDataStore:
 
         new_assigned = chore.get("assigned_to", [])
 
-        # Sync pending task instances to new assignment
+        # Sync pending task instances to new assignment when it has changed.
+        #
+        # The previous logic collapsed all existing instances to a single one
+        # and left assigned_to=None when there were multiple assignees, which
+        # caused the instances to vanish from everyone's personal dashboard.
+        #
+        # Correct behaviour:
+        #   1. Remove (delete) any pending instances whose assigned_to person
+        #      is no longer in the new assignment list — they are orphaned.
+        #   2. For each person newly added to the assignment list, create a
+        #      fresh instance for today (the next tick will handle future dates).
+        #   3. Leave instances that already have the correct assigned_to alone.
         if old_assigned != new_assigned:
+            today = date.today()
+
+            # Collect the due dates of existing active instances so we can
+            # create matching new ones (avoids duplicate today instance when
+            # one already exists for a person who stays assigned).
+            existing_by_person: dict[str | None, set[str]] = {}
             for instance in self._data["task_instances"]:
                 if instance["chore_id"] != chore_id:
                     continue
                 if instance["status"] not in ACTIVE_STATUSES:
                     continue
-                # If assignment was cleared or changed, update instance
-                instance["assigned_to"] = new_assigned[0] if len(new_assigned) == 1 else None
+                pid = instance.get("assigned_to")
+                existing_by_person.setdefault(pid, set()).add(instance["due_date"])
+
+            # Step 1: remove pending instances for people no longer assigned.
+            # We keep them if new_assigned is empty (unassigned chore stays as-is).
+            if new_assigned:
+                self._data["task_instances"] = [
+                    t for t in self._data["task_instances"]
+                    if not (
+                        t["chore_id"] == chore_id
+                        and t["status"] in ACTIVE_STATUSES
+                        and t.get("assigned_to") not in new_assigned
+                        and t.get("assigned_to") is not None  # never remove unowned instances here
+                    )
+                ]
+
+            # Step 2: create new instances for people who were just added.
+            added_people = [pid for pid in new_assigned if pid not in old_assigned]
+            today_str = today.isoformat()
+            for pid in added_people:
+                # Only create a today instance if one doesn't already exist
+                already_has_today = today_str in existing_by_person.get(pid, set())
+                if not already_has_today:
+                    await self._async_create_task_instance(chore, today, person_id=pid)
 
         await self.async_save()
         return chore
@@ -1507,7 +1558,14 @@ class FamilyHubDataStore:
     # ------------------------------------------------------------------
 
     def get_tasks_for_card(self, person_id: str) -> dict:
-        """Return due_today, overdue, and pending_approval task lists for one person."""
+        """
+        Return due_today, overdue, and pending_approval task lists for one person.
+
+        v0.4.1: row dict now includes chore_type and expires_after_days so the
+        card can identify reminders via t.chore_type === "reminder" rather than
+        the brittle 0-pts/no-penalty heuristic. is_one_time is kept for backward
+        compat with any existing card logic that reads it.
+        """
         today     = date.today()
         today_str = today.isoformat()
         due_today: list[dict] = []
@@ -1526,17 +1584,19 @@ class FamilyHubDataStore:
                 continue
 
             row = {
-                "task_id":         t["id"],
-                "chore_id":        t["chore_id"],
-                "name":            chore["name"],
-                "description":     chore.get("description", ""),
-                "points":          chore.get("points", 0),
-                "due_date":        t["due_date"],
-                "status":          t["status"],
-                "category_label":  chore.get("category_label", ""),
-                "penalty_enabled": chore.get("penalty_enabled", False),
-                "penalty_points":  chore.get("penalty_points", 0),
-                "is_one_time":     chore["recurrence"].get("type") == RECURRENCE_ONE_TIME,
+                "task_id":          t["id"],
+                "chore_id":         t["chore_id"],
+                "name":             chore["name"],
+                "description":      chore.get("description", ""),
+                "points":           chore.get("points", 0),
+                "due_date":         t["due_date"],
+                "status":           t["status"],
+                "chore_type":       chore.get("chore_type", CHORE_TYPE_ASSIGNED),  # v0.4.1
+                "category_label":   chore.get("category_label", ""),
+                "penalty_enabled":  chore.get("penalty_enabled", False),
+                "penalty_points":   chore.get("penalty_points", 0),
+                "expires_after_days": chore.get("expires_after_days"),             # v0.4.1
+                "is_one_time":      chore["recurrence"].get("type") == RECURRENCE_ONE_TIME,
             }
 
             if t["due_date"] == today_str:
@@ -1660,6 +1720,11 @@ class FamilyHubDataStore:
         All active non-maintenance assigned tasks for all people.
         Sorted: most overdue first, then today. Excludes maintenance and
         unassigned claimable tasks (those appear in their own section).
+
+        v0.4.1 fix: also excludes instances with assigned_to=None that belong
+        to non-claimable chores. These are ghost instances created when a chore
+        was saved with an empty assigned_to list. They have no person to display
+        on the command center and should not appear there.
         """
         today     = date.today()
         today_str = today.isoformat()
@@ -1673,30 +1738,40 @@ class FamilyHubDataStore:
                 continue
             if self._chore_is_maintenance(chore):
                 continue
-            if chore.get("chore_type") == CHORE_TYPE_CLAIMABLE and task.get("assigned_to") is None:
+
+            chore_type = chore.get("chore_type", CHORE_TYPE_ASSIGNED)
+            assigned   = task.get("assigned_to")
+
+            # Skip unassigned claimable instances (rendered in their own section)
+            if chore_type == CHORE_TYPE_CLAIMABLE and assigned is None:
                 continue
 
-            assigned   = task.get("assigned_to")
+            # Skip unowned non-claimable instances — these are ghost instances
+            # from chores that were created/updated with no assigned_to. They
+            # have no person to display and should not appear on the command center.
+            if chore_type != CHORE_TYPE_CLAIMABLE and assigned is None:
+                continue
+
             person     = self.get_person(assigned) if assigned else None
             due_date   = date.fromisoformat(task["due_date"])
             days_delta = (due_date - today).days
 
             items.append({
-                "task_id":         task["id"],
-                "chore_id":        task["chore_id"],
-                "name":            chore["name"],
-                "description":     chore.get("description", ""),
-                "points":          chore.get("points", 0),
-                "due_date":        task["due_date"],
-                "days_delta":      days_delta,
-                "status":          task["status"],
-                "category_label":  chore.get("category_label", ""),
-                "assigned_to":     assigned,
-                "person_name":     person["name"] if person else None,
-                "person_color":    person.get("avatar_color", "#7F77DD") if person else "#7F77DD",
+                "task_id":           task["id"],
+                "chore_id":          task["chore_id"],
+                "name":              chore["name"],
+                "description":       chore.get("description", ""),
+                "points":            chore.get("points", 0),
+                "due_date":          task["due_date"],
+                "days_delta":        days_delta,
+                "status":            task["status"],
+                "category_label":    chore.get("category_label", ""),
+                "assigned_to":       assigned,
+                "person_name":       person["name"] if person else None,
+                "person_color":      person.get("avatar_color", "#7F77DD") if person else "#7F77DD",
                 "approval_required": chore.get("approval_required", True),
-                "penalty_enabled": chore.get("penalty_enabled", False),
-                "penalty_points":  chore.get("penalty_points", 0),
+                "penalty_enabled":   chore.get("penalty_enabled", False),
+                "penalty_points":    chore.get("penalty_points", 0),
             })
 
         # Show today + overdue only on command center
