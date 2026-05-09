@@ -1,0 +1,419 @@
+/**
+ * Family Hub Card — Main Card Class
+ * Web Component shell: lifecycle, dirty-check, render orchestration,
+ * modal overlay management, and conditional UI sync.
+ *
+ * HTML rendering is delegated to the modes-*.js and modals.js modules.
+ * Event handling is delegated to dispatch.js.
+ */
+
+import { CSS }                from "./css.js";
+import { VERSION, DOMAIN, FH_SENSORS } from "./constants.js";
+import { slug }               from "./utils.js";
+import { htmlCC }             from "./modes-cc.js";
+import { htmlPersonal }       from "./modes-personal.js";
+import { htmlMaintenance }    from "./modes-maintenance.js";
+import { htmlAdmin }          from "./modes-admin.js";
+import { dispatch }           from "./dispatch.js";
+import {
+    mPointAdjust,
+    mAddTask,
+    mChoreForm,
+    mAddStoreItem,
+    mEditStoreItem,
+    mAddPerson,
+    mEditPerson,
+    mEditSettings,
+    mClaim,
+    mAddReminder,
+    mConfirmRemovePerson,
+} from "./modals.js";
+
+export class FamilyHubCard extends HTMLElement {
+
+    // ---- HA card API -------------------------------------------------------
+
+    static getStubConfig() { return { mode: "command_center" }; }
+    static getConfigElement() { return document.createElement("family-hub-card-editor"); }
+
+    constructor() {
+        super();
+        this.attachShadow({ mode: "open" });
+
+        // Config & HA state
+        this._cfg  = {};
+        this._hass = null;
+
+        // Dirty-check: entityId → last_updated timestamp
+        this._lastKeys = {};
+
+        // UI state
+        this._modal         = null;   // { type, data } — null = closed
+        this._filter        = null;   // command_center person filter (person_id)
+        this._tab           = "tasks";
+        this._adminSec      = "overview";
+        this._flashing      = new Set();  // task_ids currently animating
+        this._expandedDescs = new Set();  // ids with description expanded
+        this._histFilter    = null;       // history log person filter
+        this._choreFilter   = null;       // chores tab person filter
+
+        // Drag-to-reorder state
+        this._dragId        = null;
+        this._dragOverId    = null;
+        this._sortedChores  = [];  // populated by modes-admin.js during render
+
+        // AbortController for event listener cleanup
+        this._abortCtrl = null;
+    }
+
+    // ---- Web Component lifecycle -------------------------------------------
+
+    /**
+     * Attach ALL event listeners ONCE in connectedCallback.
+     * _doRender() NEVER touches event listeners — this is the fix for the
+     * v0.2.2 memory leak caused by re-attaching listeners on every render.
+     */
+    connectedCallback() {
+        this._abortCtrl = new AbortController();
+        const { signal } = this._abortCtrl;
+        const root = this.shadowRoot;
+
+        // ---- Delegated click handler ---------------------------------------
+        root.addEventListener("click", e => {
+            const el = e.target.closest("[data-act]");
+            if (!el) return;
+            dispatch(el.dataset.act, el, this);
+        }, { signal });
+
+        // ---- Change handler ------------------------------------------------
+        root.addEventListener("change", e => {
+            const t = e.target;
+
+            // Inline toggle: show dollar value to kids
+            if (t.dataset.act === "toggle-dollar") {
+                this._svc("update_settings", { show_dollar_value_to_kids: t.checked });
+                return;
+            }
+            // "Everyone" checkbox: sync all individual person checkboxes + chip labels
+            if (t.id === "m-everyone") {
+                root.querySelectorAll(".m-assign-person").forEach(cb => {
+                    cb.checked = t.checked;
+                    cb.closest(".fh-person-cb-chip")?.classList.toggle("checked", t.checked);
+                });
+            }
+            // Individual person checkbox unchecked: uncheck Everyone
+            if (t.classList.contains("m-assign-person") && !t.checked) {
+                const ev = root.getElementById("m-everyone");
+                if (ev) ev.checked = false;
+            }
+            // Weekday chip visual feedback
+            if (t.classList.contains("m-wd-day") || t.classList.contains("m-df-day")) {
+                t.closest(".fh-wd-chip")?.classList.toggle("checked", t.checked);
+            }
+            // Person cb chip visual feedback
+            if (t.classList.contains("m-assign-person") || t.classList.contains("m-sp-person")) {
+                t.closest(".fh-person-cb-chip")?.classList.toggle("checked", t.checked);
+            }
+            // Sync conditional modal fields after any change
+            this._syncModalUI();
+        }, { signal });
+
+        // ---- Drag-to-reorder handlers -------------------------------------
+        root.addEventListener("dragstart", e => {
+            const row = e.target.closest("[data-drag-id]");
+            if (!row) return;
+            this._dragId = row.dataset.dragId;
+            e.dataTransfer.effectAllowed = "move";
+            setTimeout(() => row.classList.add("fh-dragging"), 0);
+        }, { signal });
+
+        root.addEventListener("dragover", e => {
+            const row = e.target.closest("[data-drag-id]");
+            if (!row || row.dataset.dragId === this._dragId) return;
+            e.preventDefault();
+            root.querySelectorAll(".fh-drag-over")
+                .forEach(el => el.classList.remove("fh-drag-over"));
+            row.classList.add("fh-drag-over");
+            this._dragOverId = row.dataset.dragId;
+        }, { signal });
+
+        root.addEventListener("dragleave", e => {
+            const row = e.target.closest("[data-drag-id]");
+            if (row) row.classList.remove("fh-drag-over");
+        }, { signal });
+
+        root.addEventListener("drop", e => {
+            e.preventDefault();
+            root.querySelectorAll(".fh-drag-over, .fh-dragging")
+                .forEach(el => el.classList.remove("fh-drag-over", "fh-dragging"));
+            const dragId = this._dragId;
+            const overId = this._dragOverId;
+            this._dragId = this._dragOverId = null;
+            if (!dragId || !overId || dragId === overId) return;
+
+            const sorted  = this._sortedChores;
+            const without = sorted.filter(c => c.chore_id !== dragId);
+            const insertAt= without.findIndex(c => c.chore_id === overId);
+            if (insertAt < 0) return;
+
+            const isLast = (insertAt === without.length - 1);
+            let before, after;
+            if (isLast) {
+                before = without[insertAt].sort_order;
+                after  = before + 20;
+            } else {
+                before = without[insertAt - 1]?.sort_order ?? (without[insertAt].sort_order - 20);
+                after  = without[insertAt].sort_order;
+            }
+
+            let newOrder = (before + after) / 2;
+
+            // Reindex if gap has compressed below useful threshold
+            const GAP_THRESHOLD = 0.01;
+            if (Math.abs(after - newOrder) < GAP_THRESHOLD || Math.abs(newOrder - before) < GAP_THRESHOLD) {
+                const reindexed = without.map((c, i) => ({ ...c, sort_order: (i + 1) * 10 }));
+                const rBefore   = reindexed[insertAt - 1]?.sort_order ?? 0;
+                const rAfter    = reindexed[insertAt]?.sort_order ?? (rBefore + 20);
+                newOrder        = (rBefore + rAfter) / 2;
+                reindexed.forEach(c => {
+                    if (c.chore_id !== dragId) {
+                        this._svc("update_chore", { chore_id: c.chore_id, sort_order: c.sort_order });
+                    }
+                });
+            }
+
+            this._svc("update_chore", { chore_id: dragId, sort_order: newOrder });
+        }, { signal });
+
+        root.addEventListener("dragend", () => {
+            root.querySelectorAll(".fh-drag-over, .fh-dragging")
+                .forEach(el => el.classList.remove("fh-drag-over", "fh-dragging"));
+            this._dragId = this._dragOverId = null;
+        }, { signal });
+    }
+
+    disconnectedCallback() {
+        this._abortCtrl?.abort();
+        this._abortCtrl = null;
+    }
+
+    // ---- HA card API -------------------------------------------------------
+
+    setConfig(cfg) {
+        const modes = ["command_center", "personal", "maintenance", "admin"];
+        if (!cfg.mode) throw new Error("Family Hub: 'mode' is required");
+        if (!modes.includes(cfg.mode)) throw new Error(`Family Hub: mode must be one of ${modes.join(", ")}`);
+        if (cfg.mode === "personal" && !cfg.person) throw new Error("Family Hub: 'person' is required for personal mode");
+        this._cfg = cfg;
+        this._doRender(true);
+    }
+
+    set hass(hass) {
+        this._hass = hass;
+        this._maybeRender();
+    }
+
+    getCardSize() { return 5; }
+
+    // ---- Dirty-check -------------------------------------------------------
+
+    /**
+     * Only re-renders when Family Hub sensor data actually changed.
+     * Suppressed entirely while a modal is open to protect user input.
+     */
+    _maybeRender() {
+        if (!this._hass) return;
+        if (this._modal) return;
+
+        const states = this._hass.states;
+        let changed  = false;
+
+        for (const id of FH_SENSORS) {
+            const ts = states[id]?.last_updated;
+            if (ts !== this._lastKeys[id]) { this._lastKeys[id] = ts; changed = true; }
+        }
+
+        for (const p of (states["sensor.family_hub_needs_attention"]?.attributes?.people || [])) {
+            const id = `sensor.family_hub_${slug(p.name)}`;
+            const ts = states[id]?.last_updated;
+            if (ts !== this._lastKeys[id]) { this._lastKeys[id] = ts; changed = true; }
+        }
+
+        if (changed) this._doRender(false);
+    }
+
+    // ---- Render core -------------------------------------------------------
+
+    /**
+     * Rebuild the shadow DOM. Does NOT touch event listeners.
+     * Modal is appended as a separate DOM node so background re-renders
+     * never destroy an open modal.
+     */
+    _doRender(force = false) {
+        if (!this._hass && !force) return;
+
+        const styleEl       = document.createElement("style");
+        styleEl.textContent = CSS;
+
+        const card     = document.createElement("div");
+        card.className = "fh-card";
+
+        if (!this._hass) {
+            card.innerHTML = `<div class="fh-empty">Loading…</div>`;
+        } else {
+            // Redirect stale "people" tab from v0.2.2 to overview
+            if (this._adminSec === "people") this._adminSec = "overview";
+
+            switch (this._cfg.mode) {
+                case "command_center": card.innerHTML = htmlCC(this);          break;
+                case "personal":       card.innerHTML = htmlPersonal(this);    break;
+                case "maintenance":    card.innerHTML = htmlMaintenance(this); break;
+                case "admin":          card.innerHTML = htmlAdmin(this);       break;
+            }
+        }
+
+        this.shadowRoot.innerHTML = "";
+        this.shadowRoot.appendChild(styleEl);
+        this.shadowRoot.appendChild(card);
+
+        if (this._modal) {
+            this.shadowRoot.appendChild(this._buildModal());
+        }
+
+        this._syncModalUI();
+    }
+
+    // ---- Sensor data accessors ---------------------------------------------
+
+    _states(id) { return this._hass?.states?.[id]; }
+    _attrs(id)  { return this._states(id)?.attributes || {}; }
+    _people()   { return this._attrs("sensor.family_hub_needs_attention").people || []; }
+
+    _findPerson(nameOrId) {
+        const lc = (nameOrId || "").toLowerCase();
+        return this._people().find(p =>
+            p.name.toLowerCase() === lc || p.person_id === nameOrId
+        ) || null;
+    }
+
+    _personEntityId(name) { return `sensor.family_hub_${slug(name)}`; }
+
+    // ---- Service calls -----------------------------------------------------
+
+    _svc(service, data) {
+        if (!this._hass) return;
+        this._hass.callService(DOMAIN, service, data);
+    }
+
+    // ---- Modal management --------------------------------------------------
+
+    /**
+     * Build the modal overlay as a real DOM node appended to the shadow root.
+     * Never part of the main card innerHTML — background re-renders won't destroy it.
+     */
+    _buildModal() {
+        const bg     = document.createElement("div");
+        bg.className = "fh-modal-bg";
+        bg.innerHTML = this._modalHTML();
+        bg.addEventListener("click", e => {
+            if (e.target === bg) this._closeModal();
+        });
+        return bg;
+    }
+
+    _modalHTML() {
+        if (!this._modal) return "";
+        const { type, data } = this._modal;
+        const people    = this._people();
+        const catLabels = this._attrs("sensor.family_hub_needs_attention").category_labels || [];
+        const chores    = this._attrs("sensor.family_hub_needs_attention").active_chores || [];
+
+        switch (type) {
+            case "award":
+            case "deduct":              return mPointAdjust(this._modal);
+            case "add-task":            return mAddTask(people);
+            case "add-chore":           return mChoreForm(null, false, people, catLabels);
+            case "edit-chore":          return mChoreForm(data.chore, true, people, catLabels);
+            case "add-store-item":      return mAddStoreItem(people);
+            case "edit-store-item":     return mEditStoreItem(data.item, people);
+            case "add-person":          return mAddPerson();
+            case "edit-person":         return mEditPerson(data);
+            case "edit-settings":       return mEditSettings(data);
+            case "claim":               return mClaim(this._modal, people);
+            case "add-reminder":        return mAddReminder(this._modal, people);
+            case "confirm-remove-person": return mConfirmRemovePerson(data);
+            default:                    return "";
+        }
+    }
+
+    _closeModal() {
+        this._modal = null;
+        this._doRender(true);
+    }
+
+    // ---- Conditional modal UI sync ----------------------------------------
+
+    /**
+     * Show/hide conditional form sections without re-rendering the whole card.
+     * Called after every _doRender and every change event.
+     * Safe to call when no modal is open.
+     */
+    _syncModalUI() {
+        const sr   = this.shadowRoot;
+        const show = id => { const el = sr.getElementById(id); if (el) el.style.display = ""; };
+        const hide = id => { const el = sr.getElementById(id); if (el) el.style.display = "none"; };
+
+        // Add task modal: show sections by task type
+        const taskTypeEl = sr.getElementById("m-tasktype");
+        if (taskTypeEl) {
+            const tt = taskTypeEl.value;
+            if (tt === "assigned")  { show("m-task-assigned-section");  hide("m-task-claimable-section"); hide("m-task-reminder-section"); }
+            if (tt === "claimable") { hide("m-task-assigned-section");  show("m-task-claimable-section"); hide("m-task-reminder-section"); }
+            if (tt === "reminder")  { hide("m-task-assigned-section");  hide("m-task-claimable-section"); show("m-task-reminder-section"); }
+        }
+
+        // Add task: penalty points field inside assigned section
+        const taskPenEl  = sr.getElementById("m-tpenalty");
+        const taskPenSec = sr.getElementById("m-task-penalty-section");
+        if (taskPenEl && taskPenSec) {
+            taskPenSec.style.display = taskPenEl.checked ? "" : "none";
+        }
+
+        // Chore form: recurrence conditional fields
+        const recEl = sr.getElementById("m-crec");
+        if (recEl) {
+            const rec = recEl.value;
+            hide("m-dayfilter-section");
+            hide("m-weekdays-section");
+            hide("m-interval-section");
+            hide("m-dom-section");
+            hide("m-chore-expiry-section");
+
+            if (rec === "daily")                                    show("m-dayfilter-section");
+            if (rec === "weekly" || rec === "every_n_weeks")        show("m-weekdays-section");
+            if (rec === "every_n_days" || rec === "every_n_weeks")  show("m-interval-section");
+            if (rec === "monthly_on_date")                          show("m-dom-section");
+
+            const ctypeEl = sr.getElementById("m-ctype");
+            const isClaimOrOneTime = rec === "one_time" || ctypeEl?.value === "claimable";
+            if (isClaimOrOneTime) show("m-chore-expiry-section");
+
+            const unitEl = sr.getElementById("m-interval-unit");
+            if (unitEl) unitEl.textContent = rec === "every_n_weeks" ? "weeks" : "days";
+        }
+
+        // Chore form: penalty points field
+        const penaltyEl  = sr.getElementById("m-cpenalty");
+        const penaltySec = sr.getElementById("m-penalty-pts-section");
+        if (penaltyEl && penaltySec) {
+            penaltySec.style.display = penaltyEl.checked ? "" : "none";
+        }
+
+        // Store scope person checkboxes
+        const scopeEl     = sr.getElementById("m-sscope");
+        const personSecEl = sr.getElementById("m-sperson-section");
+        if (scopeEl && personSecEl) {
+            personSecEl.style.display = scopeEl.value === "personal" ? "" : "none";
+        }
+    }
+}

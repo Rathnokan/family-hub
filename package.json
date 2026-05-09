@@ -1,0 +1,25 @@
+{
+  "name": "family-hub",
+  "version": "1.0.0",
+  "description": "A private, self-hosted family task management integration for Home Assistant.",
+  "main": "index.js",
+  "scripts": {
+    "build": "esbuild src/main.js --bundle --format=iife --outfile=custom_components/family_hub/www/family-hub-card.js",
+    "watch": "esbuild src/main.js --bundle --format=iife --outfile=custom_components/family_hub/www/family-hub-card.js --watch"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Rathnokan/family-hub.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Rathnokan/family-hub/issues"
+  },
+  "homepage": "https://github.com/Rathnokan/family-hub#readme",
+  "devDependencies": {
+    "esbuild": "^0.28.0"
+  }
+}
