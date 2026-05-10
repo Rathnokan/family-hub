@@ -941,6 +941,12 @@ class FamilyHubDataStore:
         1. Find any existing incomplete instance(s) for same chore+person.
         2. Apply penalty and mark them skipped.
         3. Create the new instance.
+
+        After the main loop, a cleanup pass runs for RECURRENCE_DAILY chores
+        that have a day_filter and are NOT due on tick_date (off-days). Any
+        pending instances from a previous due-day are skipped with penalty so
+        they do not linger in the overdue list on off-days (e.g. a Mon–Fri chore
+        should not show overdue on Saturday).
         """
         for chore in self.get_active_chores():
             r_type = chore["recurrence"].get("type", RECURRENCE_DAILY)
@@ -987,6 +993,36 @@ class FamilyHubDataStore:
                         continue
                     await self._skip_incomplete_instances(chore, person_id=None)
                     await self._async_create_task_instance(chore, tick_date, person_id=None)
+
+        # Cleanup pass — daily chores with day_filter that are NOT due today.
+        # When today is an off-day (e.g. Saturday for a Mon–Fri chore), the main
+        # loop above skips the chore entirely, leaving Friday's pending instance
+        # sitting in the overdue list. This pass finds those stale instances and
+        # skips them (with penalty if configured) so they vanish immediately.
+        tick_date_str = tick_date.isoformat()
+        for chore in self.get_active_chores():
+            rec        = chore.get("recurrence", {})
+            r_type     = rec.get("type", RECURRENCE_DAILY)
+            day_filter = rec.get("day_filter", [])
+            if r_type != RECURRENCE_DAILY or not day_filter:
+                continue
+            if tick_date.weekday() in day_filter:
+                continue  # this chore was due today — already handled above
+            # Off-day: check for any stale pending instances older than today
+            has_stale = any(
+                t for t in self.task_instances
+                if t["chore_id"] == chore["id"]
+                and t["status"] in [STATUS_PENDING, STATUS_CLAIMED]
+                and t["due_date"] < tick_date_str
+            )
+            if not has_stale:
+                continue
+            assigned = chore.get("assigned_to", [])
+            if assigned:
+                for pid in assigned:
+                    await self._skip_incomplete_instances(chore, person_id=pid)
+            else:
+                await self._skip_incomplete_instances(chore, person_id=None)
 
     async def _skip_incomplete_instances(self, chore: dict, person_id: str | None) -> None:
         """Mark any incomplete prior instances for this chore+person as skipped, applying penalty."""
@@ -1378,15 +1414,28 @@ class FamilyHubDataStore:
 
         result = []
         for e in entries:
+            # Skip HISTORY_POINTS_AWARDED entries that are linked to a task instance.
+            # Task-completion points are already represented by the task_completed /
+            # task_approved event row. Manual bonus/deduction points use a fresh UUID
+            # as reference_id (not a task instance id) and still appear here.
+            if e["type"] == HISTORY_POINTS_AWARDED:
+                if self.get_task_instance(e.get("reference_id", "")):
+                    continue
+
             person = self.get_person(e.get("person_id", "")) if e.get("person_id") else None
             # Find the task instance for action eligibility
             instance    = self.get_task_instance(e.get("reference_id", ""))
             inst_status = instance["status"] if instance else None
 
-            # Determine what reversible action (if any) is still available
+            # Determine what reversible action (if any) is still available.
+            # "excuse" only offered when an actual penalty was deducted — if
+            # penalty_applied is 0 (no penalty configured, or it was paused),
+            # there is nothing to reverse so the button is suppressed.
             reversible = None
             if inst_status == STATUS_SKIPPED:
-                reversible = "excuse"      # can excuse or mark complete
+                if instance and instance.get("penalty_applied", 0) > 0:
+                    reversible = "excuse"
+                # else: skipped with no penalty — no action available
             elif inst_status == STATUS_EXCUSED:
                 reversible = "mark_complete"
             elif inst_status in [STATUS_APPROVED, STATUS_SELF_REPORTED]:
@@ -1532,6 +1581,21 @@ class FamilyHubDataStore:
                 chore_name=chore_name,
             )
 
+        # Same-day retry: if the task was rejected on the same day it was due,
+        # put it back as a fresh pending instance so the kid can try again.
+        # If rejected the next day the daily tick will already have generated
+        # today's instance, so no new instance is needed.
+        today_str = date.today().isoformat()
+        chore_r_type = chore["recurrence"].get("type") if chore else RECURRENCE_ONE_TIME
+        if (chore_r_type != RECURRENCE_ONE_TIME
+                and instance.get("due_date") == today_str
+                and pid):
+            await self._async_create_task_instance(chore, date.today(), person_id=pid)
+            _LOGGER.info(
+                "Family Hub: reject_task — created same-day retry instance for %s on chore %s",
+                pid, chore_name,
+            )
+
         await self.async_save()
         return instance
 
@@ -1670,8 +1734,24 @@ class FamilyHubDataStore:
             if t["due_date"] == today_str:
                 due_today.append(row)
             elif t["due_date"] < today_str:
-                row["days_overdue"] = (today - date.fromisoformat(t["due_date"])).days
-                overdue.append(row)
+                r_type     = chore["recurrence"].get("type", RECURRENCE_DAILY)
+                day_filter = chore["recurrence"].get("day_filter", [])
+
+                if r_type in (RECURRENCE_WEEKLY, RECURRENCE_EVERY_N_DAYS,
+                              RECURRENCE_EVERY_N_WEEKS, RECURRENCE_MONTHLY_ON_DATE):
+                    # Non-daily recurring chores: the instance is still "in play"
+                    # until the next cycle replaces it. Show in due_today (still
+                    # completable) rather than overdue. days_late is included for
+                    # the card to display a soft "Nd late" indicator.
+                    row["days_late"] = (today - date.fromisoformat(t["due_date"])).days
+                    due_today.append(row)
+                elif r_type == RECURRENCE_DAILY and day_filter and today.weekday() not in day_filter:
+                    # Daily with day_filter on an off-day: hide it. The tick's
+                    # cleanup pass will skip it with penalty on the next run.
+                    continue
+                else:
+                    row["days_overdue"] = (today - date.fromisoformat(t["due_date"])).days
+                    overdue.append(row)
 
         pending_approval = []
         for t in self.task_instances:
@@ -1824,6 +1904,18 @@ class FamilyHubDataStore:
             due_date   = date.fromisoformat(task["due_date"])
             days_delta = (due_date - today).days
 
+            # For non-daily recurring chores (weekly, n-days, n-weeks, monthly),
+            # past-due instances are still in play until the next cycle replaces
+            # them. Treat them as days_delta=0 ("today") on the command center so
+            # they do not appear in the "Overdue" section. days_late is set so
+            # the card can show a soft "Nd late" indicator.
+            days_late = 0
+            r_type    = chore["recurrence"].get("type", RECURRENCE_DAILY)
+            if days_delta < 0 and r_type in (RECURRENCE_WEEKLY, RECURRENCE_EVERY_N_DAYS,
+                                              RECURRENCE_EVERY_N_WEEKS, RECURRENCE_MONTHLY_ON_DATE):
+                days_late  = abs(days_delta)
+                days_delta = 0  # treat as today
+
             items.append({
                 "task_id":           task["id"],
                 "chore_id":          task["chore_id"],
@@ -1832,6 +1924,7 @@ class FamilyHubDataStore:
                 "points":            chore.get("points", 0),
                 "due_date":          task["due_date"],
                 "days_delta":        days_delta,
+                "days_late":         days_late,
                 "status":            task["status"],
                 "category_label":    chore.get("category_label", ""),
                 "assigned_to":       assigned,

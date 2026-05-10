@@ -8,9 +8,9 @@
  *         never crowded out by badges on small screens.
  */
 
-import { DEFAULT_COLOR, FLASH_MS } from "./constants.js";
+import { DEFAULT_COLOR, FLASH_MS, HISTORY_META } from "./constants.js";
 import { I } from "./constants.js";
-import { escHTML, escAttr, ini, fPts, fUSD, cap, slug } from "./utils.js";
+import { escHTML, escAttr, ini, fPts, fUSD, cap, slug, relTime } from "./utils.js";
 
 /**
  * Render the full personal dashboard HTML.
@@ -25,13 +25,18 @@ export function htmlPersonal(card) {
     const balance = parseInt(card._states(eid)?.state || "0");
     const color   = person.avatar_color || DEFAULT_COLOR;
 
-    const tabBar = ["tasks", "store"].map(t => `
+    const naAttr       = card._attrs("sensor.family_hub_needs_attention");
+    const historyLog   = naAttr.history_log || [];
+    const personHist   = historyLog.filter(e => e.person_id === person.person_id);
+
+    const tabBar = ["tasks", "store", "history"].map(t => `
       <div class="fh-tab ${card._tab === t ? "active" : ""}"
            data-act="tab" data-tab="${t}">${cap(t)}</div>`).join("");
 
     let content = "";
-    if (card._tab === "tasks") content = _htmlPersonalTasks(attr, color, person, card);
-    if (card._tab === "store") content = _htmlPersonalStore(attr, color, person, balance, card);
+    if (card._tab === "tasks")   content = _htmlPersonalTasks(attr, color, person, card);
+    if (card._tab === "store")   content = _htmlPersonalStore(attr, color, person, balance, card);
+    if (card._tab === "history") content = _htmlPersonalHistory(personHist, color);
 
     return `
       <div class="fh-person-header" style="border-left:4px solid ${color}">
@@ -72,10 +77,8 @@ function _htmlPersonalTasks(attr, color, person, card) {
     const overdue = collapseByChore(rawOverdue, (a, b) => (a.days_overdue || 0) > (b.days_overdue || 0));
     const allDue  = collapseByChore(rawDue, () => false);
 
-    // Separate reminders from regular tasks.
-    // TODO (Phase 3-C): Replace heuristic with t.chore_type === "reminder" once
-    // chore_type is added to the personal sensor payload (v0.4.1 backend resolves this).
-    const isReminderTask = t => !t.points && !t.penalty_enabled && !t.approval_required;
+    // Separate reminders from regular tasks using chore_type (added in v0.4.1).
+    const isReminderTask = t => t.chore_type === "reminder";
     const dueReminders   = allDue.filter(t =>  isReminderTask(t));
     const due            = allDue.filter(t => !isReminderTask(t));
 
@@ -154,7 +157,9 @@ function _htmlPersonalTasks(attr, color, person, card) {
               : ""}
           ${isOverdue
               ? `<span class="fh-badge fh-badge-overdue">${t.days_overdue}d late</span>`
-              : ""}
+              : (t.days_late > 0
+                  ? `<span class="fh-badge fh-badge-pending">due ${t.days_late}d ago</span>`
+                  : "")}
           ${expiryBadge(t)}
           ${!isReminder && t.points
               ? `<span class="fh-badge fh-badge-pts" style="--row-color:${color}">${t.points}pts</span>`
@@ -217,6 +222,33 @@ function _htmlPersonalTasks(attr, color, person, card) {
         <div class="fh-section-title">Awaiting approval</div>
         <div class="fh-task-list">${pendingRows}</div>` : ""}
       ${empty ? '<div class="fh-empty">Nothing due — nice work! 🎉</div>' : ""}`;
+}
+
+// ---------------------------------------------------------------------------
+// History tab — read-only personal history log
+// ---------------------------------------------------------------------------
+
+function _htmlPersonalHistory(entries, color) {
+    if (!entries.length) return `<div class="fh-empty">No history yet.</div>`;
+
+    const rows = entries.map(e => {
+        const meta     = HISTORY_META[e.type] || { label: e.type, color: "var(--fh-text-sec)" };
+        const ptsDelta = e.points_delta
+            ? `<span style="color:${e.points_delta > 0 ? "var(--fh-success)" : "var(--fh-overdue)"}">
+                 ${e.points_delta > 0 ? "+" : ""}${e.points_delta}pts
+               </span>`
+            : "";
+        return `
+          <div class="fh-hist-row" style="--hist-color:${meta.color}">
+            <div class="fh-hist-info">
+              <div class="fh-hist-label">${escHTML(meta.label)}</div>
+              <div class="fh-hist-name">${escHTML(e.chore_name || e.note || "")}</div>
+              <div class="fh-hist-meta">${relTime(e.timestamp)} ${ptsDelta}</div>
+            </div>
+          </div>`;
+    }).join("");
+
+    return `<div class="fh-hist-scroll">${rows}</div>`;
 }
 
 // ---------------------------------------------------------------------------

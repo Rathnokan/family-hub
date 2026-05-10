@@ -27,13 +27,18 @@ export function htmlCC(card) {
     const orderedLabels = naAttr.category_labels || [];
     const labelIndex    = new Map(orderedLabels.map((l, i) => [l, i]));
 
-    // Person filter chips
-    const chips = people.map(p => `
+    // Person filter chips — show a red dot when this person has pending approvals
+    const approvalQueue = naAttr.approval_queue || [];
+    const chips = people.map(p => {
+        const hasApproval = approvalQueue.some(a => a.person_id === p.person_id);
+        return `
       <div class="fh-chip ${card._filter === p.person_id ? "active" : ""}"
            style="--chip-color:${p.avatar_color || DEFAULT_COLOR}"
            data-act="filter" data-pid="${p.person_id}">
         <span class="fh-chip-dot"></span>${escHTML(p.name)}
-      </div>`).join("");
+        ${hasApproval ? `<span class="fh-chip-approval-dot" title="Pending approval"></span>` : ""}
+      </div>`;
+    }).join("");
 
     // Apply person filter
     const filtered = card._filter
@@ -156,7 +161,9 @@ function ccTaskRow(t, people, isOverdue, flashing) {
         </div>
         ${isOverdue
             ? `<span class="fh-badge fh-badge-overdue">${Math.abs(t.days_delta)}d late</span>`
-            : ""}
+            : (t.days_late > 0
+                ? `<span class="fh-badge fh-badge-pending">due ${t.days_late}d ago</span>`
+                : "")}
         ${t.points
             ? `<span class="fh-badge fh-badge-pts" style="--row-color:${color}">${t.points}pts</span>`
             : ""}

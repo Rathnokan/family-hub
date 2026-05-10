@@ -68,62 +68,83 @@ export function htmlAdmin(card) {
 // ---------------------------------------------------------------------------
 
 function _htmlOverview(people, attr) {
-    const ppdollar = attr.points_per_dollar || 10;
+    const ppdollar    = attr.points_per_dollar      || 10;
+    const globalPause = attr.penalties_paused_global || false;
 
     const rows = people.map(p => {
-        const color          = p.avatar_color || DEFAULT_COLOR;
-        const penPaused      = p.penalties_paused || false;
+        const color     = p.avatar_color || DEFAULT_COLOR;
+        const penPaused = p.penalties_paused || false;
+        const isKid     = p.type === "kid";
 
-        // Per-person penalty pause toggle. Uses data-act="toggle-person-penalty"
-        // with the person_id so dispatch can call update_person.
-        // The toggle is only shown for kids — parents don't have penalties.
-        const penaltyToggle = (p.type === "kid") ? `
-          <div class="fh-penalty-pause-wrap" title="${penPaused ? "Penalties paused — tap to resume" : "Tap to pause penalties for this person"}">
-            <span class="fh-penalty-pause-label" style="font-size:.7rem;color:${penPaused ? "var(--fh-warning)" : "var(--fh-text-sec)"}">
-              ${penPaused ? "⏸ Penalties off" : "Penalties on"}
-            </span>
-            <label class="fh-toggle" style="width:36px;height:20px">
-              <input type="checkbox" data-act="toggle-person-penalty"
-                     data-pid="${p.person_id}" ${penPaused ? "" : "checked"}>
-              <span class="fh-toggle-slider"></span>
-            </label>
-          </div>` : "";
+        // Penalty pause row: separate row below person row for kids only.
+        // Label reflects whether penalties are off due to global or per-person pause.
+        let penaltyPauseRow = "";
+        if (isKid) {
+            let penLabel, penClass;
+            if (globalPause) {
+                penLabel = "Penalties off (global)";
+                penClass = "off-global";
+            } else if (penPaused) {
+                penLabel = "Penalties off";
+                penClass = "off";
+            } else {
+                penLabel = "Penalties on";
+                penClass = "";
+            }
+            penaltyPauseRow = `
+              <div class="fh-penalty-pause-row">
+                <span class="fh-penalty-pause-label ${penClass}">${penLabel}</span>
+                <label class="fh-toggle" style="width:36px;height:20px"
+                       title="${penPaused ? "Tap to resume penalties" : "Tap to pause penalties for this person"}">
+                  <input type="checkbox" data-act="toggle-person-penalty"
+                         data-pid="${p.person_id}" ${penPaused ? "" : "checked"}>
+                  <span class="fh-toggle-slider"></span>
+                </label>
+              </div>`;
+        }
+
+        // Round only the top corners on kid rows so the pause row attaches cleanly below.
+        const rowStyle = isKid
+            ? "border-radius:var(--fh-radius-sm) var(--fh-radius-sm) 0 0"
+            : "";
 
         return `
-        <div class="fh-point-row">
-          <div class="fh-avatar" style="background:${color}">${ini(p.name)}</div>
-          <div style="flex:1;min-width:0">
-            <div style="font-weight:700;font-size:.9rem">${escHTML(p.name)}
-              <span style="font-size:.75rem;color:var(--fh-text-sec);font-weight:400">
-                (${cap(p.type)})
-              </span>
+        <div>
+          <div class="fh-point-row" style="${rowStyle}">
+            <div class="fh-avatar" style="background:${color}">${ini(p.name)}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:700;font-size:.9rem">${escHTML(p.name)}
+                <span style="font-size:.75rem;color:var(--fh-text-sec);font-weight:400">
+                  (${cap(p.type)})
+                </span>
+              </div>
+              <div style="font-size:.75rem;color:var(--fh-text-sec)">
+                ${fPts(p.points_balance)}pts · ${fUSD(p.points_balance / ppdollar)} · lifetime ${fPts(p.points_lifetime)}
+              </div>
             </div>
-            <div style="font-size:.75rem;color:var(--fh-text-sec)">
-              ${fPts(p.points_balance)}pts · ${fUSD(p.points_balance / ppdollar)} · lifetime ${fPts(p.points_lifetime)}
-            </div>
+            <button class="fh-btn fh-btn-success fh-btn-sm"
+                    data-act="open-award" data-pid="${p.person_id}"
+                    data-pname="${escAttr(p.name)}" title="Award points">
+              ${I.award}
+            </button>
+            <button class="fh-btn fh-btn-danger fh-btn-sm"
+                    data-act="open-deduct" data-pid="${p.person_id}"
+                    data-pname="${escAttr(p.name)}" title="Deduct points">
+              ${I.minus}
+            </button>
+            <button class="fh-btn fh-btn-ghost fh-btn-sm"
+                    data-act="open-edit-person" data-pid="${p.person_id}"
+                    data-pname="${escAttr(p.name)}" data-ptype="${p.type}"
+                    data-pcolor="${p.avatar_color || DEFAULT_COLOR}" title="Edit person">
+              ${I.edit}
+            </button>
+            <button class="fh-btn fh-btn-ghost fh-btn-sm"
+                    data-act="open-confirm-remove-person" data-pid="${p.person_id}"
+                    data-pname="${escAttr(p.name)}" title="Remove person">
+              ${I.remove}
+            </button>
           </div>
-          ${penaltyToggle}
-          <button class="fh-btn fh-btn-success fh-btn-sm"
-                  data-act="open-award" data-pid="${p.person_id}"
-                  data-pname="${escAttr(p.name)}" title="Award points">
-            ${I.award}
-          </button>
-          <button class="fh-btn fh-btn-danger fh-btn-sm"
-                  data-act="open-deduct" data-pid="${p.person_id}"
-                  data-pname="${escAttr(p.name)}" title="Deduct points">
-            ${I.minus}
-          </button>
-          <button class="fh-btn fh-btn-ghost fh-btn-sm"
-                  data-act="open-edit-person" data-pid="${p.person_id}"
-                  data-pname="${escAttr(p.name)}" data-ptype="${p.type}"
-                  data-pcolor="${p.avatar_color || DEFAULT_COLOR}" title="Edit person">
-            ${I.edit}
-          </button>
-          <button class="fh-btn fh-btn-ghost fh-btn-sm"
-                  data-act="open-confirm-remove-person" data-pid="${p.person_id}"
-                  data-pname="${escAttr(p.name)}" title="Remove person">
-            ${I.remove}
-          </button>
+          ${penaltyPauseRow}
         </div>`;
     }).join("") || `<div class="fh-empty">No people found.</div>`;
 

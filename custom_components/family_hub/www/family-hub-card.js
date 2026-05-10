@@ -34,6 +34,7 @@
     --fh-success:     #30d158;
     --fh-success-bg:  rgba(48,209,88,.12);
     --fh-accent:      var(--primary-color, #7F77DD);
+    --fh-text-scale:  1;
     font-family: var(--paper-font-body1_-_font-family, -apple-system, Roboto, sans-serif);
     color: var(--fh-text);
     display: block;
@@ -51,13 +52,13 @@
   }
 
   /* Typography */
-  .fh-title        { font-size:1.1rem; font-weight:700; margin:0 0 var(--fh-gap) 0; }
+  .fh-title        { font-size:calc(1.1rem * var(--fh-text-scale, 1)); font-weight:700; margin:0 0 var(--fh-gap) 0; }
   .fh-section-title {
-    font-size:.75rem; font-weight:700; letter-spacing:.07em;
+    font-size:calc(.75rem * var(--fh-text-scale, 1)); font-weight:700; letter-spacing:.07em;
     text-transform:uppercase; color:var(--fh-text-sec);
     margin:var(--fh-gap) 0 var(--fh-gap-sm) 0;
   }
-  .fh-balance      { font-size:3.4rem; font-weight:800; line-height:1; letter-spacing:-.03em; }
+  .fh-balance      { font-size:calc(3.4rem * var(--fh-text-scale, 1)); font-weight:800; line-height:1; letter-spacing:-.03em; }
   .fh-balance-unit { font-size:1.2rem; font-weight:400; opacity:.6; margin-left:3px; }
   .fh-dollar       { font-size:.95rem; color:var(--fh-text-sec); margin-top:3px; }
 
@@ -123,7 +124,7 @@
     100%   { opacity:0; transform:scaleY(0); max-height:0; padding:0; margin:0; }
   }
   .fh-task-name {
-    flex:1; font-size:.92rem; font-weight:500;
+    flex:1; font-size:calc(.92rem * var(--fh-text-scale, 1)); font-weight:500;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
   .fh-task-sub  { font-size:.75rem; color:var(--fh-text-sec); }
@@ -135,7 +136,7 @@
 
   /* Badges */
   .fh-badge {
-    font-size:.72rem; font-weight:700; padding:2px 8px; border-radius:10px;
+    font-size:calc(.72rem * var(--fh-text-scale, 1)); font-weight:700; padding:2px 8px; border-radius:10px;
     white-space:nowrap; flex-shrink:0;
   }
   .fh-badge-overdue  { color:var(--fh-overdue); background:var(--fh-overdue-bg); }
@@ -150,7 +151,7 @@
 
   /* Penalty warning */
   .fh-penalty-warn {
-    font-size:.7rem; color:var(--fh-warning); white-space:nowrap; flex-shrink:0;
+    font-size:calc(.7rem * var(--fh-text-scale, 1)); color:var(--fh-warning); white-space:nowrap; flex-shrink:0;
   }
 
   /* Description toggle button */
@@ -189,7 +190,7 @@
   .fh-btn {
     display:inline-flex; align-items:center; justify-content:center; gap:5px;
     padding:7px 14px; border-radius:var(--fh-radius-sm);
-    border:none; font-size:.84rem; font-weight:600;
+    border:none; font-size:calc(.84rem * var(--fh-text-scale, 1)); font-weight:600;
     cursor:pointer; user-select:none; white-space:nowrap;
     transition:filter .15s, transform .1s; font-family:inherit;
   }
@@ -410,13 +411,33 @@
     display:flex; flex-direction:column; gap:var(--fh-gap-sm);
   }
 
+  /* Approval dot on person filter chips */
+  .fh-chip-approval-dot {
+    width:8px; height:8px; border-radius:50%;
+    background:var(--fh-overdue); flex-shrink:0;
+  }
+
+  /* Penalty pause row \u2014 separate row below person row in admin overview */
+  .fh-penalty-pause-row {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:4px var(--fh-pad-sm) var(--fh-pad-xs) var(--fh-pad-sm);
+    margin-top:-4px;
+    background:var(--fh-surface); border-radius:0 0 var(--fh-radius-sm) var(--fh-radius-sm);
+    border-top:1px solid var(--fh-border);
+  }
+  .fh-penalty-pause-label {
+    font-size:calc(.75rem * var(--fh-text-scale, 1)); color:var(--fh-text-sec);
+  }
+  .fh-penalty-pause-label.off       { color:var(--fh-warning); }
+  .fh-penalty-pause-label.off-global { color:var(--fh-overdue); }
+
   /* Responsive */
   @container fh (min-width: 680px) {
     .fh-store-grid { grid-template-columns:repeat(auto-fill, minmax(170px, 1fr)); }
-    .fh-balance    { font-size:4rem; }
+    .fh-balance    { font-size:calc(4rem * var(--fh-text-scale, 1)); }
   }
   @container fh (min-width: 900px) {
-    .fh-balance { font-size:4.8rem; }
+    .fh-balance { font-size:calc(4.8rem * var(--fh-text-scale, 1)); }
   }
 `;
     }
@@ -427,7 +448,7 @@
   var init_constants = __esm({
     "src/card/constants.js"() {
       DOMAIN = "family_hub";
-      VERSION = "0.4.0";
+      VERSION = "0.4.2";
       DEFAULT_COLOR = "#7F77DD";
       FLASH_MS = 1400;
       FH_SENSORS = [
@@ -533,12 +554,17 @@
     const famName = naAttr.family_name || "Family Hub";
     const orderedLabels = naAttr.category_labels || [];
     const labelIndex = new Map(orderedLabels.map((l, i) => [l, i]));
-    const chips = people.map((p) => `
+    const approvalQueue = naAttr.approval_queue || [];
+    const chips = people.map((p) => {
+      const hasApproval = approvalQueue.some((a) => a.person_id === p.person_id);
+      return `
       <div class="fh-chip ${card._filter === p.person_id ? "active" : ""}"
            style="--chip-color:${p.avatar_color || DEFAULT_COLOR}"
            data-act="filter" data-pid="${p.person_id}">
         <span class="fh-chip-dot"></span>${escHTML(p.name)}
-      </div>`).join("");
+        ${hasApproval ? `<span class="fh-chip-approval-dot" title="Pending approval"></span>` : ""}
+      </div>`;
+    }).join("");
     const filtered = card._filter ? allTasks.filter((t) => t.assigned_to === card._filter) : allTasks;
     const overdueList = filtered.filter((t) => t.days_delta < 0);
     const todayList = filtered.filter((t) => t.days_delta === 0);
@@ -609,7 +635,7 @@
           <span class="fh-task-name">${escHTML(t.name)}</span>
           ${penaltyLine}
         </div>
-        ${isOverdue ? `<span class="fh-badge fh-badge-overdue">${Math.abs(t.days_delta)}d late</span>` : ""}
+        ${isOverdue ? `<span class="fh-badge fh-badge-overdue">${Math.abs(t.days_delta)}d late</span>` : t.days_late > 0 ? `<span class="fh-badge fh-badge-pending">due ${t.days_late}d ago</span>` : ""}
         ${t.points ? `<span class="fh-badge fh-badge-pts" style="--row-color:${color}">${t.points}pts</span>` : ""}
         <button class="fh-check" style="--row-color:${color}"
                 data-act="complete" data-tid="${t.task_id}" data-pid="${t.assigned_to}">
@@ -633,12 +659,16 @@
     const attr = card._attrs(eid);
     const balance = parseInt(card._states(eid)?.state || "0");
     const color = person.avatar_color || DEFAULT_COLOR;
-    const tabBar = ["tasks", "store"].map((t) => `
+    const naAttr = card._attrs("sensor.family_hub_needs_attention");
+    const historyLog = naAttr.history_log || [];
+    const personHist = historyLog.filter((e) => e.person_id === person.person_id);
+    const tabBar = ["tasks", "store", "history"].map((t) => `
       <div class="fh-tab ${card._tab === t ? "active" : ""}"
            data-act="tab" data-tab="${t}">${cap(t)}</div>`).join("");
     let content = "";
     if (card._tab === "tasks") content = _htmlPersonalTasks(attr, color, person, card);
     if (card._tab === "store") content = _htmlPersonalStore(attr, color, person, balance, card);
+    if (card._tab === "history") content = _htmlPersonalHistory(personHist, color);
     return `
       <div class="fh-person-header" style="border-left:4px solid ${color}">
         <div class="fh-avatar" style="background:${color};width:46px;height:46px;font-size:1.1rem">
@@ -669,7 +699,7 @@
     };
     const overdue = collapseByChore(rawOverdue, (a, b) => (a.days_overdue || 0) > (b.days_overdue || 0));
     const allDue = collapseByChore(rawDue, () => false);
-    const isReminderTask = (t) => !t.points && !t.penalty_enabled && !t.approval_required;
+    const isReminderTask = (t) => t.chore_type === "reminder";
     const dueReminders = allDue.filter((t) => isReminderTask(t));
     const due = allDue.filter((t) => !isReminderTask(t));
     const naAttr = card._attrs("sensor.family_hub_needs_attention");
@@ -720,7 +750,7 @@
           </div>
           ${t.description ? `<button class="fh-desc-btn" data-act="toggle-desc" data-id="${t.task_id}"
                          title="Toggle description">?</button>` : ""}
-          ${isOverdue ? `<span class="fh-badge fh-badge-overdue">${t.days_overdue}d late</span>` : ""}
+          ${isOverdue ? `<span class="fh-badge fh-badge-overdue">${t.days_overdue}d late</span>` : t.days_late > 0 ? `<span class="fh-badge fh-badge-pending">due ${t.days_late}d ago</span>` : ""}
           ${expiryBadge(t)}
           ${!isReminder && t.points ? `<span class="fh-badge fh-badge-pts" style="--row-color:${color}">${t.points}pts</span>` : ""}
           ${!isReminder ? `<button class="fh-check" style="--row-color:${color}"
@@ -764,6 +794,24 @@
         <div class="fh-section-title">Awaiting approval</div>
         <div class="fh-task-list">${pendingRows}</div>` : ""}
       ${empty ? '<div class="fh-empty">Nothing due \u2014 nice work! \u{1F389}</div>' : ""}`;
+  }
+  function _htmlPersonalHistory(entries, color) {
+    if (!entries.length) return `<div class="fh-empty">No history yet.</div>`;
+    const rows = entries.map((e) => {
+      const meta = HISTORY_META[e.type] || { label: e.type, color: "var(--fh-text-sec)" };
+      const ptsDelta = e.points_delta ? `<span style="color:${e.points_delta > 0 ? "var(--fh-success)" : "var(--fh-overdue)"}">
+                 ${e.points_delta > 0 ? "+" : ""}${e.points_delta}pts
+               </span>` : "";
+      return `
+          <div class="fh-hist-row" style="--hist-color:${meta.color}">
+            <div class="fh-hist-info">
+              <div class="fh-hist-label">${escHTML(meta.label)}</div>
+              <div class="fh-hist-name">${escHTML(e.chore_name || e.note || "")}</div>
+              <div class="fh-hist-meta">${relTime(e.timestamp)} ${ptsDelta}</div>
+            </div>
+          </div>`;
+    }).join("");
+    return `<div class="fh-hist-scroll">${rows}</div>`;
   }
   function _htmlPersonalStore(attr, color, person, balance, card) {
     const items = attr.store_items || [];
@@ -896,55 +944,73 @@
   }
   function _htmlOverview(people, attr) {
     const ppdollar = attr.points_per_dollar || 10;
+    const globalPause = attr.penalties_paused_global || false;
     const rows = people.map((p) => {
       const color = p.avatar_color || DEFAULT_COLOR;
       const penPaused = p.penalties_paused || false;
-      const penaltyToggle = p.type === "kid" ? `
-          <div class="fh-penalty-pause-wrap" title="${penPaused ? "Penalties paused \u2014 tap to resume" : "Tap to pause penalties for this person"}">
-            <span class="fh-penalty-pause-label" style="font-size:.7rem;color:${penPaused ? "var(--fh-warning)" : "var(--fh-text-sec)"}">
-              ${penPaused ? "\u23F8 Penalties off" : "Penalties on"}
-            </span>
-            <label class="fh-toggle" style="width:36px;height:20px">
-              <input type="checkbox" data-act="toggle-person-penalty"
-                     data-pid="${p.person_id}" ${penPaused ? "" : "checked"}>
-              <span class="fh-toggle-slider"></span>
-            </label>
-          </div>` : "";
+      const isKid = p.type === "kid";
+      let penaltyPauseRow = "";
+      if (isKid) {
+        let penLabel, penClass;
+        if (globalPause) {
+          penLabel = "Penalties off (global)";
+          penClass = "off-global";
+        } else if (penPaused) {
+          penLabel = "Penalties off";
+          penClass = "off";
+        } else {
+          penLabel = "Penalties on";
+          penClass = "";
+        }
+        penaltyPauseRow = `
+              <div class="fh-penalty-pause-row">
+                <span class="fh-penalty-pause-label ${penClass}">${penLabel}</span>
+                <label class="fh-toggle" style="width:36px;height:20px"
+                       title="${penPaused ? "Tap to resume penalties" : "Tap to pause penalties for this person"}">
+                  <input type="checkbox" data-act="toggle-person-penalty"
+                         data-pid="${p.person_id}" ${penPaused ? "" : "checked"}>
+                  <span class="fh-toggle-slider"></span>
+                </label>
+              </div>`;
+      }
+      const rowStyle = isKid ? "border-radius:var(--fh-radius-sm) var(--fh-radius-sm) 0 0" : "";
       return `
-        <div class="fh-point-row">
-          <div class="fh-avatar" style="background:${color}">${ini(p.name)}</div>
-          <div style="flex:1;min-width:0">
-            <div style="font-weight:700;font-size:.9rem">${escHTML(p.name)}
-              <span style="font-size:.75rem;color:var(--fh-text-sec);font-weight:400">
-                (${cap(p.type)})
-              </span>
+        <div>
+          <div class="fh-point-row" style="${rowStyle}">
+            <div class="fh-avatar" style="background:${color}">${ini(p.name)}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:700;font-size:.9rem">${escHTML(p.name)}
+                <span style="font-size:.75rem;color:var(--fh-text-sec);font-weight:400">
+                  (${cap(p.type)})
+                </span>
+              </div>
+              <div style="font-size:.75rem;color:var(--fh-text-sec)">
+                ${fPts(p.points_balance)}pts \xB7 ${fUSD(p.points_balance / ppdollar)} \xB7 lifetime ${fPts(p.points_lifetime)}
+              </div>
             </div>
-            <div style="font-size:.75rem;color:var(--fh-text-sec)">
-              ${fPts(p.points_balance)}pts \xB7 ${fUSD(p.points_balance / ppdollar)} \xB7 lifetime ${fPts(p.points_lifetime)}
-            </div>
+            <button class="fh-btn fh-btn-success fh-btn-sm"
+                    data-act="open-award" data-pid="${p.person_id}"
+                    data-pname="${escAttr(p.name)}" title="Award points">
+              ${I.award}
+            </button>
+            <button class="fh-btn fh-btn-danger fh-btn-sm"
+                    data-act="open-deduct" data-pid="${p.person_id}"
+                    data-pname="${escAttr(p.name)}" title="Deduct points">
+              ${I.minus}
+            </button>
+            <button class="fh-btn fh-btn-ghost fh-btn-sm"
+                    data-act="open-edit-person" data-pid="${p.person_id}"
+                    data-pname="${escAttr(p.name)}" data-ptype="${p.type}"
+                    data-pcolor="${p.avatar_color || DEFAULT_COLOR}" title="Edit person">
+              ${I.edit}
+            </button>
+            <button class="fh-btn fh-btn-ghost fh-btn-sm"
+                    data-act="open-confirm-remove-person" data-pid="${p.person_id}"
+                    data-pname="${escAttr(p.name)}" title="Remove person">
+              ${I.remove}
+            </button>
           </div>
-          ${penaltyToggle}
-          <button class="fh-btn fh-btn-success fh-btn-sm"
-                  data-act="open-award" data-pid="${p.person_id}"
-                  data-pname="${escAttr(p.name)}" title="Award points">
-            ${I.award}
-          </button>
-          <button class="fh-btn fh-btn-danger fh-btn-sm"
-                  data-act="open-deduct" data-pid="${p.person_id}"
-                  data-pname="${escAttr(p.name)}" title="Deduct points">
-            ${I.minus}
-          </button>
-          <button class="fh-btn fh-btn-ghost fh-btn-sm"
-                  data-act="open-edit-person" data-pid="${p.person_id}"
-                  data-pname="${escAttr(p.name)}" data-ptype="${p.type}"
-                  data-pcolor="${p.avatar_color || DEFAULT_COLOR}" title="Edit person">
-            ${I.edit}
-          </button>
-          <button class="fh-btn fh-btn-ghost fh-btn-sm"
-                  data-act="open-confirm-remove-person" data-pid="${p.person_id}"
-                  data-pname="${escAttr(p.name)}" title="Remove person">
-            ${I.remove}
-          </button>
+          ${penaltyPauseRow}
         </div>`;
     }).join("") || `<div class="fh-empty">No people found.</div>`;
     return `
@@ -2411,8 +2477,9 @@ This cannot be undone.`)) break;
          */
         _doRender(force = false) {
           if (!this._hass && !force) return;
+          const scale = parseFloat(this._cfg.text_scale) || 1;
           const styleEl = document.createElement("style");
-          styleEl.textContent = CSS;
+          styleEl.textContent = CSS + `:host { --fh-text-scale: ${scale}; }`;
           const card = document.createElement("div");
           card.className = "fh-card";
           if (!this._hass) {
@@ -2614,6 +2681,14 @@ This cannot be undone.`)) break;
           const people = this._people || [];
           const mode = cfg.mode || "command_center";
           const person = cfg.person || "";
+          const textScale = cfg.text_scale != null ? cfg.text_scale : 1;
+          const sensorState = this._hass?.states?.["sensor.family_hub_needs_attention"];
+          const connected = !!sensorState;
+          const statusDot = `<span style="
+            display:inline-block;width:8px;height:8px;border-radius:50%;
+            background:${connected ? "#30d158" : "#ff453a"};
+            margin-right:5px;vertical-align:middle;"></span>`;
+          const statusLabel = connected ? `${statusDot}Integration connected (v${VERSION})` : `${statusDot}Integration not found \u2014 install Family Hub`;
           this.innerHTML = `
       <style>
         .fhe { padding:16px; display:flex; flex-direction:column; gap:14px; }
@@ -2628,8 +2703,11 @@ This cannot be undone.`)) break;
         }
         .fhe-hint { font-size:.78rem; color:var(--secondary-text-color); }
         .fhe-select:focus, .fhe-input:focus { outline:none; border-color:var(--primary-color); }
+        .fhe-status { font-size:.8rem; padding:6px 0; }
       </style>
       <div class="fhe">
+        <div class="fhe-status">${statusLabel}</div>
+
         <div class="fhe-field">
           <label class="fhe-label">Mode</label>
           <select class="fhe-select" id="e-mode">
@@ -2641,6 +2719,7 @@ This cannot be undone.`)) break;
           ].map(([v, l]) => `<option value="${v}" ${v === mode ? "selected" : ""}>${l}</option>`).join("")}
           </select>
         </div>
+
         <div class="fhe-field" id="person-field"
              style="display:${mode === "personal" ? "flex" : "none"}">
           <label class="fhe-label">Person</label>
@@ -2653,6 +2732,13 @@ This cannot be undone.`)) break;
                         value="${person}" placeholder="e.g. jackson">`}
           <span class="fhe-hint">Enter the person's name (lowercase)</span>
         </div>
+
+        <div class="fhe-field">
+          <label class="fhe-label">Text scale</label>
+          <input class="fhe-input" id="e-scale" type="number"
+                 min="0.8" max="2.0" step="0.05" value="${textScale}">
+          <span class="fhe-hint">1.0 = default. Increase for Echo Show / tablet screens.</span>
+        </div>
       </div>`;
           this.querySelector("#e-mode")?.addEventListener("change", (e) => {
             this._cfg = { ...this._cfg, mode: e.target.value };
@@ -2663,6 +2749,13 @@ This cannot be undone.`)) break;
           this.querySelector("#e-person")?.addEventListener("change", (e) => {
             this._cfg = { ...this._cfg, person: e.target.value };
             this._fireChange();
+          });
+          this.querySelector("#e-scale")?.addEventListener("change", (e) => {
+            const val = parseFloat(e.target.value);
+            if (!isNaN(val) && val >= 0.8 && val <= 2) {
+              this._cfg = { ...this._cfg, text_scale: val };
+              this._fireChange();
+            }
           });
         }
         _fireChange() {

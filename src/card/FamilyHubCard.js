@@ -268,8 +268,9 @@ export class FamilyHubCard extends HTMLElement {
     _doRender(force = false) {
         if (!this._hass && !force) return;
 
+        const scale = parseFloat(this._cfg.text_scale) || 1;
         const styleEl       = document.createElement("style");
-        styleEl.textContent = CSS;
+        styleEl.textContent = CSS + `:host { --fh-text-scale: ${scale}; }`;
 
         const card     = document.createElement("div");
         card.className = "fh-card";

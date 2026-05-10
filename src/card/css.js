@@ -26,6 +26,7 @@ export const CSS = `
     --fh-success:     #30d158;
     --fh-success-bg:  rgba(48,209,88,.12);
     --fh-accent:      var(--primary-color, #7F77DD);
+    --fh-text-scale:  1;
     font-family: var(--paper-font-body1_-_font-family, -apple-system, Roboto, sans-serif);
     color: var(--fh-text);
     display: block;
@@ -43,13 +44,13 @@ export const CSS = `
   }
 
   /* Typography */
-  .fh-title        { font-size:1.1rem; font-weight:700; margin:0 0 var(--fh-gap) 0; }
+  .fh-title        { font-size:calc(1.1rem * var(--fh-text-scale, 1)); font-weight:700; margin:0 0 var(--fh-gap) 0; }
   .fh-section-title {
-    font-size:.75rem; font-weight:700; letter-spacing:.07em;
+    font-size:calc(.75rem * var(--fh-text-scale, 1)); font-weight:700; letter-spacing:.07em;
     text-transform:uppercase; color:var(--fh-text-sec);
     margin:var(--fh-gap) 0 var(--fh-gap-sm) 0;
   }
-  .fh-balance      { font-size:3.4rem; font-weight:800; line-height:1; letter-spacing:-.03em; }
+  .fh-balance      { font-size:calc(3.4rem * var(--fh-text-scale, 1)); font-weight:800; line-height:1; letter-spacing:-.03em; }
   .fh-balance-unit { font-size:1.2rem; font-weight:400; opacity:.6; margin-left:3px; }
   .fh-dollar       { font-size:.95rem; color:var(--fh-text-sec); margin-top:3px; }
 
@@ -115,7 +116,7 @@ export const CSS = `
     100%   { opacity:0; transform:scaleY(0); max-height:0; padding:0; margin:0; }
   }
   .fh-task-name {
-    flex:1; font-size:.92rem; font-weight:500;
+    flex:1; font-size:calc(.92rem * var(--fh-text-scale, 1)); font-weight:500;
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
   .fh-task-sub  { font-size:.75rem; color:var(--fh-text-sec); }
@@ -127,7 +128,7 @@ export const CSS = `
 
   /* Badges */
   .fh-badge {
-    font-size:.72rem; font-weight:700; padding:2px 8px; border-radius:10px;
+    font-size:calc(.72rem * var(--fh-text-scale, 1)); font-weight:700; padding:2px 8px; border-radius:10px;
     white-space:nowrap; flex-shrink:0;
   }
   .fh-badge-overdue  { color:var(--fh-overdue); background:var(--fh-overdue-bg); }
@@ -142,7 +143,7 @@ export const CSS = `
 
   /* Penalty warning */
   .fh-penalty-warn {
-    font-size:.7rem; color:var(--fh-warning); white-space:nowrap; flex-shrink:0;
+    font-size:calc(.7rem * var(--fh-text-scale, 1)); color:var(--fh-warning); white-space:nowrap; flex-shrink:0;
   }
 
   /* Description toggle button */
@@ -181,7 +182,7 @@ export const CSS = `
   .fh-btn {
     display:inline-flex; align-items:center; justify-content:center; gap:5px;
     padding:7px 14px; border-radius:var(--fh-radius-sm);
-    border:none; font-size:.84rem; font-weight:600;
+    border:none; font-size:calc(.84rem * var(--fh-text-scale, 1)); font-weight:600;
     cursor:pointer; user-select:none; white-space:nowrap;
     transition:filter .15s, transform .1s; font-family:inherit;
   }
@@ -402,12 +403,32 @@ export const CSS = `
     display:flex; flex-direction:column; gap:var(--fh-gap-sm);
   }
 
+  /* Approval dot on person filter chips */
+  .fh-chip-approval-dot {
+    width:8px; height:8px; border-radius:50%;
+    background:var(--fh-overdue); flex-shrink:0;
+  }
+
+  /* Penalty pause row — separate row below person row in admin overview */
+  .fh-penalty-pause-row {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:4px var(--fh-pad-sm) var(--fh-pad-xs) var(--fh-pad-sm);
+    margin-top:-4px;
+    background:var(--fh-surface); border-radius:0 0 var(--fh-radius-sm) var(--fh-radius-sm);
+    border-top:1px solid var(--fh-border);
+  }
+  .fh-penalty-pause-label {
+    font-size:calc(.75rem * var(--fh-text-scale, 1)); color:var(--fh-text-sec);
+  }
+  .fh-penalty-pause-label.off       { color:var(--fh-warning); }
+  .fh-penalty-pause-label.off-global { color:var(--fh-overdue); }
+
   /* Responsive */
   @container fh (min-width: 680px) {
     .fh-store-grid { grid-template-columns:repeat(auto-fill, minmax(170px, 1fr)); }
-    .fh-balance    { font-size:4rem; }
+    .fh-balance    { font-size:calc(4rem * var(--fh-text-scale, 1)); }
   }
   @container fh (min-width: 900px) {
-    .fh-balance { font-size:4.8rem; }
+    .fh-balance { font-size:calc(4.8rem * var(--fh-text-scale, 1)); }
   }
 `;

@@ -22,10 +22,22 @@ export class FamilyHubCardEditor extends HTMLElement {
     }
 
     _render() {
-        const cfg    = this._cfg   || {};
-        const people = this._people || [];
-        const mode   = cfg.mode    || "command_center";
-        const person = cfg.person  || "";
+        const cfg       = this._cfg    || {};
+        const people    = this._people  || [];
+        const mode      = cfg.mode      || "command_center";
+        const person    = cfg.person    || "";
+        const textScale = cfg.text_scale != null ? cfg.text_scale : 1.0;
+
+        // Connection indicator — green if needs_attention sensor exists, red if not
+        const sensorState   = this._hass?.states?.["sensor.family_hub_needs_attention"];
+        const connected     = !!sensorState;
+        const statusDot     = `<span style="
+            display:inline-block;width:8px;height:8px;border-radius:50%;
+            background:${connected ? "#30d158" : "#ff453a"};
+            margin-right:5px;vertical-align:middle;"></span>`;
+        const statusLabel   = connected
+            ? `${statusDot}Integration connected (v${VERSION})`
+            : `${statusDot}Integration not found — install Family Hub`;
 
         this.innerHTML = `
       <style>
@@ -41,8 +53,11 @@ export class FamilyHubCardEditor extends HTMLElement {
         }
         .fhe-hint { font-size:.78rem; color:var(--secondary-text-color); }
         .fhe-select:focus, .fhe-input:focus { outline:none; border-color:var(--primary-color); }
+        .fhe-status { font-size:.8rem; padding:6px 0; }
       </style>
       <div class="fhe">
+        <div class="fhe-status">${statusLabel}</div>
+
         <div class="fhe-field">
           <label class="fhe-label">Mode</label>
           <select class="fhe-select" id="e-mode">
@@ -54,6 +69,7 @@ export class FamilyHubCardEditor extends HTMLElement {
             ].map(([v, l]) => `<option value="${v}" ${v === mode ? "selected" : ""}>${l}</option>`).join("")}
           </select>
         </div>
+
         <div class="fhe-field" id="person-field"
              style="display:${mode === "personal" ? "flex" : "none"}">
           <label class="fhe-label">Person</label>
@@ -68,6 +84,13 @@ export class FamilyHubCardEditor extends HTMLElement {
                         value="${person}" placeholder="e.g. jackson">`}
           <span class="fhe-hint">Enter the person's name (lowercase)</span>
         </div>
+
+        <div class="fhe-field">
+          <label class="fhe-label">Text scale</label>
+          <input class="fhe-input" id="e-scale" type="number"
+                 min="0.8" max="2.0" step="0.05" value="${textScale}">
+          <span class="fhe-hint">1.0 = default. Increase for Echo Show / tablet screens.</span>
+        </div>
       </div>`;
 
         this.querySelector("#e-mode")?.addEventListener("change", e => {
@@ -80,6 +103,14 @@ export class FamilyHubCardEditor extends HTMLElement {
         this.querySelector("#e-person")?.addEventListener("change", e => {
             this._cfg = { ...this._cfg, person: e.target.value };
             this._fireChange();
+        });
+
+        this.querySelector("#e-scale")?.addEventListener("change", e => {
+            const val = parseFloat(e.target.value);
+            if (!isNaN(val) && val >= 0.8 && val <= 2.0) {
+                this._cfg = { ...this._cfg, text_scale: val };
+                this._fireChange();
+            }
         });
     }
 
