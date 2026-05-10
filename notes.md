@@ -9,7 +9,19 @@
 1. Read this file
 2. Check live files via Samba: `\\10.0.0.41\config\custom_components\family_hub\`
 3. Card source is in `src/card/*.js` — built into `www/family-hub-card.js` via `npm run build`
-4. Small fixes go to HA via Samba; formal releases go via HACS when stable
+4. Python changes: reload integration only (Settings → Devices & Services → Family Hub → Reload). No full HA restart needed.
+5. JS changes: browser hard refresh only (`Ctrl+Shift+R`). No HA involvement.
+6. After backend changes: reload integration → hard refresh → call `force_daily_tick` from Dev Tools → Services
+
+## SESSION END CHECKLIST
+
+Before closing any session, update this file:
+1. Move completed work queue items to a "Completed" note or remove them
+2. Update Current Status table (live version, GitHub state, next release)
+3. Add any new bugs discovered to Outstanding Bugs
+4. Add any architecture or design decisions made to the Architecture Decisions section
+5. Note any deferred items that came up
+6. Update the work queue if scope changed
 
 ---
 
@@ -17,31 +29,56 @@
 
 | Item | State |
 |---|---|
-| **Last HACS release** | v0.4.1 (not yet pushed — do GitHub release + tag) |
-| **Live on HA (Samba)** | v0.4.2 — all bugs + features deployed |
+| **Last HACS release** | v0.4.1 — holding v0.4.2 tag until v0.5.0 (ghost instance bug) |
+| **Live on HA (Samba)** | v0.4.2 code deployed — bugs remain (see Outstanding Bugs below) |
 | **manifest.json / hacs.json** | Bumped to 0.4.2 ✓ |
-| **Card constants.js VERSION** | "0.4.2" ✓ |
-| **Next formal release** | v0.4.2 — ready to tag + GitHub release |
-| **Phase** | 3-C complete — ready for HACS release |
+| **GitHub** | v0.4.2 code NOT yet committed — commit before starting v0.5.0 work |
+| **Next formal release** | v0.5.0 — will be the first clean public release |
+| **Phase** | v0.5.0 planning complete — ready to implement |
 
 ---
 
 ## Environment
 
-- **Family:** Parents (Jim + 1), Kids: Jackson, Olivia, Spencer
+- **Family:** Parents (Jim + Shannon), Kids: Jackson, Olivia, Spencer
 - **Devices:** Echo Show 5, Echo Show 8, Echo Show 15 (kitchen — command_center only)
 - **Kitchen account:** Restricted HA account "Kitchen Display"
 - **HA version:** 2026.5.1
 - **Add-ons:** Samba, File Editor, SSH & Web Terminal, HACS
-- **Data file:** `/config/family_hub_data.json` — never touched by updates
+- **Data file:** `/config/family_hub_data.json` — never touched by code updates
+
+---
+
+## Data File Health Issues (discovered 2026-05-10)
+
+The data file has accumulated garbage from early development. These are root causes of several active bugs.
+
+| Issue | Impact |
+|---|---|
+| **13 people records** (should be 5) | 8 orphans with blank `person_id`, `active=False` — noise, benign for now |
+| **Ghost task instances** (`assigned_to=""`) | One blank-ID instance per chore from before multi-person model. Cleanup pass skips them. **Root cause of B3 bug still showing.** |
+| **Schema inconsistency** — "Clean the Playroom" has both `weekdays` and `day_filter` set | Weekly chore should only have `weekdays`. Causes unpredictable behavior. |
+| **"Sweep the Floors"** is `every_n_days` + `claimable` | Unusual combination from early setup. Being retired by recurrence redesign in v0.5.0. |
+| **96 task instances** for 5 people | Accumulated test junk. Needs pruning. |
+| **`penalties_paused: true` globally** | Set during testing. May want to clear before going live. |
+
+---
+
+## Outstanding Bugs (carried into v0.5.0)
+
+- **B3 ghost instances:** Day-filter chores (e.g. "Get ready for School Mon–Fri") still show on off-days because ghost instances with `assigned_to=""` survive the cleanup pass. The 3 real per-person instances are cleaned correctly; the ghost is not. Fix: prevent ghost instance creation + add cleanup in migration.
+- **B2 history entries:** 3 entries per task (Completed + Approved + Points) — suppression in `get_history_for_card()` did not fully work. Full fix is the v0.5.0 history collapsing redesign.
+- **"1d late" label on recurring chores:** Weekly and every_n_days chores show "due Nd ago" badge — wrong per mental model. Fix is part of v0.5.0 mental model alignment.
 
 ---
 
 ## Workflow
 
 - Claude generates code → deployed via Samba for testing
-- When stable: commit to GitHub, bump manifest.json + hacs.json + card VERSION, cut release tag → HACS update → HA restart
-- After deploy: call `force_daily_tick` from Dev Tools → Services to clean stale instances
+- Python changes: integration reload only (not full HA restart)
+- JS changes: browser hard refresh only
+- Both changed: reload + hard refresh + `force_daily_tick`
+- When stable: commit to GitHub, bump versions, cut release tag → HACS update
 - No need for a release for every small fix — use Samba until a batch is stable
 
 ---
@@ -59,31 +96,68 @@
 
 ---
 
-## Work Queue — Phase 3-C (COMPLETE)
+## v0.5.0 Work Queue
 
-All items shipped in v0.4.2. Next phase: test in HA, then cut GitHub tag + HACS release.
+Implement in this order. Each session should cover one or two related items.
 
-### COMPLETED — Backend (`data_store.py`)
-- **B1:** `get_history_for_card()` — excuse only when `penalty_applied > 0`
-- **B2a:** Suppress duplicate `HISTORY_POINTS_AWARDED` entries for task completions
-- **B2b:** `async_reject_task()` — same-day retry instance created on reject (non-one-time chores)
-- **B3a:** `_async_tick_for_date()` — cleanup pass skips stale instances on day_filter off-days
-- **B3b:** `get_tasks_for_card()` — hides day_filter chores from overdue on off-days
-- **B4:** `get_tasks_for_card()` — weekly/recurring past-due goes to `due_today` (with `days_late`) not overdue
-- **B4:** `get_all_tasks_for_command_center()` — same treatment for command center
+### Session 1 — Data Health Infrastructure
+- Load-time migration: normalize schema fields (strip `day_filter` from weekly chores, fill missing fields with defaults)
+- Prevent ghost instance creation: never create a task instance with blank `assigned_to`
+- Ghost instance cleanup: migration removes existing ghost instances
+- Duplicate people cleanup: migration removes people with blank `person_id`
+- Daily tick pruning: remove task instances (completed/skipped/rejected) older than 60 days
+- Admin "Rebuild data" button in Settings: heavy-lift cleanup on demand (confirms first, logs changes)
 
-### COMPLETED — Card (`src/card/*.js`)
-- **B5:** `modes-admin.js` — penalty toggle moved to separate `.fh-penalty-pause-row` below person row; label shows "Penalties off (global)" / "Penalties off" / "Penalties on" correctly
-- **F1:** `css.js` + `FamilyHubCard.js` — `--fh-text-scale` CSS variable; `text_scale` config key; key font sizes use `calc(Xrem * var(--fh-text-scale, 1))`
-- `modes-personal.js` — added History tab (per-person read-only log); `days_late` badge for weekly tasks in due_today; replaced heuristic `isReminderTask` with `t.chore_type === "reminder"`
-- `modes-cc.js` — approval dot on person filter chips; `days_late` badge on weekly tasks
-- `editor.js` — sensor connection status indicator (green/red dot); `text_scale` number field
-- `constants.js` — VERSION bumped to "0.4.2"
+### Session 2 — Mental Model Alignment + History Collapsing
+- Remove "late" / "Nd ago" language from all recurring chore types — chores are available in their window, not late
+- Weekly/every_n_days/monthly chores show as completable with their reset date, no overdue styling
+- History: collapse Completed → Approved → Points into a single updating row per task instance
+- One Reject button per task (not per history event)
+- Fix B2 ghost instance fallout in personal history tab (raw log vs filtered log)
 
-### DEFERRED
+### Session 3 — Claimable Subtypes + Recurrence Redesign
+- **Claimable subtypes:**
+  - *First-come-first-serve:* one instance, removed from claimable list once claimed
+  - *Multi-claim:* max N claimants, full points each OR split evenly (rounded up)
+- **Recurrence redesign:**
+  - New type: multi-day weekly — select specific days of week it resets on (Mon/Wed/Sat pattern)
+  - Retire `every_n_days` and `every_n_weeks` from UI (keep handling in backend for existing data)
+  - UI: chore form updated to reflect new recurrence options
 
-#### F2 — Weekly chore grace period / escalating penalty
-Design after B4 base fix is confirmed working in production. Optional `overdue_grace_days` field: after N days past due_date, mark overdue and deduct penalty daily.
+### Session 4 — Streaks
+- Track consecutive daily completions per chore per person
+- Store streak count on task instance or person record (TBD during implementation)
+- Bonus points at milestones (e.g. 7-day, 30-day streaks) — configurable per chore
+- Show streak count on personal dashboard task row
+- Streak breaks when a day is skipped (penalty fires or instance missed)
+
+### Session 5 — Scheduled Allowance
+- Per-person allowance: fixed points awarded automatically on a schedule (weekly, bi-weekly, monthly)
+- Configured in Admin → person record (edit person modal)
+- Uses existing `async_award_points` plumbing
+- Shows in history log as "Allowance"
+
+### Session 6 — HA Notifications
+- Approval needed: notify Jim + Shannon when a kid submits a chore for approval
+- Morning nudge: if it's past a configurable hour and a kid has pending daily tasks, send a notification to that kid's device (or a shared device)
+- Configure notification targets per person in settings
+- Uses HA's `notify` service domain — no external dependencies
+
+### Session 7 — Polish + Release
+- Text scale editor: change number input to dropdown (Small 0.9 / Default 1.0 / Large 1.25 / XL 1.5)
+- F2: weekly chore grace period / escalating penalty (if still desired after Session 2)
+- Commit all v0.5.0 work to GitHub
+- Bump manifest.json, hacs.json, card VERSION to 0.5.0
+- Cut GitHub tag → HACS release
+
+---
+
+## Deferred (not in v0.5.0)
+
+- **Home Maintenance module** — user still thinking about design. Has partial sensor stub already.
+- **Chore rotation** — rotating assignment pool (this week Jackson, next week Olivia). On future wish list.
+- **Goal tracking** — kid sets a store item as a savings goal with progress bar.
+- **Photo evidence for approvals** — too complex for now.
 
 ---
 
@@ -96,12 +170,11 @@ Design after B4 base fix is confirmed working in production. Optional `overdue_g
 - `_doRender` appends the modal as a separate DOM node so background re-renders can't destroy open modals.
 - History is trimmed to 30-day rolling window each daily tick.
 - Penalty pause is a sticky flag (stays set until parent manually turns it off).
+- **Chore mental model:** Chores have a "window" — available during window, penalized when window closes. Never "overdue" for kids. Overdue concept reserved for Home Maintenance (future).
 
 ---
 
 ## Known Data Contracts (v0.4.2)
-
-Only record things the card reads that aren't obvious from the sensor code.
 
 **`sensor.family_hub_needs_attention` key attrs:**
 `approval_queue`, `redemption_queue`, `people` (includes `penalties_paused` per person),
@@ -133,5 +206,6 @@ Each task row includes: `task_id`, `chore_id`, `name`, `description`, `points`, 
 | v0.2.2 | Hotfixes |
 | v0.3.0 | Full data model overhaul (assigned_to list, chore_type, category_label, sort_order, penalties, recurrence) |
 | v0.4.0 | Expiry, history log, admin correction services (excuse/reject/mark_complete), force_daily_tick |
-| v0.4.1 | Bug fixes: update_chore multi-person sync, chore_type in personal sensor, ghost instance exclusion. Card modularised (src/card/*.js + esbuild). |
-| v0.4.2 | Penalty pause (global + per-person). B1–B5 backend+card bug fixes. F1 text_scale per card. Personal history tab. CC approval dots. Editor status indicator. |
+| v0.4.1 | Bug fixes: update_chore multi-person sync, chore_type in personal sensor, ghost instance exclusion. Card modularised. |
+| v0.4.2 | Penalty pause (global + per-person). B1–B5 backend+card bug fixes. F1 text_scale. Personal history tab. CC approval dots. Editor status indicator. Deployed via Samba; HACS release held for v0.5.0. |
+| v0.5.0 | Data health infrastructure, mental model alignment, history collapsing, claimable subtypes, recurrence redesign, streaks, allowance, notifications. First clean public release. |
