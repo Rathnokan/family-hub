@@ -154,6 +154,27 @@ export function dispatch(act, el, card) {
             break;
         }
 
+        // ---- Penalty pause toggles (v0.4.2) --------------------------------
+
+        // Global penalty pause — in Settings tab.
+        // The checkbox is "Penalties active" (checked = running, unchecked = paused),
+        // so we invert: penalties_paused = !checked.
+        case "toggle-global-penalty": {
+            const checked = el.checked ?? el.querySelector("input")?.checked ?? true;
+            card._svc("update_settings", { penalties_paused: !checked });
+            break;
+        }
+
+        // Per-person penalty pause — in Overview tab.
+        // The checkbox is also "Penalties active" (checked = on, unchecked = paused).
+        // We read the person_id from data-pid and invert the checkbox value.
+        case "toggle-person-penalty": {
+            const pid     = el.dataset.pid || el.closest("[data-pid]")?.dataset.pid;
+            const checked = el.checked ?? el.querySelector("input")?.checked ?? true;
+            if (pid) card._svc("update_person", { person_id: pid, penalties_paused: !checked });
+            break;
+        }
+
         // ---- Backup --------------------------------------------------------
         case "export-backup":
             card._svc("export_backup", {});

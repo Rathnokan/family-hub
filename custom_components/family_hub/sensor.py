@@ -427,13 +427,15 @@ class FamilyHubNeedsAttentionSensor(FamilyHubBaseSensor):
             # All active people with balances for admin overview
             "people": [
                 {
-                    "person_id":      p["id"],
-                    "name":           p["name"],
-                    "type":           p.get("type", "kid"),
-                    "avatar_color":   p.get("avatar_color", "#7F77DD"),
-                    "points_balance": p.get("points_balance", 0),
-                    "points_lifetime":p.get("points_lifetime", 0),
-                    "active":         p.get("active", True),
+                    "person_id":        p["id"],
+                    "name":             p["name"],
+                    "type":             p.get("type", "kid"),
+                    "avatar_color":     p.get("avatar_color", "#7F77DD"),
+                    "points_balance":   p.get("points_balance", 0),
+                    "points_lifetime":  p.get("points_lifetime", 0),
+                    "active":           p.get("active", True),
+                    # v0.4.2: per-person penalty pause flag for admin Overview toggle
+                    "penalties_paused": p.get("penalties_paused", False),
                 }
                 for p in store.people if p.get("active", True)
             ],
@@ -451,6 +453,8 @@ class FamilyHubNeedsAttentionSensor(FamilyHubBaseSensor):
             "points_per_dollar":        store.points_per_dollar,
             "show_dollar_value_to_kids":store.show_dollar_value_to_kids,
             "category_labels":          store.category_labels,
+            # v0.4.2: global penalty pause flag for admin Settings toggle
+            "penalties_paused_global":  store.penalties_paused_global,
 
             # v0.4.0: enriched history log for admin log/approvals UI
             # Includes person name/color, chore_name, reversible action hint.

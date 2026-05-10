@@ -1,7 +1,7 @@
 """Constants for Family Hub integration."""
 
 DOMAIN = "family_hub"
-VERSION = "0.4.0"
+VERSION = "0.4.2"
 
 # Config entry keys
 CONF_FAMILY_NAME = "family_name"
@@ -148,7 +148,7 @@ SERVICE_APPROVE_TASK        = "approve_task"
 SERVICE_DENY_TASK           = "deny_task"
 SERVICE_CLAIM_TASK          = "claim_task"
 SERVICE_ADD_ONE_TIME_TASK   = "add_one_time_task"  # Legacy alias
-SERVICE_ADD_TASK            = "add_task"            # New canonical one-time task service
+SERVICE_ADD_TASK            = "add_task"            # Canonical one-time task service
 SERVICE_ADD_PERSON          = "add_person"
 SERVICE_UPDATE_PERSON       = "update_person"
 SERVICE_REMOVE_PERSON       = "remove_person"
@@ -182,10 +182,24 @@ NOTIFICATION_APPROVAL_NEEDED      = "family_hub_approval_needed"
 NOTIFICATION_REDEMPTION_REQUESTED = "family_hub_redemption_requested"
 
 # Settings keys
-CONF_SHOW_DOLLAR_VALUE_TO_KIDS = "show_dollar_value_to_kids"
+CONF_SHOW_DOLLAR_VALUE_TO_KIDS  = "show_dollar_value_to_kids"
 DEFAULT_SHOW_DOLLAR_VALUE_TO_KIDS = False
 
+# ---------------------------------------------------------------------------
+# Penalty pause settings (v0.4.2)
+# ---------------------------------------------------------------------------
+# Global switch — when True, NO penalties fire for ANY person during the tick.
+# Stored in settings.penalties_paused in the JSON data file.
+CONF_PENALTIES_PAUSED_GLOBAL  = "penalties_paused"
+DEFAULT_PENALTIES_PAUSED_GLOBAL = False
+
+# Per-person switch — when True on a person record, that person's penalties are
+# suppressed even if the global switch is off. Stored as person.penalties_paused.
+# Stays paused until a parent manually re-enables it.
+CONF_PENALTIES_PAUSED_PERSON  = "penalties_paused"
+DEFAULT_PENALTIES_PAUSED_PERSON = False
+
 # Frontend / Lovelace card
-CARD_URL_PATH   = "/family_hub"
+CARD_URL_PATH    = "/family_hub"
 CARD_JS_FILENAME = "family-hub-card.js"
-CARD_JS_URL     = "/family_hub/family-hub-card.js"
+CARD_JS_URL      = "/family_hub/family-hub-card.js"

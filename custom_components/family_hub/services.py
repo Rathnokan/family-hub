@@ -217,12 +217,14 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
     hass.services.async_register(
         DOMAIN, "update_person", handle_update_person,
         schema=vol.Schema({
-            vol.Required("person_id"):      cv.string,
-            vol.Optional("name"):           cv.string,
-            vol.Optional("ha_user_id"):     cv.string,
-            vol.Optional("avatar_color"):   cv.string,
-            vol.Optional("active"):         cv.boolean,
-            vol.Optional("type"):           vol.In(PERSON_TYPES),
+            vol.Required("person_id"):           cv.string,
+            vol.Optional("name"):                cv.string,
+            vol.Optional("ha_user_id"):          cv.string,
+            vol.Optional("avatar_color"):        cv.string,
+            vol.Optional("active"):              cv.boolean,
+            vol.Optional("type"):                vol.In(PERSON_TYPES),
+            # v0.4.2: per-person penalty pause toggle
+            vol.Optional("penalties_paused"):    cv.boolean,
         }),
     )
 
@@ -524,6 +526,8 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             points_per_dollar=call.data.get("points_per_dollar"),
             show_dollar_value_to_kids=call.data.get("show_dollar_value_to_kids"),
             category_labels=list(labels) if labels is not None else None,
+            # v0.4.2: global penalty pause toggle
+            penalties_paused=call.data.get("penalties_paused"),
         )
         await coordinator.async_refresh()
 
@@ -534,6 +538,8 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             vol.Optional("points_per_dollar"):          vol.All(vol.Coerce(int), vol.Range(min=1, max=1000)),
             vol.Optional("show_dollar_value_to_kids"): cv.boolean,
             vol.Optional("category_labels"):            [cv.string],
+            # v0.4.2: global penalty pause
+            vol.Optional("penalties_paused"):           cv.boolean,
         }),
     )
 

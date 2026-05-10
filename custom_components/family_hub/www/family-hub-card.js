@@ -531,6 +531,8 @@
     const allTasks = clAttr.all_tasks || [];
     const claimable = clAttr.tasks || [];
     const famName = naAttr.family_name || "Family Hub";
+    const orderedLabels = naAttr.category_labels || [];
+    const labelIndex = new Map(orderedLabels.map((l, i) => [l, i]));
     const chips = people.map((p) => `
       <div class="fh-chip ${card._filter === p.person_id ? "active" : ""}"
            style="--chip-color:${p.avatar_color || DEFAULT_COLOR}"
@@ -538,10 +540,42 @@
         <span class="fh-chip-dot"></span>${escHTML(p.name)}
       </div>`).join("");
     const filtered = card._filter ? allTasks.filter((t) => t.assigned_to === card._filter) : allTasks;
-    const taskRows = [
-      ...filtered.filter((t) => t.days_delta < 0).map((t) => ccTaskRow(t, people, true, card._flashing)),
-      ...filtered.filter((t) => t.days_delta === 0).map((t) => ccTaskRow(t, people, false, card._flashing))
-    ].join("") || `<div class="fh-empty">\u2713 All caught up!</div>`;
+    const overdueList = filtered.filter((t) => t.days_delta < 0);
+    const todayList = filtered.filter((t) => t.days_delta === 0);
+    const overdueRows = overdueList.sort((a, b) => a.days_delta - b.days_delta).map((t) => ccTaskRow(t, people, true, card._flashing)).join("");
+    const groups = /* @__PURE__ */ new Map();
+    for (const t of todayList) {
+      const key = t.category_label || "";
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(t);
+    }
+    const sortedGroupKeys = [...groups.keys()].sort((a, b) => {
+      const aEmpty = a === "";
+      const bEmpty = b === "";
+      if (aEmpty && !bEmpty) return 1;
+      if (!aEmpty && bEmpty) return -1;
+      const ai = labelIndex.has(a) ? labelIndex.get(a) : Infinity;
+      const bi = labelIndex.has(b) ? labelIndex.get(b) : Infinity;
+      if (ai !== bi) return ai - bi;
+      return a.localeCompare(b);
+    });
+    const hasMultipleGroups = sortedGroupKeys.length > 1 || sortedGroupKeys.length === 1 && sortedGroupKeys[0] !== "";
+    const groupedRows = sortedGroupKeys.map((label) => {
+      const rows = (groups.get(label) || []).map((t) => ccTaskRow(t, people, false, card._flashing)).join("");
+      const header = hasMultipleGroups && label !== "" ? `<div class="fh-section-title">${escHTML(label)}</div>` : "";
+      return header + `<div class="fh-task-list">${rows}</div>`;
+    }).join("");
+    let todayBlock = "";
+    if (!overdueRows && !groupedRows) {
+      todayBlock = `<div class="fh-empty">\u2713 All caught up!</div>`;
+    } else {
+      if (overdueRows) {
+        todayBlock += `
+              <div class="fh-section-title" style="color:var(--fh-overdue)">Overdue</div>
+              <div class="fh-task-list" style="margin-bottom:var(--fh-gap)">${overdueRows}</div>`;
+      }
+      todayBlock += groupedRows;
+    }
     const claimSection = claimable.length ? `
       <div class="fh-section-title">Available to claim</div>
       <div class="fh-task-list">
@@ -559,18 +593,22 @@
         <span class="fh-title" style="margin:0">${escHTML(famName)}</span>
       </div>
       <div class="fh-chips">${chips}</div>
-      <div class="fh-task-list">${taskRows}</div>
+      ${todayBlock}
       ${claimSection}`;
   }
   function ccTaskRow(t, people, isOverdue, flashing) {
     const p = people.find((x) => x.person_id === t.assigned_to);
     const color = p?.avatar_color || DEFAULT_COLOR;
     const flash = flashing.has(t.task_id) ? "flash" : "";
+    const penaltyLine = t.penalty_enabled && t.penalty_points > 0 ? `<span class="fh-penalty-warn">-${t.penalty_points}pts if skipped</span>` : "";
     return `
       <div class="fh-task-row ${isOverdue ? "overdue" : ""} ${flash}"
            style="--row-color:${color}; --flash-dur:${FLASH_MS}ms">
         <div class="fh-avatar" style="background:${color}">${ini(p?.name)}</div>
-        <span class="fh-task-name">${escHTML(t.name)}</span>
+        <div class="fh-task-body">
+          <span class="fh-task-name">${escHTML(t.name)}</span>
+          ${penaltyLine}
+        </div>
         ${isOverdue ? `<span class="fh-badge fh-badge-overdue">${Math.abs(t.days_delta)}d late</span>` : ""}
         ${t.points ? `<span class="fh-badge fh-badge-pts" style="--row-color:${color}">${t.points}pts</span>` : ""}
         <button class="fh-check" style="--row-color:${color}"
@@ -634,12 +672,25 @@
     const isReminderTask = (t) => !t.points && !t.penalty_enabled && !t.approval_required;
     const dueReminders = allDue.filter((t) => isReminderTask(t));
     const due = allDue.filter((t) => !isReminderTask(t));
+    const naAttr = card._attrs("sensor.family_hub_needs_attention");
+    const orderedLabels = naAttr.category_labels || [];
+    const labelIndex = new Map(orderedLabels.map((l, i) => [l, i]));
     const groups = /* @__PURE__ */ new Map();
     for (const t of due) {
       const key = t.category_label || "Today";
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(t);
     }
+    const sortedGroupKeys = [...groups.keys()].sort((a, b) => {
+      const aIsToday = a === "Today";
+      const bIsToday = b === "Today";
+      if (aIsToday && !bIsToday) return 1;
+      if (!aIsToday && bIsToday) return -1;
+      const ai = labelIndex.has(a) ? labelIndex.get(a) : Infinity;
+      const bi = labelIndex.has(b) ? labelIndex.get(b) : Infinity;
+      if (ai !== bi) return ai - bi;
+      return a.localeCompare(b);
+    });
     const expiryBadge = (t) => {
       if (!t.expires_after_days || !t.due_date) return "";
       const due2 = new Date(t.due_date);
@@ -658,18 +709,19 @@
       const descExp = card._expandedDescs.has(t.task_id);
       const isReminder = isReminderTask(t);
       const rowClass = isOverdue ? "overdue" : isReminder ? "reminder" : "";
+      const penaltyLine = !isReminder && t.penalty_enabled && t.penalty_points > 0 ? `<span class="fh-penalty-warn">-${t.penalty_points}pts if skipped</span>` : "";
       return `
         <div class="fh-task-row ${rowClass} ${flash}"
              style="--row-color:${color}; --flash-dur:${FLASH_MS}ms">
           <div class="fh-task-body">
             <span class="fh-task-name">${escHTML(t.name)}</span>
             ${descExp && t.description ? `<span class="fh-desc-inline">${escHTML(t.description)}</span>` : ""}
+            ${penaltyLine}
           </div>
           ${t.description ? `<button class="fh-desc-btn" data-act="toggle-desc" data-id="${t.task_id}"
                          title="Toggle description">?</button>` : ""}
           ${isOverdue ? `<span class="fh-badge fh-badge-overdue">${t.days_overdue}d late</span>` : ""}
           ${expiryBadge(t)}
-          ${!isReminder && t.penalty_enabled ? `<span class="fh-penalty-warn">-${t.penalty_points}pts if skipped</span>` : ""}
           ${!isReminder && t.points ? `<span class="fh-badge fh-badge-pts" style="--row-color:${color}">${t.points}pts</span>` : ""}
           ${!isReminder ? `<button class="fh-check" style="--row-color:${color}"
                          data-act="complete" data-tid="${t.task_id}" data-pid="${person.person_id}">
@@ -687,17 +739,17 @@
         <span class="fh-badge fh-badge-pending">Awaiting approval</span>
       </div>`).join("");
     const overdueSection = overdue.length ? overdue.map((t) => mkRow(t, true)).join("") : "";
-    const dueSection = [...groups.entries()].map(([label, tasks]) => `
+    const dueSection = sortedGroupKeys.map((label) => `
       <div class="fh-section-title">${escHTML(label)}</div>
       <div class="fh-task-list">
-        ${tasks.map((t) => mkRow(t, false)).join("")}
+        ${(groups.get(label) || []).map((t) => mkRow(t, false)).join("")}
       </div>`).join("");
-    const empty = !due.length && !overdue.length && !pending.length && !dueReminders.length;
     const reminderSection = dueReminders.length ? `
       <div class="fh-section-title">Reminders</div>
       <div class="fh-task-list">
         ${dueReminders.map((t) => mkRow(t, false)).join("")}
       </div>` : "";
+    const empty = !due.length && !overdue.length && !pending.length && !dueReminders.length;
     return `
       <div style="display:flex;justify-content:flex-end;margin-bottom:var(--fh-gap-sm)">
         <button class="fh-btn fh-btn-ghost fh-btn-sm"
@@ -846,6 +898,18 @@
     const ppdollar = attr.points_per_dollar || 10;
     const rows = people.map((p) => {
       const color = p.avatar_color || DEFAULT_COLOR;
+      const penPaused = p.penalties_paused || false;
+      const penaltyToggle = p.type === "kid" ? `
+          <div class="fh-penalty-pause-wrap" title="${penPaused ? "Penalties paused \u2014 tap to resume" : "Tap to pause penalties for this person"}">
+            <span class="fh-penalty-pause-label" style="font-size:.7rem;color:${penPaused ? "var(--fh-warning)" : "var(--fh-text-sec)"}">
+              ${penPaused ? "\u23F8 Penalties off" : "Penalties on"}
+            </span>
+            <label class="fh-toggle" style="width:36px;height:20px">
+              <input type="checkbox" data-act="toggle-person-penalty"
+                     data-pid="${p.person_id}" ${penPaused ? "" : "checked"}>
+              <span class="fh-toggle-slider"></span>
+            </label>
+          </div>` : "";
       return `
         <div class="fh-point-row">
           <div class="fh-avatar" style="background:${color}">${ini(p.name)}</div>
@@ -859,6 +923,7 @@
               ${fPts(p.points_balance)}pts \xB7 ${fUSD(p.points_balance / ppdollar)} \xB7 lifetime ${fPts(p.points_lifetime)}
             </div>
           </div>
+          ${penaltyToggle}
           <button class="fh-btn fh-btn-success fh-btn-sm"
                   data-act="open-award" data-pid="${p.person_id}"
                   data-pname="${escAttr(p.name)}" title="Award points">
@@ -1139,6 +1204,7 @@
     const ppdollar = attr.points_per_dollar || 10;
     const showDollar = attr.show_dollar_value_to_kids || false;
     const catLabels = attr.category_labels || [];
+    const penPaused = attr.penalties_paused_global || false;
     const labelChips = catLabels.map((l) => `
       <div class="fh-cat-chip">
         <span>${escHTML(l)}</span>
@@ -1147,6 +1213,8 @@
       </div>`).join("");
     return `
       <div class="fh-task-list">
+
+        <!-- Dollar value toggle -->
         <div class="fh-toggle-row">
           <span style="font-size:.9rem">Show dollar value to kids</span>
           <label class="fh-toggle">
@@ -1155,6 +1223,24 @@
           </label>
         </div>
 
+        <!-- Global penalty pause toggle (v0.4.2) -->
+        <!-- NOTE: the toggle logic is inverted \u2014 "Penalties active" = checked = NOT paused.
+             This feels natural: switch ON = penalties running, switch OFF = paused.
+             The data-act handler reads the checkbox and sends penalties_paused = !checked. -->
+        <div class="fh-toggle-row" style="border-left:3px solid ${penPaused ? "var(--fh-warning)" : "var(--fh-success)"}">
+          <div>
+            <div style="font-size:.9rem;font-weight:600">Penalties active</div>
+            <div style="font-size:.75rem;color:var(--fh-text-sec)">
+              ${penPaused ? "\u23F8 All penalties paused \u2014 chores skipped without point deductions" : "Penalties will apply normally at the daily tick"}
+            </div>
+          </div>
+          <label class="fh-toggle">
+            <input type="checkbox" data-act="toggle-global-penalty" ${penPaused ? "" : "checked"}>
+            <span class="fh-toggle-slider"></span>
+          </label>
+        </div>
+
+        <!-- Family name / points rate -->
         <div class="fh-point-row">
           <div style="flex:1;min-width:0">
             <div style="font-size:.9rem;font-weight:600">${escHTML(famName)}</div>
@@ -1168,6 +1254,7 @@
 
         <div class="fh-divider"></div>
 
+        <!-- Category labels -->
         <div>
           <div class="fh-label" style="margin-bottom:6px">Category labels</div>
           <div class="fh-cat-labels" style="margin-bottom:8px">
@@ -1328,6 +1415,24 @@ This cannot be undone.`)) break;
           card._svc("update_settings", { category_labels: [...current, newLabel] });
         }
         if (input) input.value = "";
+        break;
+      }
+      // ---- Penalty pause toggles (v0.4.2) --------------------------------
+      // Global penalty pause — in Settings tab.
+      // The checkbox is "Penalties active" (checked = running, unchecked = paused),
+      // so we invert: penalties_paused = !checked.
+      case "toggle-global-penalty": {
+        const checked = el.checked ?? el.querySelector("input")?.checked ?? true;
+        card._svc("update_settings", { penalties_paused: !checked });
+        break;
+      }
+      // Per-person penalty pause — in Overview tab.
+      // The checkbox is also "Penalties active" (checked = on, unchecked = paused).
+      // We read the person_id from data-pid and invert the checkbox value.
+      case "toggle-person-penalty": {
+        const pid = el.dataset.pid || el.closest("[data-pid]")?.dataset.pid;
+        const checked = el.checked ?? el.querySelector("input")?.checked ?? true;
+        if (pid) card._svc("update_person", { person_id: pid, penalties_paused: !checked });
         break;
       }
       // ---- Backup --------------------------------------------------------
@@ -2159,6 +2264,19 @@ This cannot be undone.`)) break;
             const t = e.target;
             if (t.dataset.act === "toggle-dollar") {
               this._svc("update_settings", { show_dollar_value_to_kids: t.checked });
+              return;
+            }
+            if (t.dataset.act === "toggle-dollar") {
+              this._svc("update_settings", { show_dollar_value_to_kids: t.checked });
+              return;
+            }
+            if (t.dataset.act === "toggle-global-penalty") {
+              this._svc("update_settings", { penalties_paused: !t.checked });
+              return;
+            }
+            if (t.dataset.act === "toggle-person-penalty") {
+              const pid = t.dataset.pid;
+              if (pid) this._svc("update_person", { person_id: pid, penalties_paused: !t.checked });
               return;
             }
             if (t.id === "m-everyone") {

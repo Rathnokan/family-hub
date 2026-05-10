@@ -44,6 +44,17 @@ v0.4.1 bug fixes:
   - get_all_tasks_for_command_center: ghost instances (assigned_to=None on a
     non-claimable chore) are now excluded; they have no owner to display and
     previously appeared on the command center as nameless tasks
+
+v0.4.2 additions:
+  - Global penalty pause: settings.penalties_paused (bool) — when True, no
+    penalties fire for any person during the daily tick or expiry processing.
+    Toggled from Admin → Settings. Persists until manually turned off.
+  - Per-person penalty pause: person.penalties_paused (bool) — suppresses
+    penalties for one person regardless of the global switch. Useful for
+    sleepovers, vacations, or sick days. Toggled from Admin → Overview.
+    Persists until a parent manually re-enables it.
+  - penalties_paused_global and per-person penalties_paused exposed in the
+    needs_attention sensor so the admin card can render correct toggle state.
 """
 
 from __future__ import annotations
@@ -68,7 +79,10 @@ from .const import (
     CHORE_TYPE_ASSIGNED,
     CHORE_TYPE_CLAIMABLE,
     CHORE_TYPE_REMINDER,
+    CONF_PENALTIES_PAUSED_GLOBAL,
     CONF_SHOW_DOLLAR_VALUE_TO_KIDS,
+    DEFAULT_PENALTIES_PAUSED_GLOBAL,
+    DEFAULT_PENALTIES_PAUSED_PERSON,
     DEFAULT_CATEGORY_LABELS,
     DEFAULT_FAMILY_NAME,
     DEFAULT_POINTS_PER_DOLLAR,
@@ -259,6 +273,7 @@ class FamilyHubDataStore:
         s.setdefault("points_per_dollar",         DEFAULT_POINTS_PER_DOLLAR)
         s.setdefault("show_dollar_value_to_kids", DEFAULT_SHOW_DOLLAR_VALUE_TO_KIDS)
         s.setdefault("category_labels",           list(DEFAULT_CATEGORY_LABELS))
+        s.setdefault(CONF_PENALTIES_PAUSED_GLOBAL, DEFAULT_PENALTIES_PAUSED_GLOBAL)
 
         # Migrate all records
         self._data["chores"]         = [_migrate_chore(c)         for c in self._data.get("chores", [])]
@@ -306,12 +321,30 @@ class FamilyHubDataStore:
     def category_labels(self) -> list[str]:
         return self.settings.get("category_labels", list(DEFAULT_CATEGORY_LABELS))
 
+    @property
+    def penalties_paused_global(self) -> bool:
+        """True when all penalty deductions are globally suspended."""
+        return self.settings.get(CONF_PENALTIES_PAUSED_GLOBAL, DEFAULT_PENALTIES_PAUSED_GLOBAL)
+
+    def is_penalty_paused_for(self, person_id: str) -> bool:
+        """
+        Return True if penalties should be suppressed for this person.
+        Either the global pause is active OR the person's own pause flag is set.
+        """
+        if self.penalties_paused_global:
+            return True
+        person = self.get_person(person_id)
+        if person and person.get(CONF_PENALTIES_PAUSED_GLOBAL, DEFAULT_PENALTIES_PAUSED_PERSON):
+            return True
+        return False
+
     async def async_update_settings(
         self,
         family_name: str | None = None,
         points_per_dollar: int | None = None,
         show_dollar_value_to_kids: bool | None = None,
         category_labels: list[str] | None = None,
+        penalties_paused: bool | None = None,
     ) -> None:
         s = self._data["settings"]
         if family_name is not None:
@@ -322,6 +355,8 @@ class FamilyHubDataStore:
             s[CONF_SHOW_DOLLAR_VALUE_TO_KIDS] = show_dollar_value_to_kids
         if category_labels is not None:
             s["category_labels"] = category_labels
+        if penalties_paused is not None:
+            s[CONF_PENALTIES_PAUSED_GLOBAL] = penalties_paused
         await self.async_save()
 
     # ------------------------------------------------------------------
@@ -370,7 +405,7 @@ class FamilyHubDataStore:
         person = self.get_person(person_id)
         if not person:
             return None
-        allowed = {"name", "ha_user_id", "avatar_color", "active", "type"}
+        allowed = {"name", "ha_user_id", "avatar_color", "active", "type", "penalties_paused"}
         for key, val in kwargs.items():
             if key in allowed:
                 person[key] = val
@@ -969,24 +1004,44 @@ class FamilyHubDataStore:
             instance["approved_at"] = _now_iso()
             instance["approved_by"] = "system"
 
-            # Apply penalty if configured
+            # Apply penalty if configured, subject to global and per-person pause flags.
+            # If either pause is active for this person, the task is still marked
+            # skipped (so the next instance generates correctly) but no points
+            # are deducted and no penalty history entry is written.
             if chore.get("penalty_enabled") and chore.get("penalty_points", 0) > 0:
                 pid = instance.get("assigned_to") or person_id
                 if pid:
-                    penalty = chore["penalty_points"]
-                    instance["penalty_applied"] = penalty
-                    person = self.get_person(pid)
-                    if person:
-                        person["points_balance"] = max(0, person.get("points_balance", 0) - penalty)
+                    if self.is_penalty_paused_for(pid):
+                        # Penalties paused — skip silently, no deduction
+                        _LOGGER.debug(
+                            "Family Hub: penalty suppressed for %s (paused) — chore %s",
+                            pid, chore["name"],
+                        )
                         self._append_history(
                             event_type=HISTORY_TASK_SKIPPED,
                             person_id=pid,
                             reference_id=instance["id"],
-                            points_delta=-penalty,
-                            balance_after=person["points_balance"],
-                            note=f'"{chore["name"]}" not completed — {penalty}pt penalty applied',
+                            points_delta=0,
+                            balance_after=self.get_person(pid).get("points_balance", 0)
+                                if self.get_person(pid) else 0,
+                            note=f'"{chore["name"]}" not completed — penalty paused',
                             chore_name=chore["name"],
                         )
+                    else:
+                        penalty = chore["penalty_points"]
+                        instance["penalty_applied"] = penalty
+                        person = self.get_person(pid)
+                        if person:
+                            person["points_balance"] = max(0, person.get("points_balance", 0) - penalty)
+                            self._append_history(
+                                event_type=HISTORY_TASK_SKIPPED,
+                                person_id=pid,
+                                reference_id=instance["id"],
+                                points_delta=-penalty,
+                                balance_after=person["points_balance"],
+                                note=f'"{chore["name"]}" not completed — {penalty}pt penalty applied',
+                                chore_name=chore["name"],
+                            )
 
     def _is_due_on_date(self, chore: dict, check_date: date) -> bool:
         """Return True if this chore should generate a task instance on check_date."""
@@ -1069,22 +1124,35 @@ class FamilyHubDataStore:
                     note=f'"{chore["name"]}" claimable task expired unclaimed',
                 )
             else:
-                # One-time assigned task — apply penalty if configured
+                # One-time assigned task — apply penalty if configured and not paused.
                 pid = instance.get("assigned_to")
                 if pid and chore.get("penalty_enabled") and chore.get("penalty_points", 0) > 0:
-                    penalty = chore["penalty_points"]
-                    instance["penalty_applied"] = penalty
-                    person = self.get_person(pid)
-                    if person:
-                        person["points_balance"] = max(0, person.get("points_balance", 0) - penalty)
+                    if self.is_penalty_paused_for(pid):
+                        # Penalties paused for this person — expire silently
+                        _LOGGER.debug(
+                            "Family Hub: expiry penalty suppressed for %s (paused) — chore %s",
+                            pid, chore["name"],
+                        )
                         self._append_history(
                             event_type=HISTORY_TASK_SKIPPED,
                             person_id=pid,
                             reference_id=instance["id"],
-                            points_delta=-penalty,
-                            balance_after=person["points_balance"],
-                            note=f'"{chore["name"]}" one-time task expired — {penalty}pt penalty applied',
+                            note=f'"{chore["name"]}" one-time task expired — penalty paused',
                         )
+                    else:
+                        penalty = chore["penalty_points"]
+                        instance["penalty_applied"] = penalty
+                        person = self.get_person(pid)
+                        if person:
+                            person["points_balance"] = max(0, person.get("points_balance", 0) - penalty)
+                            self._append_history(
+                                event_type=HISTORY_TASK_SKIPPED,
+                                person_id=pid,
+                                reference_id=instance["id"],
+                                points_delta=-penalty,
+                                balance_after=person["points_balance"],
+                                note=f'"{chore["name"]}" one-time task expired — {penalty}pt penalty applied',
+                            )
                 else:
                     self._append_history(
                         event_type=HISTORY_TASK_SKIPPED,

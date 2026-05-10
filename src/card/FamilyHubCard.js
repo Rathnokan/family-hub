@@ -94,6 +94,22 @@ export class FamilyHubCard extends HTMLElement {
                 this._svc("update_settings", { show_dollar_value_to_kids: t.checked });
                 return;
             }
+            // Inline toggle: show dollar value to kids
+            if (t.dataset.act === "toggle-dollar") {
+                this._svc("update_settings", { show_dollar_value_to_kids: t.checked });
+                return;
+            }
+            // Global penalty pause toggle (v0.4.2)
+            if (t.dataset.act === "toggle-global-penalty") {
+                this._svc("update_settings", { penalties_paused: !t.checked });
+                return;
+            }
+            // Per-person penalty pause toggle (v0.4.2)
+            if (t.dataset.act === "toggle-person-penalty") {
+                const pid = t.dataset.pid;
+                if (pid) this._svc("update_person", { person_id: pid, penalties_paused: !t.checked });
+                return;
+            }
             // "Everyone" checkbox: sync all individual person checkboxes + chip labels
             if (t.id === "m-everyone") {
                 root.querySelectorAll(".m-assign-person").forEach(cb => {

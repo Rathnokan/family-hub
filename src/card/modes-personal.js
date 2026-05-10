@@ -2,6 +2,10 @@
  * Family Hub Card — Personal Dashboard Mode
  * Per-person view: points balance, tasks grouped by category, reminders, store.
  * Imported and called by FamilyHubCard._htmlPersonal().
+ *
+ * v0.4.2: Category groups render in admin-defined order (category_labels).
+ *         Penalty warning moved into task body (under task name) so it's
+ *         never crowded out by badges on small screens.
  */
 
 import { DEFAULT_COLOR, FLASH_MS } from "./constants.js";
@@ -55,7 +59,7 @@ function _htmlPersonalTasks(attr, color, person, card) {
     const rawOverdue = attr.tasks_overdue_list          || [];
     const pending    = attr.tasks_pending_approval_list || [];
 
-    // ---- BUG FIX: Collapse multiple instances of the same chore to one row.
+    // Collapse multiple instances of the same chore to one row.
     // For each chore_id, keep only the worst-state row.
     const collapseByChore = (rows, pickFn) => {
         const seen = new Map();
@@ -70,11 +74,18 @@ function _htmlPersonalTasks(attr, color, person, card) {
 
     // Separate reminders from regular tasks.
     // TODO (Phase 3-C): Replace heuristic with t.chore_type === "reminder" once
-    // chore_type is added to the personal sensor payload.
-    // Risk: a 0-pt assigned chore with no penalty will be styled as a reminder.
+    // chore_type is added to the personal sensor payload (v0.4.1 backend resolves this).
     const isReminderTask = t => !t.points && !t.penalty_enabled && !t.approval_required;
-    const dueReminders = allDue.filter(t => isReminderTask(t));
-    const due = allDue.filter(t => !isReminderTask(t));
+    const dueReminders   = allDue.filter(t =>  isReminderTask(t));
+    const due            = allDue.filter(t => !isReminderTask(t));
+
+    // ---- Category ordering ------------------------------------------------
+    // Pull the admin-defined ordered list from the needs_attention sensor.
+    // This is the same list the admin Settings tab manages, so category groups
+    // always appear in the same order as the admin has arranged them.
+    const naAttr        = card._attrs("sensor.family_hub_needs_attention");
+    const orderedLabels = naAttr.category_labels || [];
+    const labelIndex    = new Map(orderedLabels.map((l, i) => [l, i]));
 
     // Group due-today tasks by category_label. Items with no label → "Today".
     const groups = new Map();
@@ -84,7 +95,21 @@ function _htmlPersonalTasks(attr, color, person, card) {
         groups.get(key).push(t);
     }
 
-    // Build expiry badge: show only when ≤ 2 days remain.
+    // Sort group keys: known labels first (in admin order), unknown labels
+    // alphabetically, then "Today" (unlabeled) always last.
+    const sortedGroupKeys = [...groups.keys()].sort((a, b) => {
+        const aIsToday = a === "Today";
+        const bIsToday = b === "Today";
+        if (aIsToday && !bIsToday) return 1;
+        if (!aIsToday && bIsToday) return -1;
+        const ai = labelIndex.has(a) ? labelIndex.get(a) : Infinity;
+        const bi = labelIndex.has(b) ? labelIndex.get(b) : Infinity;
+        if (ai !== bi) return ai - bi;
+        return a.localeCompare(b);
+    });
+
+    // ---- Expiry badge -----------------------------------------------------
+    // Shown only when ≤ 2 days remain before the task expires.
     const expiryBadge = t => {
         if (!t.expires_after_days || !t.due_date) return "";
         const due       = new Date(t.due_date);
@@ -99,27 +124,38 @@ function _htmlPersonalTasks(attr, color, person, card) {
         return `<span class="fh-badge fh-badge-expiry">Expires in ${daysLeft}d</span>`;
     };
 
+    // ---- Task row builder -------------------------------------------------
     const mkRow = (t, isOverdue) => {
         const flash      = card._flashing.has(t.task_id) ? "flash" : "";
         const descExp    = card._expandedDescs.has(t.task_id);
         const isReminder = isReminderTask(t);
         const rowClass   = isOverdue ? "overdue" : isReminder ? "reminder" : "";
+
+        // Penalty warning rendered inside fh-task-body, directly under the task
+        // name. Sitting in the body column means it's never crowded out by the
+        // badges and check button on the right, and wraps cleanly on small screens.
+        const penaltyLine = (!isReminder && t.penalty_enabled && t.penalty_points > 0)
+            ? `<span class="fh-penalty-warn">-${t.penalty_points}pts if skipped</span>`
+            : "";
+
         return `
         <div class="fh-task-row ${rowClass} ${flash}"
              style="--row-color:${color}; --flash-dur:${FLASH_MS}ms">
           <div class="fh-task-body">
             <span class="fh-task-name">${escHTML(t.name)}</span>
-            ${descExp && t.description ? `<span class="fh-desc-inline">${escHTML(t.description)}</span>` : ""}
+            ${descExp && t.description
+                ? `<span class="fh-desc-inline">${escHTML(t.description)}</span>`
+                : ""}
+            ${penaltyLine}
           </div>
           ${t.description
               ? `<button class="fh-desc-btn" data-act="toggle-desc" data-id="${t.task_id}"
                          title="Toggle description">?</button>`
               : ""}
-          ${isOverdue ? `<span class="fh-badge fh-badge-overdue">${t.days_overdue}d late</span>` : ""}
-          ${expiryBadge(t)}
-          ${!isReminder && t.penalty_enabled
-              ? `<span class="fh-penalty-warn">-${t.penalty_points}pts if skipped</span>`
+          ${isOverdue
+              ? `<span class="fh-badge fh-badge-overdue">${t.days_overdue}d late</span>`
               : ""}
+          ${expiryBadge(t)}
           ${!isReminder && t.points
               ? `<span class="fh-badge fh-badge-pts" style="--row-color:${color}">${t.points}pts</span>`
               : ""}
@@ -135,30 +171,35 @@ function _htmlPersonalTasks(attr, color, person, card) {
         </div>`;
     };
 
+    // ---- Pending approval rows --------------------------------------------
     const pendingRows = pending.map(t => `
       <div class="fh-task-row" style="--row-color:${color}">
         <span class="fh-task-name">${escHTML(t.name)}</span>
-        ${t.points ? `<span class="fh-badge fh-badge-pts" style="--row-color:${color}">${t.points}pts</span>` : ""}
+        ${t.points
+            ? `<span class="fh-badge fh-badge-pts" style="--row-color:${color}">${t.points}pts</span>`
+            : ""}
         <span class="fh-badge fh-badge-pending">Awaiting approval</span>
       </div>`).join("");
 
+    // ---- Assemble sections ------------------------------------------------
     const overdueSection = overdue.length
         ? overdue.map(t => mkRow(t, true)).join("")
         : "";
 
-    const dueSection = [...groups.entries()].map(([label, tasks]) => `
+    // Groups rendered in admin-defined order via sortedGroupKeys
+    const dueSection = sortedGroupKeys.map(label => `
       <div class="fh-section-title">${escHTML(label)}</div>
       <div class="fh-task-list">
-        ${tasks.map(t => mkRow(t, false)).join("")}
+        ${(groups.get(label) || []).map(t => mkRow(t, false)).join("")}
       </div>`).join("");
-
-    const empty = !due.length && !overdue.length && !pending.length && !dueReminders.length;
 
     const reminderSection = dueReminders.length ? `
       <div class="fh-section-title">Reminders</div>
       <div class="fh-task-list">
         ${dueReminders.map(t => mkRow(t, false)).join("")}
       </div>` : "";
+
+    const empty = !due.length && !overdue.length && !pending.length && !dueReminders.length;
 
     return `
       <div style="display:flex;justify-content:flex-end;margin-bottom:var(--fh-gap-sm)">
@@ -167,7 +208,9 @@ function _htmlPersonalTasks(attr, color, person, card) {
           ${I.bell} Add reminder
         </button>
       </div>
-      ${overdue.length ? `<div class="fh-task-list" style="margin-bottom:var(--fh-gap-sm)">${overdueSection}</div>` : ""}
+      ${overdue.length
+          ? `<div class="fh-task-list" style="margin-bottom:var(--fh-gap-sm)">${overdueSection}</div>`
+          : ""}
       ${dueSection}
       ${reminderSection}
       ${pending.length ? `
@@ -201,7 +244,9 @@ function _htmlPersonalStore(attr, color, person, balance, card) {
             return `
             <div class="fh-store-item">
               <div class="fh-store-name">${escHTML(item.name)}</div>
-              ${item.description ? `<div class="fh-store-desc">${escHTML(item.description)}</div>` : ""}
+              ${item.description
+                  ? `<div class="fh-store-desc">${escHTML(item.description)}</div>`
+                  : ""}
               <div class="fh-store-price" style="color:${color}">${fPts(item.points_cost)}pts</div>
               ${requested
                   ? `<span class="fh-badge fh-badge-requested" style="text-align:center">Requested ✓</span>`
@@ -211,8 +256,7 @@ function _htmlPersonalStore(attr, color, person, balance, card) {
                              data-iid="${item.item_id}" data-pid="${person.person_id}"
                              ${can ? "" : "disabled"}>
                        ${can ? "Request" : "Need more pts"}
-                     </button>`
-              }
+                     </button>`}
             </div>`;
         }).join("")}
       </div>`;

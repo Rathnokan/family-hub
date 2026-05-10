@@ -1,7 +1,10 @@
 /**
  * Family Hub Card — Admin Mode
- * Four tabs: Overview, Approvals (+ history log), Redemptions (+ store inventory), Chores, Settings.
- * Imported and called by FamilyHubCard._htmlAdmin().
+ * Four tabs: Overview, Approvals (+ history log), Redemptions (+ store inventory),
+ * Chores, Settings.
+ *
+ * v0.4.2: Global penalty pause toggle added to Settings tab.
+ *         Per-person penalty pause toggles added to Overview tab.
  */
 
 import { DEFAULT_COLOR, HISTORY_META } from "./constants.js";
@@ -42,17 +45,19 @@ export function htmlAdmin(card) {
 
     let body = "";
     switch (card._adminSec) {
-        case "overview":    body = _htmlOverview(people, attr);                      break;
-        case "approvals":   body = _htmlApprovals(approvals, attr, card);            break;
-        case "redemptions": body = _htmlRedemptions(redemptions, attr, card);        break;
-        case "chores":      body = _htmlChores(chores, people, catLabels, card);     break;
-        case "settings":    body = _htmlSettings(attr);                              break;
+        case "overview":    body = _htmlOverview(people, attr);                  break;
+        case "approvals":   body = _htmlApprovals(approvals, attr, card);        break;
+        case "redemptions": body = _htmlRedemptions(redemptions, attr, card);    break;
+        case "chores":      body = _htmlChores(chores, people, catLabels, card); break;
+        case "settings":    body = _htmlSettings(attr);                          break;
     }
 
     return `
       <div class="fh-hdr">
         <span class="fh-title" style="margin:0">${escHTML(famName)} — Admin</span>
-        ${actionCount ? `<span class="fh-badge fh-badge-overdue">${actionCount} need action</span>` : ""}
+        ${actionCount
+            ? `<span class="fh-badge fh-badge-overdue">${actionCount} need action</span>`
+            : ""}
       </div>
       ${nav}
       ${body}`;
@@ -66,7 +71,24 @@ function _htmlOverview(people, attr) {
     const ppdollar = attr.points_per_dollar || 10;
 
     const rows = people.map(p => {
-        const color = p.avatar_color || DEFAULT_COLOR;
+        const color          = p.avatar_color || DEFAULT_COLOR;
+        const penPaused      = p.penalties_paused || false;
+
+        // Per-person penalty pause toggle. Uses data-act="toggle-person-penalty"
+        // with the person_id so dispatch can call update_person.
+        // The toggle is only shown for kids — parents don't have penalties.
+        const penaltyToggle = (p.type === "kid") ? `
+          <div class="fh-penalty-pause-wrap" title="${penPaused ? "Penalties paused — tap to resume" : "Tap to pause penalties for this person"}">
+            <span class="fh-penalty-pause-label" style="font-size:.7rem;color:${penPaused ? "var(--fh-warning)" : "var(--fh-text-sec)"}">
+              ${penPaused ? "⏸ Penalties off" : "Penalties on"}
+            </span>
+            <label class="fh-toggle" style="width:36px;height:20px">
+              <input type="checkbox" data-act="toggle-person-penalty"
+                     data-pid="${p.person_id}" ${penPaused ? "" : "checked"}>
+              <span class="fh-toggle-slider"></span>
+            </label>
+          </div>` : "";
+
         return `
         <div class="fh-point-row">
           <div class="fh-avatar" style="background:${color}">${ini(p.name)}</div>
@@ -80,6 +102,7 @@ function _htmlOverview(people, attr) {
               ${fPts(p.points_balance)}pts · ${fUSD(p.points_balance / ppdollar)} · lifetime ${fPts(p.points_lifetime)}
             </div>
           </div>
+          ${penaltyToggle}
           <button class="fh-btn fh-btn-success fh-btn-sm"
                   data-act="open-award" data-pid="${p.person_id}"
                   data-pname="${escAttr(p.name)}" title="Award points">
@@ -309,7 +332,6 @@ function _htmlRedemptions(redemptions, attr, card) {
 // ---------------------------------------------------------------------------
 
 function _htmlChores(chores, people, catLabels, card) {
-    // Store sorted chores for drag-drop reference
     card._sortedChores = chores;
 
     const filterChips = `
@@ -340,11 +362,12 @@ function _htmlChores(chores, people, catLabels, card) {
           ${filterChips}
           ${addBtn}
           <div class="fh-empty">
-            ${card._choreFilter ? "No chores assigned to this person." : "No active chores. Add one above."}
+            ${card._choreFilter
+                ? "No chores assigned to this person."
+                : "No active chores. Add one above."}
           </div>`;
     }
 
-    // Group by category_label (empty → "Uncategorized")
     const groups = new Map();
     for (const c of visibleChores) {
         const key = c.category_label || "Uncategorized";
@@ -423,10 +446,12 @@ function _htmlChores(chores, people, catLabels, card) {
 // ---------------------------------------------------------------------------
 
 function _htmlSettings(attr) {
-    const famName    = attr.family_name              || "Family Hub";
-    const ppdollar   = attr.points_per_dollar        || 10;
-    const showDollar = attr.show_dollar_value_to_kids || false;
-    const catLabels  = attr.category_labels          || [];
+    const famName        = attr.family_name               || "Family Hub";
+    const ppdollar       = attr.points_per_dollar         || 10;
+    const showDollar     = attr.show_dollar_value_to_kids || false;
+    const catLabels      = attr.category_labels           || [];
+    // v0.4.2: global penalty pause flag from sensor
+    const penPaused      = attr.penalties_paused_global   || false;
 
     const labelChips = catLabels.map(l => `
       <div class="fh-cat-chip">
@@ -437,6 +462,8 @@ function _htmlSettings(attr) {
 
     return `
       <div class="fh-task-list">
+
+        <!-- Dollar value toggle -->
         <div class="fh-toggle-row">
           <span style="font-size:.9rem">Show dollar value to kids</span>
           <label class="fh-toggle">
@@ -445,6 +472,26 @@ function _htmlSettings(attr) {
           </label>
         </div>
 
+        <!-- Global penalty pause toggle (v0.4.2) -->
+        <!-- NOTE: the toggle logic is inverted — "Penalties active" = checked = NOT paused.
+             This feels natural: switch ON = penalties running, switch OFF = paused.
+             The data-act handler reads the checkbox and sends penalties_paused = !checked. -->
+        <div class="fh-toggle-row" style="border-left:3px solid ${penPaused ? "var(--fh-warning)" : "var(--fh-success)"}">
+          <div>
+            <div style="font-size:.9rem;font-weight:600">Penalties active</div>
+            <div style="font-size:.75rem;color:var(--fh-text-sec)">
+              ${penPaused
+                  ? "⏸ All penalties paused — chores skipped without point deductions"
+                  : "Penalties will apply normally at the daily tick"}
+            </div>
+          </div>
+          <label class="fh-toggle">
+            <input type="checkbox" data-act="toggle-global-penalty" ${penPaused ? "" : "checked"}>
+            <span class="fh-toggle-slider"></span>
+          </label>
+        </div>
+
+        <!-- Family name / points rate -->
         <div class="fh-point-row">
           <div style="flex:1;min-width:0">
             <div style="font-size:.9rem;font-weight:600">${escHTML(famName)}</div>
@@ -458,6 +505,7 @@ function _htmlSettings(attr) {
 
         <div class="fh-divider"></div>
 
+        <!-- Category labels -->
         <div>
           <div class="fh-label" style="margin-bottom:6px">Category labels</div>
           <div class="fh-cat-labels" style="margin-bottom:8px">
