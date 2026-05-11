@@ -40,7 +40,11 @@ from homeassistant.helpers import config_validation as cv
 
 from .const import (
     CHORE_TYPES,
+    CLAIMABLE_SUBTYPE_FCFS,
+    CLAIMABLE_SUBTYPE_MULTI,
     DOMAIN,
+    MULTI_CLAIM_POINTS_FULL,
+    MULTI_CLAIM_POINTS_SPLIT,
     PERSON_TYPES,
     RECURRENCE_TYPES,
     SCOPE_COMMON,
@@ -275,7 +279,13 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             sort_order=call.data.get("sort_order"),
             penalty_enabled=call.data.get("penalty_enabled", False),
             penalty_points=call.data.get("penalty_points", 0),
+            daily_penalty_after_days=call.data.get("daily_penalty_after_days"),
             expires_after_days=call.data.get("expires_after_days"),
+            claimable_subtype=call.data.get("claimable_subtype", CLAIMABLE_SUBTYPE_FCFS),
+            max_claimants=call.data.get("max_claimants", 2),
+            multi_claim_points_mode=call.data.get("multi_claim_points_mode", MULTI_CLAIM_POINTS_FULL),
+            streak_milestone=call.data.get("streak_milestone", 0),
+            streak_bonus_points=call.data.get("streak_bonus_points", 0),
             icon=call.data.get("icon"),
             created_by=call.data.get("created_by"),
         )
@@ -284,24 +294,32 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
     hass.services.async_register(
         DOMAIN, "add_chore", handle_add_chore,
         schema=vol.Schema({
-            vol.Required("name"):                            cv.string,
-            vol.Optional("description", default=""):         cv.string,
-            vol.Optional("chore_type", default="assigned"):  vol.In(CHORE_TYPES),
-            vol.Optional("category_label", default=""):      cv.string,
-            vol.Optional("assigned_to", default=[]):         vol.Any(cv.string, [cv.string]),
-            vol.Optional("points", default=10):              vol.Coerce(int),
-            vol.Optional("approval_required", default=True): cv.boolean,
-            vol.Optional("recurrence_type", default="daily"):vol.In(RECURRENCE_TYPES),
-            vol.Optional("weekdays", default=[]):            [vol.All(vol.Coerce(int), vol.Range(min=0, max=6))],
-            vol.Optional("day_filter", default=[]):          [vol.All(vol.Coerce(int), vol.Range(min=0, max=6))],
-            vol.Optional("interval", default=1):             vol.All(vol.Coerce(int), vol.Range(min=1)),
-            vol.Optional("day_of_month"):                    vol.All(vol.Coerce(int), vol.Range(min=1, max=31)),
-            vol.Optional("sort_order"):                      vol.Coerce(int),
-            vol.Optional("penalty_enabled", default=False):  cv.boolean,
-            vol.Optional("penalty_points", default=0):       vol.Coerce(int),
-            vol.Optional("expires_after_days"):              vol.All(vol.Coerce(int), vol.Range(min=1)),
-            vol.Optional("icon"):                            cv.string,
-            vol.Optional("created_by"):                      cv.string,
+            vol.Required("name"):                              cv.string,
+            vol.Optional("description", default=""):           cv.string,
+            vol.Optional("chore_type", default="assigned"):    vol.In(CHORE_TYPES),
+            vol.Optional("category_label", default=""):        cv.string,
+            vol.Optional("assigned_to", default=[]):           vol.Any(cv.string, [cv.string]),
+            vol.Optional("points", default=10):                vol.Coerce(int),
+            vol.Optional("approval_required", default=True):   cv.boolean,
+            vol.Optional("recurrence_type", default="daily"):  vol.In(RECURRENCE_TYPES),
+            vol.Optional("weekdays", default=[]):              [vol.All(vol.Coerce(int), vol.Range(min=0, max=6))],
+            vol.Optional("day_filter", default=[]):            [vol.All(vol.Coerce(int), vol.Range(min=0, max=6))],
+            vol.Optional("interval", default=1):               vol.All(vol.Coerce(int), vol.Range(min=1)),
+            vol.Optional("day_of_month"):                      vol.All(vol.Coerce(int), vol.Range(min=1, max=31)),
+            vol.Optional("sort_order"):                        vol.Coerce(int),
+            vol.Optional("penalty_enabled", default=False):    cv.boolean,
+            vol.Optional("penalty_points", default=0):         vol.Coerce(int),
+            vol.Optional("daily_penalty_after_days"):          vol.All(vol.Coerce(int), vol.Range(min=1)),
+            vol.Optional("expires_after_days"):                vol.All(vol.Coerce(int), vol.Range(min=1)),
+            vol.Optional("claimable_subtype", default=CLAIMABLE_SUBTYPE_FCFS):
+                vol.In([CLAIMABLE_SUBTYPE_FCFS, CLAIMABLE_SUBTYPE_MULTI]),
+            vol.Optional("max_claimants", default=2):          vol.All(vol.Coerce(int), vol.Range(min=2)),
+            vol.Optional("multi_claim_points_mode", default=MULTI_CLAIM_POINTS_FULL):
+                vol.In([MULTI_CLAIM_POINTS_FULL, MULTI_CLAIM_POINTS_SPLIT]),
+            vol.Optional("streak_milestone", default=0):       vol.All(vol.Coerce(int), vol.Range(min=0)),
+            vol.Optional("streak_bonus_points", default=0):    vol.All(vol.Coerce(int), vol.Range(min=0)),
+            vol.Optional("icon"):                              cv.string,
+            vol.Optional("created_by"):                        cv.string,
         }),
     )
 
@@ -337,9 +355,15 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             vol.Optional("approval_required"):               cv.boolean,
             vol.Optional("penalty_enabled"):                 cv.boolean,
             vol.Optional("penalty_points"):                  vol.Coerce(int),
+            vol.Optional("daily_penalty_after_days"):        vol.Any(
+                None, vol.All(vol.Coerce(int), vol.Range(min=1))
+            ),
             vol.Optional("expires_after_days"):              vol.Any(
                 None, vol.All(vol.Coerce(int), vol.Range(min=1))
             ),
+            vol.Optional("claimable_subtype"):               vol.In([CLAIMABLE_SUBTYPE_FCFS, CLAIMABLE_SUBTYPE_MULTI]),
+            vol.Optional("max_claimants"):                   vol.All(vol.Coerce(int), vol.Range(min=2)),
+            vol.Optional("multi_claim_points_mode"):         vol.In([MULTI_CLAIM_POINTS_FULL, MULTI_CLAIM_POINTS_SPLIT]),
             vol.Optional("weekdays"):                        [vol.All(vol.Coerce(int), vol.Range(min=0, max=6))],
             vol.Optional("day_filter"):                      [vol.All(vol.Coerce(int), vol.Range(min=0, max=6))],
             vol.Optional("interval"):                        vol.All(vol.Coerce(int), vol.Range(min=1)),
@@ -347,6 +371,8 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             vol.Optional("recurrence"):                      dict,
             vol.Optional("active"):                          cv.boolean,
             vol.Optional("icon"):                            cv.string,
+            vol.Optional("streak_milestone"):                vol.Any(None, vol.All(vol.Coerce(int), vol.Range(min=0))),
+            vol.Optional("streak_bonus_points"):             vol.Any(None, vol.All(vol.Coerce(int), vol.Range(min=0))),
         }),
     )
 
@@ -619,6 +645,60 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
     hass.services.async_register(
         DOMAIN, "force_daily_tick", handle_force_daily_tick,
         schema=vol.Schema({}),
+    )
+
+    async def handle_rebuild_data(call: ServiceCall) -> None:
+        """
+        Heavy-lift data cleanup: remove orphan people, ghost instances, orphaned
+        instances, duplicates, and prune old terminal data. Surfaces a summary
+        via persistent notification.
+        """
+        _LOGGER.info("Family Hub: rebuild_data service called")
+        summary = await store.async_rebuild_data()
+        await coordinator.async_refresh()
+
+        lines = [
+            f"- Orphan people removed: {summary.get('orphan_people_removed', 0)}",
+            f"- Ghost instances removed: {summary.get('ghost_instances_removed', 0)}",
+            f"- Orphaned instances removed: {summary.get('orphaned_instances_removed', 0)}",
+            f"- Duplicate instances removed: {summary.get('duplicate_instances_removed', 0)}",
+            f"- Old instances pruned (>60d): {summary.get('old_instances_pruned', 0)}",
+            f"- Old history pruned (>30d): {summary.get('old_history_pruned', 0)}",
+        ]
+        await hass.services.async_call(
+            "persistent_notification", "create",
+            {
+                "title": "Family Hub: data rebuild complete",
+                "message": "Cleanup summary:\n" + "\n".join(lines),
+                "notification_id": "family_hub_rebuild",
+            },
+        )
+
+    hass.services.async_register(
+        DOMAIN, "rebuild_data", handle_rebuild_data,
+        schema=vol.Schema({}),
+    )
+
+    # ------------------------------------------------------------------
+    # Streak correction
+    # ------------------------------------------------------------------
+
+    async def handle_set_streak(call: ServiceCall) -> None:
+        success = await store.async_set_streak(
+            call.data["person_id"], call.data["chore_id"], call.data["count"],
+        )
+        if success:
+            await coordinator.async_refresh()
+        else:
+            _LOGGER.warning("Family Hub: set_streak — person not found: %s", call.data["person_id"])
+
+    hass.services.async_register(
+        DOMAIN, "set_streak", handle_set_streak,
+        schema=vol.Schema({
+            vol.Required("person_id"): cv.string,
+            vol.Required("chore_id"):  cv.string,
+            vol.Required("count"):     vol.All(vol.Coerce(int), vol.Range(min=0)),
+        }),
     )
 
     # ------------------------------------------------------------------

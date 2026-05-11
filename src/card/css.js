@@ -140,6 +140,8 @@ export const CSS = `
   }
   .fh-badge-expiry   { color:var(--fh-warning); background:var(--fh-warning-bg); }
   .fh-badge-requested { color:var(--fh-accent); background:color-mix(in srgb, var(--fh-accent) 15%, transparent); }
+  .fh-badge-reset    { color:var(--fh-text-sec); background:var(--fh-surface); border:1px solid var(--fh-border); }
+  .fh-badge-streak   { color:var(--fh-warning); background:var(--fh-warning-bg); }
 
   /* Penalty warning */
   .fh-penalty-warn {
@@ -341,12 +343,13 @@ export const CSS = `
   .fh-weekday-row { display:flex; flex-wrap:wrap; gap:4px; }
   .fh-wd-chip {
     display:flex; align-items:center; justify-content:center;
-    width:40px; height:32px; border-radius:6px;
+    min-width:52px; height:32px; padding:0 8px; border-radius:6px;
     border:1.5px solid var(--fh-border); background:var(--fh-surface);
     font-size:.78rem; font-weight:600; cursor:pointer; user-select:none;
     transition:border-color .12s, background .12s, color .12s;
   }
-  .fh-wd-chip input[type=checkbox] { display:none; }
+  .fh-wd-chip input[type=checkbox],
+  .fh-wd-chip input[type=radio] { display:none; }
   .fh-wd-chip.checked {
     background:var(--fh-accent); border-color:var(--fh-accent); color:#fff;
   }
@@ -402,6 +405,29 @@ export const CSS = `
     max-height:420px; overflow-y:auto;
     display:flex; flex-direction:column; gap:var(--fh-gap-sm);
   }
+
+  /* Skipped-chore rollup group */
+  .fh-hist-group {
+    background:var(--fh-surface); border-radius:var(--fh-radius-sm);
+    border-left:3px solid var(--fh-warning); overflow:hidden;
+  }
+  .fh-hist-group-hdr {
+    display:flex; align-items:center; gap:var(--fh-gap-sm);
+    padding:var(--fh-pad-xs) var(--fh-pad-sm);
+    cursor:pointer; user-select:none;
+  }
+  .fh-hist-group-hdr:hover { background:color-mix(in srgb, var(--fh-warning) 6%, transparent); }
+  .fh-hist-expand-icon { font-size:.65rem; color:var(--fh-text-sec); flex-shrink:0; }
+  .fh-hist-subitems {
+    border-top:1px solid var(--fh-border);
+    display:flex; flex-direction:column; gap:1px;
+  }
+  .fh-hist-subrow {
+    display:flex; align-items:center; gap:var(--fh-gap-sm);
+    padding:6px var(--fh-pad-sm);
+    background:color-mix(in srgb, var(--fh-surface) 60%, var(--fh-bg));
+  }
+  .fh-hist-subrow:hover { background:var(--fh-surface); }
 
   /* Approval dot on person filter chips */
   .fh-chip-approval-dot {

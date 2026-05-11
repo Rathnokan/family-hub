@@ -8,9 +8,9 @@
  *         never crowded out by badges on small screens.
  */
 
-import { DEFAULT_COLOR, FLASH_MS, HISTORY_META } from "./constants.js";
+import { DEFAULT_COLOR, FLASH_MS, HISTORY_META, WEEKDAY_LABELS } from "./constants.js";
 import { I } from "./constants.js";
-import { escHTML, escAttr, ini, fPts, fUSD, cap, slug, relTime } from "./utils.js";
+import { escHTML, escAttr, ini, fPts, fUSD, cap, slug, relTime, groupHistorySkipped } from "./utils.js";
 
 /**
  * Render the full personal dashboard HTML.
@@ -36,7 +36,7 @@ export function htmlPersonal(card) {
     let content = "";
     if (card._tab === "tasks")   content = _htmlPersonalTasks(attr, color, person, card);
     if (card._tab === "store")   content = _htmlPersonalStore(attr, color, person, balance, card);
-    if (card._tab === "history") content = _htmlPersonalHistory(personHist, color);
+    if (card._tab === "history") content = _htmlPersonalHistory(personHist, color, card);
 
     return `
       <div class="fh-person-header" style="border-left:4px solid ${color}">
@@ -111,6 +111,33 @@ function _htmlPersonalTasks(attr, color, person, card) {
         return a.localeCompare(b);
     });
 
+    // ---- Reset badge ------------------------------------------------------
+    // Replaces the old "due Nd ago" language for weekly/monthly/every-n-days
+    // chores. Shows when the chore resets and turns amber the day before.
+    // Urgency is only shown for weekly and monthly chores, not short cycles.
+    const resetBadge = t => {
+        const rType = t.recurrence_type;
+        if (!rType || rType === "daily" || rType === "one_time") return "";
+        const dur = t.days_until_reset;
+        if (dur === undefined || dur === null) return "";
+
+        let label;
+        if (dur <= 0) {
+            label = "Resets today";
+        } else if (dur === 1) {
+            label = "Resets tomorrow";
+        } else if (rType === "weekly" && t.recurrence_weekdays?.length) {
+            const names = t.recurrence_weekdays.map(d => WEEKDAY_LABELS[d]).join("/");
+            label = `Resets ${names}`;
+        } else {
+            label = `Resets in ${dur}d`;
+        }
+
+        const isLongCycle = rType === "weekly" || rType === "monthly_on_date";
+        const urgent      = isLongCycle && dur <= 1;
+        return `<span class="fh-badge ${urgent ? "fh-badge-pending" : "fh-badge-reset"}">${label}</span>`;
+    };
+
     // ---- Expiry badge -----------------------------------------------------
     // Shown only when ≤ 2 days remain before the task expires.
     const expiryBadge = t => {
@@ -134,9 +161,7 @@ function _htmlPersonalTasks(attr, color, person, card) {
         const isReminder = isReminderTask(t);
         const rowClass   = isOverdue ? "overdue" : isReminder ? "reminder" : "";
 
-        // Penalty warning rendered inside fh-task-body, directly under the task
-        // name. Sitting in the body column means it's never crowded out by the
-        // badges and check button on the right, and wraps cleanly on small screens.
+        // Penalty warning rendered inside fh-task-body, directly under the task name.
         const penaltyLine = (!isReminder && t.penalty_enabled && t.penalty_points > 0)
             ? `<span class="fh-penalty-warn">-${t.penalty_points}pts if skipped</span>`
             : "";
@@ -155,14 +180,18 @@ function _htmlPersonalTasks(attr, color, person, card) {
               ? `<button class="fh-desc-btn" data-act="toggle-desc" data-id="${t.task_id}"
                          title="Toggle description">?</button>`
               : ""}
+          ${t.daily_penalty_firing
+              ? `<span class="fh-badge fh-badge-overdue">-${t.penalty_points}pts/day</span>`
+              : ""}
           ${isOverdue
               ? `<span class="fh-badge fh-badge-overdue">${t.days_overdue}d late</span>`
-              : (t.days_late > 0
-                  ? `<span class="fh-badge fh-badge-pending">due ${t.days_late}d ago</span>`
-                  : "")}
+              : resetBadge(t)}
           ${expiryBadge(t)}
           ${!isReminder && t.points
               ? `<span class="fh-badge fh-badge-pts" style="--row-color:${color}">${t.points}pts</span>`
+              : ""}
+          ${!isReminder && (t.streak || 0) >= 2
+              ? `<span class="fh-badge fh-badge-streak">🔥 ${t.streak}</span>`
               : ""}
           ${!isReminder
               ? `<button class="fh-check" style="--row-color:${color}"
@@ -225,30 +254,84 @@ function _htmlPersonalTasks(attr, color, person, card) {
 }
 
 // ---------------------------------------------------------------------------
-// History tab — read-only personal history log
+// History tab — personal history log (one row per task, skipped rollup)
 // ---------------------------------------------------------------------------
 
-function _htmlPersonalHistory(entries, color) {
+function _htmlPersonalHistory(entries, color, card) {
     if (!entries.length) return `<div class="fh-empty">No history yet.</div>`;
 
-    const rows = entries.map(e => {
-        const meta     = HISTORY_META[e.type] || { label: e.type, color: "var(--fh-text-sec)" };
-        const ptsDelta = e.points_delta
-            ? `<span style="color:${e.points_delta > 0 ? "var(--fh-success)" : "var(--fh-overdue)"}">
-                 ${e.points_delta > 0 ? "+" : ""}${e.points_delta}pts
-               </span>`
-            : "";
-        return `
-          <div class="fh-hist-row" style="--hist-color:${meta.color}">
-            <div class="fh-hist-info">
-              <div class="fh-hist-label">${escHTML(meta.label)}</div>
-              <div class="fh-hist-name">${escHTML(e.chore_name || e.note || "")}</div>
-              <div class="fh-hist-meta">${relTime(e.timestamp)} ${ptsDelta}</div>
-            </div>
-          </div>`;
+    const grouped = groupHistorySkipped(entries);
+    const rows = grouped.map(item => {
+        if (item.isGroup) return _renderSkippedGroup(item, null, card);
+        return _renderHistRow(item.entry);
     }).join("");
 
     return `<div class="fh-hist-scroll">${rows}</div>`;
+}
+
+/** Render a single history entry row (no action buttons — personal view). */
+function _renderHistRow(e) {
+    const meta     = HISTORY_META[e.type] || { label: e.type, color: "var(--fh-text-sec)" };
+    const ptsDelta = e.points_delta
+        ? `<span style="color:${e.points_delta > 0 ? "var(--fh-success)" : "var(--fh-overdue)"}">
+             ${e.points_delta > 0 ? "+" : ""}${e.points_delta}pts
+           </span>`
+        : "";
+    return `
+      <div class="fh-hist-row" style="--hist-color:${meta.color}">
+        <div class="fh-hist-info">
+          <div class="fh-hist-label">${escHTML(meta.label)}</div>
+          <div class="fh-hist-name">${escHTML(e.chore_name || e.note || "")}</div>
+          <div class="fh-hist-meta">${relTime(e.timestamp)} ${ptsDelta}</div>
+        </div>
+      </div>`;
+}
+
+/**
+ * Render a collapsible skipped-chores group.
+ * @param {object}      group        - Group object from groupHistorySkipped
+ * @param {object|null} firstParent  - First parent person (for Excuse button); null = personal view
+ * @param {object}      card         - Card instance (for expand state)
+ */
+function _renderSkippedGroup(group, firstParent, card) {
+    const expanded = card._expandedSkippedDates.has(group.key);
+    const penLabel = group.totalPenalty > 0 ? `−${group.totalPenalty}pts` : "no penalty";
+
+    const subItems = expanded ? group.items.map(e => {
+        const pts = e.points_delta
+            ? `<span style="color:var(--fh-overdue);font-weight:700">${e.points_delta}pts</span>`
+            : "";
+        let actionBtn = "";
+        if (firstParent && e.reversible === "excuse") {
+            actionBtn = `<button class="fh-btn fh-btn-warning fh-btn-sm"
+                                 data-act="excuse-task"
+                                 data-iid="${e.reference_id}"
+                                 data-excused-by="${firstParent.person_id}"
+                                 title="Reverse this penalty">
+                           ${I.excuse} Excuse
+                         </button>`;
+        }
+        return `
+          <div class="fh-hist-subrow">
+            <div class="fh-hist-info" style="flex:1;min-width:0">
+              <div class="fh-hist-name">${escHTML(e.chore_name || "")}</div>
+              <div class="fh-hist-meta">${pts}</div>
+            </div>
+            ${actionBtn}
+          </div>`;
+    }).join("") : "";
+
+    return `
+      <div class="fh-hist-group">
+        <div class="fh-hist-group-hdr" data-act="toggle-skipped-group" data-key="${group.key}">
+          <div class="fh-hist-info" style="flex:1;min-width:0">
+            <div class="fh-hist-label" style="color:var(--fh-warning)">Skipped chores</div>
+            <div class="fh-hist-name">${escHTML(group.dateDisplay)} · ${penLabel}</div>
+          </div>
+          <span class="fh-hist-expand-icon">${expanded ? "▲" : "▼"}</span>
+        </div>
+        ${expanded ? `<div class="fh-hist-subitems">${subItems}</div>` : ""}
+      </div>`;
 }
 
 // ---------------------------------------------------------------------------

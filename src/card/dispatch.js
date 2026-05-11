@@ -73,6 +73,15 @@ export function dispatch(act, el, card) {
             break;
         }
 
+        // ---- Skipped-group expand/collapse ---------------------------------
+        case "toggle-skipped-group": {
+            const key = el.dataset.key;
+            if (card._expandedSkippedDates.has(key)) card._expandedSkippedDates.delete(key);
+            else card._expandedSkippedDates.add(key);
+            card._doRender(true);
+            break;
+        }
+
         // ---- Task / redemption approvals -----------------------------------
         case "approve-task": {
             const parent = card._people().find(p => p.type === "parent");
@@ -180,6 +189,16 @@ export function dispatch(act, el, card) {
             card._svc("export_backup", {});
             break;
 
+        case "rebuild-data":
+            if (!confirm(
+                "Rebuild data?\n\n" +
+                "This will remove ghost records, orphaned instances, and duplicates. " +
+                "A summary will appear as a Home Assistant notification.\n\n" +
+                "This cannot be undone."
+            )) break;
+            card._svc("rebuild_data", {});
+            break;
+
         // ---- Open modals ---------------------------------------------------
         case "open-award":
             card._modal = { type: "award",  data: { pid: el.dataset.pid, pname: el.dataset.pname } };
@@ -247,6 +266,10 @@ export function dispatch(act, el, card) {
             break;
         case "open-add-reminder":
             card._modal = { type: "add-reminder", data: { pid: el.dataset.pid || null } };
+            card._doRender(true);
+            break;
+        case "open-edit-streaks":
+            card._modal = { type: "edit-streaks", data: { pid: el.dataset.pid, pname: el.dataset.pname } };
             card._doRender(true);
             break;
 
@@ -324,13 +347,14 @@ export function dispatch(act, el, card) {
             if (!name) break;
             const isEdit    = (act === "ok-edit-chore");
             const recType   = v("m-crec");
+            const ctype     = v("m-ctype");
             const assigned  = _selectedPersonIds("m-assign-person", sr);
             const weekdays  = Array.from(sr.querySelectorAll(".m-wd-day:checked")).map(cb => parseInt(cb.value));
             const dayFilter = Array.from(sr.querySelectorAll(".m-df-day:checked")).map(cb => parseInt(cb.value));
 
             const data = {
                 name,
-                chore_type:        v("m-ctype"),
+                chore_type:        ctype,
                 category_label:    v("m-clabel"),
                 assigned_to:       assigned,
                 points:            int("m-cpts"),
@@ -339,13 +363,27 @@ export function dispatch(act, el, card) {
                 penalty_points:    int("m-cpenalty-pts"),
             };
 
-            // Only include description if non-empty — avoids sending undefined
+            // Daily penalty threshold — only when penalty enabled and value > 0
+            if (b("m-cpenalty")) {
+                const thresh = parseInt(v("m-daily-threshold") || "0");
+                if (thresh > 0) data.daily_penalty_after_days = thresh;
+            }
+
+            // Claimable subtype fields — only for claimable chores
+            if (ctype === "claimable") {
+                data.claimable_subtype = v("m-csubtype") || "fcfs";
+                if (data.claimable_subtype === "multi_claim") {
+                    data.max_claimants         = Math.max(2, int("m-max-claimants") || 2);
+                    data.multi_claim_points_mode = v("m-points-mode") || "full";
+                }
+            }
+
+            // Only include description if non-empty
             const desc = v("m-cdesc").trim();
             if (desc) data.description = desc;
 
             // expires_after_days: ONLY include when expiry section is visible
-            // AND user entered a positive integer. Never send 0, null, or undefined —
-            // add_chore rejects it, and omitting on update_chore leaves existing value intact.
+            // AND user entered a positive integer. Never send 0, null, or undefined.
             const expirySection = sr.getElementById("m-chore-expiry-section");
             const expiryVisible = expirySection && expirySection.style.display !== "none";
             if (expiryVisible) {
@@ -357,14 +395,10 @@ export function dispatch(act, el, card) {
                 data.chore_id   = v("m-cid");
                 data.weekdays   = weekdays;
                 data.day_filter = dayFilter;
-                if (recType === "every_n_days" || recType === "every_n_weeks")
-                    data.interval = Math.max(1, int("m-interval"));
                 data.recurrence = {
                     type:       recType,
                     weekdays,
                     day_filter: dayFilter,
-                    interval:   (recType === "every_n_days" || recType === "every_n_weeks")
-                                    ? Math.max(1, int("m-interval")) : 1,
                     ...(recType === "monthly_on_date"
                             ? { day_of_month: Math.max(1, Math.min(31, int("m-dom"))) }
                             : {}),
@@ -373,14 +407,24 @@ export function dispatch(act, el, card) {
                 data.recurrence_type = recType;
                 if (weekdays.length)  data.weekdays   = weekdays;
                 if (dayFilter.length) data.day_filter = dayFilter;
-                if (recType === "every_n_days" || recType === "every_n_weeks")
-                    data.interval = Math.max(1, int("m-interval"));
                 if (recType === "monthly_on_date")
                     data.day_of_month = Math.max(1, Math.min(31, int("m-dom")));
             }
 
+            // Streak milestone — always include (0 = disabled)
+            data.streak_milestone    = Math.max(0, int("m-streak-milestone") || 0);
+            data.streak_bonus_points = Math.max(0, int("m-streak-bonus") || 0);
+
             card._svc(isEdit ? "update_chore" : "add_chore", data);
             card._closeModal();
+            break;
+        }
+
+        case "set-streak": {
+            const cid   = el.dataset.cid;
+            const pid   = el.dataset.pid;
+            const count = Math.max(0, parseInt(sr.getElementById(`m-streak-${cid}`)?.value || "0"));
+            card._svc("set_streak", { person_id: pid, chore_id: cid, count });
             break;
         }
 

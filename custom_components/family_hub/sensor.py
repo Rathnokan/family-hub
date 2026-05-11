@@ -436,6 +436,8 @@ class FamilyHubNeedsAttentionSensor(FamilyHubBaseSensor):
                     "active":           p.get("active", True),
                     # v0.4.2: per-person penalty pause flag for admin Overview toggle
                     "penalties_paused": p.get("penalties_paused", False),
+                    # v0.5.0: per-chore streak counts for admin Edit Streaks modal
+                    "streaks": {k: v.get("count", 0) for k, v in p.get("streaks", {}).items()},
                 }
                 for p in store.people if p.get("active", True)
             ],

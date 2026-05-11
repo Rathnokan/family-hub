@@ -148,6 +148,8 @@
   }
   .fh-badge-expiry   { color:var(--fh-warning); background:var(--fh-warning-bg); }
   .fh-badge-requested { color:var(--fh-accent); background:color-mix(in srgb, var(--fh-accent) 15%, transparent); }
+  .fh-badge-reset    { color:var(--fh-text-sec); background:var(--fh-surface); border:1px solid var(--fh-border); }
+  .fh-badge-streak   { color:var(--fh-warning); background:var(--fh-warning-bg); }
 
   /* Penalty warning */
   .fh-penalty-warn {
@@ -349,12 +351,13 @@
   .fh-weekday-row { display:flex; flex-wrap:wrap; gap:4px; }
   .fh-wd-chip {
     display:flex; align-items:center; justify-content:center;
-    width:40px; height:32px; border-radius:6px;
+    min-width:52px; height:32px; padding:0 8px; border-radius:6px;
     border:1.5px solid var(--fh-border); background:var(--fh-surface);
     font-size:.78rem; font-weight:600; cursor:pointer; user-select:none;
     transition:border-color .12s, background .12s, color .12s;
   }
-  .fh-wd-chip input[type=checkbox] { display:none; }
+  .fh-wd-chip input[type=checkbox],
+  .fh-wd-chip input[type=radio] { display:none; }
   .fh-wd-chip.checked {
     background:var(--fh-accent); border-color:var(--fh-accent); color:#fff;
   }
@@ -411,6 +414,29 @@
     display:flex; flex-direction:column; gap:var(--fh-gap-sm);
   }
 
+  /* Skipped-chore rollup group */
+  .fh-hist-group {
+    background:var(--fh-surface); border-radius:var(--fh-radius-sm);
+    border-left:3px solid var(--fh-warning); overflow:hidden;
+  }
+  .fh-hist-group-hdr {
+    display:flex; align-items:center; gap:var(--fh-gap-sm);
+    padding:var(--fh-pad-xs) var(--fh-pad-sm);
+    cursor:pointer; user-select:none;
+  }
+  .fh-hist-group-hdr:hover { background:color-mix(in srgb, var(--fh-warning) 6%, transparent); }
+  .fh-hist-expand-icon { font-size:.65rem; color:var(--fh-text-sec); flex-shrink:0; }
+  .fh-hist-subitems {
+    border-top:1px solid var(--fh-border);
+    display:flex; flex-direction:column; gap:1px;
+  }
+  .fh-hist-subrow {
+    display:flex; align-items:center; gap:var(--fh-gap-sm);
+    padding:6px var(--fh-pad-sm);
+    background:color-mix(in srgb, var(--fh-surface) 60%, var(--fh-bg));
+  }
+  .fh-hist-subrow:hover { background:var(--fh-surface); }
+
   /* Approval dot on person filter chips */
   .fh-chip-approval-dot {
     width:8px; height:8px; border-radius:50%;
@@ -461,6 +487,7 @@
       HISTORY_META = {
         task_completed: { label: "Completed", color: "var(--fh-success)" },
         task_approved: { label: "Approved", color: "var(--fh-success)" },
+        pending_approval: { label: "Pending approval", color: "var(--fh-warning)" },
         task_denied: { label: "Denied", color: "var(--fh-overdue)" },
         task_skipped: { label: "Skipped", color: "var(--fh-warning)" },
         task_excused: { label: "Excused", color: "var(--fh-accent)" },
@@ -510,11 +537,14 @@
       (o) => `<option value="${o.value}" ${o.value === current ? "selected" : ""}>${o.label}</option>`
     ).join("");
   }
-  function weekdayChips(checkedDays, cbClass) {
+  function weekdayChips(checkedDays, cbClass, singleSelect = false) {
+    const days = checkedDays || [];
+    const effective = singleSelect ? days.slice(0, 1) : days;
     return WEEKDAY_LABELS.map((label, i) => {
-      const checked = (checkedDays || []).includes(i);
+      const checked = effective.includes(i);
+      const type = singleSelect ? "radio" : "checkbox";
       return `<label class="fh-wd-chip ${checked ? "checked" : ""}">
-          <input type="checkbox" class="${cbClass}" value="${i}" ${checked ? "checked" : ""}>
+          <input type="${type}" class="${cbClass}" value="${i}" ${checked ? "checked" : ""}>
           ${label}
         </label>`;
     }).join("");
@@ -529,6 +559,39 @@
     if (hrs < 24) return `${hrs}h ago`;
     const days = Math.floor(hrs / 24);
     return `${days}d ago`;
+  }
+  function fmtShortDate(iso) {
+    if (!iso) return "";
+    const d = /* @__PURE__ */ new Date(iso + "T12:00:00");
+    return d.toLocaleDateString(void 0, { month: "short", day: "numeric" });
+  }
+  function groupHistorySkipped(entries) {
+    const regular = [];
+    const byDate = /* @__PURE__ */ new Map();
+    for (const e of entries) {
+      if (e.type === "task_skipped" && e.skipped_date) {
+        if (!byDate.has(e.skipped_date)) byDate.set(e.skipped_date, []);
+        byDate.get(e.skipped_date).push(e);
+      } else {
+        regular.push({ isGroup: false, entry: e, timestamp: e.timestamp });
+      }
+    }
+    const groups = [];
+    for (const [date, items] of byDate) {
+      const totalPenalty = items.reduce((s, e) => s + Math.abs(e.points_delta || 0), 0);
+      groups.push({
+        isGroup: true,
+        key: `skipped-${date}`,
+        date,
+        dateDisplay: fmtShortDate(date),
+        totalPenalty,
+        items,
+        timestamp: items[0].timestamp
+      });
+    }
+    return [...regular, ...groups].sort(
+      (a, b) => (b.timestamp || "").localeCompare(a.timestamp || "")
+    );
   }
   var ini, fPts, fUSD, cap, slug, escHTML, escAttr;
   var init_utils = __esm({
@@ -622,6 +685,25 @@
       ${todayBlock}
       ${claimSection}`;
   }
+  function _ccResetBadge(t) {
+    const rType = t.recurrence_type;
+    if (!rType || !t.days_until_reset) return "";
+    const dur = t.days_until_reset;
+    let label;
+    if (dur <= 0) {
+      label = "Resets today";
+    } else if (dur === 1) {
+      label = "Resets tomorrow";
+    } else if (rType === "weekly" && t.recurrence_weekdays?.length) {
+      const names = t.recurrence_weekdays.map((d) => WEEKDAY_LABELS[d]).join("/");
+      label = `Resets ${names}`;
+    } else {
+      label = `Resets in ${dur}d`;
+    }
+    const isLongCycle = rType === "weekly" || rType === "monthly_on_date";
+    const urgent = isLongCycle && dur <= 1;
+    return `<span class="fh-badge ${urgent ? "fh-badge-pending" : "fh-badge-reset"}">${label}</span>`;
+  }
   function ccTaskRow(t, people, isOverdue, flashing) {
     const p = people.find((x) => x.person_id === t.assigned_to);
     const color = p?.avatar_color || DEFAULT_COLOR;
@@ -635,7 +717,7 @@
           <span class="fh-task-name">${escHTML(t.name)}</span>
           ${penaltyLine}
         </div>
-        ${isOverdue ? `<span class="fh-badge fh-badge-overdue">${Math.abs(t.days_delta)}d late</span>` : t.days_late > 0 ? `<span class="fh-badge fh-badge-pending">due ${t.days_late}d ago</span>` : ""}
+        ${isOverdue ? `<span class="fh-badge fh-badge-overdue">${Math.abs(t.days_delta)}d late</span>` : _ccResetBadge(t)}
         ${t.points ? `<span class="fh-badge fh-badge-pts" style="--row-color:${color}">${t.points}pts</span>` : ""}
         <button class="fh-check" style="--row-color:${color}"
                 data-act="complete" data-tid="${t.task_id}" data-pid="${t.assigned_to}">
@@ -668,7 +750,7 @@
     let content = "";
     if (card._tab === "tasks") content = _htmlPersonalTasks(attr, color, person, card);
     if (card._tab === "store") content = _htmlPersonalStore(attr, color, person, balance, card);
-    if (card._tab === "history") content = _htmlPersonalHistory(personHist, color);
+    if (card._tab === "history") content = _htmlPersonalHistory(personHist, color, card);
     return `
       <div class="fh-person-header" style="border-left:4px solid ${color}">
         <div class="fh-avatar" style="background:${color};width:46px;height:46px;font-size:1.1rem">
@@ -721,6 +803,26 @@
       if (ai !== bi) return ai - bi;
       return a.localeCompare(b);
     });
+    const resetBadge = (t) => {
+      const rType = t.recurrence_type;
+      if (!rType || rType === "daily" || rType === "one_time") return "";
+      const dur = t.days_until_reset;
+      if (dur === void 0 || dur === null) return "";
+      let label;
+      if (dur <= 0) {
+        label = "Resets today";
+      } else if (dur === 1) {
+        label = "Resets tomorrow";
+      } else if (rType === "weekly" && t.recurrence_weekdays?.length) {
+        const names = t.recurrence_weekdays.map((d) => WEEKDAY_LABELS[d]).join("/");
+        label = `Resets ${names}`;
+      } else {
+        label = `Resets in ${dur}d`;
+      }
+      const isLongCycle = rType === "weekly" || rType === "monthly_on_date";
+      const urgent = isLongCycle && dur <= 1;
+      return `<span class="fh-badge ${urgent ? "fh-badge-pending" : "fh-badge-reset"}">${label}</span>`;
+    };
     const expiryBadge = (t) => {
       if (!t.expires_after_days || !t.due_date) return "";
       const due2 = new Date(t.due_date);
@@ -750,9 +852,11 @@
           </div>
           ${t.description ? `<button class="fh-desc-btn" data-act="toggle-desc" data-id="${t.task_id}"
                          title="Toggle description">?</button>` : ""}
-          ${isOverdue ? `<span class="fh-badge fh-badge-overdue">${t.days_overdue}d late</span>` : t.days_late > 0 ? `<span class="fh-badge fh-badge-pending">due ${t.days_late}d ago</span>` : ""}
+          ${t.daily_penalty_firing ? `<span class="fh-badge fh-badge-overdue">-${t.penalty_points}pts/day</span>` : ""}
+          ${isOverdue ? `<span class="fh-badge fh-badge-overdue">${t.days_overdue}d late</span>` : resetBadge(t)}
           ${expiryBadge(t)}
           ${!isReminder && t.points ? `<span class="fh-badge fh-badge-pts" style="--row-color:${color}">${t.points}pts</span>` : ""}
+          ${!isReminder && (t.streak || 0) >= 2 ? `<span class="fh-badge fh-badge-streak">\u{1F525} ${t.streak}</span>` : ""}
           ${!isReminder ? `<button class="fh-check" style="--row-color:${color}"
                          data-act="complete" data-tid="${t.task_id}" data-pid="${person.person_id}">
                    ${I.check}
@@ -795,23 +899,64 @@
         <div class="fh-task-list">${pendingRows}</div>` : ""}
       ${empty ? '<div class="fh-empty">Nothing due \u2014 nice work! \u{1F389}</div>' : ""}`;
   }
-  function _htmlPersonalHistory(entries, color) {
+  function _htmlPersonalHistory(entries, color, card) {
     if (!entries.length) return `<div class="fh-empty">No history yet.</div>`;
-    const rows = entries.map((e) => {
-      const meta = HISTORY_META[e.type] || { label: e.type, color: "var(--fh-text-sec)" };
-      const ptsDelta = e.points_delta ? `<span style="color:${e.points_delta > 0 ? "var(--fh-success)" : "var(--fh-overdue)"}">
-                 ${e.points_delta > 0 ? "+" : ""}${e.points_delta}pts
-               </span>` : "";
-      return `
-          <div class="fh-hist-row" style="--hist-color:${meta.color}">
-            <div class="fh-hist-info">
-              <div class="fh-hist-label">${escHTML(meta.label)}</div>
-              <div class="fh-hist-name">${escHTML(e.chore_name || e.note || "")}</div>
-              <div class="fh-hist-meta">${relTime(e.timestamp)} ${ptsDelta}</div>
-            </div>
-          </div>`;
+    const grouped = groupHistorySkipped(entries);
+    const rows = grouped.map((item) => {
+      if (item.isGroup) return _renderSkippedGroup(item, null, card);
+      return _renderHistRow(item.entry);
     }).join("");
     return `<div class="fh-hist-scroll">${rows}</div>`;
+  }
+  function _renderHistRow(e) {
+    const meta = HISTORY_META[e.type] || { label: e.type, color: "var(--fh-text-sec)" };
+    const ptsDelta = e.points_delta ? `<span style="color:${e.points_delta > 0 ? "var(--fh-success)" : "var(--fh-overdue)"}">
+             ${e.points_delta > 0 ? "+" : ""}${e.points_delta}pts
+           </span>` : "";
+    return `
+      <div class="fh-hist-row" style="--hist-color:${meta.color}">
+        <div class="fh-hist-info">
+          <div class="fh-hist-label">${escHTML(meta.label)}</div>
+          <div class="fh-hist-name">${escHTML(e.chore_name || e.note || "")}</div>
+          <div class="fh-hist-meta">${relTime(e.timestamp)} ${ptsDelta}</div>
+        </div>
+      </div>`;
+  }
+  function _renderSkippedGroup(group, firstParent, card) {
+    const expanded = card._expandedSkippedDates.has(group.key);
+    const penLabel = group.totalPenalty > 0 ? `\u2212${group.totalPenalty}pts` : "no penalty";
+    const subItems = expanded ? group.items.map((e) => {
+      const pts = e.points_delta ? `<span style="color:var(--fh-overdue);font-weight:700">${e.points_delta}pts</span>` : "";
+      let actionBtn = "";
+      if (firstParent && e.reversible === "excuse") {
+        actionBtn = `<button class="fh-btn fh-btn-warning fh-btn-sm"
+                                 data-act="excuse-task"
+                                 data-iid="${e.reference_id}"
+                                 data-excused-by="${firstParent.person_id}"
+                                 title="Reverse this penalty">
+                           ${I.excuse} Excuse
+                         </button>`;
+      }
+      return `
+          <div class="fh-hist-subrow">
+            <div class="fh-hist-info" style="flex:1;min-width:0">
+              <div class="fh-hist-name">${escHTML(e.chore_name || "")}</div>
+              <div class="fh-hist-meta">${pts}</div>
+            </div>
+            ${actionBtn}
+          </div>`;
+    }).join("") : "";
+    return `
+      <div class="fh-hist-group">
+        <div class="fh-hist-group-hdr" data-act="toggle-skipped-group" data-key="${group.key}">
+          <div class="fh-hist-info" style="flex:1;min-width:0">
+            <div class="fh-hist-label" style="color:var(--fh-warning)">Skipped chores</div>
+            <div class="fh-hist-name">${escHTML(group.dateDisplay)} \xB7 ${penLabel}</div>
+          </div>
+          <span class="fh-hist-expand-icon">${expanded ? "\u25B2" : "\u25BC"}</span>
+        </div>
+        ${expanded ? `<div class="fh-hist-subitems">${subItems}</div>` : ""}
+      </div>`;
   }
   function _htmlPersonalStore(attr, color, person, balance, card) {
     const items = attr.store_items || [];
@@ -953,20 +1098,25 @@
       if (isKid) {
         let penLabel, penClass;
         if (globalPause) {
-          penLabel = "Penalties off (global)";
+          penLabel = "Penalties & streaks off (global)";
           penClass = "off-global";
         } else if (penPaused) {
-          penLabel = "Penalties off";
+          penLabel = "Penalties & streaks off";
           penClass = "off";
         } else {
-          penLabel = "Penalties on";
+          penLabel = "Penalties & streaks on";
           penClass = "";
         }
         penaltyPauseRow = `
               <div class="fh-penalty-pause-row">
                 <span class="fh-penalty-pause-label ${penClass}">${penLabel}</span>
+                <button class="fh-btn fh-btn-ghost fh-btn-sm"
+                        data-act="open-edit-streaks" data-pid="${p.person_id}"
+                        data-pname="${escAttr(p.name)}" title="Edit streak counts">
+                  \u{1F525} Streaks
+                </button>
                 <label class="fh-toggle" style="width:36px;height:20px"
-                       title="${penPaused ? "Tap to resume penalties" : "Tap to pause penalties for this person"}">
+                       title="${penPaused ? "Tap to resume penalties & streaks" : "Tap to pause penalties & streaks for this person"}">
                   <input type="checkbox" data-act="toggle-person-penalty"
                          data-pid="${p.person_id}" ${penPaused ? "" : "checked"}>
                   <span class="fh-toggle-slider"></span>
@@ -1063,53 +1213,10 @@
       </div>`;
     const filtered = card._histFilter ? historyLog.filter((e) => e.person_id === card._histFilter) : historyLog;
     const firstParent = people.find((p) => p.type === "parent");
-    const histRows = filtered.map((e) => {
-      const meta = HISTORY_META[e.type] || { label: e.type, color: "var(--fh-text-sec)" };
-      const color = e.person_color || DEFAULT_COLOR;
-      const ptsDelta = e.points_delta ? `<span style="color:${e.points_delta > 0 ? "var(--fh-success)" : "var(--fh-overdue)"}">
-                 ${e.points_delta > 0 ? "+" : ""}${e.points_delta}pts
-               </span>` : "";
-      let actionBtn = "";
-      if (e.reversible === "excuse" && firstParent) {
-        actionBtn = `<button class="fh-btn fh-btn-warning fh-btn-sm"
-                                 data-act="excuse-task"
-                                 data-iid="${e.reference_id}"
-                                 data-excused-by="${firstParent.person_id}"
-                                 title="Reverse penalty for this skipped task">
-                           ${I.excuse} Excuse
-                         </button>`;
-      } else if (e.reversible === "mark_complete" && firstParent) {
-        actionBtn = `<button class="fh-btn fh-btn-success fh-btn-sm"
-                                 data-act="mark-complete"
-                                 data-iid="${e.reference_id}"
-                                 data-marked-by="${firstParent.person_id}"
-                                 title="Retroactively mark as done and award points">
-                           ${I.check} Mark done
-                         </button>`;
-      } else if (e.reversible === "reject" && firstParent) {
-        actionBtn = `<button class="fh-btn fh-btn-danger fh-btn-sm"
-                                 data-act="reject-task"
-                                 data-iid="${e.reference_id}"
-                                 data-rejected-by="${firstParent.person_id}"
-                                 title="Claw back points for this task">
-                           ${I.close} Reject
-                         </button>`;
-      }
-      return `
-          <div class="fh-hist-row" style="--hist-color:${meta.color}">
-            <div class="fh-avatar" style="background:${color};width:22px;height:22px;font-size:.62rem">
-              ${e.person_name ? ini(e.person_name) : "\u2014"}
-            </div>
-            <div class="fh-hist-info">
-              <div class="fh-hist-label">${escHTML(meta.label)}</div>
-              <div class="fh-hist-name">${escHTML(e.chore_name || e.note || "")}</div>
-              <div class="fh-hist-meta">
-                ${e.person_name ? escHTML(e.person_name) + " \xB7 " : ""}${relTime(e.timestamp)}
-                ${ptsDelta}
-              </div>
-            </div>
-            ${actionBtn ? `<div class="fh-hist-actions">${actionBtn}</div>` : ""}
-          </div>`;
+    const grouped = groupHistorySkipped(filtered);
+    const histRows = grouped.map((item) => {
+      if (item.isGroup) return _renderAdminSkippedGroup(item, firstParent, card);
+      return _renderAdminHistRow(item.entry, firstParent);
     }).join("") || `<div class="fh-empty">No history entries yet.</div>`;
     return `
       <div class="fh-section-title">Pending approvals</div>
@@ -1295,9 +1402,9 @@
              The data-act handler reads the checkbox and sends penalties_paused = !checked. -->
         <div class="fh-toggle-row" style="border-left:3px solid ${penPaused ? "var(--fh-warning)" : "var(--fh-success)"}">
           <div>
-            <div style="font-size:.9rem;font-weight:600">Penalties active</div>
+            <div style="font-size:.9rem;font-weight:600">Penalties &amp; streaks active</div>
             <div style="font-size:.75rem;color:var(--fh-text-sec)">
-              ${penPaused ? "\u23F8 All penalties paused \u2014 chores skipped without point deductions" : "Penalties will apply normally at the daily tick"}
+              ${penPaused ? "\u23F8 All penalties &amp; streaks paused \u2014 skips won't break streaks or deduct points" : "Penalties &amp; streaks will apply normally at the daily tick"}
             </div>
           </div>
           <label class="fh-toggle">
@@ -1341,6 +1448,100 @@
                 style="width:100%;justify-content:center">
           Export backup
         </button>
+
+        <button class="fh-btn fh-btn-warning fh-btn-sm" data-act="rebuild-data"
+                style="width:100%;justify-content:center;margin-top:6px">
+          Rebuild data
+        </button>
+
+      </div>`;
+  }
+  function _renderAdminHistRow(e, firstParent) {
+    const meta = HISTORY_META[e.type] || { label: e.type, color: "var(--fh-text-sec)" };
+    const color = e.person_color || DEFAULT_COLOR;
+    const ptsDelta = e.points_delta ? `<span style="color:${e.points_delta > 0 ? "var(--fh-success)" : "var(--fh-overdue)"}">
+             ${e.points_delta > 0 ? "+" : ""}${e.points_delta}pts
+           </span>` : "";
+    let actionBtn = "";
+    if (e.reversible === "excuse" && firstParent) {
+      actionBtn = `<button class="fh-btn fh-btn-warning fh-btn-sm"
+                             data-act="excuse-task"
+                             data-iid="${e.reference_id}"
+                             data-excused-by="${firstParent.person_id}"
+                             title="Reverse penalty for this skipped task">
+                       ${I.excuse} Excuse
+                     </button>`;
+    } else if (e.reversible === "mark_complete" && firstParent) {
+      actionBtn = `<button class="fh-btn fh-btn-success fh-btn-sm"
+                             data-act="mark-complete"
+                             data-iid="${e.reference_id}"
+                             data-marked-by="${firstParent.person_id}"
+                             title="Retroactively mark as done and award points">
+                       ${I.check} Mark done
+                     </button>`;
+    } else if (e.reversible === "reject" && firstParent) {
+      actionBtn = `<button class="fh-btn fh-btn-danger fh-btn-sm"
+                             data-act="reject-task"
+                             data-iid="${e.reference_id}"
+                             data-rejected-by="${firstParent.person_id}"
+                             title="Claw back points for this task">
+                       ${I.close} Reject
+                     </button>`;
+    }
+    return `
+      <div class="fh-hist-row" style="--hist-color:${meta.color}">
+        <div class="fh-avatar" style="background:${color};width:22px;height:22px;font-size:.62rem">
+          ${e.person_name ? ini(e.person_name) : "\u2014"}
+        </div>
+        <div class="fh-hist-info">
+          <div class="fh-hist-label">${escHTML(meta.label)}</div>
+          <div class="fh-hist-name">${escHTML(e.chore_name || e.note || "")}</div>
+          <div class="fh-hist-meta">
+            ${e.person_name ? escHTML(e.person_name) + " \xB7 " : ""}${relTime(e.timestamp)}
+            ${ptsDelta}
+          </div>
+        </div>
+        ${actionBtn ? `<div class="fh-hist-actions">${actionBtn}</div>` : ""}
+      </div>`;
+  }
+  function _renderAdminSkippedGroup(group, firstParent, card) {
+    const expanded = card._expandedSkippedDates.has(group.key);
+    const penLabel = group.totalPenalty > 0 ? `\u2212${group.totalPenalty}pts` : "no penalty";
+    const subItems = expanded ? group.items.map((e) => {
+      const color = e.person_color || DEFAULT_COLOR;
+      const pts = e.points_delta ? `<span style="color:var(--fh-overdue);font-weight:700">${e.points_delta}pts</span>` : "";
+      let actionBtn = "";
+      if (firstParent && e.reversible === "excuse") {
+        actionBtn = `<button class="fh-btn fh-btn-warning fh-btn-sm"
+                                 data-act="excuse-task"
+                                 data-iid="${e.reference_id}"
+                                 data-excused-by="${firstParent.person_id}"
+                                 title="Reverse this penalty">
+                           ${I.excuse} Excuse
+                         </button>`;
+      }
+      return `
+          <div class="fh-hist-subrow">
+            <div class="fh-avatar" style="background:${color};width:18px;height:18px;font-size:.55rem;flex-shrink:0">
+              ${e.person_name ? ini(e.person_name) : "\u2014"}
+            </div>
+            <div class="fh-hist-info" style="flex:1;min-width:0">
+              <div class="fh-hist-name">${escHTML(e.person_name ? e.person_name + " \u2014 " : "") + escHTML(e.chore_name || "")}</div>
+              <div class="fh-hist-meta">${pts}</div>
+            </div>
+            ${actionBtn}
+          </div>`;
+    }).join("") : "";
+    return `
+      <div class="fh-hist-group">
+        <div class="fh-hist-group-hdr" data-act="toggle-skipped-group" data-key="${group.key}">
+          <div class="fh-hist-info" style="flex:1;min-width:0">
+            <div class="fh-hist-label" style="color:var(--fh-warning)">Skipped chores</div>
+            <div class="fh-hist-name">${escHTML(group.dateDisplay)} \xB7 ${penLabel}</div>
+          </div>
+          <span class="fh-hist-expand-icon">${expanded ? "\u25B2" : "\u25BC"}</span>
+        </div>
+        ${expanded ? `<div class="fh-hist-subitems">${subItems}</div>` : ""}
       </div>`;
   }
   var init_modes_admin = __esm({
@@ -1401,6 +1602,14 @@
         const id = el.dataset.id;
         if (card._expandedDescs.has(id)) card._expandedDescs.delete(id);
         else card._expandedDescs.add(id);
+        card._doRender(true);
+        break;
+      }
+      // ---- Skipped-group expand/collapse ---------------------------------
+      case "toggle-skipped-group": {
+        const key = el.dataset.key;
+        if (card._expandedSkippedDates.has(key)) card._expandedSkippedDates.delete(key);
+        else card._expandedSkippedDates.add(key);
         card._doRender(true);
         break;
       }
@@ -1505,6 +1714,12 @@ This cannot be undone.`)) break;
       case "export-backup":
         card._svc("export_backup", {});
         break;
+      case "rebuild-data":
+        if (!confirm(
+          "Rebuild data?\n\nThis will remove ghost records, orphaned instances, and duplicates. A summary will appear as a Home Assistant notification.\n\nThis cannot be undone."
+        )) break;
+        card._svc("rebuild_data", {});
+        break;
       // ---- Open modals ---------------------------------------------------
       case "open-award":
         card._modal = { type: "award", data: { pid: el.dataset.pid, pname: el.dataset.pname } };
@@ -1572,6 +1787,10 @@ This cannot be undone.`)) break;
         break;
       case "open-add-reminder":
         card._modal = { type: "add-reminder", data: { pid: el.dataset.pid || null } };
+        card._doRender(true);
+        break;
+      case "open-edit-streaks":
+        card._modal = { type: "edit-streaks", data: { pid: el.dataset.pid, pname: el.dataset.pname } };
         card._doRender(true);
         break;
       // ---- Close modal ---------------------------------------------------
@@ -1643,12 +1862,13 @@ This cannot be undone.`)) break;
         if (!name) break;
         const isEdit = act === "ok-edit-chore";
         const recType = v("m-crec");
+        const ctype = v("m-ctype");
         const assigned = _selectedPersonIds("m-assign-person", sr);
         const weekdays = Array.from(sr.querySelectorAll(".m-wd-day:checked")).map((cb) => parseInt(cb.value));
         const dayFilter = Array.from(sr.querySelectorAll(".m-df-day:checked")).map((cb) => parseInt(cb.value));
         const data = {
           name,
-          chore_type: v("m-ctype"),
+          chore_type: ctype,
           category_label: v("m-clabel"),
           assigned_to: assigned,
           points: int("m-cpts"),
@@ -1656,6 +1876,17 @@ This cannot be undone.`)) break;
           penalty_enabled: b("m-cpenalty"),
           penalty_points: int("m-cpenalty-pts")
         };
+        if (b("m-cpenalty")) {
+          const thresh = parseInt(v("m-daily-threshold") || "0");
+          if (thresh > 0) data.daily_penalty_after_days = thresh;
+        }
+        if (ctype === "claimable") {
+          data.claimable_subtype = v("m-csubtype") || "fcfs";
+          if (data.claimable_subtype === "multi_claim") {
+            data.max_claimants = Math.max(2, int("m-max-claimants") || 2);
+            data.multi_claim_points_mode = v("m-points-mode") || "full";
+          }
+        }
         const desc = v("m-cdesc").trim();
         if (desc) data.description = desc;
         const expirySection = sr.getElementById("m-chore-expiry-section");
@@ -1668,26 +1899,30 @@ This cannot be undone.`)) break;
           data.chore_id = v("m-cid");
           data.weekdays = weekdays;
           data.day_filter = dayFilter;
-          if (recType === "every_n_days" || recType === "every_n_weeks")
-            data.interval = Math.max(1, int("m-interval"));
           data.recurrence = {
             type: recType,
             weekdays,
             day_filter: dayFilter,
-            interval: recType === "every_n_days" || recType === "every_n_weeks" ? Math.max(1, int("m-interval")) : 1,
             ...recType === "monthly_on_date" ? { day_of_month: Math.max(1, Math.min(31, int("m-dom"))) } : {}
           };
         } else {
           data.recurrence_type = recType;
           if (weekdays.length) data.weekdays = weekdays;
           if (dayFilter.length) data.day_filter = dayFilter;
-          if (recType === "every_n_days" || recType === "every_n_weeks")
-            data.interval = Math.max(1, int("m-interval"));
           if (recType === "monthly_on_date")
             data.day_of_month = Math.max(1, Math.min(31, int("m-dom")));
         }
+        data.streak_milestone = Math.max(0, int("m-streak-milestone") || 0);
+        data.streak_bonus_points = Math.max(0, int("m-streak-bonus") || 0);
         card._svc(isEdit ? "update_chore" : "add_chore", data);
         card._closeModal();
+        break;
+      }
+      case "set-streak": {
+        const cid = el.dataset.cid;
+        const pid = el.dataset.pid;
+        const count = Math.max(0, parseInt(sr.getElementById(`m-streak-${cid}`)?.value || "0"));
+        card._svc("set_streak", { person_id: pid, chore_id: cid, count });
         break;
       }
       case "ok-add-store-item": {
@@ -1977,8 +2212,6 @@ This cannot be undone.`)) break;
              ${opts([
         { value: "daily", label: "Daily" },
         { value: "weekly", label: "Weekly" },
-        { value: "every_n_days", label: "Every N days" },
-        { value: "every_n_weeks", label: "Every N weeks" },
         { value: "monthly_on_date", label: "Monthly" },
         { value: "one_time", label: "One-time" }
       ], recType)}
@@ -1994,19 +2227,12 @@ This cannot be undone.`)) break;
          </div>
        </div>
 
-       <!-- Weekday selector: weekly / every_n_weeks -->
+       <!-- Weekday selector: weekly (multi-select) -->
        <div id="m-weekdays-section" class="fh-field" style="display:none">
          <label class="fh-label">Day(s) of week</label>
          <div class="fh-weekday-row">
            ${weekdayChips(rec.weekdays || [], "m-wd-day")}
          </div>
-       </div>
-
-       <!-- Interval N: every_n_days / every_n_weeks -->
-       <div id="m-interval-section" class="fh-field" style="display:none">
-         <label class="fh-label">Every N <span id="m-interval-unit">days</span></label>
-         <input class="fh-input" id="m-interval" type="number" min="1"
-                value="${rec.interval || 2}">
        </div>
 
        <!-- Day of month: monthly_on_date -->
@@ -2021,6 +2247,31 @@ This cannot be undone.`)) break;
          <label class="fh-label">Expires after (days)</label>
          <input class="fh-input" id="m-cexpiry" type="number" min="1"
                 value="${c.expires_after_days || ""}">
+       </div>
+
+       <!-- Claimable subtype: shown when chore_type = claimable -->
+       <div id="m-claimable-section" class="fh-field" style="display:none">
+         <label class="fh-label">Claim type</label>
+         <select class="fh-select" id="m-csubtype">
+           <option value="fcfs"        ${(c.claimable_subtype || "fcfs") === "fcfs" ? "selected" : ""}>First come, first served</option>
+           <option value="multi_claim" ${c.claimable_subtype === "multi_claim" ? "selected" : ""}>Multi-claim (multiple helpers)</option>
+         </select>
+       </div>
+       <div id="m-multi-claim-section" class="fh-field" style="display:none">
+         <div class="fh-row">
+           <div class="fh-field">
+             <label class="fh-label">Max helpers</label>
+             <input class="fh-input" id="m-max-claimants" type="number" min="2" max="20"
+                    value="${c.max_claimants || 2}">
+           </div>
+           <div class="fh-field">
+             <label class="fh-label">Points mode</label>
+             <select class="fh-select" id="m-points-mode">
+               <option value="full"  ${(c.multi_claim_points_mode || "full") === "full" ? "selected" : ""}>Full points each</option>
+               <option value="split" ${c.multi_claim_points_mode === "split" ? "selected" : ""}>Split evenly</option>
+             </select>
+           </div>
+         </div>
        </div>
 
        <div class="fh-divider"></div>
@@ -2040,6 +2291,28 @@ This cannot be undone.`)) break;
          <label class="fh-label">Penalty points</label>
          <input class="fh-input" id="m-cpenalty-pts" type="number" min="1"
                 value="${c.penalty_points || 5}">
+       </div>
+
+       <!-- Daily threshold: shown when penalty checkbox checked -->
+       <div id="m-daily-threshold-section" class="fh-field" style="display:none">
+         <label class="fh-label">Daily penalty after (days, optional)</label>
+         <input class="fh-input" id="m-daily-threshold" type="number" min="1"
+                placeholder="e.g. 3 \u2014 start deducting after 3 days"
+                value="${c.daily_penalty_after_days || ""}">
+       </div>
+
+       <div class="fh-divider"></div>
+       <div class="fh-row">
+         <div class="fh-field">
+           <label class="fh-label">Streak milestone (0 = off)</label>
+           <input class="fh-input" id="m-streak-milestone" type="number" min="0"
+                  placeholder="e.g. 7" value="${c.streak_milestone || 0}">
+         </div>
+         <div class="fh-field">
+           <label class="fh-label">Milestone bonus points</label>
+           <input class="fh-input" id="m-streak-bonus" type="number" min="0"
+                  value="${c.streak_bonus_points || 0}">
+         </div>
        </div>`,
       isEdit ? "Save changes" : "Add chore",
       okAct
@@ -2181,6 +2454,34 @@ This cannot be undone.`)) break;
         </div>
       </div>`;
   }
+  function mEditStreaks(pid, pname, chores, personStreaks) {
+    const assigned = chores.filter((c) => c.chore_type === "assigned");
+    const rows = assigned.map((c) => {
+      const current = personStreaks[c.chore_id] || 0;
+      return `
+          <div class="fh-point-row" style="gap:8px">
+            <span style="flex:1;font-size:.88rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                  title="${escAttr(c.name)}">${escHTML(c.name)}</span>
+            <input class="fh-input" id="m-streak-${escAttr(c.chore_id)}" type="number" min="0"
+                   value="${current}" style="width:64px;text-align:center">
+            <button class="fh-btn fh-btn-primary fh-btn-sm"
+                    data-act="set-streak" data-pid="${pid}" data-cid="${escAttr(c.chore_id)}">
+              Set
+            </button>
+          </div>`;
+    }).join("") || `<div class="fh-empty">No assigned chores.</div>`;
+    return `
+      <div class="fh-modal">
+        <div class="fh-modal-title">\u{1F525} Edit streaks \u2014 ${escHTML(pname)}</div>
+        <p style="font-size:.8rem;color:var(--fh-text-sec);margin:0 0 8px">
+          Enter the correct streak count and press Set. Changes save immediately.
+        </p>
+        <div style="display:flex;flex-direction:column;gap:6px">${rows}</div>
+        <div class="fh-modal-footer">
+          <button class="fh-btn fh-btn-ghost" data-act="close-modal">Done</button>
+        </div>
+      </div>`;
+  }
   function mEditSettings(d) {
     return mWrap(
       "Edit settings",
@@ -2306,6 +2607,7 @@ This cannot be undone.`)) break;
           this._expandedDescs = /* @__PURE__ */ new Set();
           this._histFilter = null;
           this._choreFilter = null;
+          this._expandedSkippedDates = /* @__PURE__ */ new Set();
           this._dragId = null;
           this._dragOverId = null;
           this._sortedChores = [];
@@ -2579,6 +2881,11 @@ This cannot be undone.`)) break;
               return mAddReminder(this._modal, people);
             case "confirm-remove-person":
               return mConfirmRemovePerson(data);
+            case "edit-streaks": {
+              const p = this._people().find((pp) => pp.person_id === data.pid);
+              const streaks = p?.streaks || {};
+              return mEditStreaks(data.pid, data.pname, chores, streaks);
+            }
             default:
               return "";
           }
@@ -2630,25 +2937,36 @@ This cannot be undone.`)) break;
           const recEl = sr.getElementById("m-crec");
           if (recEl) {
             const rec = recEl.value;
+            const ctypeEl = sr.getElementById("m-ctype");
+            const ctype = ctypeEl?.value || "assigned";
             hide("m-dayfilter-section");
             hide("m-weekdays-section");
-            hide("m-interval-section");
             hide("m-dom-section");
             hide("m-chore-expiry-section");
             if (rec === "daily") show("m-dayfilter-section");
-            if (rec === "weekly" || rec === "every_n_weeks") show("m-weekdays-section");
-            if (rec === "every_n_days" || rec === "every_n_weeks") show("m-interval-section");
+            if (rec === "weekly") show("m-weekdays-section");
             if (rec === "monthly_on_date") show("m-dom-section");
-            const ctypeEl = sr.getElementById("m-ctype");
-            const isClaimOrOneTime = rec === "one_time" || ctypeEl?.value === "claimable";
+            const isClaimOrOneTime = rec === "one_time" || ctype === "claimable";
             if (isClaimOrOneTime) show("m-chore-expiry-section");
-            const unitEl = sr.getElementById("m-interval-unit");
-            if (unitEl) unitEl.textContent = rec === "every_n_weeks" ? "weeks" : "days";
+          }
+          const ctypeEl2 = sr.getElementById("m-ctype");
+          const claimSec = sr.getElementById("m-claimable-section");
+          const multiSec = sr.getElementById("m-multi-claim-section");
+          const subtypeEl = sr.getElementById("m-csubtype");
+          if (ctypeEl2 && claimSec) {
+            const isClaimable = ctypeEl2.value === "claimable";
+            claimSec.style.display = isClaimable ? "" : "none";
+            if (multiSec) {
+              const isMulti = isClaimable && subtypeEl?.value === "multi_claim";
+              multiSec.style.display = isMulti ? "" : "none";
+            }
           }
           const penaltyEl = sr.getElementById("m-cpenalty");
           const penaltySec = sr.getElementById("m-penalty-pts-section");
+          const dailyThreshSec = sr.getElementById("m-daily-threshold-section");
           if (penaltyEl && penaltySec) {
             penaltySec.style.display = penaltyEl.checked ? "" : "none";
+            if (dailyThreshSec) dailyThreshSec.style.display = penaltyEl.checked ? "" : "none";
           }
           const scopeEl = sr.getElementById("m-sscope");
           const personSecEl = sr.getElementById("m-sperson-section");

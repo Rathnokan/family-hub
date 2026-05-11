@@ -62,8 +62,8 @@ DEFAULT_CATEGORY_LABELS = [
 # ---------------------------------------------------------------------------
 RECURRENCE_DAILY           = "daily"
 RECURRENCE_WEEKLY          = "weekly"
-RECURRENCE_EVERY_N_DAYS    = "every_n_days"
-RECURRENCE_EVERY_N_WEEKS   = "every_n_weeks"
+RECURRENCE_EVERY_N_DAYS    = "every_n_days"   # legacy — backend only, not in UI
+RECURRENCE_EVERY_N_WEEKS   = "every_n_weeks"  # legacy — backend only, not in UI
 RECURRENCE_MONTHLY_ON_DATE = "monthly_on_date"
 RECURRENCE_ONE_TIME        = "one_time"
 RECURRENCE_TYPES = [
@@ -74,6 +74,15 @@ RECURRENCE_TYPES = [
     RECURRENCE_MONTHLY_ON_DATE,
     RECURRENCE_ONE_TIME,
 ]
+
+# ---------------------------------------------------------------------------
+# Claimable subtypes (v0.5.0)
+# ---------------------------------------------------------------------------
+CLAIMABLE_SUBTYPE_FCFS  = "fcfs"        # one instance, first person to claim wins
+CLAIMABLE_SUBTYPE_MULTI = "multi_claim" # multiple claimants up to max_claimants
+
+MULTI_CLAIM_POINTS_FULL  = "full"   # each claimant earns full points
+MULTI_CLAIM_POINTS_SPLIT = "split"  # points divided evenly among actual claimants
 
 # ---------------------------------------------------------------------------
 # Task instance statuses
@@ -128,6 +137,10 @@ HISTORY_PERSON_ADDED          = "person_added"
 # daily tick to keep the data file from growing unbounded.
 HISTORY_RETENTION_DAYS = 30
 
+# Terminal task instances (skipped/approved/denied/rejected/excused) older than
+# this many days are pruned on each daily tick.
+TASK_INSTANCE_RETENTION_DAYS = 60
+
 # ---------------------------------------------------------------------------
 # Sensor names
 # ---------------------------------------------------------------------------
@@ -170,6 +183,8 @@ SERVICE_EXCUSE_TASK         = "excuse_task"         # Reverse penalty on a skipp
 SERVICE_REJECT_TASK         = "reject_task"         # Claw back points on an approved task
 SERVICE_MARK_TASK_COMPLETE  = "mark_task_complete"  # Retroactively mark skipped task done
 SERVICE_FORCE_DAILY_TICK    = "force_daily_tick"    # Trigger tick immediately (admin/debug)
+SERVICE_REBUILD_DATA        = "rebuild_data"         # Heavy-lift data cleanup on demand
+SERVICE_SET_STREAK          = "set_streak"           # Admin override of a person's streak count
 
 # Coordinator update interval (seconds)
 UPDATE_INTERVAL = 30

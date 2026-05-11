@@ -238,8 +238,6 @@ export function mChoreForm(chore, isEdit, people, catLabels) {
              ${opts([
                  { value: "daily",           label: "Daily" },
                  { value: "weekly",          label: "Weekly" },
-                 { value: "every_n_days",    label: "Every N days" },
-                 { value: "every_n_weeks",   label: "Every N weeks" },
                  { value: "monthly_on_date", label: "Monthly" },
                  { value: "one_time",        label: "One-time" },
              ], recType)}
@@ -255,19 +253,12 @@ export function mChoreForm(chore, isEdit, people, catLabels) {
          </div>
        </div>
 
-       <!-- Weekday selector: weekly / every_n_weeks -->
+       <!-- Weekday selector: weekly (multi-select) -->
        <div id="m-weekdays-section" class="fh-field" style="display:none">
          <label class="fh-label">Day(s) of week</label>
          <div class="fh-weekday-row">
            ${weekdayChips(rec.weekdays || [], "m-wd-day")}
          </div>
-       </div>
-
-       <!-- Interval N: every_n_days / every_n_weeks -->
-       <div id="m-interval-section" class="fh-field" style="display:none">
-         <label class="fh-label">Every N <span id="m-interval-unit">days</span></label>
-         <input class="fh-input" id="m-interval" type="number" min="1"
-                value="${rec.interval || 2}">
        </div>
 
        <!-- Day of month: monthly_on_date -->
@@ -282,6 +273,31 @@ export function mChoreForm(chore, isEdit, people, catLabels) {
          <label class="fh-label">Expires after (days)</label>
          <input class="fh-input" id="m-cexpiry" type="number" min="1"
                 value="${c.expires_after_days || ""}">
+       </div>
+
+       <!-- Claimable subtype: shown when chore_type = claimable -->
+       <div id="m-claimable-section" class="fh-field" style="display:none">
+         <label class="fh-label">Claim type</label>
+         <select class="fh-select" id="m-csubtype">
+           <option value="fcfs"        ${(c.claimable_subtype || "fcfs") === "fcfs"        ? "selected" : ""}>First come, first served</option>
+           <option value="multi_claim" ${c.claimable_subtype === "multi_claim"             ? "selected" : ""}>Multi-claim (multiple helpers)</option>
+         </select>
+       </div>
+       <div id="m-multi-claim-section" class="fh-field" style="display:none">
+         <div class="fh-row">
+           <div class="fh-field">
+             <label class="fh-label">Max helpers</label>
+             <input class="fh-input" id="m-max-claimants" type="number" min="2" max="20"
+                    value="${c.max_claimants || 2}">
+           </div>
+           <div class="fh-field">
+             <label class="fh-label">Points mode</label>
+             <select class="fh-select" id="m-points-mode">
+               <option value="full"  ${(c.multi_claim_points_mode || "full") === "full"  ? "selected" : ""}>Full points each</option>
+               <option value="split" ${c.multi_claim_points_mode === "split"             ? "selected" : ""}>Split evenly</option>
+             </select>
+           </div>
+         </div>
        </div>
 
        <div class="fh-divider"></div>
@@ -301,6 +317,28 @@ export function mChoreForm(chore, isEdit, people, catLabels) {
          <label class="fh-label">Penalty points</label>
          <input class="fh-input" id="m-cpenalty-pts" type="number" min="1"
                 value="${c.penalty_points || 5}">
+       </div>
+
+       <!-- Daily threshold: shown when penalty checkbox checked -->
+       <div id="m-daily-threshold-section" class="fh-field" style="display:none">
+         <label class="fh-label">Daily penalty after (days, optional)</label>
+         <input class="fh-input" id="m-daily-threshold" type="number" min="1"
+                placeholder="e.g. 3 — start deducting after 3 days"
+                value="${c.daily_penalty_after_days || ""}">
+       </div>
+
+       <div class="fh-divider"></div>
+       <div class="fh-row">
+         <div class="fh-field">
+           <label class="fh-label">Streak milestone (0 = off)</label>
+           <input class="fh-input" id="m-streak-milestone" type="number" min="0"
+                  placeholder="e.g. 7" value="${c.streak_milestone || 0}">
+         </div>
+         <div class="fh-field">
+           <label class="fh-label">Milestone bonus points</label>
+           <input class="fh-input" id="m-streak-bonus" type="number" min="0"
+                  value="${c.streak_bonus_points || 0}">
+         </div>
        </div>`,
         isEdit ? "Save changes" : "Add chore",
         okAct
@@ -440,6 +478,41 @@ export function mConfirmRemovePerson(d) {
           <button class="fh-btn fh-btn-danger" data-act="ok-remove-person">
             Remove ${escHTML(d.pname)}
           </button>
+        </div>
+      </div>`;
+}
+
+// ---------------------------------------------------------------------------
+// Edit streaks (admin correction modal — per-row Set buttons, no mWrap)
+// ---------------------------------------------------------------------------
+
+export function mEditStreaks(pid, pname, chores, personStreaks) {
+    // Only show assigned chores (claimable/reminder streaks don't apply)
+    const assigned = chores.filter(c => c.chore_type === "assigned");
+    const rows = assigned.map(c => {
+        const current = personStreaks[c.chore_id] || 0;
+        return `
+          <div class="fh-point-row" style="gap:8px">
+            <span style="flex:1;font-size:.88rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
+                  title="${escAttr(c.name)}">${escHTML(c.name)}</span>
+            <input class="fh-input" id="m-streak-${escAttr(c.chore_id)}" type="number" min="0"
+                   value="${current}" style="width:64px;text-align:center">
+            <button class="fh-btn fh-btn-primary fh-btn-sm"
+                    data-act="set-streak" data-pid="${pid}" data-cid="${escAttr(c.chore_id)}">
+              Set
+            </button>
+          </div>`;
+    }).join("") || `<div class="fh-empty">No assigned chores.</div>`;
+
+    return `
+      <div class="fh-modal">
+        <div class="fh-modal-title">🔥 Edit streaks — ${escHTML(pname)}</div>
+        <p style="font-size:.8rem;color:var(--fh-text-sec);margin:0 0 8px">
+          Enter the correct streak count and press Set. Changes save immediately.
+        </p>
+        <div style="display:flex;flex-direction:column;gap:6px">${rows}</div>
+        <div class="fh-modal-footer">
+          <button class="fh-btn fh-btn-ghost" data-act="close-modal">Done</button>
         </div>
       </div>`;
 }

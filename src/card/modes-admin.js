@@ -9,7 +9,7 @@
 
 import { DEFAULT_COLOR, HISTORY_META } from "./constants.js";
 import { I } from "./constants.js";
-import { escHTML, escAttr, ini, fPts, fUSD, cap, relTime } from "./utils.js";
+import { escHTML, escAttr, ini, fPts, fUSD, cap, relTime, groupHistorySkipped } from "./utils.js";
 
 /**
  * Render the full admin mode HTML.
@@ -82,20 +82,25 @@ function _htmlOverview(people, attr) {
         if (isKid) {
             let penLabel, penClass;
             if (globalPause) {
-                penLabel = "Penalties off (global)";
+                penLabel = "Penalties & streaks off (global)";
                 penClass = "off-global";
             } else if (penPaused) {
-                penLabel = "Penalties off";
+                penLabel = "Penalties & streaks off";
                 penClass = "off";
             } else {
-                penLabel = "Penalties on";
+                penLabel = "Penalties & streaks on";
                 penClass = "";
             }
             penaltyPauseRow = `
               <div class="fh-penalty-pause-row">
                 <span class="fh-penalty-pause-label ${penClass}">${penLabel}</span>
+                <button class="fh-btn fh-btn-ghost fh-btn-sm"
+                        data-act="open-edit-streaks" data-pid="${p.person_id}"
+                        data-pname="${escAttr(p.name)}" title="Edit streak counts">
+                  🔥 Streaks
+                </button>
                 <label class="fh-toggle" style="width:36px;height:20px"
-                       title="${penPaused ? "Tap to resume penalties" : "Tap to pause penalties for this person"}">
+                       title="${penPaused ? "Tap to resume penalties & streaks" : "Tap to pause penalties & streaks for this person"}">
                   <input type="checkbox" data-act="toggle-person-penalty"
                          data-pid="${p.person_id}" ${penPaused ? "" : "checked"}>
                   <span class="fh-toggle-slider"></span>
@@ -210,57 +215,10 @@ function _htmlApprovals(approvals, attr, card) {
         : historyLog;
     const firstParent = people.find(p => p.type === "parent");
 
-    const histRows = filtered.map(e => {
-        const meta     = HISTORY_META[e.type] || { label: e.type, color: "var(--fh-text-sec)" };
-        const color    = e.person_color || DEFAULT_COLOR;
-        const ptsDelta = e.points_delta
-            ? `<span style="color:${e.points_delta > 0 ? "var(--fh-success)" : "var(--fh-overdue)"}">
-                 ${e.points_delta > 0 ? "+" : ""}${e.points_delta}pts
-               </span>`
-            : "";
-
-        let actionBtn = "";
-        if (e.reversible === "excuse" && firstParent) {
-            actionBtn = `<button class="fh-btn fh-btn-warning fh-btn-sm"
-                                 data-act="excuse-task"
-                                 data-iid="${e.reference_id}"
-                                 data-excused-by="${firstParent.person_id}"
-                                 title="Reverse penalty for this skipped task">
-                           ${I.excuse} Excuse
-                         </button>`;
-        } else if (e.reversible === "mark_complete" && firstParent) {
-            actionBtn = `<button class="fh-btn fh-btn-success fh-btn-sm"
-                                 data-act="mark-complete"
-                                 data-iid="${e.reference_id}"
-                                 data-marked-by="${firstParent.person_id}"
-                                 title="Retroactively mark as done and award points">
-                           ${I.check} Mark done
-                         </button>`;
-        } else if (e.reversible === "reject" && firstParent) {
-            actionBtn = `<button class="fh-btn fh-btn-danger fh-btn-sm"
-                                 data-act="reject-task"
-                                 data-iid="${e.reference_id}"
-                                 data-rejected-by="${firstParent.person_id}"
-                                 title="Claw back points for this task">
-                           ${I.close} Reject
-                         </button>`;
-        }
-
-        return `
-          <div class="fh-hist-row" style="--hist-color:${meta.color}">
-            <div class="fh-avatar" style="background:${color};width:22px;height:22px;font-size:.62rem">
-              ${e.person_name ? ini(e.person_name) : "—"}
-            </div>
-            <div class="fh-hist-info">
-              <div class="fh-hist-label">${escHTML(meta.label)}</div>
-              <div class="fh-hist-name">${escHTML(e.chore_name || e.note || "")}</div>
-              <div class="fh-hist-meta">
-                ${e.person_name ? escHTML(e.person_name) + " · " : ""}${relTime(e.timestamp)}
-                ${ptsDelta}
-              </div>
-            </div>
-            ${actionBtn ? `<div class="fh-hist-actions">${actionBtn}</div>` : ""}
-          </div>`;
+    const grouped = groupHistorySkipped(filtered);
+    const histRows = grouped.map(item => {
+        if (item.isGroup) return _renderAdminSkippedGroup(item, firstParent, card);
+        return _renderAdminHistRow(item.entry, firstParent);
     }).join("") || `<div class="fh-empty">No history entries yet.</div>`;
 
     return `
@@ -499,11 +457,11 @@ function _htmlSettings(attr) {
              The data-act handler reads the checkbox and sends penalties_paused = !checked. -->
         <div class="fh-toggle-row" style="border-left:3px solid ${penPaused ? "var(--fh-warning)" : "var(--fh-success)"}">
           <div>
-            <div style="font-size:.9rem;font-weight:600">Penalties active</div>
+            <div style="font-size:.9rem;font-weight:600">Penalties &amp; streaks active</div>
             <div style="font-size:.75rem;color:var(--fh-text-sec)">
               ${penPaused
-                  ? "⏸ All penalties paused — chores skipped without point deductions"
-                  : "Penalties will apply normally at the daily tick"}
+                  ? "⏸ All penalties &amp; streaks paused — skips won't break streaks or deduct points"
+                  : "Penalties &amp; streaks will apply normally at the daily tick"}
             </div>
           </div>
           <label class="fh-toggle">
@@ -547,5 +505,115 @@ function _htmlSettings(attr) {
                 style="width:100%;justify-content:center">
           Export backup
         </button>
+
+        <button class="fh-btn fh-btn-warning fh-btn-sm" data-act="rebuild-data"
+                style="width:100%;justify-content:center;margin-top:6px">
+          Rebuild data
+        </button>
+
+      </div>`;
+}
+
+// ---------------------------------------------------------------------------
+// History helpers (shared between Approvals tab and any future admin log)
+// ---------------------------------------------------------------------------
+
+/** Render one regular (non-skipped-group) history row for the admin log. */
+function _renderAdminHistRow(e, firstParent) {
+    const meta     = HISTORY_META[e.type] || { label: e.type, color: "var(--fh-text-sec)" };
+    const color    = e.person_color || DEFAULT_COLOR;
+    const ptsDelta = e.points_delta
+        ? `<span style="color:${e.points_delta > 0 ? "var(--fh-success)" : "var(--fh-overdue)"}">
+             ${e.points_delta > 0 ? "+" : ""}${e.points_delta}pts
+           </span>`
+        : "";
+
+    let actionBtn = "";
+    if (e.reversible === "excuse" && firstParent) {
+        actionBtn = `<button class="fh-btn fh-btn-warning fh-btn-sm"
+                             data-act="excuse-task"
+                             data-iid="${e.reference_id}"
+                             data-excused-by="${firstParent.person_id}"
+                             title="Reverse penalty for this skipped task">
+                       ${I.excuse} Excuse
+                     </button>`;
+    } else if (e.reversible === "mark_complete" && firstParent) {
+        actionBtn = `<button class="fh-btn fh-btn-success fh-btn-sm"
+                             data-act="mark-complete"
+                             data-iid="${e.reference_id}"
+                             data-marked-by="${firstParent.person_id}"
+                             title="Retroactively mark as done and award points">
+                       ${I.check} Mark done
+                     </button>`;
+    } else if (e.reversible === "reject" && firstParent) {
+        actionBtn = `<button class="fh-btn fh-btn-danger fh-btn-sm"
+                             data-act="reject-task"
+                             data-iid="${e.reference_id}"
+                             data-rejected-by="${firstParent.person_id}"
+                             title="Claw back points for this task">
+                       ${I.close} Reject
+                     </button>`;
+    }
+
+    return `
+      <div class="fh-hist-row" style="--hist-color:${meta.color}">
+        <div class="fh-avatar" style="background:${color};width:22px;height:22px;font-size:.62rem">
+          ${e.person_name ? ini(e.person_name) : "—"}
+        </div>
+        <div class="fh-hist-info">
+          <div class="fh-hist-label">${escHTML(meta.label)}</div>
+          <div class="fh-hist-name">${escHTML(e.chore_name || e.note || "")}</div>
+          <div class="fh-hist-meta">
+            ${e.person_name ? escHTML(e.person_name) + " · " : ""}${relTime(e.timestamp)}
+            ${ptsDelta}
+          </div>
+        </div>
+        ${actionBtn ? `<div class="fh-hist-actions">${actionBtn}</div>` : ""}
+      </div>`;
+}
+
+/** Render a collapsible skipped-chores group for the admin history log. */
+function _renderAdminSkippedGroup(group, firstParent, card) {
+    const expanded = card._expandedSkippedDates.has(group.key);
+    const penLabel = group.totalPenalty > 0 ? `−${group.totalPenalty}pts` : "no penalty";
+
+    const subItems = expanded ? group.items.map(e => {
+        const color  = e.person_color || DEFAULT_COLOR;
+        const pts    = e.points_delta
+            ? `<span style="color:var(--fh-overdue);font-weight:700">${e.points_delta}pts</span>`
+            : "";
+        let actionBtn = "";
+        if (firstParent && e.reversible === "excuse") {
+            actionBtn = `<button class="fh-btn fh-btn-warning fh-btn-sm"
+                                 data-act="excuse-task"
+                                 data-iid="${e.reference_id}"
+                                 data-excused-by="${firstParent.person_id}"
+                                 title="Reverse this penalty">
+                           ${I.excuse} Excuse
+                         </button>`;
+        }
+        return `
+          <div class="fh-hist-subrow">
+            <div class="fh-avatar" style="background:${color};width:18px;height:18px;font-size:.55rem;flex-shrink:0">
+              ${e.person_name ? ini(e.person_name) : "—"}
+            </div>
+            <div class="fh-hist-info" style="flex:1;min-width:0">
+              <div class="fh-hist-name">${escHTML(e.person_name ? e.person_name + " — " : "") + escHTML(e.chore_name || "")}</div>
+              <div class="fh-hist-meta">${pts}</div>
+            </div>
+            ${actionBtn}
+          </div>`;
+    }).join("") : "";
+
+    return `
+      <div class="fh-hist-group">
+        <div class="fh-hist-group-hdr" data-act="toggle-skipped-group" data-key="${group.key}">
+          <div class="fh-hist-info" style="flex:1;min-width:0">
+            <div class="fh-hist-label" style="color:var(--fh-warning)">Skipped chores</div>
+            <div class="fh-hist-name">${escHTML(group.dateDisplay)} · ${penLabel}</div>
+          </div>
+          <span class="fh-hist-expand-icon">${expanded ? "▲" : "▼"}</span>
+        </div>
+        ${expanded ? `<div class="fh-hist-subitems">${subItems}</div>` : ""}
       </div>`;
 }

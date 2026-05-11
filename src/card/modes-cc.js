@@ -7,7 +7,7 @@
  *         Penalty warning shown under task name for chores with penalty_enabled.
  */
 
-import { DEFAULT_COLOR, FLASH_MS } from "./constants.js";
+import { DEFAULT_COLOR, FLASH_MS, WEEKDAY_LABELS } from "./constants.js";
 import { escHTML, escAttr, ini } from "./utils.js";
 import { I } from "./constants.js";
 
@@ -129,6 +129,32 @@ export function htmlCC(card) {
 }
 
 /**
+ * Reset badge for CC task rows — replaces "due Nd ago" on weekly/monthly chores.
+ * Urgency (amber) only for weekly and monthly chores nearing their reset.
+ */
+function _ccResetBadge(t) {
+    const rType = t.recurrence_type;
+    if (!rType || !t.days_until_reset) return "";
+    const dur = t.days_until_reset;
+
+    let label;
+    if (dur <= 0) {
+        label = "Resets today";
+    } else if (dur === 1) {
+        label = "Resets tomorrow";
+    } else if (rType === "weekly" && t.recurrence_weekdays?.length) {
+        const names = t.recurrence_weekdays.map(d => WEEKDAY_LABELS[d]).join("/");
+        label = `Resets ${names}`;
+    } else {
+        label = `Resets in ${dur}d`;
+    }
+
+    const isLongCycle = rType === "weekly" || rType === "monthly_on_date";
+    const urgent      = isLongCycle && dur <= 1;
+    return `<span class="fh-badge ${urgent ? "fh-badge-pending" : "fh-badge-reset"}">${label}</span>`;
+}
+
+/**
  * Render a single task row for the command center.
  *
  * The penalty warning sits inside fh-task-body, directly below the task name.
@@ -161,9 +187,7 @@ function ccTaskRow(t, people, isOverdue, flashing) {
         </div>
         ${isOverdue
             ? `<span class="fh-badge fh-badge-overdue">${Math.abs(t.days_delta)}d late</span>`
-            : (t.days_late > 0
-                ? `<span class="fh-badge fh-badge-pending">due ${t.days_late}d ago</span>`
-                : "")}
+            : _ccResetBadge(t)}
         ${t.points
             ? `<span class="fh-badge fh-badge-pts" style="--row-color:${color}">${t.points}pts</span>`
             : ""}

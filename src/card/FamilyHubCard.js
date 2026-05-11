@@ -27,6 +27,7 @@ import {
     mClaim,
     mAddReminder,
     mConfirmRemovePerson,
+    mEditStreaks,
 } from "./modals.js";
 
 export class FamilyHubCard extends HTMLElement {
@@ -54,8 +55,9 @@ export class FamilyHubCard extends HTMLElement {
         this._adminSec      = "overview";
         this._flashing      = new Set();  // task_ids currently animating
         this._expandedDescs = new Set();  // ids with description expanded
-        this._histFilter    = null;       // history log person filter
-        this._choreFilter   = null;       // chores tab person filter
+        this._histFilter          = null;       // history log person filter
+        this._choreFilter         = null;       // chores tab person filter
+        this._expandedSkippedDates = new Set(); // dates whose skipped-group is expanded
 
         // Drag-to-reorder state
         this._dragId        = null;
@@ -122,7 +124,8 @@ export class FamilyHubCard extends HTMLElement {
                 const ev = root.getElementById("m-everyone");
                 if (ev) ev.checked = false;
             }
-            // Weekday chip visual feedback
+            // Weekday chip visual feedback — both m-wd-day (weekly, multi-select)
+            // and m-df-day (daily filter, multi-select) just toggle the clicked chip.
             if (t.classList.contains("m-wd-day") || t.classList.contains("m-df-day")) {
                 t.closest(".fh-wd-chip")?.classList.toggle("checked", t.checked);
             }
@@ -359,6 +362,11 @@ export class FamilyHubCard extends HTMLElement {
             case "claim":               return mClaim(this._modal, people);
             case "add-reminder":        return mAddReminder(this._modal, people);
             case "confirm-remove-person": return mConfirmRemovePerson(data);
+            case "edit-streaks": {
+                const p       = this._people().find(pp => pp.person_id === data.pid);
+                const streaks = p?.streaks || {};
+                return mEditStreaks(data.pid, data.pname, chores, streaks);
+            }
             default:                    return "";
         }
     }
@@ -399,31 +407,44 @@ export class FamilyHubCard extends HTMLElement {
         // Chore form: recurrence conditional fields
         const recEl = sr.getElementById("m-crec");
         if (recEl) {
-            const rec = recEl.value;
+            const rec     = recEl.value;
+            const ctypeEl = sr.getElementById("m-ctype");
+            const ctype   = ctypeEl?.value || "assigned";
+
             hide("m-dayfilter-section");
             hide("m-weekdays-section");
-            hide("m-interval-section");
             hide("m-dom-section");
             hide("m-chore-expiry-section");
 
-            if (rec === "daily")                                    show("m-dayfilter-section");
-            if (rec === "weekly" || rec === "every_n_weeks")        show("m-weekdays-section");
-            if (rec === "every_n_days" || rec === "every_n_weeks")  show("m-interval-section");
-            if (rec === "monthly_on_date")                          show("m-dom-section");
+            if (rec === "daily")            show("m-dayfilter-section");
+            if (rec === "weekly")           show("m-weekdays-section");
+            if (rec === "monthly_on_date")  show("m-dom-section");
 
-            const ctypeEl = sr.getElementById("m-ctype");
-            const isClaimOrOneTime = rec === "one_time" || ctypeEl?.value === "claimable";
+            const isClaimOrOneTime = rec === "one_time" || ctype === "claimable";
             if (isClaimOrOneTime) show("m-chore-expiry-section");
-
-            const unitEl = sr.getElementById("m-interval-unit");
-            if (unitEl) unitEl.textContent = rec === "every_n_weeks" ? "weeks" : "days";
         }
 
-        // Chore form: penalty points field
-        const penaltyEl  = sr.getElementById("m-cpenalty");
-        const penaltySec = sr.getElementById("m-penalty-pts-section");
+        // Chore form: claimable subtype section
+        const ctypeEl2   = sr.getElementById("m-ctype");
+        const claimSec   = sr.getElementById("m-claimable-section");
+        const multiSec   = sr.getElementById("m-multi-claim-section");
+        const subtypeEl  = sr.getElementById("m-csubtype");
+        if (ctypeEl2 && claimSec) {
+            const isClaimable = ctypeEl2.value === "claimable";
+            claimSec.style.display = isClaimable ? "" : "none";
+            if (multiSec) {
+                const isMulti = isClaimable && subtypeEl?.value === "multi_claim";
+                multiSec.style.display = isMulti ? "" : "none";
+            }
+        }
+
+        // Chore form: penalty points + daily threshold fields
+        const penaltyEl       = sr.getElementById("m-cpenalty");
+        const penaltySec      = sr.getElementById("m-penalty-pts-section");
+        const dailyThreshSec  = sr.getElementById("m-daily-threshold-section");
         if (penaltyEl && penaltySec) {
-            penaltySec.style.display = penaltyEl.checked ? "" : "none";
+            penaltySec.style.display     = penaltyEl.checked ? "" : "none";
+            if (dailyThreshSec) dailyThreshSec.style.display = penaltyEl.checked ? "" : "none";
         }
 
         // Store scope person checkboxes

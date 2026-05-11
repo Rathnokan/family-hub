@@ -54,15 +54,19 @@ export function opts(arr, current) {
 }
 
 /**
- * Render a row of weekday chip checkboxes.
- * @param {number[]} checkedDays - Array of weekday indices (0=Mon) that are checked
- * @param {string}   cbClass     - CSS class to apply to each <input> for bulk reading
+ * Render a row of weekday chip inputs.
+ * @param {number[]} checkedDays  - Array of weekday indices (0=Mon) that are checked
+ * @param {string}   cbClass      - CSS class to apply to each <input> for bulk reading
+ * @param {boolean}  singleSelect - If true, renders radio buttons (one-day selection)
  */
-export function weekdayChips(checkedDays, cbClass) {
+export function weekdayChips(checkedDays, cbClass, singleSelect = false) {
+    const days = checkedDays || [];
+    const effective = singleSelect ? days.slice(0, 1) : days;
     return WEEKDAY_LABELS.map((label, i) => {
-        const checked = (checkedDays || []).includes(i);
+        const checked = effective.includes(i);
+        const type = singleSelect ? "radio" : "checkbox";
         return `<label class="fh-wd-chip ${checked ? "checked" : ""}">
-          <input type="checkbox" class="${cbClass}" value="${i}" ${checked ? "checked" : ""}>
+          <input type="${type}" class="${cbClass}" value="${i}" ${checked ? "checked" : ""}>
           ${label}
         </label>`;
     }).join("");
@@ -82,4 +86,58 @@ export function relTime(ts) {
     if (hrs  < 24)  return `${hrs}h ago`;
     const days = Math.floor(hrs / 24);
     return `${days}d ago`;
+}
+
+/**
+ * Format an ISO date string to a short month+day label.
+ * "2026-05-09" → "May 9"
+ */
+export function fmtShortDate(iso) {
+    if (!iso) return "";
+    const d = new Date(iso + "T12:00:00");
+    return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+/**
+ * Group a flat history entry list so that all task_skipped entries sharing
+ * the same skipped_date are collapsed into one group object.
+ *
+ * Returns a mixed array of:
+ *   { isGroup: false, entry }  — regular (non-skipped) history entry
+ *   { isGroup: true, key, date, dateDisplay, totalPenalty, items, timestamp }
+ *
+ * Sorted newest-first by timestamp.
+ *
+ * @param {object[]} entries - Flat history entry array (already filtered if needed)
+ */
+export function groupHistorySkipped(entries) {
+    const regular   = [];
+    const byDate    = new Map();  // skipped_date → entry[]
+
+    for (const e of entries) {
+        if (e.type === "task_skipped" && e.skipped_date) {
+            if (!byDate.has(e.skipped_date)) byDate.set(e.skipped_date, []);
+            byDate.get(e.skipped_date).push(e);
+        } else {
+            regular.push({ isGroup: false, entry: e, timestamp: e.timestamp });
+        }
+    }
+
+    const groups = [];
+    for (const [date, items] of byDate) {
+        const totalPenalty = items.reduce((s, e) => s + Math.abs(e.points_delta || 0), 0);
+        groups.push({
+            isGroup:      true,
+            key:          `skipped-${date}`,
+            date,
+            dateDisplay:  fmtShortDate(date),
+            totalPenalty,
+            items,
+            timestamp:    items[0].timestamp,
+        });
+    }
+
+    return [...regular, ...groups].sort((a, b) =>
+        (b.timestamp || "").localeCompare(a.timestamp || "")
+    );
 }

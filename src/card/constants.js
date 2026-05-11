@@ -21,19 +21,20 @@ export const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 // History event type → { label, color }
 export const HISTORY_META = {
-    task_completed:       { label: "Completed",       color: "var(--fh-success)"  },
-    task_approved:        { label: "Approved",         color: "var(--fh-success)"  },
-    task_denied:          { label: "Denied",           color: "var(--fh-overdue)"  },
-    task_skipped:         { label: "Skipped",          color: "var(--fh-warning)"  },
-    task_excused:         { label: "Excused",          color: "var(--fh-accent)"   },
-    task_rejected:        { label: "Rejected",         color: "var(--fh-overdue)"  },
-    task_marked_complete: { label: "Marked done",      color: "var(--fh-success)"  },
-    points_awarded:       { label: "Points",           color: "var(--fh-accent)"   },
-    redemption_requested: { label: "Redeem request",   color: "var(--fh-warning)"  },
-    redemption_approved:  { label: "Redeem approved",  color: "var(--fh-success)"  },
-    redemption_declined:  { label: "Redeem declined",  color: "var(--fh-overdue)"  },
-    task_added:           { label: "Task added",       color: "var(--fh-text-sec)" },
-    person_added:         { label: "Person added",     color: "var(--fh-text-sec)" },
+    task_completed:       { label: "Completed",         color: "var(--fh-success)"  },
+    task_approved:        { label: "Approved",           color: "var(--fh-success)"  },
+    pending_approval:     { label: "Pending approval",   color: "var(--fh-warning)"  },
+    task_denied:          { label: "Denied",             color: "var(--fh-overdue)"  },
+    task_skipped:         { label: "Skipped",            color: "var(--fh-warning)"  },
+    task_excused:         { label: "Excused",            color: "var(--fh-accent)"   },
+    task_rejected:        { label: "Rejected",           color: "var(--fh-overdue)"  },
+    task_marked_complete: { label: "Marked done",        color: "var(--fh-success)"  },
+    points_awarded:       { label: "Points",             color: "var(--fh-accent)"   },
+    redemption_requested: { label: "Redeem request",     color: "var(--fh-warning)"  },
+    redemption_approved:  { label: "Redeem approved",    color: "var(--fh-success)"  },
+    redemption_declined:  { label: "Redeem declined",    color: "var(--fh-overdue)"  },
+    task_added:           { label: "Task added",         color: "var(--fh-text-sec)" },
+    person_added:         { label: "Person added",       color: "var(--fh-text-sec)" },
 };
 
 // Inline SVG icons — no external dependency

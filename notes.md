@@ -30,11 +30,11 @@ Before closing any session, update this file:
 | Item | State |
 |---|---|
 | **Last HACS release** | v0.4.1 — holding v0.4.2 tag until v0.5.0 (ghost instance bug) |
-| **Live on HA (Samba)** | v0.4.2 code deployed — bugs remain (see Outstanding Bugs below) |
-| **manifest.json / hacs.json** | Bumped to 0.4.2 ✓ |
-| **GitHub** | v0.4.2 code NOT yet committed — commit before starting v0.5.0 work |
+| **Live on HA (Samba)** | v0.5.0 Session 4 deployed |
+| **manifest.json / hacs.json** | Still at 0.4.2 — bump at v0.5.0 final release |
+| **GitHub** | v0.4.2 committed ✓. v0.5.0 Sessions 1–4 NOT yet committed. |
 | **Next formal release** | v0.5.0 — will be the first clean public release |
-| **Phase** | v0.5.0 planning complete — ready to implement |
+| **Phase** | Session 4 complete — ready for Session 5 (Scheduled Allowance) |
 
 ---
 
@@ -66,9 +66,13 @@ The data file has accumulated garbage from early development. These are root cau
 
 ## Outstanding Bugs (carried into v0.5.0)
 
-- **B3 ghost instances:** Day-filter chores (e.g. "Get ready for School Mon–Fri") still show on off-days because ghost instances with `assigned_to=""` survive the cleanup pass. The 3 real per-person instances are cleaned correctly; the ghost is not. Fix: prevent ghost instance creation + add cleanup in migration.
-- **B2 history entries:** 3 entries per task (Completed + Approved + Points) — suppression in `get_history_for_card()` did not fully work. Full fix is the v0.5.0 history collapsing redesign.
-- **"1d late" label on recurring chores:** Weekly and every_n_days chores show "due Nd ago" badge — wrong per mental model. Fix is part of v0.5.0 mental model alignment.
+- **B3 ghost instances:** FIXED in Session 1.
+- **B2 history entries:** FIXED in Session 2 (history collapsing — one row per instance).
+- **"1d late" label on recurring chores:** FIXED in Session 2 (reset badge replaces overdue language).
+- **Claimable task rejection:** FIXED post-Session 2. `async_reject_task` and `async_deny_task` now recreate the shared pending instance so anyone can claim it again.
+- **Denied task not reappearing:** FIXED post-Session 2. `async_deny_task` now creates a same-day retry instance for recurring chores (same as reject).
+- **Denied history not erased on success:** FIXED post-Session 2. Denied instances are now suppressed in history when the same chore+person later has an approved instance.
+- **Weekly chore weekday editor:** FIXED post-Session 2 / revised Session 3. Changed to multi-select checkboxes (radio approach dropped). Multi-day weekly patterns (Mon/Wed/Sat) now supported.
 
 ---
 
@@ -100,22 +104,33 @@ The data file has accumulated garbage from early development. These are root cau
 
 Implement in this order. Each session should cover one or two related items.
 
-### Session 1 — Data Health Infrastructure
-- Load-time migration: normalize schema fields (strip `day_filter` from weekly chores, fill missing fields with defaults)
-- Prevent ghost instance creation: never create a task instance with blank `assigned_to`
-- Ghost instance cleanup: migration removes existing ghost instances
-- Duplicate people cleanup: migration removes people with blank `person_id`
-- Daily tick pruning: remove task instances (completed/skipped/rejected) older than 60 days
-- Admin "Rebuild data" button in Settings: heavy-lift cleanup on demand (confirms first, logs changes)
+### ~~Session 1 — Data Health Infrastructure~~ COMPLETE (2026-05-10)
+- ✓ Load-time migration: strip `day_filter` from weekly chores, fill defaults
+- ✓ Ghost instance prevention in `async_add_chore` and `_async_tick_for_date`
+- ✓ Load-time cleanup: removes `assigned_to=""` ghost instances and blank-id people
+- ✓ `_skip_incomplete_instances` fix: treats `assigned_to=""` as None
+- ✓ Daily tick: prunes terminal task instances older than 60 days
+- ✓ `rebuild_data` service + Admin Settings button with confirm dialog + HA notification summary
 
-### Session 2 — Mental Model Alignment + History Collapsing
-- Remove "late" / "Nd ago" language from all recurring chore types — chores are available in their window, not late
-- Weekly/every_n_days/monthly chores show as completable with their reset date, no overdue styling
-- History: collapse Completed → Approved → Points into a single updating row per task instance
-- One Reject button per task (not per history event)
-- Fix B2 ghost instance fallout in personal history tab (raw log vs filtered log)
+### ~~Session 2 — Mental Model Alignment + History Collapsing~~ COMPLETE (2026-05-10)
+- ✓ Removed "due Nd ago" / "days_late" language from recurring chores (weekly, every_n_days, monthly)
+- ✓ Backend now exposes `recurrence_type`, `recurrence_weekdays`, `days_until_reset` on task rows
+- ✓ New `_days_until_reset()` helper computes days to next cycle reset
+- ✓ Card shows "Resets Sun" (neutral) or "Resets today/tomorrow" (amber) for weekly/monthly chores
+- ✓ CC card updated with same reset badge logic
+- ✓ History: one row per task instance (collapsed completed + approved + points into single evolving row)
+- ✓ Rejected instances suppressed when same chore+person later has an approved instance
+- ✓ Skipped chores group by date into collapsible entries with per-chore Excuse buttons
+- ✓ `pending_approval` added to HISTORY_META ("Pending approval" in amber)
+- ✓ Both admin and personal history tabs get grouping + collapsing
 
-### Session 3 — Claimable Subtypes + Recurrence Redesign
+### ~~Session 3 — Daily Penalty Threshold + Claimable Subtypes + Recurrence Redesign~~ COMPLETE (2026-05-10)
+- **Weekday chip sizing (polish):** Radio button chips on the weekly chore editor are too small — the button overlaps the day label text. Widen chips slightly (e.g. `min-width: 44px` or larger) so the radio + label sit comfortably side by side. CSS-only change in `css.js`.
+- **Daily penalty threshold (new):** Per-chore option: if not completed within N days of becoming available, accrue a daily point penalty until reset day. Applies to weekly, monthly, and one-time tasks. Needs:
+  - New chore field `daily_penalty_after_days` (optional int)
+  - Backend tick logic: if task age > threshold and still pending, apply incremental penalty without skipping the chore
+  - Urgency indicator on card: red flag when daily penalties are actively firing (distinct from reset-proximity amber)
+  - Chore editor UI field
 - **Claimable subtypes:**
   - *First-come-first-serve:* one instance, removed from claimable list once claimed
   - *Multi-claim:* max N claimants, full points each OR split evenly (rounded up)
@@ -124,12 +139,22 @@ Implement in this order. Each session should cover one or two related items.
   - Retire `every_n_days` and `every_n_weeks` from UI (keep handling in backend for existing data)
   - UI: chore form updated to reflect new recurrence options
 
-### Session 4 — Streaks
-- Track consecutive daily completions per chore per person
-- Store streak count on task instance or person record (TBD during implementation)
-- Bonus points at milestones (e.g. 7-day, 30-day streaks) — configurable per chore
-- Show streak count on personal dashboard task row
-- Streak breaks when a day is skipped (penalty fires or instance missed)
+### ~~Session 4 — Streaks~~ COMPLETE (2026-05-10)
+- ✓ Streak storage: lazy dict `person["streaks"][chore_id] = {count, last_completed}` on person record
+- ✓ `_get_streak`, `_break_streak`, `_increment_streak`, `async_set_streak` helpers in data_store.py
+- ✓ Streak increments on `async_complete_task` (no-approval path) and `async_approve_task`
+- ✓ Streak breaks on `_skip_incomplete_instances` — skipped = streak reset
+- ✓ Pause flag (`penalties_paused`) covers both penalties AND streaks: when paused, neither increment nor break
+- ✓ Milestone bonus: `streak_milestone` int + `streak_bonus_points` per chore — fires every N completions
+- ✓ `set_streak` service for admin correction (fix accidental breaks)
+- ✓ `streak` field added to `get_tasks_for_card` row; `streak_milestone`/`streak_bonus_points` to `get_active_chores_for_card`
+- ✓ `streaks` dict added to people list in `sensor.family_hub_needs_attention` attrs
+- ✓ Personal dashboard: `🔥 N` badge on task rows when streak ≥ 2
+- ✓ Admin Overview: pause labels renamed to "Penalties & streaks on/off"; "🔥 Streaks" button opens edit modal
+- ✓ Admin Settings: global toggle label updated to "Penalties & streaks active"
+- ✓ Edit Streaks modal: per-chore streak counts with per-row Set buttons (immediate save, no modal close)
+- ✓ Chore editor: streak milestone + bonus points fields added
+- ✓ `.fh-badge-streak` CSS added
 
 ### Session 5 — Scheduled Allowance
 - Per-person allowance: fixed points awarded automatically on a schedule (weekly, bi-weekly, monthly)
@@ -171,6 +196,8 @@ Implement in this order. Each session should cover one or two related items.
 - History is trimmed to 30-day rolling window each daily tick.
 - Penalty pause is a sticky flag (stays set until parent manually turns it off).
 - **Chore mental model:** Chores have a "window" — available during window, penalized when window closes. Never "overdue" for kids. Overdue concept reserved for Home Maintenance (future).
+- **Ghost instance rule (v0.5.0):** `CHORE_TYPE_ASSIGNED` chores with no `assigned_to` people never generate task instances. Only `CHORE_TYPE_REMINDER` (and `CHORE_TYPE_CLAIMABLE`) may have unassigned instances. This is enforced in both `async_add_chore` and `_async_tick_for_date`.
+- **Task instance retention (v0.5.0):** Terminal task instances (skipped/approved/denied/rejected/excused) older than 60 days are pruned each daily tick. History entries pruned at 30 days (unchanged).
 
 ---
 

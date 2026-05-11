@@ -62,6 +62,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import math
 import os
 import uuid
 from datetime import date, datetime, timedelta
@@ -79,6 +80,10 @@ from .const import (
     CHORE_TYPE_ASSIGNED,
     CHORE_TYPE_CLAIMABLE,
     CHORE_TYPE_REMINDER,
+    CLAIMABLE_SUBTYPE_FCFS,
+    CLAIMABLE_SUBTYPE_MULTI,
+    MULTI_CLAIM_POINTS_FULL,
+    MULTI_CLAIM_POINTS_SPLIT,
     CONF_PENALTIES_PAUSED_GLOBAL,
     CONF_SHOW_DOLLAR_VALUE_TO_KIDS,
     DEFAULT_PENALTIES_PAUSED_GLOBAL,
@@ -94,6 +99,7 @@ from .const import (
     HISTORY_REDEMPTION_DECLINED,
     HISTORY_REDEMPTION_REQUESTED,
     HISTORY_RETENTION_DAYS,
+    TASK_INSTANCE_RETENTION_DAYS,
     HISTORY_TASK_ADDED,
     HISTORY_TASK_APPROVED,
     HISTORY_TASK_COMPLETED,
@@ -219,6 +225,23 @@ def _migrate_chore(chore: dict) -> dict:
     rec.setdefault("day_filter", [])   # day filter for daily chores
     rec.setdefault("interval", 1)
 
+    # v0.5.0: weekly chores use weekdays, not day_filter — clear any stale value.
+    # Caused by early data where both fields were set simultaneously.
+    if rec.get("type") == RECURRENCE_WEEKLY and rec.get("day_filter"):
+        rec["day_filter"] = []
+
+    # v0.5.0: daily penalty threshold
+    chore.setdefault("daily_penalty_after_days", None)
+
+    # v0.5.0: claimable subtypes
+    chore.setdefault("claimable_subtype", CLAIMABLE_SUBTYPE_FCFS)
+    chore.setdefault("max_claimants", 2)
+    chore.setdefault("multi_claim_points_mode", MULTI_CLAIM_POINTS_FULL)
+
+    # v0.5.0: streak milestone config
+    chore.setdefault("streak_milestone", 0)      # 0 = disabled; else bonus fires every N completions
+    chore.setdefault("streak_bonus_points", 0)
+
     return chore
 
 
@@ -233,7 +256,59 @@ def _migrate_store_item(item: dict) -> dict:
 def _migrate_task_instance(instance: dict) -> dict:
     """Ensure task instances have expected fields."""
     instance.setdefault("penalty_applied", 0)
+    instance.setdefault("daily_penalty_days_applied", 0)
+    # multi-claim tracking on shared claimable instances
+    instance.setdefault("claim_count", 0)
+    instance.setdefault("claimant_ids", [])
     return instance
+
+
+def _days_until_reset(chore: dict, today: date) -> int:
+    """
+    Days until this recurring chore will next be replaced by a fresh instance.
+    Used by the card to show a "Resets [day]" badge instead of "due Nd ago".
+    Returns 7 as a safe fallback.
+    """
+    rec    = chore.get("recurrence", {})
+    r_type = rec.get("type")
+
+    if r_type == RECURRENCE_WEEKLY:
+        weekdays = rec.get("weekdays", [])
+        if not weekdays:
+            return 7
+        # Minimum days until any configured reset weekday (never 0 — use 7 if today IS that day)
+        return min(((wd - today.weekday()) % 7) or 7 for wd in weekdays)
+
+    if r_type in (RECURRENCE_EVERY_N_DAYS, RECURRENCE_EVERY_N_WEEKS):
+        n = rec.get("interval", 1)
+        if r_type == RECURRENCE_EVERY_N_WEEKS:
+            n *= 7
+        try:
+            created    = date.fromisoformat(chore["created_at"][:10])
+            days_since = (today - created).days
+            remaining  = n - (days_since % n)
+            return remaining if remaining < n else n
+        except (ValueError, KeyError):
+            return n
+
+    if r_type == RECURRENCE_MONTHLY_ON_DATE:
+        dom = rec.get("day_of_month", 1)
+        try:
+            this_month = today.replace(day=dom)
+            if this_month > today:
+                return (this_month - today).days
+        except ValueError:
+            pass
+        try:
+            if today.month == 12:
+                nxt = today.replace(year=today.year + 1, month=1, day=dom)
+            else:
+                nxt = today.replace(month=today.month + 1, day=dom)
+            return (nxt - today).days
+        except ValueError:
+            return 28
+
+    return 7
 
 
 class FamilyHubDataStore:
@@ -279,6 +354,24 @@ class FamilyHubDataStore:
         self._data["chores"]         = [_migrate_chore(c)         for c in self._data.get("chores", [])]
         self._data["store_items"]    = [_migrate_store_item(i)     for i in self._data.get("store_items", [])]
         self._data["task_instances"] = [_migrate_task_instance(t)  for t in self._data.get("task_instances", [])]
+
+        # v0.5.0: remove people records with blank id (orphans from early development).
+        _before = len(self._data["people"])
+        self._data["people"] = [p for p in self._data["people"] if p.get("id")]
+        _removed = _before - len(self._data["people"])
+        if _removed:
+            _LOGGER.info("Family Hub: migration removed %d orphan people records (blank id)", _removed)
+
+        # v0.5.0: remove ghost task instances where assigned_to="" (pre-multi-person era).
+        # These bypass the day-filter cleanup pass because "" is not None, causing
+        # day-filter chores to appear on off-days (bug B3).
+        _before = len(self._data["task_instances"])
+        self._data["task_instances"] = [
+            t for t in self._data["task_instances"] if t.get("assigned_to") != ""
+        ]
+        _removed = _before - len(self._data["task_instances"])
+        if _removed:
+            _LOGGER.info("Family Hub: migration removed %d ghost task instances (assigned_to='')", _removed)
 
         # Back-fill sort_order in creation order
         for idx, chore in enumerate(self._data["chores"]):
@@ -337,6 +430,71 @@ class FamilyHubDataStore:
         if person and person.get(CONF_PENALTIES_PAUSED_GLOBAL, DEFAULT_PENALTIES_PAUSED_PERSON):
             return True
         return False
+
+    # ------------------------------------------------------------------
+    # Streak helpers (v0.5.0)
+    # ------------------------------------------------------------------
+
+    def _get_streak(self, person_id: str, chore_id: str) -> int:
+        """Return current streak count for this person+chore (0 if none)."""
+        person = self.get_person(person_id)
+        if not person:
+            return 0
+        return person.get("streaks", {}).get(chore_id, {}).get("count", 0)
+
+    def _break_streak(self, person_id: str, chore_id: str) -> None:
+        """Reset streak to 0. Called when a chore is skipped and not paused."""
+        person = self.get_person(person_id)
+        if not person:
+            return
+        streaks = person.setdefault("streaks", {})
+        if chore_id in streaks and streaks[chore_id].get("count", 0) > 0:
+            streaks[chore_id]["count"] = 0
+
+    async def _increment_streak(
+        self, person_id: str, chore_id: str, chore: dict, today: date
+    ) -> None:
+        """
+        Increment streak by 1 and check for milestone bonus.
+        Called on task approval / self-reported completion (not pending_approval submit).
+        Skipped when the pause flag is active — paused days are transparent to streaks.
+        """
+        person = self.get_person(person_id)
+        if not person:
+            return
+        streaks = person.setdefault("streaks", {})
+        entry = streaks.setdefault(chore_id, {"count": 0, "last_completed": None})
+        entry["count"] = entry.get("count", 0) + 1
+        entry["last_completed"] = today.isoformat()
+        new_count = entry["count"]
+
+        milestone = chore.get("streak_milestone", 0)
+        bonus     = chore.get("streak_bonus_points", 0)
+        if milestone > 0 and bonus > 0 and new_count % milestone == 0:
+            _LOGGER.info(
+                "Family Hub: streak milestone %d for %s on chore '%s' — awarding %d bonus pts",
+                new_count, person_id, chore["name"], bonus,
+            )
+            await self.async_award_points(
+                person_id, bonus, _new_id(),
+                f'Streak milestone ({new_count} in a row) — {bonus}pts for "{chore["name"]}"',
+            )
+
+    async def async_set_streak(
+        self, person_id: str, chore_id: str, count: int
+    ) -> bool:
+        """
+        Admin override: set a person's streak count directly.
+        Used to correct accidental breaks (forgot to mark off, app error, etc.).
+        """
+        person = self.get_person(person_id)
+        if not person:
+            return False
+        streaks = person.setdefault("streaks", {})
+        streaks.setdefault(chore_id, {"count": 0, "last_completed": None})
+        streaks[chore_id]["count"] = max(0, count)
+        await self.async_save()
+        return True
 
     async def async_update_settings(
         self,
@@ -530,7 +688,13 @@ class FamilyHubDataStore:
         sort_order: int | None = None,
         penalty_enabled: bool = False,
         penalty_points: int = 0,
+        daily_penalty_after_days: int | None = None,
         expires_after_days: int | None = None,
+        claimable_subtype: str = CLAIMABLE_SUBTYPE_FCFS,
+        max_claimants: int = 2,
+        multi_claim_points_mode: str = MULTI_CLAIM_POINTS_FULL,
+        streak_milestone: int = 0,
+        streak_bonus_points: int = 0,
         icon: str | None = None,
         created_by: str | None = None,
     ) -> dict:
@@ -561,7 +725,13 @@ class FamilyHubDataStore:
             "approval_required": approval_required,
             "penalty_enabled": penalty_enabled,
             "penalty_points": penalty_points,
+            "daily_penalty_after_days": daily_penalty_after_days,
             "expires_after_days": expires_after_days,  # None = no expiry
+            "claimable_subtype": claimable_subtype,
+            "max_claimants": max_claimants,
+            "multi_claim_points_mode": multi_claim_points_mode,
+            "streak_milestone":        streak_milestone,
+            "streak_bonus_points":     streak_bonus_points,
             "recurrence": rec,
             "active": True,
             "created_at": _now_iso(),
@@ -585,8 +755,10 @@ class FamilyHubDataStore:
             if people_to_assign:
                 for pid in people_to_assign:
                     await self._async_create_task_instance(chore, today, person_id=pid)
-            else:
+            elif chore_type == CHORE_TYPE_REMINDER:
+                # Reminders can exist without an owner (house-level reminders)
                 await self._async_create_task_instance(chore, today, person_id=None)
+            # else: assigned chore with no people yet — no instance until people are added
 
         await self.async_save()
         return chore
@@ -606,7 +778,9 @@ class FamilyHubDataStore:
         allowed = {
             "name", "description", "icon", "chore_type", "category_label",
             "sort_order", "assigned_to", "points", "approval_required",
-            "penalty_enabled", "penalty_points", "expires_after_days",
+            "penalty_enabled", "penalty_points", "daily_penalty_after_days",
+            "expires_after_days", "claimable_subtype", "max_claimants",
+            "multi_claim_points_mode", "streak_milestone", "streak_bonus_points",
             "recurrence", "active", "weekdays", "day_filter", "interval",
         }
         old_assigned = list(chore.get("assigned_to", []))
@@ -816,6 +990,8 @@ class FamilyHubDataStore:
                 await self.async_award_points(
                     completed_by, points, instance_id, f'Points for "{chore["name"]}"'
                 )
+            if completed_by and not self.is_penalty_paused_for(completed_by):
+                await self._increment_streak(completed_by, chore["id"], chore, date.today())
 
         await self.async_save()
         return instance
@@ -846,6 +1022,8 @@ class FamilyHubDataStore:
             await self.async_award_points(
                 completed_by, points, instance_id, f'Points for "{chore["name"]}"'
             )
+        if completed_by and not self.is_penalty_paused_for(completed_by):
+            await self._increment_streak(completed_by, chore["id"], chore, date.today())
         await self.async_save()
         return instance
 
@@ -869,6 +1047,29 @@ class FamilyHubDataStore:
             note=f'"{chore_name}" denied. {reason}'.strip(),
             chore_name=chore_name,
         )
+
+        # Same retry logic as async_reject_task: recreate a pending instance so
+        # the person can try again.
+        today_str = date.today().isoformat()
+        chore_r_type = chore["recurrence"].get("type") if chore else RECURRENCE_ONE_TIME
+        pid = instance.get("completed_by") or instance.get("assigned_to")
+        is_claimable = chore and chore.get("chore_type") == CHORE_TYPE_CLAIMABLE
+
+        if (not is_claimable
+                and chore_r_type != RECURRENCE_ONE_TIME
+                and instance.get("due_date") == today_str
+                and pid):
+            await self._async_create_task_instance(chore, date.today(), person_id=pid)
+
+        if is_claimable:
+            already_available = any(
+                t for t in self.task_instances
+                if t["chore_id"] == chore["id"]
+                and t["status"] in [STATUS_PENDING, STATUS_CLAIMED]
+            )
+            if not already_available:
+                await self._async_create_task_instance(chore, date.today(), person_id=None)
+
         await self.async_save()
         return instance
 
@@ -878,11 +1079,99 @@ class FamilyHubDataStore:
             return None
         if not self._is_claimable_task(instance):
             return None
-        instance["status"]      = STATUS_CLAIMED
-        instance["assigned_to"] = claimed_by
-        instance["claimed_by"]  = claimed_by
+
+        chore = self.get_chore(instance["chore_id"])
+        if not chore:
+            return None
+
+        subtype = chore.get("claimable_subtype", CLAIMABLE_SUBTYPE_FCFS)
+
+        if subtype == CLAIMABLE_SUBTYPE_MULTI:
+            max_c = chore.get("max_claimants", 2)
+            # Reject if already claimed by this person or capacity reached
+            if claimed_by in instance.get("claimant_ids", []):
+                _LOGGER.warning("Family Hub: claim_task — %s already claimed this multi-claim task", claimed_by)
+                return None
+            if instance.get("claim_count", 0) >= max_c:
+                _LOGGER.warning("Family Hub: claim_task — multi-claim capacity already reached")
+                return None
+
+            # Record this claimant on the shared instance
+            instance.setdefault("claimant_ids", []).append(claimed_by)
+            instance["claim_count"] = instance.get("claim_count", 0) + 1
+
+            # Create a personal instance for the claimant (STATUS_CLAIMED, awaiting award)
+            personal = await self._async_create_task_instance(chore, date.today(), person_id=claimed_by)
+            personal["status"]     = STATUS_CLAIMED
+            personal["claimed_by"] = claimed_by
+
+            # If capacity now full, award points to all claimants immediately
+            if instance["claim_count"] >= max_c:
+                await self._async_award_multi_claim_claimants(instance, chore)
+                instance["status"] = STATUS_APPROVED  # shared instance closed
+
+        else:
+            # FCFS: first claimer takes the whole task
+            instance["status"]      = STATUS_CLAIMED
+            instance["assigned_to"] = claimed_by
+            instance["claimed_by"]  = claimed_by
+
         await self.async_save()
         return instance
+
+    async def _async_award_multi_claim_claimants(
+        self, shared_instance: dict, chore: dict
+    ) -> None:
+        """
+        Award points to all claimants of a multi-claim shared instance.
+        Called either when max_claimants is reached (at claim time) or when
+        the chore cycle resets (in the tick, before the shared instance is skipped).
+
+        Points mode:
+          "full"  — each claimant earns chore.points
+          "split" — points divided evenly among actual claimants (ceil)
+        """
+        claimant_ids = shared_instance.get("claimant_ids", [])
+        if not claimant_ids:
+            return
+
+        base_points = chore.get("points", 0)
+        if chore.get("multi_claim_points_mode", MULTI_CLAIM_POINTS_FULL) == MULTI_CLAIM_POINTS_SPLIT:
+            pts_each = math.ceil(base_points / len(claimant_ids)) if base_points and claimant_ids else 0
+        else:
+            pts_each = base_points
+
+        for pid in claimant_ids:
+            # Find the personal STATUS_CLAIMED instance for this claimant
+            personal = next(
+                (t for t in self.task_instances
+                 if t["chore_id"] == chore["id"]
+                 and t.get("assigned_to") == pid
+                 and t["status"] == STATUS_CLAIMED),
+                None,
+            )
+            if personal:
+                personal["status"]        = STATUS_SELF_REPORTED
+                personal["points_awarded"] = pts_each
+                personal["approved_at"]   = _now_iso()
+                personal["approved_by"]   = "system"
+                personal.setdefault("completed_at", _now_iso())
+                personal.setdefault("completed_by", pid)
+
+            if pts_each > 0:
+                person = self.get_person(pid)
+                if person:
+                    person["points_balance"]  = person.get("points_balance", 0) + pts_each
+                    person["points_lifetime"] = person.get("points_lifetime", 0) + pts_each
+                    self._append_history(
+                        event_type=HISTORY_TASK_APPROVED,
+                        person_id=pid,
+                        reference_id=personal["id"] if personal else shared_instance["id"],
+                        points_delta=pts_each,
+                        balance_after=person["points_balance"],
+                        note=f'"{chore["name"]}" multi-claim awarded — {pts_each}pts',
+                        chore_name=chore["name"],
+                    )
 
     # ------------------------------------------------------------------
     # Daily tick — persistent stateful, with catch-up and penalty/replace
@@ -931,6 +1220,9 @@ class FamilyHubDataStore:
 
         # --- Trim history to rolling window ----------------------------------
         self._trim_history(today)
+
+        # --- Prune old terminal task instances -------------------------------
+        self._trim_task_instances(today)
 
         self._data["settings"]["last_tick_date"] = today.isoformat()
         await self.async_save()
@@ -983,7 +1275,11 @@ class FamilyHubDataStore:
                         await self._skip_incomplete_instances(chore, person_id=pid)
                         await self._async_create_task_instance(chore, tick_date, person_id=pid)
                 else:
-                    # Unassigned reminder / maintenance — single instance
+                    # No assigned people. Only reminder chores generate an unassigned
+                    # instance — assigned chores with nobody configured are skipped to
+                    # prevent ghost instances with no owner.
+                    if chore.get("chore_type") == CHORE_TYPE_ASSIGNED:
+                        continue
                     existing = [
                         t for t in self.task_instances
                         if t["chore_id"] == chore["id"]
@@ -1024,6 +1320,11 @@ class FamilyHubDataStore:
             else:
                 await self._skip_incomplete_instances(chore, person_id=None)
 
+        # Daily penalty pass — apply incremental daily penalties to pending
+        # instances that have been sitting past their threshold. Runs after all
+        # skipping so already-skipped instances are not double-penalised.
+        await self._async_apply_daily_penalties(tick_date)
+
     async def _skip_incomplete_instances(self, chore: dict, person_id: str | None) -> None:
         """Mark any incomplete prior instances for this chore+person as skipped, applying penalty."""
         for instance in self.task_instances:
@@ -1033,8 +1334,15 @@ class FamilyHubDataStore:
                 continue
             if person_id is not None and instance.get("assigned_to") != person_id:
                 continue
-            if person_id is None and instance.get("assigned_to") is not None:
+            if person_id is None and instance.get("assigned_to") not in (None, ""):
                 continue
+
+            # Multi-claim: award split/full points to any claimants before closing.
+            if (person_id is None
+                    and chore.get("chore_type") == CHORE_TYPE_CLAIMABLE
+                    and chore.get("claimable_subtype") == CLAIMABLE_SUBTYPE_MULTI
+                    and instance.get("claimant_ids")):
+                await self._async_award_multi_claim_claimants(instance, chore)
 
             instance["status"] = STATUS_SKIPPED
             instance["approved_at"] = _now_iso()
@@ -1044,8 +1352,8 @@ class FamilyHubDataStore:
             # If either pause is active for this person, the task is still marked
             # skipped (so the next instance generates correctly) but no points
             # are deducted and no penalty history entry is written.
+            pid = instance.get("assigned_to") or person_id
             if chore.get("penalty_enabled") and chore.get("penalty_points", 0) > 0:
-                pid = instance.get("assigned_to") or person_id
                 if pid:
                     if self.is_penalty_paused_for(pid):
                         # Penalties paused — skip silently, no deduction
@@ -1078,6 +1386,78 @@ class FamilyHubDataStore:
                                 note=f'"{chore["name"]}" not completed — {penalty}pt penalty applied',
                                 chore_name=chore["name"],
                             )
+
+            # Break streak on skip — unless the pause flag is active.
+            # When paused, skipped days are transparent: streak is preserved
+            # exactly where it was (neither increments nor resets).
+            if pid and not self.is_penalty_paused_for(pid):
+                self._break_streak(pid, chore["id"])
+
+    async def _async_apply_daily_penalties(self, tick_date: date) -> None:
+        """
+        Apply incremental daily penalties to pending instances that have exceeded
+        their `daily_penalty_after_days` threshold.
+
+        Unlike the end-of-cycle skip penalty, this deducts points each day the
+        task remains pending past the threshold WITHOUT skipping it. The task can
+        still be completed; these penalties are in addition to any eventual skip.
+
+        Tracks `daily_penalty_days_applied` on the instance so catch-up ticks
+        apply exactly one penalty per missed day without double-charging.
+        """
+        for instance in self.task_instances:
+            if instance["status"] not in [STATUS_PENDING, STATUS_CLAIMED]:
+                continue
+
+            chore = self.get_chore(instance["chore_id"])
+            if not chore:
+                continue
+
+            threshold = chore.get("daily_penalty_after_days")
+            if not threshold or not chore.get("penalty_enabled") or not chore.get("penalty_points", 0):
+                continue
+
+            try:
+                due = date.fromisoformat(instance["due_date"])
+            except (ValueError, KeyError):
+                continue
+
+            age_days = (tick_date - due).days
+            days_over = age_days - threshold
+            if days_over <= 0:
+                continue
+
+            already_applied = instance.get("daily_penalty_days_applied", 0)
+            if already_applied >= days_over:
+                continue  # this day's penalty already fired (e.g. from prior catch-up run)
+
+            pid = instance.get("assigned_to")
+            if not pid:
+                continue
+
+            if self.is_penalty_paused_for(pid):
+                _LOGGER.debug(
+                    "Family Hub: daily penalty suppressed for %s (paused) — chore %s",
+                    pid, chore["name"],
+                )
+                # Still count the day so we don't try again next tick
+                instance["daily_penalty_days_applied"] = already_applied + 1
+                continue
+
+            penalty = chore["penalty_points"]
+            instance["daily_penalty_days_applied"] = already_applied + 1
+            person = self.get_person(pid)
+            if person:
+                person["points_balance"] = max(0, person.get("points_balance", 0) - penalty)
+                self._append_history(
+                    event_type=HISTORY_TASK_SKIPPED,
+                    person_id=pid,
+                    reference_id=instance["id"],
+                    points_delta=-penalty,
+                    balance_after=person["points_balance"],
+                    note=f'"{chore["name"]}" daily penalty — day {already_applied + 1} over threshold',
+                    chore_name=chore["name"],
+                )
 
     def _is_due_on_date(self, chore: dict, check_date: date) -> bool:
         """Return True if this chore should generate a task instance on check_date."""
@@ -1214,6 +1594,27 @@ class FamilyHubDataStore:
             _LOGGER.debug(
                 "Family Hub: trimmed %d history entries older than %d days",
                 removed, HISTORY_RETENTION_DAYS,
+            )
+
+    def _trim_task_instances(self, today: date) -> None:
+        """
+        Remove terminal task instances (skipped/approved/denied/rejected/excused)
+        whose due_date is older than TASK_INSTANCE_RETENTION_DAYS.
+        Active instances (pending/claimed/pending_approval) are never pruned.
+        Instances without a parseable due_date are preserved (defensive).
+        """
+        cutoff = (today - timedelta(days=TASK_INSTANCE_RETENTION_DAYS)).isoformat()
+        before = len(self._data["task_instances"])
+        self._data["task_instances"] = [
+            t for t in self._data["task_instances"]
+            if t["status"] in ACTIVE_STATUSES
+            or t.get("due_date", "9999")[:10] >= cutoff[:10]
+        ]
+        removed = before - len(self._data["task_instances"])
+        if removed:
+            _LOGGER.debug(
+                "Family Hub: pruned %d terminal task instances older than %d days",
+                removed, TASK_INSTANCE_RETENTION_DAYS,
             )
 
     # ------------------------------------------------------------------
@@ -1396,67 +1797,150 @@ class FamilyHubDataStore:
 
     def get_history_for_card(self, person_id: str | None = None, limit: int = 150) -> list[dict]:
         """
-        Enriched history log for the admin card log UI.
-        Returns at most `limit` entries sorted newest-first, optionally filtered
-        to one person. Each entry is augmented with person name/color for display
-        and a `reversible` action hint so the card knows which action buttons to show:
+        Enriched, collapsed history log for the card UI.
 
-          reversible actions:
-            "excuse"          — skipped instance with a penalty, can be excused
-            "mark_complete"   — skipped/excused instance, can be retroactively completed
-            "reject"          — approved/self-reported instance, points can be clawed back
-            None              — no further parent action available
+        One row is emitted per task instance (collapsing task_completed +
+        task_approved + points_awarded into a single evolving row). The row
+        reflects the current instance status so it naturally "updates" as the
+        instance moves through states (submitted → approved).
+
+        Rejected instances are suppressed when the same chore + person later
+        has an approved/self-reported instance (kid retried and succeeded).
+
+        Skipped entries carry a `skipped_date` field (ISO date string) so the
+        frontend can roll up all skipped chores from the same day into one
+        collapsible group.
+
+        Reversible action hints:
+          "excuse"        — skipped with penalty, can be excused
+          "mark_complete" — excused instance, can be retroactively completed
+          "reject"        — approved/self-reported, points can be clawed back
+          None            — no further parent action available
         """
         entries = sorted(self.history, key=lambda e: e["timestamp"], reverse=True)
         if person_id:
             entries = [e for e in entries if e.get("person_id") == person_id]
-        entries = entries[:limit]
 
-        result = []
+        # Build (chore_id, person_id) pairs with any approved/self-reported instance
+        # so we can suppress rejected entries superseded by a later success.
+        approved_chore_person: set[tuple] = set()
+        for inst in self.task_instances:
+            if inst["status"] in [STATUS_APPROVED, STATUS_SELF_REPORTED]:
+                pid = inst.get("completed_by") or inst.get("assigned_to")
+                if pid:
+                    approved_chore_person.add((inst["chore_id"], pid))
+
+        result: list[dict] = []
+        seen_instance_ids: set[str] = set()
+
+        _task_event_types = {
+            HISTORY_TASK_COMPLETED, HISTORY_TASK_APPROVED, HISTORY_TASK_SKIPPED,
+            HISTORY_TASK_EXCUSED, HISTORY_TASK_REJECTED, HISTORY_TASK_DENIED,
+            HISTORY_TASK_MARKED_COMPLETE,
+        }
+
         for e in entries:
-            # Skip HISTORY_POINTS_AWARDED entries that are linked to a task instance.
-            # Task-completion points are already represented by the task_completed /
-            # task_approved event row. Manual bonus/deduction points use a fresh UUID
-            # as reference_id (not a task instance id) and still appear here.
-            if e["type"] == HISTORY_POINTS_AWARDED:
-                if self.get_task_instance(e.get("reference_id", "")):
+            ref_id   = e.get("reference_id", "")
+            instance = self.get_task_instance(ref_id)
+
+            if instance:
+                # Deduplicate — only emit one row per task instance (collapse
+                # task_completed + task_approved + points_awarded into one).
+                if ref_id in seen_instance_ids:
+                    continue
+                seen_instance_ids.add(ref_id)
+
+                inst_status = instance["status"]
+
+                # Suppress rejected or denied instances where a later success exists
+                # for the same chore + person (kid retried and passed).
+                if inst_status in (STATUS_REJECTED, STATUS_DENIED):
+                    pid = instance.get("completed_by") or instance.get("assigned_to")
+                    if (instance["chore_id"], pid) in approved_chore_person:
+                        continue
+
+                person     = self.get_person(e.get("person_id", "")) if e.get("person_id") else None
+                chore      = self.get_chore(instance["chore_id"])
+                chore_name = chore["name"] if chore else e.get("chore_name", "")
+
+                # Map current instance status → canonical history display type.
+                display_type = {
+                    STATUS_APPROVED:         HISTORY_TASK_APPROVED,
+                    STATUS_SELF_REPORTED:    HISTORY_TASK_COMPLETED,
+                    STATUS_PENDING_APPROVAL: "pending_approval",
+                    STATUS_SKIPPED:          HISTORY_TASK_SKIPPED,
+                    STATUS_EXCUSED:          HISTORY_TASK_EXCUSED,
+                    STATUS_REJECTED:         HISTORY_TASK_REJECTED,
+                    STATUS_DENIED:           HISTORY_TASK_DENIED,
+                }.get(inst_status, e["type"])
+
+                # Net points effect of this instance.
+                pts = 0
+                if inst_status in [STATUS_APPROVED, STATUS_SELF_REPORTED]:
+                    pts = instance.get("points_awarded", 0)
+                elif inst_status == STATUS_SKIPPED:
+                    pts = -instance.get("penalty_applied", 0)
+                elif inst_status == STATUS_REJECTED:
+                    pts = -instance.get("points_awarded", 0)
+
+                # Reversible action available to a parent.
+                reversible = None
+                if inst_status == STATUS_SKIPPED:
+                    if instance.get("penalty_applied", 0) > 0:
+                        reversible = "excuse"
+                elif inst_status == STATUS_EXCUSED:
+                    reversible = "mark_complete"
+                elif inst_status in [STATUS_APPROVED, STATUS_SELF_REPORTED]:
+                    reversible = "reject"
+
+                row: dict = {
+                    "history_id":      e["id"],
+                    "type":            display_type,
+                    "person_id":       e.get("person_id"),
+                    "person_name":     person["name"] if person else None,
+                    "person_color":    person.get("avatar_color", "#7F77DD") if person else "#7F77DD",
+                    "reference_id":    ref_id,
+                    "chore_name":      chore_name,
+                    "points_delta":    pts,
+                    "balance_after":   e.get("balance_after", 0),
+                    "timestamp":       e["timestamp"],
+                    "note":            e.get("note", ""),
+                    "reversible":      reversible,
+                    "instance_status": inst_status,
+                }
+
+                # skipped_date lets the frontend group all skipped chores from
+                # the same day into one collapsible entry with a total penalty.
+                if inst_status == STATUS_SKIPPED:
+                    row["skipped_date"] = e["timestamp"][:10]
+
+                result.append(row)
+
+            else:
+                # No matching task instance. Skip stale task-type events whose
+                # instance has been pruned. Keep non-task events (bonus points,
+                # person/redemption events, etc.).
+                if e["type"] in _task_event_types:
                     continue
 
-            person = self.get_person(e.get("person_id", "")) if e.get("person_id") else None
-            # Find the task instance for action eligibility
-            instance    = self.get_task_instance(e.get("reference_id", ""))
-            inst_status = instance["status"] if instance else None
+                person = self.get_person(e.get("person_id", "")) if e.get("person_id") else None
+                result.append({
+                    "history_id":      e["id"],
+                    "type":            e["type"],
+                    "person_id":       e.get("person_id"),
+                    "person_name":     person["name"] if person else None,
+                    "person_color":    person.get("avatar_color", "#7F77DD") if person else "#7F77DD",
+                    "reference_id":    ref_id,
+                    "chore_name":      e.get("chore_name", ""),
+                    "points_delta":    e.get("points_delta", 0),
+                    "balance_after":   e.get("balance_after", 0),
+                    "timestamp":       e["timestamp"],
+                    "note":            e.get("note", ""),
+                    "reversible":      None,
+                    "instance_status": None,
+                })
 
-            # Determine what reversible action (if any) is still available.
-            # "excuse" only offered when an actual penalty was deducted — if
-            # penalty_applied is 0 (no penalty configured, or it was paused),
-            # there is nothing to reverse so the button is suppressed.
-            reversible = None
-            if inst_status == STATUS_SKIPPED:
-                if instance and instance.get("penalty_applied", 0) > 0:
-                    reversible = "excuse"
-                # else: skipped with no penalty — no action available
-            elif inst_status == STATUS_EXCUSED:
-                reversible = "mark_complete"
-            elif inst_status in [STATUS_APPROVED, STATUS_SELF_REPORTED]:
-                reversible = "reject"
-
-            result.append({
-                "history_id":    e["id"],
-                "type":          e["type"],
-                "person_id":     e.get("person_id"),
-                "person_name":   person["name"] if person else None,
-                "person_color":  person.get("avatar_color", "#7F77DD") if person else "#7F77DD",
-                "reference_id":  e.get("reference_id"),
-                "chore_name":    e.get("chore_name", ""),
-                "points_delta":  e.get("points_delta", 0),
-                "balance_after": e.get("balance_after", 0),
-                "timestamp":     e["timestamp"],
-                "note":          e.get("note", ""),
-                "reversible":    reversible,
-                "instance_status": inst_status,
-            })
-        return result
+        return result[:limit]
 
     def _append_history(
         self,
@@ -1587,7 +2071,9 @@ class FamilyHubDataStore:
         # today's instance, so no new instance is needed.
         today_str = date.today().isoformat()
         chore_r_type = chore["recurrence"].get("type") if chore else RECURRENCE_ONE_TIME
-        if (chore_r_type != RECURRENCE_ONE_TIME
+        is_claimable = chore and chore.get("chore_type") == CHORE_TYPE_CLAIMABLE
+        if (not is_claimable
+                and chore_r_type != RECURRENCE_ONE_TIME
                 and instance.get("due_date") == today_str
                 and pid):
             await self._async_create_task_instance(chore, date.today(), person_id=pid)
@@ -1595,6 +2081,21 @@ class FamilyHubDataStore:
                 "Family Hub: reject_task — created same-day retry instance for %s on chore %s",
                 pid, chore_name,
             )
+
+        # Claimable tasks: always recreate the shared pending instance so anyone
+        # can claim the task again (regardless of recurrence type or due date).
+        if is_claimable:
+            already_available = any(
+                t for t in self.task_instances
+                if t["chore_id"] == chore["id"]
+                and t["status"] in [STATUS_PENDING, STATUS_CLAIMED]
+            )
+            if not already_available:
+                await self._async_create_task_instance(chore, date.today(), person_id=None)
+                _LOGGER.info(
+                    "Family Hub: reject_task — recreated shared claimable instance for chore %s",
+                    chore_name,
+                )
 
         await self.async_save()
         return instance
@@ -1668,6 +2169,76 @@ class FamilyHubDataStore:
         _LOGGER.info("Family Hub: force_daily_tick called — running tick now")
         await self.async_daily_tick()
 
+    async def async_rebuild_data(self) -> dict:
+        """
+        Heavy-lift data cleanup, run on demand from the Admin settings UI.
+
+        Steps:
+          1. Re-run _migrate_chore on every chore (idempotent; catches anything
+             that snuck in after the initial load-time migration).
+          2. Remove people records with blank id (orphans).
+          3. Remove ghost task instances (assigned_to == "").
+          4. Remove orphaned task instances whose chore no longer exists.
+          5. Remove duplicate pending instances per (chore_id, assigned_to, due_date).
+          6. Prune terminal instances and history (same as daily tick).
+          7. Save and return a summary dict for the caller to surface as a notification.
+        """
+        today = date.today()
+        summary: dict[str, int] = {}
+
+        # Step 1: re-run chore migration (idempotent)
+        self._data["chores"] = [_migrate_chore(c) for c in self._data.get("chores", [])]
+
+        # Step 2: orphan people (blank id)
+        before = len(self._data["people"])
+        self._data["people"] = [p for p in self._data["people"] if p.get("id")]
+        summary["orphan_people_removed"] = before - len(self._data["people"])
+
+        # Step 3: ghost task instances (assigned_to == "")
+        before = len(self._data["task_instances"])
+        self._data["task_instances"] = [
+            t for t in self._data["task_instances"] if t.get("assigned_to") != ""
+        ]
+        summary["ghost_instances_removed"] = before - len(self._data["task_instances"])
+
+        # Step 4: orphaned instances (chore_id not in any active chore)
+        active_chore_ids = {c["id"] for c in self._data.get("chores", []) if c.get("active", True)}
+        before = len(self._data["task_instances"])
+        self._data["task_instances"] = [
+            t for t in self._data["task_instances"]
+            if t["status"] in ACTIVE_STATUSES or t.get("chore_id") in active_chore_ids
+        ]
+        summary["orphaned_instances_removed"] = before - len(self._data["task_instances"])
+
+        # Step 5: duplicate active instances per (chore_id, assigned_to, due_date)
+        seen: set[tuple] = set()
+        deduped: list[dict] = []
+        dupe_count = 0
+        for t in self._data["task_instances"]:
+            if t["status"] not in ACTIVE_STATUSES:
+                deduped.append(t)
+                continue
+            key = (t["chore_id"], t.get("assigned_to"), t.get("due_date"))
+            if key in seen:
+                dupe_count += 1
+            else:
+                seen.add(key)
+                deduped.append(t)
+        self._data["task_instances"] = deduped
+        summary["duplicate_instances_removed"] = dupe_count
+
+        # Step 6: prune old terminal instances and history
+        old_inst = len(self._data["task_instances"])
+        old_hist = len(self._data["history"])
+        self._trim_task_instances(today)
+        self._trim_history(today)
+        summary["old_instances_pruned"] = old_inst - len(self._data["task_instances"])
+        summary["old_history_pruned"]   = old_hist - len(self._data["history"])
+
+        await self.async_save()
+        _LOGGER.info("Family Hub: rebuild_data complete — %s", summary)
+        return summary
+
     # ------------------------------------------------------------------
     # Summary / coordinator
     # ------------------------------------------------------------------
@@ -1715,20 +2286,34 @@ class FamilyHubDataStore:
             if self._chore_is_maintenance(chore):
                 continue
 
+            threshold = chore.get("daily_penalty_after_days")
+            if threshold and chore.get("penalty_enabled") and chore.get("penalty_points", 0):
+                try:
+                    due_d    = date.fromisoformat(t["due_date"])
+                    age_days = (today - due_d).days
+                    daily_penalty_firing = age_days > threshold
+                except (ValueError, KeyError):
+                    daily_penalty_firing = False
+            else:
+                daily_penalty_firing = False
+
             row = {
-                "task_id":          t["id"],
-                "chore_id":         t["chore_id"],
-                "name":             chore["name"],
-                "description":      chore.get("description", ""),
-                "points":           chore.get("points", 0),
-                "due_date":         t["due_date"],
-                "status":           t["status"],
-                "chore_type":       chore.get("chore_type", CHORE_TYPE_ASSIGNED),  # v0.4.1
-                "category_label":   chore.get("category_label", ""),
-                "penalty_enabled":  chore.get("penalty_enabled", False),
-                "penalty_points":   chore.get("penalty_points", 0),
-                "expires_after_days": chore.get("expires_after_days"),             # v0.4.1
-                "is_one_time":      chore["recurrence"].get("type") == RECURRENCE_ONE_TIME,
+                "task_id":               t["id"],
+                "chore_id":              t["chore_id"],
+                "name":                  chore["name"],
+                "description":           chore.get("description", ""),
+                "points":                chore.get("points", 0),
+                "due_date":              t["due_date"],
+                "status":                t["status"],
+                "chore_type":            chore.get("chore_type", CHORE_TYPE_ASSIGNED),
+                "category_label":        chore.get("category_label", ""),
+                "penalty_enabled":       chore.get("penalty_enabled", False),
+                "penalty_points":        chore.get("penalty_points", 0),
+                "daily_penalty_after_days": threshold,
+                "daily_penalty_firing":  daily_penalty_firing,
+                "expires_after_days":    chore.get("expires_after_days"),
+                "is_one_time":           chore["recurrence"].get("type") == RECURRENCE_ONE_TIME,
+                "streak":                self._get_streak(person_id, t["chore_id"]),
             }
 
             if t["due_date"] == today_str:
@@ -1739,11 +2324,12 @@ class FamilyHubDataStore:
 
                 if r_type in (RECURRENCE_WEEKLY, RECURRENCE_EVERY_N_DAYS,
                               RECURRENCE_EVERY_N_WEEKS, RECURRENCE_MONTHLY_ON_DATE):
-                    # Non-daily recurring chores: the instance is still "in play"
-                    # until the next cycle replaces it. Show in due_today (still
-                    # completable) rather than overdue. days_late is included for
-                    # the card to display a soft "Nd late" indicator.
-                    row["days_late"] = (today - date.fromisoformat(t["due_date"])).days
+                    # Non-daily recurring chores: still "in play" until the next
+                    # cycle replaces them. Expose reset info so the card shows
+                    # "Resets [day]" instead of the misleading "due Nd ago" badge.
+                    row["recurrence_type"]      = r_type
+                    row["recurrence_weekdays"]  = chore["recurrence"].get("weekdays", [])
+                    row["days_until_reset"]     = _days_until_reset(chore, today)
                     due_today.append(row)
                 elif r_type == RECURRENCE_DAILY and day_filter and today.weekday() not in day_filter:
                     # Daily with day_filter on an off-day: hide it. The tick's
@@ -1854,12 +2440,28 @@ class FamilyHubDataStore:
         items = []
         for task in self.get_claimable_tasks():
             chore = self.get_chore(task["chore_id"])
+            if not chore:
+                continue
+            subtype   = chore.get("claimable_subtype", CLAIMABLE_SUBTYPE_FCFS)
+            max_c     = chore.get("max_claimants", 2)
+            claim_cnt = task.get("claim_count", 0)
+            pts_mode  = chore.get("multi_claim_points_mode", MULTI_CLAIM_POINTS_FULL)
+            pts       = chore.get("points", 0)
+            if subtype == CLAIMABLE_SUBTYPE_MULTI and pts_mode == MULTI_CLAIM_POINTS_SPLIT:
+                pts_display = math.ceil(pts / max_c) if pts and max_c else pts
+            else:
+                pts_display = pts
             items.append({
-                "task_id":     task["id"],
-                "name":        chore["name"] if chore else task["chore_id"],
-                "description": chore.get("description", "") if chore else "",
-                "points":      chore.get("points", 0) if chore else 0,
-                "due_date":    task["due_date"],
+                "task_id":               task["id"],
+                "name":                  chore["name"],
+                "description":           chore.get("description", ""),
+                "points":                pts_display,
+                "due_date":              task["due_date"],
+                "claimable_subtype":     subtype,
+                "max_claimants":         max_c,
+                "claim_count":           claim_cnt,
+                "slots_remaining":       max(0, max_c - claim_cnt) if subtype == CLAIMABLE_SUBTYPE_MULTI else 1,
+                "multi_claim_points_mode": pts_mode,
             })
         return items
 
@@ -1909,30 +2511,34 @@ class FamilyHubDataStore:
             # them. Treat them as days_delta=0 ("today") on the command center so
             # they do not appear in the "Overdue" section. days_late is set so
             # the card can show a soft "Nd late" indicator.
-            days_late = 0
-            r_type    = chore["recurrence"].get("type", RECURRENCE_DAILY)
+            recurrence_type     = chore["recurrence"].get("type", RECURRENCE_DAILY)
+            recurrence_weekdays = chore["recurrence"].get("weekdays", [])
+            days_until_reset    = 0
+            r_type              = recurrence_type
             if days_delta < 0 and r_type in (RECURRENCE_WEEKLY, RECURRENCE_EVERY_N_DAYS,
                                               RECURRENCE_EVERY_N_WEEKS, RECURRENCE_MONTHLY_ON_DATE):
-                days_late  = abs(days_delta)
-                days_delta = 0  # treat as today
+                days_until_reset = _days_until_reset(chore, today)
+                days_delta       = 0  # treat as today
 
             items.append({
-                "task_id":           task["id"],
-                "chore_id":          task["chore_id"],
-                "name":              chore["name"],
-                "description":       chore.get("description", ""),
-                "points":            chore.get("points", 0),
-                "due_date":          task["due_date"],
-                "days_delta":        days_delta,
-                "days_late":         days_late,
-                "status":            task["status"],
-                "category_label":    chore.get("category_label", ""),
-                "assigned_to":       assigned,
-                "person_name":       person["name"] if person else None,
-                "person_color":      person.get("avatar_color", "#7F77DD") if person else "#7F77DD",
-                "approval_required": chore.get("approval_required", True),
-                "penalty_enabled":   chore.get("penalty_enabled", False),
-                "penalty_points":    chore.get("penalty_points", 0),
+                "task_id":            task["id"],
+                "chore_id":           task["chore_id"],
+                "name":               chore["name"],
+                "description":        chore.get("description", ""),
+                "points":             chore.get("points", 0),
+                "due_date":           task["due_date"],
+                "days_delta":         days_delta,
+                "recurrence_type":    recurrence_type,
+                "recurrence_weekdays":recurrence_weekdays,
+                "days_until_reset":   days_until_reset,
+                "status":             task["status"],
+                "category_label":     chore.get("category_label", ""),
+                "assigned_to":        assigned,
+                "person_name":        person["name"] if person else None,
+                "person_color":       person.get("avatar_color", "#7F77DD") if person else "#7F77DD",
+                "approval_required":  chore.get("approval_required", True),
+                "penalty_enabled":    chore.get("penalty_enabled", False),
+                "penalty_points":     chore.get("penalty_points", 0),
             })
 
         # Show today + overdue only on command center
@@ -1958,20 +2564,26 @@ class FamilyHubDataStore:
                 if p:
                     assigned_names.append(p["name"])
             result.append({
-                "chore_id":        c["id"],
-                "name":            c["name"],
-                "description":     c.get("description", ""),
-                "chore_type":      c.get("chore_type", CHORE_TYPE_ASSIGNED),
-                "category_label":  c.get("category_label", ""),
-                "sort_order":      c.get("sort_order", 0),
-                "assigned_to":     c.get("assigned_to", []),
-                "assigned_names":  assigned_names,
-                "points":          c.get("points", 0),
-                "approval_required": c.get("approval_required", True),
-                "penalty_enabled": c.get("penalty_enabled", False),
-                "penalty_points":  c.get("penalty_points", 0),
-                "expires_after_days": c.get("expires_after_days"),
-                "recurrence":      c.get("recurrence", {}),
+                "chore_id":               c["id"],
+                "name":                   c["name"],
+                "description":            c.get("description", ""),
+                "chore_type":             c.get("chore_type", CHORE_TYPE_ASSIGNED),
+                "category_label":         c.get("category_label", ""),
+                "sort_order":             c.get("sort_order", 0),
+                "assigned_to":            c.get("assigned_to", []),
+                "assigned_names":         assigned_names,
+                "points":                 c.get("points", 0),
+                "approval_required":      c.get("approval_required", True),
+                "penalty_enabled":        c.get("penalty_enabled", False),
+                "penalty_points":         c.get("penalty_points", 0),
+                "daily_penalty_after_days": c.get("daily_penalty_after_days"),
+                "expires_after_days":     c.get("expires_after_days"),
+                "claimable_subtype":      c.get("claimable_subtype", CLAIMABLE_SUBTYPE_FCFS),
+                "max_claimants":          c.get("max_claimants", 2),
+                "multi_claim_points_mode": c.get("multi_claim_points_mode", MULTI_CLAIM_POINTS_FULL),
+                "recurrence":             c.get("recurrence", {}),
+                "streak_milestone":       c.get("streak_milestone", 0),
+                "streak_bonus_points":    c.get("streak_bonus_points", 0),
             })
         return sorted(result, key=lambda x: (x["sort_order"], x["name"]))
 
