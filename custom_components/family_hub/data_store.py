@@ -93,6 +93,7 @@ from .const import (
     DEFAULT_POINTS_PER_DOLLAR,
     DEFAULT_SHOW_DOLLAR_VALUE_TO_KIDS,
     DOMAIN,
+    HISTORY_ALLOWANCE,
     HISTORY_PERSON_ADDED,
     HISTORY_POINTS_AWARDED,
     HISTORY_REDEMPTION_APPROVED,
@@ -242,6 +243,9 @@ def _migrate_chore(chore: dict) -> dict:
     chore.setdefault("streak_milestone", 0)      # 0 = disabled; else bonus fires every N completions
     chore.setdefault("streak_bonus_points", 0)
 
+    # v0.5.0: per-chore reminder time (HHMM int, -1 = off)
+    chore.setdefault("reminder_time", -1)
+
     return chore
 
 
@@ -260,6 +264,10 @@ def _migrate_task_instance(instance: dict) -> dict:
     # multi-claim tracking on shared claimable instances
     instance.setdefault("claim_count", 0)
     instance.setdefault("claimant_ids", [])
+    # v0.5.0: notification nudge tracking
+    instance.setdefault("nudged_reminder", False)
+    instance.setdefault("nudged_penalty_warning", False)
+    instance.setdefault("nudged_penalty_date", None)
     return instance
 
 
@@ -349,6 +357,8 @@ class FamilyHubDataStore:
         s.setdefault("show_dollar_value_to_kids", DEFAULT_SHOW_DOLLAR_VALUE_TO_KIDS)
         s.setdefault("category_labels",           list(DEFAULT_CATEGORY_LABELS))
         s.setdefault(CONF_PENALTIES_PAUSED_GLOBAL, DEFAULT_PENALTIES_PAUSED_GLOBAL)
+        # v0.5.0: notification settings
+        s.setdefault("penalty_alert_time", 800)  # HHMM; -1 = disabled
 
         # Migrate all records
         self._data["chores"]         = [_migrate_chore(c)         for c in self._data.get("chores", [])]
@@ -503,6 +513,7 @@ class FamilyHubDataStore:
         show_dollar_value_to_kids: bool | None = None,
         category_labels: list[str] | None = None,
         penalties_paused: bool | None = None,
+        penalty_alert_time: int | None = None,
     ) -> None:
         s = self._data["settings"]
         if family_name is not None:
@@ -515,6 +526,8 @@ class FamilyHubDataStore:
             s["category_labels"] = category_labels
         if penalties_paused is not None:
             s[CONF_PENALTIES_PAUSED_GLOBAL] = penalties_paused
+        if penalty_alert_time is not None:
+            s["penalty_alert_time"] = penalty_alert_time
         await self.async_save()
 
     # ------------------------------------------------------------------
@@ -563,7 +576,13 @@ class FamilyHubDataStore:
         person = self.get_person(person_id)
         if not person:
             return None
-        allowed = {"name", "ha_user_id", "avatar_color", "active", "type", "penalties_paused"}
+        allowed = {
+            "name", "ha_user_id", "avatar_color", "active", "type", "penalties_paused",
+            # v0.5.0: allowance
+            "allowance_points", "allowance_schedule", "allowance_weekday", "allowance_monthday",
+            # v0.5.0: notification target
+            "notify_target",
+        }
         for key, val in kwargs.items():
             if key in allowed:
                 person[key] = val
@@ -695,6 +714,7 @@ class FamilyHubDataStore:
         multi_claim_points_mode: str = MULTI_CLAIM_POINTS_FULL,
         streak_milestone: int = 0,
         streak_bonus_points: int = 0,
+        reminder_time: int = -1,
         icon: str | None = None,
         created_by: str | None = None,
     ) -> dict:
@@ -732,6 +752,7 @@ class FamilyHubDataStore:
             "multi_claim_points_mode": multi_claim_points_mode,
             "streak_milestone":        streak_milestone,
             "streak_bonus_points":     streak_bonus_points,
+            "reminder_time":           reminder_time,
             "recurrence": rec,
             "active": True,
             "created_at": _now_iso(),
@@ -781,6 +802,7 @@ class FamilyHubDataStore:
             "penalty_enabled", "penalty_points", "daily_penalty_after_days",
             "expires_after_days", "claimable_subtype", "max_claimants",
             "multi_claim_points_mode", "streak_milestone", "streak_bonus_points",
+            "reminder_time",
             "recurrence", "active", "weekdays", "day_filter", "interval",
         }
         old_assigned = list(chore.get("assigned_to", []))
@@ -1174,6 +1196,175 @@ class FamilyHubDataStore:
                     )
 
     # ------------------------------------------------------------------
+    # Notification helpers (v0.5.0)
+    # ------------------------------------------------------------------
+
+    async def _send_notify(self, target: str, title: str, message: str) -> None:
+        """Call a HA notify service. Errors are logged, never raised."""
+        try:
+            await self._hass.services.async_call(
+                "notify", target,
+                {"title": title, "message": message},
+                blocking=False,
+            )
+            _LOGGER.info("Family Hub: notification sent to %s — %s", target, title)
+        except Exception as err:
+            _LOGGER.warning("Family Hub: notification failed for '%s': %s", target, err)
+
+    async def async_check_notifications(self) -> None:
+        """
+        Send per-chore reminders and penalty nudges. Called every coordinator poll.
+
+        Three notification types:
+          #3 Per-chore reminder_time — fires once per task instance when current
+             time reaches the chore's configured HHMM threshold and task is still pending.
+          #1 Last-chance penalty warning — fires once per instance on the last day
+             before a weekly/monthly penalty-enabled chore resets.
+          #2 Daily penalty accumulating — fires once per day while daily_penalty_after_days
+             penalties are actively accruing on a task instance.
+        """
+        now = datetime.now()
+        today = now.date()
+        current_hmm = now.hour * 100 + now.minute
+
+        settings = self._data["settings"]
+        penalty_alert_time = settings.get("penalty_alert_time", 800)
+        past_alert_time = penalty_alert_time != -1 and current_hmm >= penalty_alert_time
+
+        changed = False
+
+        for instance in self._data["task_instances"]:
+            if instance["status"] not in [STATUS_PENDING, STATUS_CLAIMED]:
+                continue
+
+            pid = instance.get("assigned_to")
+            if not pid:
+                continue
+
+            person = self.get_person(pid)
+            if not person or not person.get("active", True):
+                continue
+
+            target = person.get("notify_target", "").strip()
+            if not target:
+                continue
+
+            chore = self.get_chore(instance["chore_id"])
+            if not chore:
+                continue
+
+            first_name = person["name"].split()[0]
+            chore_name = chore["name"]
+
+            # --- #3: Per-chore reminder_time ---
+            reminder_time = chore.get("reminder_time", -1)
+            if (reminder_time != -1
+                    and current_hmm >= reminder_time
+                    and not instance.get("nudged_reminder")):
+                await self._send_notify(
+                    target,
+                    f"Don't forget — {chore_name}",
+                    f"Hey {first_name}, don't forget to {chore_name}!",
+                )
+                instance["nudged_reminder"] = True
+                changed = True
+
+            # --- #1: Last-chance penalty warning (weekly/monthly only) ---
+            if past_alert_time and not instance.get("nudged_penalty_warning"):
+                rec = chore.get("recurrence", {})
+                r_type = rec.get("type", RECURRENCE_DAILY)
+                is_long_cycle = r_type in (
+                    RECURRENCE_WEEKLY, RECURRENCE_EVERY_N_WEEKS,
+                    RECURRENCE_EVERY_N_DAYS, RECURRENCE_MONTHLY_ON_DATE,
+                )
+                if (is_long_cycle
+                        and chore.get("penalty_enabled")
+                        and chore.get("penalty_points", 0) > 0
+                        and _days_until_reset(chore, today) == 1):
+                    penalty_pts = chore["penalty_points"]
+                    await self._send_notify(
+                        target,
+                        f"Don't forget — {chore_name}!",
+                        f"Hey {first_name}! {chore_name} needs to get done today. "
+                        f"Skip it and you'll lose {penalty_pts} pts!",
+                    )
+                    instance["nudged_penalty_warning"] = True
+                    changed = True
+
+            # --- #2: Daily penalty accumulating ---
+            daily_applied = instance.get("daily_penalty_days_applied", 0)
+            if (past_alert_time
+                    and daily_applied > 0
+                    and instance.get("nudged_penalty_date") != today.isoformat()):
+                penalty_pts = chore.get("penalty_points", 0)
+                await self._send_notify(
+                    target,
+                    f"Still losing points — {chore_name}",
+                    f"Hey {first_name}, you're losing {penalty_pts} pts each day "
+                    f"{chore_name} isn't done. Finish it today to stop losing points!",
+                )
+                instance["nudged_penalty_date"] = today.isoformat()
+                changed = True
+
+        if changed:
+            await self.async_save()
+
+    # ------------------------------------------------------------------
+    # Scheduled allowance helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _should_award_allowance(person: dict, tick_date: date) -> bool:
+        """Return True if this person's scheduled allowance should fire on tick_date."""
+        points = person.get("allowance_points", 0)
+        if not points or points <= 0:
+            return False
+        schedule = person.get("allowance_schedule", "weekly")
+        last_str = person.get("last_allowance_date")
+        last = date.fromisoformat(last_str) if last_str else None
+
+        if schedule in ("weekly", "biweekly"):
+            weekday = person.get("allowance_weekday", 5)  # Saturday default
+            if tick_date.weekday() != weekday:
+                return False
+            min_gap = 14 if schedule == "biweekly" else 7
+            if last and (tick_date - last).days < min_gap:
+                return False
+            return True
+
+        if schedule == "monthly":
+            monthday = person.get("allowance_monthday", 1)
+            if tick_date.day != monthday:
+                return False
+            if last and last.month == tick_date.month and last.year == tick_date.year:
+                return False
+            return True
+
+        return False
+
+    async def _async_process_allowances(self, tick_date: date) -> None:
+        """Award scheduled allowances for all active people on tick_date."""
+        for person in self.get_active_people():
+            if not self._should_award_allowance(person, tick_date):
+                continue
+            pts = person["allowance_points"]
+            person["points_balance"]  = person.get("points_balance", 0) + pts
+            person["points_lifetime"] = person.get("points_lifetime", 0) + pts
+            self._append_history(
+                event_type=HISTORY_ALLOWANCE,
+                person_id=person["id"],
+                reference_id=_new_id(),
+                points_delta=pts,
+                balance_after=person["points_balance"],
+                note="Allowance",
+            )
+            person["last_allowance_date"] = tick_date.isoformat()
+            _LOGGER.info(
+                "Family Hub: allowance awarded — %s %dpts (%s)",
+                person.get("name", person["id"]), pts, tick_date.isoformat(),
+            )
+
+    # ------------------------------------------------------------------
     # Daily tick — persistent stateful, with catch-up and penalty/replace
     # ------------------------------------------------------------------
 
@@ -1213,6 +1404,7 @@ class FamilyHubDataStore:
         current = last_tick + timedelta(days=1)
         while current <= today:
             await self._async_tick_for_date(current)
+            await self._async_process_allowances(current)
             current += timedelta(days=1)
 
         # --- Expire overdue one-time / claimable instances -------------------
@@ -2186,8 +2378,9 @@ class FamilyHubDataStore:
         today = date.today()
         summary: dict[str, int] = {}
 
-        # Step 1: re-run chore migration (idempotent)
-        self._data["chores"] = [_migrate_chore(c) for c in self._data.get("chores", [])]
+        # Step 1: re-run chore + instance migration (idempotent)
+        self._data["chores"]         = [_migrate_chore(c)         for c in self._data.get("chores", [])]
+        self._data["task_instances"] = [_migrate_task_instance(t) for t in self._data.get("task_instances", [])]
 
         # Step 2: orphan people (blank id)
         before = len(self._data["people"])

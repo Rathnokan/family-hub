@@ -25,16 +25,16 @@ Before closing any session, update this file:
 
 ---
 
-## Current Status — 2026-05-10
+## Current Status — 2026-05-11
 
 | Item | State |
 |---|---|
 | **Last HACS release** | v0.4.1 — holding v0.4.2 tag until v0.5.0 (ghost instance bug) |
-| **Live on HA (Samba)** | v0.5.0 Session 4 deployed |
+| **Live on HA (Samba)** | v0.5.0 Session 6 deployed |
 | **manifest.json / hacs.json** | Still at 0.4.2 — bump at v0.5.0 final release |
-| **GitHub** | v0.4.2 committed ✓. v0.5.0 Sessions 1–4 NOT yet committed. |
+| **GitHub** | v0.4.2 committed ✓. v0.5.0 Sessions 1–5 NOT yet committed. |
 | **Next formal release** | v0.5.0 — will be the first clean public release |
-| **Phase** | Session 4 complete — ready for Session 5 (Scheduled Allowance) |
+| **Phase** | Session 6 complete — ready for Session 7 (Polish + Release) |
 
 ---
 
@@ -156,17 +156,31 @@ Implement in this order. Each session should cover one or two related items.
 - ✓ Chore editor: streak milestone + bonus points fields added
 - ✓ `.fh-badge-streak` CSS added
 
-### Session 5 — Scheduled Allowance
-- Per-person allowance: fixed points awarded automatically on a schedule (weekly, bi-weekly, monthly)
-- Configured in Admin → person record (edit person modal)
-- Uses existing `async_award_points` plumbing
-- Shows in history log as "Allowance"
+### ~~Session 5 — Scheduled Allowance~~ COMPLETE (2026-05-11)
+- ✓ `HISTORY_ALLOWANCE = "allowance"` constant added (distinct from points_awarded)
+- ✓ `_should_award_allowance(person, tick_date)` static helper on DataStore
+- ✓ `_async_process_allowances(tick_date)` called inside catch-up loop — awards per day, catch-up aware
+- ✓ Per-person fields: `allowance_points`, `allowance_schedule`, `allowance_weekday`, `allowance_monthday`, `last_allowance_date`
+- ✓ Weekly: fires on matching weekday, gap ≥7 days. Bi-weekly: same but gap ≥14. Monthly: matching day-of-month, once per calendar month
+- ✓ `update_person` service schema updated with 4 allowance fields
+- ✓ `sensor.py` people list now includes allowance fields
+- ✓ Admin Overview: edit-person button passes allowance data-* attrs; balance line shows "Allowance: Npts/wk|2wk|mo" when set
+- ✓ Edit Person modal: Allowance section with amount, schedule, weekday, monthday fields
+- ✓ `HISTORY_META.allowance` added to constants.js — shows as "Allowance" in green in history log
 
-### Session 6 — HA Notifications
-- Approval needed: notify Jim + Shannon when a kid submits a chore for approval
-- Morning nudge: if it's past a configurable hour and a kid has pending daily tasks, send a notification to that kid's device (or a shared device)
-- Configure notification targets per person in settings
-- Uses HA's `notify` service domain — no external dependencies
+### ~~Session 6 — HA Notifications~~ COMPLETE (2026-05-11)
+- ✓ Per-person `notify_target` field (HA notify service name, e.g. `mobile_app_jims_iphone`)
+- ✓ Global `penalty_alert_time` setting (HHMM int, default 800, -1 = disabled)
+- ✓ Per-chore `reminder_time` field (HHMM int, default -1 = off)
+- ✓ Notification #1: last-chance penalty warning — fires at `penalty_alert_time` on the last valid day before a weekly/monthly penalty-enabled chore resets (`days_until_reset == 1`)
+- ✓ Notification #2: daily penalty accumulating — fires once per day at `penalty_alert_time` while `daily_penalty_after_days` penalties are accruing on an instance
+- ✓ Notification #3: per-chore time reminder — fires once per instance when current time reaches `reminder_time` and task is still pending
+- ✓ Notification #4: approval push — parents with `notify_target` receive push when a kid submits for approval; same for redemption requests
+- ✓ Nudge tracking: `nudged_reminder`, `nudged_penalty_warning`, `nudged_penalty_date` flags on task instances
+- ✓ `async_check_notifications()` on data store, called each coordinator poll (30s) with guards
+- ✓ Fixed bug: `async_update_person` allowed set was missing allowance fields from Session 5
+- ✓ Admin UI: Edit Person modal has Notifications section; Edit Settings modal has Penalty alert time field; chore editor has Reminder time field
+- ✓ Uses HA `notify.*` services — works with Companion App (push to phones) and alexa_media_player (Echo Show TTS)
 
 ### Session 7 — Polish + Release
 - Text scale editor: change number input to dropdown (Small 0.9 / Default 1.0 / Large 1.25 / XL 1.5)

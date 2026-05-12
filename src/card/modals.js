@@ -339,6 +339,13 @@ export function mChoreForm(chore, isEdit, people, catLabels) {
            <input class="fh-input" id="m-streak-bonus" type="number" min="0"
                   value="${c.streak_bonus_points || 0}">
          </div>
+       </div>
+
+       <div class="fh-divider"></div>
+       <div class="fh-field">
+         <label class="fh-label">Reminder time (-1 = off, e.g. 1900 for 7:00 PM)</label>
+         <input class="fh-input" id="m-reminder-time" type="number" min="-1" max="2359"
+                placeholder="-1 (off)" value="${c.reminder_time !== undefined ? c.reminder_time : -1}">
        </div>`,
         isEdit ? "Save changes" : "Add chore",
         okAct
@@ -440,6 +447,14 @@ export function mAddPerson() {
 }
 
 export function mEditPerson(d) {
+    const WEEKDAY_NAMES = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+    const wdayOpts = WEEKDAY_NAMES.map((n, i) =>
+        `<option value="${i}" ${d.allowanceWday === i ? "selected" : ""}>${n}</option>`
+    ).join("");
+    const mdayOpts = Array.from({length: 28}, (_, i) => i + 1).map(day =>
+        `<option value="${day}" ${d.allowanceMday === day ? "selected" : ""}>${day}</option>`
+    ).join("");
+
     return mWrap(`Edit — ${d.pname}`,
         `<div class="fh-field">
          <label class="fh-label">Name *</label>
@@ -458,6 +473,39 @@ export function mEditPerson(d) {
            <input class="fh-input" id="m-pcolor" type="color"
                   value="${d.pcolor}" style="height:42px;padding:4px">
          </div>
+       </div>
+       <div class="fh-section-title" style="margin-top:var(--fh-gap-sm)">Allowance</div>
+       <div class="fh-row">
+         <div class="fh-field">
+           <label class="fh-label">Amount (pts, 0 = off)</label>
+           <input class="fh-input" id="m-allowance-pts" type="number" min="0"
+                  value="${d.allowancePts}" style="width:100%">
+         </div>
+         <div class="fh-field">
+           <label class="fh-label">Schedule</label>
+           <select class="fh-select" id="m-allowance-schedule">
+             <option value="weekly"   ${d.allowanceSched === "weekly"   ? "selected" : ""}>Weekly</option>
+             <option value="biweekly" ${d.allowanceSched === "biweekly" ? "selected" : ""}>Bi-weekly</option>
+             <option value="monthly"  ${d.allowanceSched === "monthly"  ? "selected" : ""}>Monthly</option>
+           </select>
+         </div>
+       </div>
+       <div class="fh-row">
+         <div class="fh-field">
+           <label class="fh-label">Day of week (weekly / bi-weekly)</label>
+           <select class="fh-select" id="m-allowance-weekday">${wdayOpts}</select>
+         </div>
+         <div class="fh-field">
+           <label class="fh-label">Day of month (monthly)</label>
+           <select class="fh-select" id="m-allowance-monthday">${mdayOpts}</select>
+         </div>
+       </div>
+       <div class="fh-section-title" style="margin-top:var(--fh-gap-sm)">Notifications</div>
+       <div class="fh-field">
+         <label class="fh-label">Notify target (HA service name, blank = off)</label>
+         <input class="fh-input" id="m-pnotify" type="text"
+                value="${escAttr(d.notifyTarget || "")}"
+                placeholder="e.g. mobile_app_jackson_iphone">
        </div>
        <input type="hidden" id="m-pid" value="${d.pid}">`,
         "Save", "ok-edit-person");
@@ -531,6 +579,11 @@ export function mEditSettings(d) {
        <div class="fh-field">
          <label class="fh-label">Points per dollar</label>
          <input class="fh-input" id="m-ppd" type="number" min="1" value="${d.ppd}">
+       </div>
+       <div class="fh-field">
+         <label class="fh-label">Penalty alert time (-1 = off, e.g. 800 for 8:00 AM)</label>
+         <input class="fh-input" id="m-alert-time" type="number" min="-1" max="2359"
+                placeholder="800" value="${d.penaltyAlertTime !== undefined ? d.penaltyAlertTime : 800}">
        </div>`,
         "Save", "ok-edit-settings");
 }

@@ -474,7 +474,7 @@
   var init_constants = __esm({
     "src/card/constants.js"() {
       DOMAIN = "family_hub";
-      VERSION = "0.4.2";
+      VERSION = "0.5.0";
       DEFAULT_COLOR = "#7F77DD";
       FLASH_MS = 1400;
       FH_SENSORS = [
@@ -498,7 +498,8 @@
         redemption_approved: { label: "Redeem approved", color: "var(--fh-success)" },
         redemption_declined: { label: "Redeem declined", color: "var(--fh-overdue)" },
         task_added: { label: "Task added", color: "var(--fh-text-sec)" },
-        person_added: { label: "Person added", color: "var(--fh-text-sec)" }
+        person_added: { label: "Person added", color: "var(--fh-text-sec)" },
+        allowance: { label: "Allowance", color: "var(--fh-success)" }
       };
       I = {
         check: `<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>`,
@@ -1090,6 +1091,7 @@
   function _htmlOverview(people, attr) {
     const ppdollar = attr.points_per_dollar || 10;
     const globalPause = attr.penalties_paused_global || false;
+    const penaltyAlertTime = attr.penalty_alert_time !== void 0 ? attr.penalty_alert_time : 800;
     const rows = people.map((p) => {
       const color = p.avatar_color || DEFAULT_COLOR;
       const penPaused = p.penalties_paused || false;
@@ -1135,7 +1137,7 @@
                 </span>
               </div>
               <div style="font-size:.75rem;color:var(--fh-text-sec)">
-                ${fPts(p.points_balance)}pts \xB7 ${fUSD(p.points_balance / ppdollar)} \xB7 lifetime ${fPts(p.points_lifetime)}
+                ${fPts(p.points_balance)}pts \xB7 ${fUSD(p.points_balance / ppdollar)} \xB7 lifetime ${fPts(p.points_lifetime)}${p.allowance_points > 0 ? ` \xB7 Allowance: ${p.allowance_points}pts/${p.allowance_schedule === "monthly" ? "mo" : p.allowance_schedule === "biweekly" ? "2wk" : "wk"}` : ""}
               </div>
             </div>
             <button class="fh-btn fh-btn-success fh-btn-sm"
@@ -1151,7 +1153,13 @@
             <button class="fh-btn fh-btn-ghost fh-btn-sm"
                     data-act="open-edit-person" data-pid="${p.person_id}"
                     data-pname="${escAttr(p.name)}" data-ptype="${p.type}"
-                    data-pcolor="${p.avatar_color || DEFAULT_COLOR}" title="Edit person">
+                    data-pcolor="${p.avatar_color || DEFAULT_COLOR}"
+                    data-pallowpts="${p.allowance_points || 0}"
+                    data-pallowsched="${p.allowance_schedule || "weekly"}"
+                    data-pallowwday="${p.allowance_weekday ?? 5}"
+                    data-pallowmday="${p.allowance_monthday || 1}"
+                    data-pnotify="${escAttr(p.notify_target || "")}"
+                    title="Edit person">
               ${I.edit}
             </button>
             <button class="fh-btn fh-btn-ghost fh-btn-sm"
@@ -1378,6 +1386,7 @@
     const showDollar = attr.show_dollar_value_to_kids || false;
     const catLabels = attr.category_labels || [];
     const penPaused = attr.penalties_paused_global || false;
+    const penaltyAlertTime = attr.penalty_alert_time !== void 0 ? attr.penalty_alert_time : 800;
     const labelChips = catLabels.map((l) => `
       <div class="fh-cat-chip">
         <span>${escHTML(l)}</span>
@@ -1420,7 +1429,8 @@
             <div style="font-size:.75rem;color:var(--fh-text-sec)">${ppdollar} points per dollar</div>
           </div>
           <button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="open-edit-settings"
-                  data-fname="${escAttr(famName)}" data-ppd="${ppdollar}">
+                  data-fname="${escAttr(famName)}" data-ppd="${ppdollar}"
+                  data-palerttime="${penaltyAlertTime}">
             ${I.settings} Edit
           </button>
         </div>
@@ -1768,7 +1778,12 @@ This cannot be undone.`)) break;
             pid: el.dataset.pid,
             pname: el.dataset.pname,
             ptype: el.dataset.ptype,
-            pcolor: el.dataset.pcolor
+            pcolor: el.dataset.pcolor,
+            allowancePts: parseInt(el.dataset.pallowpts || "0"),
+            allowanceSched: el.dataset.pallowsched || "weekly",
+            allowanceWday: parseInt(el.dataset.pallowwday ?? "5"),
+            allowanceMday: parseInt(el.dataset.pallowmday || "1"),
+            notifyTarget: el.dataset.pnotify || ""
           }
         };
         card._doRender(true);
@@ -1778,7 +1793,7 @@ This cannot be undone.`)) break;
         card._doRender(true);
         break;
       case "open-edit-settings":
-        card._modal = { type: "edit-settings", data: { fname: el.dataset.fname, ppd: el.dataset.ppd } };
+        card._modal = { type: "edit-settings", data: { fname: el.dataset.fname, ppd: el.dataset.ppd, penaltyAlertTime: parseInt(el.dataset.palerttime ?? "800") } };
         card._doRender(true);
         break;
       case "open-claim":
@@ -1914,6 +1929,8 @@ This cannot be undone.`)) break;
         }
         data.streak_milestone = Math.max(0, int("m-streak-milestone") || 0);
         data.streak_bonus_points = Math.max(0, int("m-streak-bonus") || 0);
+        const rtRaw = parseInt(v("m-reminder-time") ?? "-1");
+        data.reminder_time = isNaN(rtRaw) ? -1 : rtRaw;
         card._svc(isEdit ? "update_chore" : "add_chore", data);
         card._closeModal();
         break;
@@ -1962,7 +1979,17 @@ This cannot be undone.`)) break;
       case "ok-edit-person": {
         const name = v("m-pname").trim();
         if (!name) break;
-        card._svc("update_person", { person_id: v("m-pid"), name, avatar_color: v("m-pcolor"), type: v("m-ptype") });
+        card._svc("update_person", {
+          person_id: v("m-pid"),
+          name,
+          avatar_color: v("m-pcolor"),
+          type: v("m-ptype"),
+          allowance_points: parseInt(v("m-allowance-pts") || "0"),
+          allowance_schedule: v("m-allowance-schedule"),
+          allowance_weekday: parseInt(v("m-allowance-weekday")),
+          allowance_monthday: parseInt(v("m-allowance-monthday")),
+          notify_target: v("m-pnotify").trim()
+        });
         card._closeModal();
         break;
       }
@@ -1976,8 +2003,13 @@ This cannot be undone.`)) break;
       case "ok-edit-settings": {
         const fname = v("m-fname").trim();
         const ppd = parseInt(v("m-ppd") || "10");
+        const alertTime = parseInt(v("m-alert-time") ?? "-1");
         if (!fname) break;
-        card._svc("update_settings", { family_name: fname, points_per_dollar: ppd });
+        card._svc("update_settings", {
+          family_name: fname,
+          points_per_dollar: ppd,
+          penalty_alert_time: isNaN(alertTime) ? 800 : alertTime
+        });
         card._closeModal();
         break;
       }
@@ -2313,6 +2345,13 @@ This cannot be undone.`)) break;
            <input class="fh-input" id="m-streak-bonus" type="number" min="0"
                   value="${c.streak_bonus_points || 0}">
          </div>
+       </div>
+
+       <div class="fh-divider"></div>
+       <div class="fh-field">
+         <label class="fh-label">Reminder time (-1 = off, e.g. 1900 for 7:00 PM)</label>
+         <input class="fh-input" id="m-reminder-time" type="number" min="-1" max="2359"
+                placeholder="-1 (off)" value="${c.reminder_time !== void 0 ? c.reminder_time : -1}">
        </div>`,
       isEdit ? "Save changes" : "Add chore",
       okAct
@@ -2411,6 +2450,13 @@ This cannot be undone.`)) break;
     );
   }
   function mEditPerson(d) {
+    const WEEKDAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    const wdayOpts = WEEKDAY_NAMES.map(
+      (n, i) => `<option value="${i}" ${d.allowanceWday === i ? "selected" : ""}>${n}</option>`
+    ).join("");
+    const mdayOpts = Array.from({ length: 28 }, (_, i) => i + 1).map(
+      (day) => `<option value="${day}" ${d.allowanceMday === day ? "selected" : ""}>${day}</option>`
+    ).join("");
     return mWrap(
       `Edit \u2014 ${d.pname}`,
       `<div class="fh-field">
@@ -2430,6 +2476,39 @@ This cannot be undone.`)) break;
            <input class="fh-input" id="m-pcolor" type="color"
                   value="${d.pcolor}" style="height:42px;padding:4px">
          </div>
+       </div>
+       <div class="fh-section-title" style="margin-top:var(--fh-gap-sm)">Allowance</div>
+       <div class="fh-row">
+         <div class="fh-field">
+           <label class="fh-label">Amount (pts, 0 = off)</label>
+           <input class="fh-input" id="m-allowance-pts" type="number" min="0"
+                  value="${d.allowancePts}" style="width:100%">
+         </div>
+         <div class="fh-field">
+           <label class="fh-label">Schedule</label>
+           <select class="fh-select" id="m-allowance-schedule">
+             <option value="weekly"   ${d.allowanceSched === "weekly" ? "selected" : ""}>Weekly</option>
+             <option value="biweekly" ${d.allowanceSched === "biweekly" ? "selected" : ""}>Bi-weekly</option>
+             <option value="monthly"  ${d.allowanceSched === "monthly" ? "selected" : ""}>Monthly</option>
+           </select>
+         </div>
+       </div>
+       <div class="fh-row">
+         <div class="fh-field">
+           <label class="fh-label">Day of week (weekly / bi-weekly)</label>
+           <select class="fh-select" id="m-allowance-weekday">${wdayOpts}</select>
+         </div>
+         <div class="fh-field">
+           <label class="fh-label">Day of month (monthly)</label>
+           <select class="fh-select" id="m-allowance-monthday">${mdayOpts}</select>
+         </div>
+       </div>
+       <div class="fh-section-title" style="margin-top:var(--fh-gap-sm)">Notifications</div>
+       <div class="fh-field">
+         <label class="fh-label">Notify target (HA service name, blank = off)</label>
+         <input class="fh-input" id="m-pnotify" type="text"
+                value="${escAttr(d.notifyTarget || "")}"
+                placeholder="e.g. mobile_app_jackson_iphone">
        </div>
        <input type="hidden" id="m-pid" value="${d.pid}">`,
       "Save",
@@ -2493,6 +2572,11 @@ This cannot be undone.`)) break;
        <div class="fh-field">
          <label class="fh-label">Points per dollar</label>
          <input class="fh-input" id="m-ppd" type="number" min="1" value="${d.ppd}">
+       </div>
+       <div class="fh-field">
+         <label class="fh-label">Penalty alert time (-1 = off, e.g. 800 for 8:00 AM)</label>
+         <input class="fh-input" id="m-alert-time" type="number" min="-1" max="2359"
+                placeholder="800" value="${d.penaltyAlertTime !== void 0 ? d.penaltyAlertTime : 800}">
        </div>`,
       "Save",
       "ok-edit-settings"
@@ -3053,9 +3137,15 @@ This cannot be undone.`)) break;
 
         <div class="fhe-field">
           <label class="fhe-label">Text scale</label>
-          <input class="fhe-input" id="e-scale" type="number"
-                 min="0.8" max="2.0" step="0.05" value="${textScale}">
-          <span class="fhe-hint">1.0 = default. Increase for Echo Show / tablet screens.</span>
+          <select class="fhe-select" id="e-scale">
+            ${[
+            [0.9, "Small (0.9)"],
+            [1, "Default (1.0)"],
+            [1.25, "Large (1.25)"],
+            [1.5, "XL (1.5)"]
+          ].map(([v, l]) => `<option value="${v}" ${parseFloat(textScale) === v ? "selected" : ""}>${l}</option>`).join("")}
+          </select>
+          <span class="fhe-hint">Increase for Echo Show / tablet screens.</span>
         </div>
       </div>`;
           this.querySelector("#e-mode")?.addEventListener("change", (e) => {
@@ -3069,11 +3159,8 @@ This cannot be undone.`)) break;
             this._fireChange();
           });
           this.querySelector("#e-scale")?.addEventListener("change", (e) => {
-            const val = parseFloat(e.target.value);
-            if (!isNaN(val) && val >= 0.8 && val <= 2) {
-              this._cfg = { ...this._cfg, text_scale: val };
-              this._fireChange();
-            }
+            this._cfg = { ...this._cfg, text_scale: parseFloat(e.target.value) };
+            this._fireChange();
           });
         }
         _fireChange() {

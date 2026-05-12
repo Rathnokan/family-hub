@@ -87,9 +87,15 @@ export class FamilyHubCardEditor extends HTMLElement {
 
         <div class="fhe-field">
           <label class="fhe-label">Text scale</label>
-          <input class="fhe-input" id="e-scale" type="number"
-                 min="0.8" max="2.0" step="0.05" value="${textScale}">
-          <span class="fhe-hint">1.0 = default. Increase for Echo Show / tablet screens.</span>
+          <select class="fhe-select" id="e-scale">
+            ${[
+                [0.9,  "Small (0.9)"],
+                [1.0,  "Default (1.0)"],
+                [1.25, "Large (1.25)"],
+                [1.5,  "XL (1.5)"],
+            ].map(([v, l]) => `<option value="${v}" ${parseFloat(textScale) === v ? "selected" : ""}>${l}</option>`).join("")}
+          </select>
+          <span class="fhe-hint">Increase for Echo Show / tablet screens.</span>
         </div>
       </div>`;
 
@@ -106,11 +112,8 @@ export class FamilyHubCardEditor extends HTMLElement {
         });
 
         this.querySelector("#e-scale")?.addEventListener("change", e => {
-            const val = parseFloat(e.target.value);
-            if (!isNaN(val) && val >= 0.8 && val <= 2.0) {
-                this._cfg = { ...this._cfg, text_scale: val };
-                this._fireChange();
-            }
+            this._cfg = { ...this._cfg, text_scale: parseFloat(e.target.value) };
+            this._fireChange();
         });
     }
 

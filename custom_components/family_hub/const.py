@@ -132,6 +132,7 @@ HISTORY_REDEMPTION_APPROVED   = "redemption_approved"
 HISTORY_REDEMPTION_DECLINED   = "redemption_declined"
 HISTORY_TASK_ADDED            = "task_added"
 HISTORY_PERSON_ADDED          = "person_added"
+HISTORY_ALLOWANCE             = "allowance"
 
 # Rolling retention window — history entries older than this are trimmed on each
 # daily tick to keep the data file from growing unbounded.

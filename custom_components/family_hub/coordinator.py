@@ -55,6 +55,7 @@ class FamilyHubCoordinator(DataUpdateCoordinator):
         """
         try:
             await self.store.async_daily_tick()
+            await self.store.async_check_notifications()
             return self.store.get_summary()
 
         except Exception as err:

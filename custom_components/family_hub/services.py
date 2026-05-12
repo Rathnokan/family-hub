@@ -229,6 +229,13 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             vol.Optional("type"):                vol.In(PERSON_TYPES),
             # v0.4.2: per-person penalty pause toggle
             vol.Optional("penalties_paused"):    cv.boolean,
+            # v0.5.0: scheduled allowance
+            vol.Optional("allowance_points"):    vol.All(vol.Coerce(int), vol.Range(min=0)),
+            vol.Optional("allowance_schedule"):  vol.In(["weekly", "biweekly", "monthly"]),
+            vol.Optional("allowance_weekday"):   vol.All(vol.Coerce(int), vol.Range(min=0, max=6)),
+            vol.Optional("allowance_monthday"):  vol.All(vol.Coerce(int), vol.Range(min=1, max=28)),
+            # v0.5.0: notification target (HA notify service name, empty = disabled)
+            vol.Optional("notify_target"):       cv.string,
         }),
     )
 
@@ -286,6 +293,7 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             multi_claim_points_mode=call.data.get("multi_claim_points_mode", MULTI_CLAIM_POINTS_FULL),
             streak_milestone=call.data.get("streak_milestone", 0),
             streak_bonus_points=call.data.get("streak_bonus_points", 0),
+            reminder_time=call.data.get("reminder_time", -1),
             icon=call.data.get("icon"),
             created_by=call.data.get("created_by"),
         )
@@ -318,6 +326,7 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
                 vol.In([MULTI_CLAIM_POINTS_FULL, MULTI_CLAIM_POINTS_SPLIT]),
             vol.Optional("streak_milestone", default=0):       vol.All(vol.Coerce(int), vol.Range(min=0)),
             vol.Optional("streak_bonus_points", default=0):    vol.All(vol.Coerce(int), vol.Range(min=0)),
+            vol.Optional("reminder_time", default=-1):         vol.Any(-1, vol.All(vol.Coerce(int), vol.Range(min=0, max=2359))),
             vol.Optional("icon"):                              cv.string,
             vol.Optional("created_by"):                        cv.string,
         }),
@@ -373,6 +382,7 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             vol.Optional("icon"):                            cv.string,
             vol.Optional("streak_milestone"):                vol.Any(None, vol.All(vol.Coerce(int), vol.Range(min=0))),
             vol.Optional("streak_bonus_points"):             vol.Any(None, vol.All(vol.Coerce(int), vol.Range(min=0))),
+            vol.Optional("reminder_time"):                   vol.Any(-1, None, vol.All(vol.Coerce(int), vol.Range(min=0, max=2359))),
         }),
     )
 
@@ -554,6 +564,8 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             category_labels=list(labels) if labels is not None else None,
             # v0.4.2: global penalty pause toggle
             penalties_paused=call.data.get("penalties_paused"),
+            # v0.5.0: penalty alert time
+            penalty_alert_time=call.data.get("penalty_alert_time"),
         )
         await coordinator.async_refresh()
 
@@ -566,6 +578,8 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             vol.Optional("category_labels"):            [cv.string],
             # v0.4.2: global penalty pause
             vol.Optional("penalties_paused"):           cv.boolean,
+            # v0.5.0: penalty alert time (HHMM int, -1 = disabled)
+            vol.Optional("penalty_alert_time"):         vol.Any(-1, vol.All(vol.Coerce(int), vol.Range(min=0, max=2359))),
         }),
     )
 
@@ -733,14 +747,16 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
 async def _notify_approval(hass: HomeAssistant, instance: dict, store) -> None:
     if instance.get("status") != "pending_approval":
         return
-    chore  = store.get_chore(instance["chore_id"])
-    person = store.get_person(instance.get("completed_by", ""))
+    chore       = store.get_chore(instance["chore_id"])
+    person      = store.get_person(instance.get("completed_by", ""))
+    person_name = person["name"] if person else "Someone"
+    chore_name  = chore["name"] if chore else "a task"
+
     await hass.services.async_call(
         "persistent_notification", "create",
         {
             "message": (
-                f"**{person['name'] if person else 'Someone'}** completed "
-                f"**{chore['name'] if chore else 'a task'}** and needs your approval.\n\n"
+                f"**{person_name}** completed **{chore_name}** and needs your approval.\n\n"
                 f"Task ID: `{instance['id']}`"
             ),
             "title": "Family Hub: approval needed",
@@ -748,18 +764,56 @@ async def _notify_approval(hass: HomeAssistant, instance: dict, store) -> None:
         },
     )
 
+    # Push to parents who have a notify_target configured
+    push_msg = f"{person_name} finished {chore_name} — open Family Hub to approve!"
+    for parent in store.get_active_people():
+        if parent.get("type") != "parent":
+            continue
+        target = parent.get("notify_target", "").strip()
+        if not target:
+            continue
+        try:
+            await hass.services.async_call(
+                "notify", target,
+                {"title": "Approval needed — Family Hub", "message": push_msg},
+                blocking=False,
+            )
+        except Exception as err:
+            _LOGGER.warning("Family Hub: approval push failed for '%s': %s", target, err)
+
 
 async def _notify_redemption(hass: HomeAssistant, redemption: dict, store) -> None:
-    person = store.get_person(redemption["person_id"])
+    person      = store.get_person(redemption["person_id"])
+    person_name = person["name"] if person else "Someone"
+    item_name   = redemption["item_name"]
+    pts         = redemption["points_cost"]
+
     await hass.services.async_call(
         "persistent_notification", "create",
         {
             "message": (
-                f"**{person['name'] if person else 'Someone'}** wants to redeem "
-                f"**{redemption['item_name']}** for **{redemption['points_cost']} points**.\n\n"
+                f"**{person_name}** wants to redeem "
+                f"**{item_name}** for **{pts} points**.\n\n"
                 f"Redemption ID: `{redemption['id']}`"
             ),
             "title": "Family Hub: redemption requested",
             "notification_id": f"family_hub_redemption_{redemption['id']}",
         },
     )
+
+    # Push to parents who have a notify_target configured
+    push_msg = f"{person_name} wants to redeem {item_name} for {pts} pts — open Family Hub to approve!"
+    for parent in store.get_active_people():
+        if parent.get("type") != "parent":
+            continue
+        target = parent.get("notify_target", "").strip()
+        if not target:
+            continue
+        try:
+            await hass.services.async_call(
+                "notify", target,
+                {"title": "Redemption request — Family Hub", "message": push_msg},
+                blocking=False,
+            )
+        except Exception as err:
+            _LOGGER.warning("Family Hub: redemption push failed for '%s': %s", target, err)

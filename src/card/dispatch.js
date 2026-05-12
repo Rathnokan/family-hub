@@ -244,10 +244,15 @@ export function dispatch(act, el, card) {
             card._modal = {
                 type: "edit-person",
                 data: {
-                    pid:    el.dataset.pid,
-                    pname:  el.dataset.pname,
-                    ptype:  el.dataset.ptype,
-                    pcolor: el.dataset.pcolor,
+                    pid:            el.dataset.pid,
+                    pname:          el.dataset.pname,
+                    ptype:          el.dataset.ptype,
+                    pcolor:         el.dataset.pcolor,
+                    allowancePts:   parseInt(el.dataset.pallowpts   || "0"),
+                    allowanceSched: el.dataset.pallowsched           || "weekly",
+                    allowanceWday:  parseInt(el.dataset.pallowwday  ?? "5"),
+                    allowanceMday:  parseInt(el.dataset.pallowmday  || "1"),
+                    notifyTarget:   el.dataset.pnotify               || "",
                 }
             };
             card._doRender(true);
@@ -257,7 +262,7 @@ export function dispatch(act, el, card) {
             card._doRender(true);
             break;
         case "open-edit-settings":
-            card._modal = { type: "edit-settings", data: { fname: el.dataset.fname, ppd: el.dataset.ppd } };
+            card._modal = { type: "edit-settings", data: { fname: el.dataset.fname, ppd: el.dataset.ppd, penaltyAlertTime: parseInt(el.dataset.palerttime ?? "800") } };
             card._doRender(true);
             break;
         case "open-claim":
@@ -415,6 +420,10 @@ export function dispatch(act, el, card) {
             data.streak_milestone    = Math.max(0, int("m-streak-milestone") || 0);
             data.streak_bonus_points = Math.max(0, int("m-streak-bonus") || 0);
 
+            // Reminder time — HHMM int, -1 = off
+            const rtRaw = parseInt(v("m-reminder-time") ?? "-1");
+            data.reminder_time = isNaN(rtRaw) ? -1 : rtRaw;
+
             card._svc(isEdit ? "update_chore" : "add_chore", data);
             card._closeModal();
             break;
@@ -468,7 +477,17 @@ export function dispatch(act, el, card) {
         case "ok-edit-person": {
             const name = v("m-pname").trim();
             if (!name) break;
-            card._svc("update_person", { person_id: v("m-pid"), name, avatar_color: v("m-pcolor"), type: v("m-ptype") });
+            card._svc("update_person", {
+                person_id:          v("m-pid"),
+                name,
+                avatar_color:       v("m-pcolor"),
+                type:               v("m-ptype"),
+                allowance_points:   parseInt(v("m-allowance-pts")   || "0"),
+                allowance_schedule: v("m-allowance-schedule"),
+                allowance_weekday:  parseInt(v("m-allowance-weekday")),
+                allowance_monthday: parseInt(v("m-allowance-monthday")),
+                notify_target:      v("m-pnotify").trim(),
+            });
             card._closeModal();
             break;
         }
@@ -482,10 +501,15 @@ export function dispatch(act, el, card) {
         }
 
         case "ok-edit-settings": {
-            const fname = v("m-fname").trim();
-            const ppd   = parseInt(v("m-ppd") || "10");
+            const fname     = v("m-fname").trim();
+            const ppd       = parseInt(v("m-ppd") || "10");
+            const alertTime = parseInt(v("m-alert-time") ?? "-1");
             if (!fname) break;
-            card._svc("update_settings", { family_name: fname, points_per_dollar: ppd });
+            card._svc("update_settings", {
+                family_name:        fname,
+                points_per_dollar:  ppd,
+                penalty_alert_time: isNaN(alertTime) ? 800 : alertTime,
+            });
             card._closeModal();
             break;
         }

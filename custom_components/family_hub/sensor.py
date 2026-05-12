@@ -438,6 +438,13 @@ class FamilyHubNeedsAttentionSensor(FamilyHubBaseSensor):
                     "penalties_paused": p.get("penalties_paused", False),
                     # v0.5.0: per-chore streak counts for admin Edit Streaks modal
                     "streaks": {k: v.get("count", 0) for k, v in p.get("streaks", {}).items()},
+                    # v0.5.0: scheduled allowance config for admin edit modal
+                    "allowance_points":   p.get("allowance_points", 0),
+                    "allowance_schedule": p.get("allowance_schedule", "weekly"),
+                    "allowance_weekday":  p.get("allowance_weekday", 5),
+                    "allowance_monthday": p.get("allowance_monthday", 1),
+                    # v0.5.0: notification target
+                    "notify_target":      p.get("notify_target", ""),
                 }
                 for p in store.people if p.get("active", True)
             ],
@@ -457,6 +464,8 @@ class FamilyHubNeedsAttentionSensor(FamilyHubBaseSensor):
             "category_labels":          store.category_labels,
             # v0.4.2: global penalty pause flag for admin Settings toggle
             "penalties_paused_global":  store.penalties_paused_global,
+            # v0.5.0: penalty alert time for admin Settings
+            "penalty_alert_time":       store.settings.get("penalty_alert_time", 800),
 
             # v0.4.0: enriched history log for admin log/approvals UI
             # Includes person name/color, chore_name, reversible action hint.

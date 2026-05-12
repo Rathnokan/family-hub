@@ -68,8 +68,9 @@ export function htmlAdmin(card) {
 // ---------------------------------------------------------------------------
 
 function _htmlOverview(people, attr) {
-    const ppdollar    = attr.points_per_dollar      || 10;
-    const globalPause = attr.penalties_paused_global || false;
+    const ppdollar        = attr.points_per_dollar      || 10;
+    const globalPause     = attr.penalties_paused_global || false;
+    const penaltyAlertTime = attr.penalty_alert_time !== undefined ? attr.penalty_alert_time : 800;
 
     const rows = people.map(p => {
         const color     = p.avatar_color || DEFAULT_COLOR;
@@ -124,7 +125,11 @@ function _htmlOverview(people, attr) {
                 </span>
               </div>
               <div style="font-size:.75rem;color:var(--fh-text-sec)">
-                ${fPts(p.points_balance)}pts · ${fUSD(p.points_balance / ppdollar)} · lifetime ${fPts(p.points_lifetime)}
+                ${fPts(p.points_balance)}pts · ${fUSD(p.points_balance / ppdollar)} · lifetime ${fPts(p.points_lifetime)}${
+                  p.allowance_points > 0
+                    ? ` · Allowance: ${p.allowance_points}pts/${p.allowance_schedule === "monthly" ? "mo" : p.allowance_schedule === "biweekly" ? "2wk" : "wk"}`
+                    : ""
+                }
               </div>
             </div>
             <button class="fh-btn fh-btn-success fh-btn-sm"
@@ -140,7 +145,13 @@ function _htmlOverview(people, attr) {
             <button class="fh-btn fh-btn-ghost fh-btn-sm"
                     data-act="open-edit-person" data-pid="${p.person_id}"
                     data-pname="${escAttr(p.name)}" data-ptype="${p.type}"
-                    data-pcolor="${p.avatar_color || DEFAULT_COLOR}" title="Edit person">
+                    data-pcolor="${p.avatar_color || DEFAULT_COLOR}"
+                    data-pallowpts="${p.allowance_points || 0}"
+                    data-pallowsched="${p.allowance_schedule || "weekly"}"
+                    data-pallowwday="${p.allowance_weekday ?? 5}"
+                    data-pallowmday="${p.allowance_monthday || 1}"
+                    data-pnotify="${escAttr(p.notify_target || "")}"
+                    title="Edit person">
               ${I.edit}
             </button>
             <button class="fh-btn fh-btn-ghost fh-btn-sm"
@@ -425,12 +436,12 @@ function _htmlChores(chores, people, catLabels, card) {
 // ---------------------------------------------------------------------------
 
 function _htmlSettings(attr) {
-    const famName        = attr.family_name               || "Family Hub";
-    const ppdollar       = attr.points_per_dollar         || 10;
-    const showDollar     = attr.show_dollar_value_to_kids || false;
-    const catLabels      = attr.category_labels           || [];
-    // v0.4.2: global penalty pause flag from sensor
-    const penPaused      = attr.penalties_paused_global   || false;
+    const famName          = attr.family_name               || "Family Hub";
+    const ppdollar         = attr.points_per_dollar         || 10;
+    const showDollar       = attr.show_dollar_value_to_kids || false;
+    const catLabels        = attr.category_labels           || [];
+    const penPaused        = attr.penalties_paused_global   || false;
+    const penaltyAlertTime = attr.penalty_alert_time !== undefined ? attr.penalty_alert_time : 800;
 
     const labelChips = catLabels.map(l => `
       <div class="fh-cat-chip">
@@ -477,7 +488,8 @@ function _htmlSettings(attr) {
             <div style="font-size:.75rem;color:var(--fh-text-sec)">${ppdollar} points per dollar</div>
           </div>
           <button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="open-edit-settings"
-                  data-fname="${escAttr(famName)}" data-ppd="${ppdollar}">
+                  data-fname="${escAttr(famName)}" data-ppd="${ppdollar}"
+                  data-palerttime="${penaltyAlertTime}">
             ${I.settings} Edit
           </button>
         </div>
