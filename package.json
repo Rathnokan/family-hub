@@ -4,8 +4,8 @@
   "description": "A private, self-hosted family task management integration for Home Assistant.",
   "main": "index.js",
   "scripts": {
-    "build": "esbuild src/main.js --bundle --format=iife --outfile=custom_components/family_hub/www/family-hub-card.js",
-    "watch": "esbuild src/main.js --bundle --format=iife --outfile=custom_components/family_hub/www/family-hub-card.js --watch"
+    "build": "esbuild src/main.js --bundle --format=iife --target=chrome80 --outfile=custom_components/family_hub/www/family-hub-card.js",
+    "watch": "esbuild src/main.js --bundle --format=iife --target=chrome80 --outfile=custom_components/family_hub/www/family-hub-card.js --watch"
   },
   "repository": {
     "type": "git",

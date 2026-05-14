@@ -687,6 +687,7 @@
       ${claimSection}`;
   }
   function _ccResetBadge(t) {
+    var _a;
     const rType = t.recurrence_type;
     if (!rType || !t.days_until_reset) return "";
     const dur = t.days_until_reset;
@@ -695,7 +696,7 @@
       label = "Resets today";
     } else if (dur === 1) {
       label = "Resets tomorrow";
-    } else if (rType === "weekly" && t.recurrence_weekdays?.length) {
+    } else if (rType === "weekly" && ((_a = t.recurrence_weekdays) == null ? void 0 : _a.length)) {
       const names = t.recurrence_weekdays.map((d) => WEEKDAY_LABELS[d]).join("/");
       label = `Resets ${names}`;
     } else {
@@ -707,13 +708,13 @@
   }
   function ccTaskRow(t, people, isOverdue, flashing) {
     const p = people.find((x) => x.person_id === t.assigned_to);
-    const color = p?.avatar_color || DEFAULT_COLOR;
+    const color = (p == null ? void 0 : p.avatar_color) || DEFAULT_COLOR;
     const flash = flashing.has(t.task_id) ? "flash" : "";
     const penaltyLine = t.penalty_enabled && t.penalty_points > 0 ? `<span class="fh-penalty-warn">-${t.penalty_points}pts if skipped</span>` : "";
     return `
       <div class="fh-task-row ${isOverdue ? "overdue" : ""} ${flash}"
            style="--row-color:${color}; --flash-dur:${FLASH_MS}ms">
-        <div class="fh-avatar" style="background:${color}">${ini(p?.name)}</div>
+        <div class="fh-avatar" style="background:${color}">${ini(p == null ? void 0 : p.name)}</div>
         <div class="fh-task-body">
           <span class="fh-task-name">${escHTML(t.name)}</span>
           ${penaltyLine}
@@ -736,11 +737,12 @@
 
   // src/card/modes-personal.js
   function htmlPersonal(card) {
+    var _a;
     const person = card._findPerson(card._cfg.person);
     if (!person) return `<div class="fh-empty">Person "${card._cfg.person}" not found.<br>Check spelling in card config.</div>`;
     const eid = card._personEntityId(person.name);
     const attr = card._attrs(eid);
-    const balance = parseInt(card._states(eid)?.state || "0");
+    const balance = parseInt(((_a = card._states(eid)) == null ? void 0 : _a.state) || "0");
     const color = person.avatar_color || DEFAULT_COLOR;
     const naAttr = card._attrs("sensor.family_hub_needs_attention");
     const historyLog = naAttr.history_log || [];
@@ -805,6 +807,7 @@
       return a.localeCompare(b);
     });
     const resetBadge = (t) => {
+      var _a;
       const rType = t.recurrence_type;
       if (!rType || rType === "daily" || rType === "one_time") return "";
       const dur = t.days_until_reset;
@@ -814,7 +817,7 @@
         label = "Resets today";
       } else if (dur === 1) {
         label = "Resets tomorrow";
-      } else if (rType === "weekly" && t.recurrence_weekdays?.length) {
+      } else if (rType === "weekly" && ((_a = t.recurrence_weekdays) == null ? void 0 : _a.length)) {
         const names = t.recurrence_weekdays.map((d) => WEEKDAY_LABELS[d]).join("/");
         label = `Resets ${names}`;
       } else {
@@ -1259,7 +1262,10 @@
             </div>`;
     }).join("") || `<div class="fh-empty">No pending redemptions. \u2713</div>`;
     const storeRows = storeItems.map((item) => {
-      const personNames = (item.person_ids || []).map((id) => people.find((p) => p.person_id === id)?.name).filter(Boolean).join(", ");
+      const personNames = (item.person_ids || []).map((id) => {
+        var _a;
+        return (_a = people.find((p) => p.person_id === id)) == null ? void 0 : _a.name;
+      }).filter(Boolean).join(", ");
       return `
           <div class="fh-store-inv-row">
             <div class="fh-store-inv-info">
@@ -1332,18 +1338,19 @@
     }
     const sections = [...groups.entries()].map(([label, list]) => {
       const rows = list.map((c) => {
+        var _a, _b, _c, _d;
         const assignedPeople = (c.assigned_to || []).map((id) => people.find((p) => p.person_id === id)).filter(Boolean);
         const avatarHtml = assignedPeople.length ? `<div class="fh-avatars">${assignedPeople.map(
           (p) => `<div class="fh-avatar" style="background:${p.avatar_color || DEFAULT_COLOR};width:22px;height:22px;font-size:.62rem">${ini(p.name)}</div>`
         ).join("")}</div>` : "";
         const descExp = card._expandedDescs.has(c.chore_id);
-        const rowColor = assignedPeople[0]?.avatar_color || DEFAULT_COLOR;
-        const recType = c.recurrence?.type || "daily";
+        const rowColor = ((_a = assignedPeople[0]) == null ? void 0 : _a.avatar_color) || DEFAULT_COLOR;
+        const recType = ((_b = c.recurrence) == null ? void 0 : _b.type) || "daily";
         const recLabel = {
           daily: "Daily",
           weekly: "Weekly",
-          every_n_days: `Every ${c.recurrence?.interval || 2}d`,
-          every_n_weeks: `Every ${c.recurrence?.interval || 2}wk`,
+          every_n_days: `Every ${((_c = c.recurrence) == null ? void 0 : _c.interval) || 2}d`,
+          every_n_weeks: `Every ${((_d = c.recurrence) == null ? void 0 : _d.interval) || 2}wk`,
           monthly_on_date: "Monthly",
           one_time: "One-time"
         }[recType] || recType;
@@ -1564,9 +1571,16 @@
 
   // src/card/dispatch.js
   function dispatch(act, el, card) {
+    var _a, _b, _c, _d, _e;
     const sr = card.shadowRoot;
-    const v = (id) => sr.getElementById(id)?.value ?? "";
-    const b = (id) => sr.getElementById(id)?.checked ?? false;
+    const v = (id) => {
+      var _a2;
+      return ((_a2 = sr.getElementById(id)) == null ? void 0 : _a2.value) ?? "";
+    };
+    const b = (id) => {
+      var _a2;
+      return ((_a2 = sr.getElementById(id)) == null ? void 0 : _a2.checked) ?? false;
+    };
     const int = (id) => parseInt(v(id) || "0");
     switch (act) {
       // ---- Navigation ----------------------------------------------------
@@ -1599,11 +1613,12 @@
         card._flashing.add(tid);
         card._doRender(true);
         setTimeout(() => {
+          var _a2;
           card._flashing.delete(tid);
-          const row = card.shadowRoot.querySelector(
+          const row = (_a2 = card.shadowRoot.querySelector(
             `[data-tid="${tid}"], [data-act="complete"][data-tid="${tid}"]`
-          )?.closest(".fh-task-row");
-          row?.remove();
+          )) == null ? void 0 : _a2.closest(".fh-task-row");
+          row == null ? void 0 : row.remove();
         }, FLASH_MS + 50);
         break;
       }
@@ -1626,22 +1641,22 @@
       // ---- Task / redemption approvals -----------------------------------
       case "approve-task": {
         const parent = card._people().find((p) => p.type === "parent");
-        card._svc("approve_task", { task_id: el.dataset.tid, approved_by: parent?.person_id || "" });
+        card._svc("approve_task", { task_id: el.dataset.tid, approved_by: (parent == null ? void 0 : parent.person_id) || "" });
         break;
       }
       case "deny-task": {
         const parent = card._people().find((p) => p.type === "parent");
-        card._svc("deny_task", { task_id: el.dataset.tid, denied_by: parent?.person_id || "" });
+        card._svc("deny_task", { task_id: el.dataset.tid, denied_by: (parent == null ? void 0 : parent.person_id) || "" });
         break;
       }
       case "approve-redemption": {
         const parent = card._people().find((p) => p.type === "parent");
-        card._svc("approve_redemption", { redemption_id: el.dataset.rid, approved_by: parent?.person_id || "" });
+        card._svc("approve_redemption", { redemption_id: el.dataset.rid, approved_by: (parent == null ? void 0 : parent.person_id) || "" });
         break;
       }
       case "decline-redemption": {
         const parent = card._people().find((p) => p.type === "parent");
-        card._svc("decline_redemption", { redemption_id: el.dataset.rid, declined_by: parent?.person_id || "" });
+        card._svc("decline_redemption", { redemption_id: el.dataset.rid, declined_by: (parent == null ? void 0 : parent.person_id) || "" });
         break;
       }
       // ---- v0.4.0 Admin correction actions -------------------------------
@@ -1693,7 +1708,7 @@ This cannot be undone.`)) break;
       }
       case "add-cat-label": {
         const input = sr.getElementById("cat-label-input");
-        const newLabel = input?.value?.trim();
+        const newLabel = (_a = input == null ? void 0 : input.value) == null ? void 0 : _a.trim();
         if (!newLabel) break;
         const current = card._attrs("sensor.family_hub_needs_attention").category_labels || [];
         if (!current.includes(newLabel)) {
@@ -1707,7 +1722,7 @@ This cannot be undone.`)) break;
       // The checkbox is "Penalties active" (checked = running, unchecked = paused),
       // so we invert: penalties_paused = !checked.
       case "toggle-global-penalty": {
-        const checked = el.checked ?? el.querySelector("input")?.checked ?? true;
+        const checked = el.checked ?? ((_b = el.querySelector("input")) == null ? void 0 : _b.checked) ?? true;
         card._svc("update_settings", { penalties_paused: !checked });
         break;
       }
@@ -1715,8 +1730,8 @@ This cannot be undone.`)) break;
       // The checkbox is also "Penalties active" (checked = on, unchecked = paused).
       // We read the person_id from data-pid and invert the checkbox value.
       case "toggle-person-penalty": {
-        const pid = el.dataset.pid || el.closest("[data-pid]")?.dataset.pid;
-        const checked = el.checked ?? el.querySelector("input")?.checked ?? true;
+        const pid = el.dataset.pid || ((_c = el.closest("[data-pid]")) == null ? void 0 : _c.dataset.pid);
+        const checked = el.checked ?? ((_d = el.querySelector("input")) == null ? void 0 : _d.checked) ?? true;
         if (pid) card._svc("update_person", { person_id: pid, penalties_paused: !checked });
         break;
       }
@@ -1938,7 +1953,7 @@ This cannot be undone.`)) break;
       case "set-streak": {
         const cid = el.dataset.cid;
         const pid = el.dataset.pid;
-        const count = Math.max(0, parseInt(sr.getElementById(`m-streak-${cid}`)?.value || "0"));
+        const count = Math.max(0, parseInt(((_e = sr.getElementById(`m-streak-${cid}`)) == null ? void 0 : _e.value) || "0"));
         card._svc("set_streak", { person_id: pid, chore_id: cid, count });
         break;
       }
@@ -2609,8 +2624,11 @@ This cannot be undone.`)) break;
            <label class="fh-label">Who?</label>
            <select class="fh-select" id="m-rperson">
              ${people.map(
-        (p) => `<option value="${p.person_id}"
-                          ${m.data?.pid === p.person_id ? "selected" : ""}>${escHTML(p.name)}</option>`
+        (p) => {
+          var _a;
+          return `<option value="${p.person_id}"
+                          ${((_a = m.data) == null ? void 0 : _a.pid) === p.person_id ? "selected" : ""}>${escHTML(p.name)}</option>`;
+        }
       ).join("")}
            </select>
          </div>
@@ -2696,6 +2714,7 @@ This cannot be undone.`)) break;
           this._dragOverId = null;
           this._sortedChores = [];
           this._abortCtrl = null;
+          this._retryTimer = null;
         }
         // ---- Web Component lifecycle -------------------------------------------
         /**
@@ -2713,6 +2732,7 @@ This cannot be undone.`)) break;
             dispatch(el.dataset.act, el, this);
           }, { signal });
           root.addEventListener("change", (e) => {
+            var _a, _b;
             const t = e.target;
             if (t.dataset.act === "toggle-dollar") {
               this._svc("update_settings", { show_dollar_value_to_kids: t.checked });
@@ -2733,8 +2753,9 @@ This cannot be undone.`)) break;
             }
             if (t.id === "m-everyone") {
               root.querySelectorAll(".m-assign-person").forEach((cb) => {
+                var _a2;
                 cb.checked = t.checked;
-                cb.closest(".fh-person-cb-chip")?.classList.toggle("checked", t.checked);
+                (_a2 = cb.closest(".fh-person-cb-chip")) == null ? void 0 : _a2.classList.toggle("checked", t.checked);
               });
             }
             if (t.classList.contains("m-assign-person") && !t.checked) {
@@ -2742,10 +2763,10 @@ This cannot be undone.`)) break;
               if (ev) ev.checked = false;
             }
             if (t.classList.contains("m-wd-day") || t.classList.contains("m-df-day")) {
-              t.closest(".fh-wd-chip")?.classList.toggle("checked", t.checked);
+              (_a = t.closest(".fh-wd-chip")) == null ? void 0 : _a.classList.toggle("checked", t.checked);
             }
             if (t.classList.contains("m-assign-person") || t.classList.contains("m-sp-person")) {
-              t.closest(".fh-person-cb-chip")?.classList.toggle("checked", t.checked);
+              (_b = t.closest(".fh-person-cb-chip")) == null ? void 0 : _b.classList.toggle("checked", t.checked);
             }
             this._syncModalUI();
           }, { signal });
@@ -2769,6 +2790,7 @@ This cannot be undone.`)) break;
             if (row) row.classList.remove("fh-drag-over");
           }, { signal });
           root.addEventListener("drop", (e) => {
+            var _a, _b, _c;
             e.preventDefault();
             root.querySelectorAll(".fh-drag-over, .fh-dragging").forEach((el) => el.classList.remove("fh-drag-over", "fh-dragging"));
             const dragId = this._dragId;
@@ -2785,15 +2807,15 @@ This cannot be undone.`)) break;
               before = without[insertAt].sort_order;
               after = before + 20;
             } else {
-              before = without[insertAt - 1]?.sort_order ?? without[insertAt].sort_order - 20;
+              before = ((_a = without[insertAt - 1]) == null ? void 0 : _a.sort_order) ?? without[insertAt].sort_order - 20;
               after = without[insertAt].sort_order;
             }
             let newOrder = (before + after) / 2;
             const GAP_THRESHOLD = 0.01;
             if (Math.abs(after - newOrder) < GAP_THRESHOLD || Math.abs(newOrder - before) < GAP_THRESHOLD) {
               const reindexed = without.map((c, i) => ({ ...c, sort_order: (i + 1) * 10 }));
-              const rBefore = reindexed[insertAt - 1]?.sort_order ?? 0;
-              const rAfter = reindexed[insertAt]?.sort_order ?? rBefore + 20;
+              const rBefore = ((_b = reindexed[insertAt - 1]) == null ? void 0 : _b.sort_order) ?? 0;
+              const rAfter = ((_c = reindexed[insertAt]) == null ? void 0 : _c.sort_order) ?? rBefore + 20;
               newOrder = (rBefore + rAfter) / 2;
               reindexed.forEach((c) => {
                 if (c.chore_id !== dragId) {
@@ -2809,8 +2831,13 @@ This cannot be undone.`)) break;
           }, { signal });
         }
         disconnectedCallback() {
-          this._abortCtrl?.abort();
+          var _a;
+          (_a = this._abortCtrl) == null ? void 0 : _a.abort();
           this._abortCtrl = null;
+          if (this._retryTimer) {
+            clearTimeout(this._retryTimer);
+            this._retryTimer = null;
+          }
         }
         // ---- HA card API -------------------------------------------------------
         setConfig(cfg) {
@@ -2824,6 +2851,30 @@ This cannot be undone.`)) break;
         set hass(hass) {
           this._hass = hass;
           this._maybeRender();
+          this._scheduleRetryIfNeeded();
+        }
+        // Polls until sensor data is present — handles slow websocket delivery on Echo Show 15.
+        // Once people data arrives the dirty-check will re-evaluate and render.
+        _scheduleRetryIfNeeded() {
+          var _a, _b, _c, _d, _e;
+          if (this._retryTimer) return;
+          const ready = !!((_e = (_d = (_c = (_b = (_a = this._hass) == null ? void 0 : _a.states) == null ? void 0 : _b["sensor.family_hub_needs_attention"]) == null ? void 0 : _c.attributes) == null ? void 0 : _d.people) == null ? void 0 : _e.length);
+          if (ready) return;
+          let attempts = 0;
+          const retry = () => {
+            var _a2, _b2, _c2, _d2;
+            this._retryTimer = null;
+            if (!this._hass) return;
+            attempts++;
+            const nowReady = !!((_d2 = (_c2 = (_b2 = (_a2 = this._hass.states) == null ? void 0 : _a2["sensor.family_hub_needs_attention"]) == null ? void 0 : _b2.attributes) == null ? void 0 : _c2.people) == null ? void 0 : _d2.length);
+            if (nowReady) {
+              for (const id of FH_SENSORS) delete this._lastKeys[id];
+              this._maybeRender();
+            } else if (attempts < 15) {
+              this._retryTimer = setTimeout(retry, 2e3);
+            }
+          };
+          this._retryTimer = setTimeout(retry, 2e3);
         }
         getCardSize() {
           return 5;
@@ -2834,20 +2885,21 @@ This cannot be undone.`)) break;
          * Suppressed entirely while a modal is open to protect user input.
          */
         _maybeRender() {
+          var _a, _b, _c, _d;
           if (!this._hass) return;
           if (this._modal) return;
           const states = this._hass.states;
           let changed = false;
           for (const id of FH_SENSORS) {
-            const ts = states[id]?.last_updated;
+            const ts = (_a = states[id]) == null ? void 0 : _a.last_updated;
             if (ts !== this._lastKeys[id]) {
               this._lastKeys[id] = ts;
               changed = true;
             }
           }
-          for (const p of states["sensor.family_hub_needs_attention"]?.attributes?.people || []) {
+          for (const p of ((_c = (_b = states["sensor.family_hub_needs_attention"]) == null ? void 0 : _b.attributes) == null ? void 0 : _c.people) || []) {
             const id = `sensor.family_hub_${slug(p.name)}`;
-            const ts = states[id]?.last_updated;
+            const ts = (_d = states[id]) == null ? void 0 : _d.last_updated;
             if (ts !== this._lastKeys[id]) {
               this._lastKeys[id] = ts;
               changed = true;
@@ -2863,44 +2915,64 @@ This cannot be undone.`)) break;
          */
         _doRender(force = false) {
           if (!this._hass && !force) return;
-          const scale = parseFloat(this._cfg.text_scale) || 1;
-          const styleEl = document.createElement("style");
-          styleEl.textContent = CSS + `:host { --fh-text-scale: ${scale}; }`;
-          const card = document.createElement("div");
-          card.className = "fh-card";
-          if (!this._hass) {
-            card.innerHTML = `<div class="fh-empty">Loading\u2026</div>`;
-          } else {
-            if (this._adminSec === "people") this._adminSec = "overview";
-            switch (this._cfg.mode) {
-              case "command_center":
-                card.innerHTML = htmlCC(this);
-                break;
-              case "personal":
-                card.innerHTML = htmlPersonal(this);
-                break;
-              case "maintenance":
-                card.innerHTML = htmlMaintenance(this);
-                break;
-              case "admin":
-                card.innerHTML = htmlAdmin(this);
-                break;
+          try {
+            const scale = parseFloat(this._cfg.text_scale) || 1;
+            const styleEl = document.createElement("style");
+            styleEl.textContent = CSS + `:host { --fh-text-scale: ${scale}; }`;
+            const card = document.createElement("div");
+            card.className = "fh-card";
+            if (!this._hass) {
+              card.innerHTML = `<div class="fh-empty">Loading\u2026</div>`;
+            } else {
+              if (this._adminSec === "people") this._adminSec = "overview";
+              switch (this._cfg.mode) {
+                case "command_center":
+                  card.innerHTML = htmlCC(this);
+                  break;
+                case "personal":
+                  card.innerHTML = htmlPersonal(this);
+                  break;
+                case "maintenance":
+                  card.innerHTML = htmlMaintenance(this);
+                  break;
+                case "admin":
+                  card.innerHTML = htmlAdmin(this);
+                  break;
+              }
             }
+            this.shadowRoot.innerHTML = "";
+            this.shadowRoot.appendChild(styleEl);
+            this.shadowRoot.appendChild(card);
+            if (this._modal) {
+              this.shadowRoot.appendChild(this._buildModal());
+            }
+            this._syncModalUI();
+          } catch (err) {
+            console.error("[family-hub] render error:", err);
+            const styleEl = document.createElement("style");
+            styleEl.textContent = CSS;
+            const card = document.createElement("div");
+            card.className = "fh-card";
+            card.innerHTML = `<div class="fh-empty">Loading\u2026</div>`;
+            this.shadowRoot.innerHTML = "";
+            this.shadowRoot.appendChild(styleEl);
+            this.shadowRoot.appendChild(card);
+            setTimeout(() => {
+              if (this._hass) {
+                for (const id of FH_SENSORS) delete this._lastKeys[id];
+                this._maybeRender();
+              }
+            }, 3e3);
           }
-          this.shadowRoot.innerHTML = "";
-          this.shadowRoot.appendChild(styleEl);
-          this.shadowRoot.appendChild(card);
-          if (this._modal) {
-            this.shadowRoot.appendChild(this._buildModal());
-          }
-          this._syncModalUI();
         }
         // ---- Sensor data accessors ---------------------------------------------
         _states(id) {
-          return this._hass?.states?.[id];
+          var _a, _b;
+          return (_b = (_a = this._hass) == null ? void 0 : _a.states) == null ? void 0 : _b[id];
         }
         _attrs(id) {
-          return this._states(id)?.attributes || {};
+          var _a;
+          return ((_a = this._states(id)) == null ? void 0 : _a.attributes) || {};
         }
         _people() {
           return this._attrs("sensor.family_hub_needs_attention").people || [];
@@ -2967,7 +3039,7 @@ This cannot be undone.`)) break;
               return mConfirmRemovePerson(data);
             case "edit-streaks": {
               const p = this._people().find((pp) => pp.person_id === data.pid);
-              const streaks = p?.streaks || {};
+              const streaks = (p == null ? void 0 : p.streaks) || {};
               return mEditStreaks(data.pid, data.pname, chores, streaks);
             }
             default:
@@ -3022,7 +3094,7 @@ This cannot be undone.`)) break;
           if (recEl) {
             const rec = recEl.value;
             const ctypeEl = sr.getElementById("m-ctype");
-            const ctype = ctypeEl?.value || "assigned";
+            const ctype = (ctypeEl == null ? void 0 : ctypeEl.value) || "assigned";
             hide("m-dayfilter-section");
             hide("m-weekdays-section");
             hide("m-dom-section");
@@ -3041,7 +3113,7 @@ This cannot be undone.`)) break;
             const isClaimable = ctypeEl2.value === "claimable";
             claimSec.style.display = isClaimable ? "" : "none";
             if (multiSec) {
-              const isMulti = isClaimable && subtypeEl?.value === "multi_claim";
+              const isMulti = isClaimable && (subtypeEl == null ? void 0 : subtypeEl.value) === "multi_claim";
               multiSec.style.display = isMulti ? "" : "none";
             }
           }
@@ -3074,17 +3146,19 @@ This cannot be undone.`)) break;
           this._render();
         }
         set hass(hass) {
+          var _a, _b, _c;
           this._hass = hass;
-          this._people = hass?.states?.["sensor.family_hub_needs_attention"]?.attributes?.people || [];
+          this._people = ((_c = (_b = (_a = hass == null ? void 0 : hass.states) == null ? void 0 : _a["sensor.family_hub_needs_attention"]) == null ? void 0 : _b.attributes) == null ? void 0 : _c.people) || [];
           this._render();
         }
         _render() {
+          var _a, _b, _c, _d, _e;
           const cfg = this._cfg || {};
           const people = this._people || [];
           const mode = cfg.mode || "command_center";
           const person = cfg.person || "";
           const textScale = cfg.text_scale != null ? cfg.text_scale : 1;
-          const sensorState = this._hass?.states?.["sensor.family_hub_needs_attention"];
+          const sensorState = (_b = (_a = this._hass) == null ? void 0 : _a.states) == null ? void 0 : _b["sensor.family_hub_needs_attention"];
           const connected = !!sensorState;
           const statusDot = `<span style="
             display:inline-block;width:8px;height:8px;border-radius:50%;
@@ -3148,17 +3222,17 @@ This cannot be undone.`)) break;
           <span class="fhe-hint">Increase for Echo Show / tablet screens.</span>
         </div>
       </div>`;
-          this.querySelector("#e-mode")?.addEventListener("change", (e) => {
+          (_c = this.querySelector("#e-mode")) == null ? void 0 : _c.addEventListener("change", (e) => {
             this._cfg = { ...this._cfg, mode: e.target.value };
             if (e.target.value !== "personal") delete this._cfg.person;
             this._fireChange();
             this._render();
           });
-          this.querySelector("#e-person")?.addEventListener("change", (e) => {
+          (_d = this.querySelector("#e-person")) == null ? void 0 : _d.addEventListener("change", (e) => {
             this._cfg = { ...this._cfg, person: e.target.value };
             this._fireChange();
           });
-          this.querySelector("#e-scale")?.addEventListener("change", (e) => {
+          (_e = this.querySelector("#e-scale")) == null ? void 0 : _e.addEventListener("change", (e) => {
             this._cfg = { ...this._cfg, text_scale: parseFloat(e.target.value) };
             this._fireChange();
           });

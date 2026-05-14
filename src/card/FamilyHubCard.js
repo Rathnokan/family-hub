@@ -66,6 +66,9 @@ export class FamilyHubCard extends HTMLElement {
 
         // AbortController for event listener cleanup
         this._abortCtrl = null;
+
+        // Retry timer: polls for sensor data on slow cold-boot (Echo Show 15)
+        this._retryTimer = null;
     }
 
     // ---- Web Component lifecycle -------------------------------------------
@@ -214,6 +217,7 @@ export class FamilyHubCard extends HTMLElement {
     disconnectedCallback() {
         this._abortCtrl?.abort();
         this._abortCtrl = null;
+        if (this._retryTimer) { clearTimeout(this._retryTimer); this._retryTimer = null; }
     }
 
     // ---- HA card API -------------------------------------------------------
@@ -230,6 +234,30 @@ export class FamilyHubCard extends HTMLElement {
     set hass(hass) {
         this._hass = hass;
         this._maybeRender();
+        this._scheduleRetryIfNeeded();
+    }
+
+    // Polls until sensor data is present — handles slow websocket delivery on Echo Show 15.
+    // Once people data arrives the dirty-check will re-evaluate and render.
+    _scheduleRetryIfNeeded() {
+        if (this._retryTimer) return;
+        const ready = !!(this._hass?.states?.["sensor.family_hub_needs_attention"]?.attributes?.people?.length);
+        if (ready) return;
+
+        let attempts = 0;
+        const retry = () => {
+            this._retryTimer = null;
+            if (!this._hass) return;
+            attempts++;
+            const nowReady = !!(this._hass.states?.["sensor.family_hub_needs_attention"]?.attributes?.people?.length);
+            if (nowReady) {
+                for (const id of FH_SENSORS) delete this._lastKeys[id];
+                this._maybeRender();
+            } else if (attempts < 15) {
+                this._retryTimer = setTimeout(retry, 2000);
+            }
+        };
+        this._retryTimer = setTimeout(retry, 2000);
     }
 
     getCardSize() { return 5; }
@@ -271,36 +299,57 @@ export class FamilyHubCard extends HTMLElement {
     _doRender(force = false) {
         if (!this._hass && !force) return;
 
-        const scale = parseFloat(this._cfg.text_scale) || 1;
-        const styleEl       = document.createElement("style");
-        styleEl.textContent = CSS + `:host { --fh-text-scale: ${scale}; }`;
+        try {
+            const scale = parseFloat(this._cfg.text_scale) || 1;
+            const styleEl       = document.createElement("style");
+            styleEl.textContent = CSS + `:host { --fh-text-scale: ${scale}; }`;
 
-        const card     = document.createElement("div");
-        card.className = "fh-card";
+            const card     = document.createElement("div");
+            card.className = "fh-card";
 
-        if (!this._hass) {
-            card.innerHTML = `<div class="fh-empty">Loading…</div>`;
-        } else {
-            // Redirect stale "people" tab from v0.2.2 to overview
-            if (this._adminSec === "people") this._adminSec = "overview";
+            if (!this._hass) {
+                card.innerHTML = `<div class="fh-empty">Loading…</div>`;
+            } else {
+                // Redirect stale "people" tab from v0.2.2 to overview
+                if (this._adminSec === "people") this._adminSec = "overview";
 
-            switch (this._cfg.mode) {
-                case "command_center": card.innerHTML = htmlCC(this);          break;
-                case "personal":       card.innerHTML = htmlPersonal(this);    break;
-                case "maintenance":    card.innerHTML = htmlMaintenance(this); break;
-                case "admin":          card.innerHTML = htmlAdmin(this);       break;
+                switch (this._cfg.mode) {
+                    case "command_center": card.innerHTML = htmlCC(this);          break;
+                    case "personal":       card.innerHTML = htmlPersonal(this);    break;
+                    case "maintenance":    card.innerHTML = htmlMaintenance(this); break;
+                    case "admin":          card.innerHTML = htmlAdmin(this);       break;
+                }
             }
+
+            this.shadowRoot.innerHTML = "";
+            this.shadowRoot.appendChild(styleEl);
+            this.shadowRoot.appendChild(card);
+
+            if (this._modal) {
+                this.shadowRoot.appendChild(this._buildModal());
+            }
+
+            this._syncModalUI();
+        } catch (err) {
+            console.error("[family-hub] render error:", err);
+            // Show a safe loading state rather than letting HA catch this as a card error.
+            // The retry loop will attempt another render once sensor data is available.
+            const styleEl = document.createElement("style");
+            styleEl.textContent = CSS;
+            const card = document.createElement("div");
+            card.className = "fh-card";
+            card.innerHTML = `<div class="fh-empty">Loading…</div>`;
+            this.shadowRoot.innerHTML = "";
+            this.shadowRoot.appendChild(styleEl);
+            this.shadowRoot.appendChild(card);
+            // Force a fresh render attempt in 3s
+            setTimeout(() => {
+                if (this._hass) {
+                    for (const id of FH_SENSORS) delete this._lastKeys[id];
+                    this._maybeRender();
+                }
+            }, 3000);
         }
-
-        this.shadowRoot.innerHTML = "";
-        this.shadowRoot.appendChild(styleEl);
-        this.shadowRoot.appendChild(card);
-
-        if (this._modal) {
-            this.shadowRoot.appendChild(this._buildModal());
-        }
-
-        this._syncModalUI();
     }
 
     // ---- Sensor data accessors ---------------------------------------------
