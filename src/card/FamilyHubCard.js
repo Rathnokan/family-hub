@@ -7,14 +7,15 @@
  * Event handling is delegated to dispatch.js.
  */
 
-import { CSS }                from "./css.js";
-import { VERSION, DOMAIN, FH_SENSORS } from "./constants.js";
-import { slug }               from "./utils.js";
-import { htmlCC }             from "./modes-cc.js";
-import { htmlPersonal }       from "./modes-personal.js";
-import { htmlMaintenance }    from "./modes-maintenance.js";
-import { htmlAdmin }          from "./modes-admin.js";
-import { dispatch }           from "./dispatch.js";
+import { CSS }                                        from "./css.js";
+import { VERSION, DOMAIN, FH_SENSORS }               from "./constants.js";
+import { slug }                                       from "./utils.js";
+import { htmlPersonal }                               from "./modes-personal.js";
+import { htmlAdmin }                                  from "./modes-admin.js";
+import { htmlHome, htmlNavBack }                      from "./modes-home.js";
+import { getRoomById }                                from "./rooms/index.js";
+import { getTheme }                                   from "./themes/index.js";
+import { dispatch }                                   from "./dispatch.js";
 import {
     mPointAdjust,
     mAddTask,
@@ -52,17 +53,30 @@ export class FamilyHubCard extends HTMLElement {
         this._modal         = null;   // { type, data } — null = closed
         this._filter        = null;   // command_center person filter (person_id)
         this._tab           = "tasks";
-        this._adminSec      = "overview";
+        this._adminSec      = "today";
         this._flashing      = new Set();  // task_ids currently animating
+        this._pendingSubmit = new Set();  // task_ids optimistically submitted, awaiting sensor refresh
         this._expandedDescs = new Set();  // ids with description expanded
         this._histFilter          = null;       // history log person filter
         this._choreFilter         = null;       // chores tab person filter
         this._expandedSkippedDates = new Set(); // dates whose skipped-group is expanded
 
+        // Navigation state (command_center mode)
+        this._view         = "home";     // 'home' | 'room:<id>' | 'person:<id>'
+        this._backStack    = [];         // push on nav, pop on nav-back
+        this._viewPersonId = null;       // set transiently during person-view render
+        this._celebration  = null;       // { name, streak } — milestone overlay
+
         // Drag-to-reorder state
         this._dragId        = null;
         this._dragOverId    = null;
         this._sortedChores  = [];  // populated by modes-admin.js during render
+
+        // Admin chore table state (S9 P3 item 5)
+        this._adminSelectedChoreId = null;   // chore_id shown in inline side panel (null = closed)
+        this._adminSort            = { col: null, dir: "asc" }; // { col: "name"|"pts"|"cat"|"asgn", dir: "asc"|"desc" }
+        this._adminCollapsedCats   = new Set();  // category labels whose rows are collapsed
+        this._choreFormTab         = "details";  // active tab in chore form (modal AND inline panel share this)
 
         // AbortController for event listener cleanup
         this._abortCtrl = null;
@@ -271,6 +285,9 @@ export class FamilyHubCard extends HTMLElement {
     _maybeRender() {
         if (!this._hass) return;
         if (this._modal) return;
+        // Freeze sensor-driven re-renders while inline chore editor panel is open —
+        // otherwise typed-but-unsaved field values get overwritten on every 30s poll.
+        if (this._adminSelectedChoreId) return;
 
         const states = this._hass.states;
         let changed  = false;
@@ -310,14 +327,15 @@ export class FamilyHubCard extends HTMLElement {
             if (!this._hass) {
                 card.innerHTML = `<div class="fh-empty">Loading…</div>`;
             } else {
-                // Redirect stale "people" tab from v0.2.2 to overview
-                if (this._adminSec === "people") this._adminSec = "overview";
+                // Redirect stale section IDs from older builds
+                const _validAdminSecs = ["today","family","tasks","history","settings"];
+                if (!_validAdminSecs.includes(this._adminSec)) this._adminSec = "today";
 
                 switch (this._cfg.mode) {
-                    case "command_center": card.innerHTML = htmlCC(this);          break;
-                    case "personal":       card.innerHTML = htmlPersonal(this);    break;
-                    case "maintenance":    card.innerHTML = htmlMaintenance(this); break;
-                    case "admin":          card.innerHTML = htmlAdmin(this);       break;
+                    case "command_center": card.innerHTML = this._htmlCommandCenter(); break;
+                    case "personal":       card.innerHTML = htmlPersonal(this);        break;
+                    case "maintenance":    card.innerHTML = htmlMaintenance(this);     break;
+                    case "admin":          card.innerHTML = htmlAdmin(this);           break;
                 }
             }
 
@@ -350,6 +368,40 @@ export class FamilyHubCard extends HTMLElement {
                 }
             }, 3000);
         }
+    }
+
+    // ---- Command Center view routing ---------------------------------------
+
+    _htmlCommandCenter() {
+        const view = this._view || "home";
+
+        if (view === "home") {
+            return htmlHome(this);
+        }
+
+        // Non-home: figure out view content, then wrap with back bar
+        let inner = "";
+
+        if (view.startsWith("room:")) {
+            const roomId = view.slice(5);   // "room:".length === 5
+            const room   = getRoomById(roomId);
+            inner = room?.render ? room.render(this) : `<div class="fh-empty">Unknown room.</div>`;
+        } else if (view.startsWith("person:")) {
+            const personId     = view.slice(7); // "person:".length === 7
+            this._viewPersonId = personId;
+            const person       = this._findPerson(personId);
+            const theme        = getTheme(person?.theme_key || "classic");
+            inner              = htmlPersonal(this);
+            this._viewPersonId = null;
+            // Themes with handlesNavigation:true render their own back button
+            if (theme.handlesNavigation) return inner;
+        } else {
+            // Fallback: go home
+            this._view = "home";
+            return htmlHome(this);
+        }
+
+        return htmlNavBack("Home") + inner;
     }
 
     // ---- Sensor data accessors ---------------------------------------------
@@ -401,8 +453,8 @@ export class FamilyHubCard extends HTMLElement {
             case "award":
             case "deduct":              return mPointAdjust(this._modal);
             case "add-task":            return mAddTask(people);
-            case "add-chore":           return mChoreForm(null, false, people, catLabels);
-            case "edit-chore":          return mChoreForm(data.chore, true, people, catLabels);
+            case "add-chore":           return mChoreForm(null, false, people, catLabels, this._choreFormTab);
+            case "edit-chore":          return mChoreForm(data.chore, true, people, catLabels, this._choreFormTab);
             case "add-store-item":      return mAddStoreItem(people);
             case "edit-store-item":     return mEditStoreItem(data.item, people);
             case "add-person":          return mAddPerson();
@@ -422,6 +474,7 @@ export class FamilyHubCard extends HTMLElement {
 
     _closeModal() {
         this._modal = null;
+        this._choreFormTab = "details";  // reset for next time
         this._doRender(true);
     }
 

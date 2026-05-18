@@ -7,6 +7,7 @@
 import { DEFAULT_COLOR } from "./constants.js";
 import { I } from "./constants.js";
 import { escHTML, escAttr, ini, opts, weekdayChips } from "./utils.js";
+import { FH_ICONS, FH_ICON_META, choreIcon } from "./icons.js";
 
 // ---------------------------------------------------------------------------
 // Shared modal wrapper
@@ -168,188 +169,270 @@ export function mAddTask(people) {
 }
 
 // ---------------------------------------------------------------------------
-// Chore form (shared by Add and Edit)
+// Chore form (shared by Add/Edit modal AND inline admin side panel)
 // ---------------------------------------------------------------------------
 
 /**
- * Chore form modal — shared by add and edit.
+ * Returns the inner form-fields HTML for add/edit chore — tabbed layout.
+ * Used by mChoreForm (modal) and the inline admin side panel.
+ * Both contexts use the same m-* element IDs — they are never in the DOM simultaneously
+ * because opening any chore modal always clears _adminSelectedChoreId first.
+ *
+ * All four tab panes are rendered into the DOM at once; inactive panes are hidden via
+ * inline display:none. Tab switching is CSS-only (see "chore-tab" dispatch) so user
+ * input on inactive tabs is never lost during a tab change.
+ *
  * @param {object|null} chore      - Existing chore for edit mode, null for add
  * @param {boolean}     isEdit     - Whether this is an edit operation
  * @param {object[]}    people     - All people from sensor
  * @param {string[]}    catLabels  - Available category label strings
+ * @param {string}      activeTab  - "details" | "schedule" | "rewards" | "reminders"
  */
-export function mChoreForm(chore, isEdit, people, catLabels) {
-    const c      = chore || {};
-    const rec    = c.recurrence || {};
-    const recType= rec.type || "daily";
+export function choreFormFields(chore, isEdit, people, catLabels, activeTab = "details") {
+    const c        = chore || {};
+    const rec      = c.recurrence || {};
+    const recType  = rec.type || "daily";
     const assigned = c.assigned_to || [];
-    const title  = isEdit ? `Edit — ${c.name}` : "Add chore";
-    const okAct  = isEdit ? "ok-edit-chore" : "ok-add-chore";
 
-    return mWrap(title,
-        `${isEdit ? `<input type="hidden" id="m-cid" value="${c.chore_id}">` : ""}
-       <div class="fh-field">
-         <label class="fh-label">Chore name *</label>
-         <input class="fh-input" id="m-cname" type="text" value="${escAttr(c.name || "")}" autofocus>
-       </div>
-       <div class="fh-field">
-         <label class="fh-label">Description (optional)</label>
-         <input class="fh-input" id="m-cdesc" type="text"
-                value="${escAttr(c.description || "")}" placeholder="More detail…">
-       </div>
-       <div class="fh-row">
-         <div class="fh-field">
-           <label class="fh-label">Chore type</label>
-           <select class="fh-select" id="m-ctype">
-             ${opts([
-                 { value: "assigned",  label: "Assigned" },
-                 { value: "claimable", label: "Claimable (bonus)" },
-                 { value: "reminder",  label: "Reminder" },
-             ], c.chore_type || "assigned")}
-           </select>
-         </div>
-         <div class="fh-field">
-           <label class="fh-label">Category label</label>
-           <select class="fh-select" id="m-clabel">
-             <option value="">— None —</option>
-             ${catLabels.map(l =>
-                 `<option value="${escAttr(l)}" ${l === c.category_label ? "selected" : ""}>${l}</option>`
-             ).join("")}
-           </select>
-         </div>
-       </div>
-       <div class="fh-field">
-         <label class="fh-label">Assign to</label>
-         <div class="fh-checkbox-row" style="margin-bottom:4px">
-           <input type="checkbox" id="m-everyone">
-           <label for="m-everyone" style="font-size:.85rem;font-weight:600;cursor:pointer">Everyone</label>
-         </div>
-         ${multiPersonCheckboxes(people, assigned, "m-assign-person")}
-       </div>
-       <div class="fh-row">
-         <div class="fh-field">
-           <label class="fh-label">Points</label>
-           <input class="fh-input" id="m-cpts" type="number" min="0"
-                  value="${c.points !== undefined ? c.points : 10}">
-         </div>
-         <div class="fh-field">
-           <label class="fh-label">Recurrence</label>
-           <select class="fh-select" id="m-crec">
-             ${opts([
-                 { value: "daily",           label: "Daily" },
-                 { value: "weekly",          label: "Weekly" },
-                 { value: "monthly_on_date", label: "Monthly" },
-                 { value: "one_time",        label: "One-time" },
-             ], recType)}
-           </select>
-         </div>
-       </div>
+    // ---- Icon grid (always visible, grouped by category) --------------------
+    const iconsByCat = new Map();
+    for (const m of FH_ICON_META) {
+        const cat = m.category || "Other";
+        if (!iconsByCat.has(cat)) iconsByCat.set(cat, []);
+        iconsByCat.get(cat).push(m);
+    }
+    const iconGridHtml = [...iconsByCat.entries()].map(([cat, items]) => `
+        <div class="fh-icon-picker-cat-hdr">${escHTML(cat)}</div>
+        <div class="fh-icon-picker-cat-grid">
+          ${items.map(({ key, label }) => `
+            <button class="fh-icon-cell${c.icon === key ? " selected" : ""}"
+                    data-act="pick-icon" data-icon="${key}" type="button"
+                    title="${label}">
+              <span style="display:inline-flex;width:28px;height:28px;color:var(--fh-text)">${FH_ICONS[key]}</span>
+              <span class="fh-icon-cell-label">${label}</span>
+            </button>`).join("")}
+        </div>`).join("");
 
-       <!-- Day filter: daily recurrence only -->
-       <div id="m-dayfilter-section" class="fh-field" style="display:none">
-         <label class="fh-label">Restrict to days (leave empty = every day)</label>
-         <div class="fh-weekday-row">
-           ${weekdayChips(rec.day_filter || [], "m-df-day")}
-         </div>
-       </div>
+    // ---- Tab strip ----------------------------------------------------------
+    const tabs = [
+        { key: "details",   label: "Details"          },
+        { key: "schedule",  label: "Schedule"         },
+        { key: "rewards",   label: "Points & Rewards" },
+        { key: "reminders", label: "Reminders"        },
+    ];
+    const tabStrip = `
+      <div class="fh-chore-tabs">
+        ${tabs.map(t => `
+          <button class="fh-chore-tab${activeTab === t.key ? " active" : ""}"
+                  data-act="chore-tab" data-tab="${t.key}" type="button">
+            ${t.label}
+          </button>`).join("")}
+      </div>`;
 
-       <!-- Weekday selector: weekly (multi-select) -->
-       <div id="m-weekdays-section" class="fh-field" style="display:none">
-         <label class="fh-label">Day(s) of week</label>
-         <div class="fh-weekday-row">
-           ${weekdayChips(rec.weekdays || [], "m-wd-day")}
-         </div>
-       </div>
+    // ---- Pane helper --------------------------------------------------------
+    const pane = (key, content) => `
+      <div class="fh-chore-tab-pane" data-tab="${key}"
+           style="${activeTab === key ? "" : "display:none"}">
+        ${content}
+      </div>`;
 
-       <!-- Day of month: monthly_on_date -->
-       <div id="m-dom-section" class="fh-field" style="display:none">
-         <label class="fh-label">Day of month (1–31)</label>
-         <input class="fh-input" id="m-dom" type="number" min="1" max="31"
-                value="${rec.day_of_month || 1}">
-       </div>
+    // ---- Details pane: name / desc / icon / type+category / assignees ------
+    const detailsPane = pane("details", `
+        <div class="fh-field">
+          <label class="fh-label">Chore name *</label>
+          <input class="fh-input" id="m-cname" type="text"
+                 value="${escAttr(c.name || "")}" autofocus>
+        </div>
+        <div class="fh-field">
+          <label class="fh-label">Description (optional)</label>
+          <input class="fh-input" id="m-cdesc" type="text"
+                 value="${escAttr(c.description || "")}" placeholder="More detail…">
+        </div>
+        <div class="fh-field">
+          <label class="fh-label">Icon</label>
+          <input type="hidden" id="m-cicon" value="${escAttr(c.icon || "")}">
+          <div class="fh-chore-icon-grid">
+            ${iconGridHtml}
+          </div>
+        </div>
+        <div class="fh-row">
+          <div class="fh-field">
+            <label class="fh-label">Chore type</label>
+            <select class="fh-select" id="m-ctype">
+              ${opts([
+                  { value: "assigned",  label: "Assigned" },
+                  { value: "claimable", label: "Claimable (bonus)" },
+                  { value: "reminder",  label: "Reminder" },
+              ], c.chore_type || "assigned")}
+            </select>
+          </div>
+          <div class="fh-field">
+            <label class="fh-label">Category</label>
+            <select class="fh-select" id="m-clabel">
+              <option value="">— None —</option>
+              ${catLabels.map(l =>
+                  `<option value="${escAttr(l)}" ${l === c.category_label ? "selected" : ""}>${l}</option>`
+              ).join("")}
+            </select>
+          </div>
+        </div>
+        <div class="fh-field">
+          <label class="fh-label">Assign to</label>
+          <div class="fh-checkbox-row" style="margin-bottom:4px">
+            <input type="checkbox" id="m-everyone">
+            <label for="m-everyone" style="font-size:.85rem;font-weight:600;cursor:pointer">Everyone</label>
+          </div>
+          ${multiPersonCheckboxes(people, assigned, "m-assign-person")}
+        </div>
+    `);
 
-       <!-- Expiry: claimable or one-time -->
-       <div id="m-chore-expiry-section" class="fh-field" style="display:none">
-         <label class="fh-label">Expires after (days)</label>
-         <input class="fh-input" id="m-cexpiry" type="number" min="1"
-                value="${c.expires_after_days || ""}">
-       </div>
+    // ---- Schedule pane: recurrence / days / expiry / claimable ------------
+    const schedulePane = pane("schedule", `
+        <div class="fh-field">
+          <label class="fh-label">Recurrence</label>
+          <select class="fh-select" id="m-crec">
+            ${opts([
+                { value: "daily",           label: "Daily" },
+                { value: "weekly",          label: "Weekly" },
+                { value: "monthly_on_date", label: "Monthly" },
+                { value: "one_time",        label: "One-time" },
+            ], recType)}
+          </select>
+        </div>
+        <div id="m-dayfilter-section" class="fh-field" style="display:none">
+          <label class="fh-label">Restrict to days (leave empty = every day)</label>
+          <div class="fh-weekday-row">
+            ${weekdayChips(rec.day_filter || [], "m-df-day")}
+          </div>
+        </div>
+        <div id="m-weekdays-section" class="fh-field" style="display:none">
+          <label class="fh-label">Day(s) of week</label>
+          <div class="fh-weekday-row">
+            ${weekdayChips(rec.weekdays || [], "m-wd-day")}
+          </div>
+        </div>
+        <div id="m-dom-section" class="fh-field" style="display:none">
+          <label class="fh-label">Day of month (1–31)</label>
+          <input class="fh-input" id="m-dom" type="number" min="1" max="31"
+                 value="${rec.day_of_month || 1}">
+        </div>
+        <div id="m-chore-expiry-section" class="fh-field" style="display:none">
+          <label class="fh-label">Expires after (days)</label>
+          <input class="fh-input" id="m-cexpiry" type="number" min="1"
+                 value="${c.expires_after_days || ""}">
+        </div>
+        <div id="m-claimable-section" class="fh-field" style="display:none">
+          <label class="fh-label">Claim type</label>
+          <select class="fh-select" id="m-csubtype">
+            <option value="fcfs"        ${(c.claimable_subtype || "fcfs") === "fcfs"        ? "selected" : ""}>First come, first served</option>
+            <option value="multi_claim" ${c.claimable_subtype === "multi_claim"             ? "selected" : ""}>Multi-claim (multiple helpers)</option>
+          </select>
+        </div>
+        <div id="m-multi-claim-section" class="fh-field" style="display:none">
+          <div class="fh-row">
+            <div class="fh-field">
+              <label class="fh-label">Max helpers</label>
+              <input class="fh-input" id="m-max-claimants" type="number" min="2" max="20"
+                     value="${c.max_claimants || 2}">
+            </div>
+            <div class="fh-field">
+              <label class="fh-label">Points mode</label>
+              <select class="fh-select" id="m-points-mode">
+                <option value="full"  ${(c.multi_claim_points_mode || "full") === "full"  ? "selected" : ""}>Full points each</option>
+                <option value="split" ${c.multi_claim_points_mode === "split"             ? "selected" : ""}>Split evenly</option>
+              </select>
+            </div>
+          </div>
+        </div>
+    `);
 
-       <!-- Claimable subtype: shown when chore_type = claimable -->
-       <div id="m-claimable-section" class="fh-field" style="display:none">
-         <label class="fh-label">Claim type</label>
-         <select class="fh-select" id="m-csubtype">
-           <option value="fcfs"        ${(c.claimable_subtype || "fcfs") === "fcfs"        ? "selected" : ""}>First come, first served</option>
-           <option value="multi_claim" ${c.claimable_subtype === "multi_claim"             ? "selected" : ""}>Multi-claim (multiple helpers)</option>
-         </select>
-       </div>
-       <div id="m-multi-claim-section" class="fh-field" style="display:none">
-         <div class="fh-row">
-           <div class="fh-field">
-             <label class="fh-label">Max helpers</label>
-             <input class="fh-input" id="m-max-claimants" type="number" min="2" max="20"
-                    value="${c.max_claimants || 2}">
-           </div>
-           <div class="fh-field">
-             <label class="fh-label">Points mode</label>
-             <select class="fh-select" id="m-points-mode">
-               <option value="full"  ${(c.multi_claim_points_mode || "full") === "full"  ? "selected" : ""}>Full points each</option>
-               <option value="split" ${c.multi_claim_points_mode === "split"             ? "selected" : ""}>Split evenly</option>
-             </select>
-           </div>
-         </div>
-       </div>
+    // ---- Rewards pane: points / approval / penalty / streak milestone ----
+    const rewardsPane = pane("rewards", `
+        <div class="fh-field">
+          <label class="fh-label">Points awarded on completion</label>
+          <input class="fh-input" id="m-cpts" type="number" min="0"
+                 value="${c.points !== undefined ? c.points : 10}">
+        </div>
+        <div class="fh-checkbox-row">
+          <input type="checkbox" id="m-cappr"
+                 ${(c.approval_required !== false) ? "checked" : ""}>
+          <label for="m-cappr" style="font-size:.88rem">Requires parent approval</label>
+        </div>
 
-       <div class="fh-divider"></div>
-       <div class="fh-checkbox-row">
-         <input type="checkbox" id="m-cappr"
-                ${(c.approval_required !== false) ? "checked" : ""}>
-         <label for="m-cappr" style="font-size:.88rem">Requires parent approval</label>
-       </div>
-       <div class="fh-checkbox-row">
-         <input type="checkbox" id="m-cpenalty"
-                ${c.penalty_enabled ? "checked" : ""}>
-         <label for="m-cpenalty" style="font-size:.88rem">Apply penalty points if skipped</label>
-       </div>
+        <div class="fh-divider"></div>
+        <div class="fh-form-group-lbl">Penalty for skipping</div>
+        <div class="fh-checkbox-row">
+          <input type="checkbox" id="m-cpenalty"
+                 ${c.penalty_enabled ? "checked" : ""}>
+          <label for="m-cpenalty" style="font-size:.88rem">Apply penalty points if skipped</label>
+        </div>
+        <div id="m-penalty-pts-section" class="fh-field" style="display:none">
+          <label class="fh-label">Penalty points</label>
+          <input class="fh-input" id="m-cpenalty-pts" type="number" min="1"
+                 value="${c.penalty_points || 5}">
+        </div>
+        <div id="m-daily-threshold-section" class="fh-field" style="display:none">
+          <label class="fh-label">Daily penalty after (days, optional)</label>
+          <input class="fh-input" id="m-daily-threshold" type="number" min="1"
+                 placeholder="e.g. 3 — start deducting after 3 days"
+                 value="${c.daily_penalty_after_days || ""}">
+        </div>
 
-       <!-- Penalty points: shown when penalty checkbox checked -->
-       <div id="m-penalty-pts-section" class="fh-field" style="display:none">
-         <label class="fh-label">Penalty points</label>
-         <input class="fh-input" id="m-cpenalty-pts" type="number" min="1"
-                value="${c.penalty_points || 5}">
-       </div>
+        <div class="fh-divider"></div>
+        <div class="fh-form-group-lbl">Streak bonus</div>
+        <div class="fh-row">
+          <div class="fh-field">
+            <label class="fh-label">Streak milestone (0 = off)</label>
+            <input class="fh-input" id="m-streak-milestone" type="number" min="0"
+                   placeholder="e.g. 7" value="${c.streak_milestone || 0}">
+          </div>
+          <div class="fh-field">
+            <label class="fh-label">Bonus points awarded</label>
+            <input class="fh-input" id="m-streak-bonus" type="number" min="0"
+                   value="${c.streak_bonus_points || 0}">
+          </div>
+        </div>
+    `);
 
-       <!-- Daily threshold: shown when penalty checkbox checked -->
-       <div id="m-daily-threshold-section" class="fh-field" style="display:none">
-         <label class="fh-label">Daily penalty after (days, optional)</label>
-         <input class="fh-input" id="m-daily-threshold" type="number" min="1"
-                placeholder="e.g. 3 — start deducting after 3 days"
-                value="${c.daily_penalty_after_days || ""}">
-       </div>
+    // ---- Reminders pane -----------------------------------------------------
+    const remindersPane = pane("reminders", `
+        <div class="fh-field">
+          <label class="fh-label">Reminder time (-1 = off)</label>
+          <input class="fh-input" id="m-reminder-time" type="number" min="-1" max="2359"
+                 placeholder="-1 (off)"
+                 value="${c.reminder_time !== undefined ? c.reminder_time : -1}">
+          <div class="fh-field-help">
+            HHMM format — e.g. 1900 for 7:00 PM. Sends a push notification once per task instance
+            when local time reaches this value and the task is still pending.
+          </div>
+        </div>
+    `);
 
-       <div class="fh-divider"></div>
-       <div class="fh-row">
-         <div class="fh-field">
-           <label class="fh-label">Streak milestone (0 = off)</label>
-           <input class="fh-input" id="m-streak-milestone" type="number" min="0"
-                  placeholder="e.g. 7" value="${c.streak_milestone || 0}">
-         </div>
-         <div class="fh-field">
-           <label class="fh-label">Milestone bonus points</label>
-           <input class="fh-input" id="m-streak-bonus" type="number" min="0"
-                  value="${c.streak_bonus_points || 0}">
-         </div>
-       </div>
+    return `
+        ${isEdit ? `<input type="hidden" id="m-cid" value="${c.chore_id}">` : ""}
+        ${tabStrip}
+        <div class="fh-chore-tab-panes">
+          ${detailsPane}
+          ${schedulePane}
+          ${rewardsPane}
+          ${remindersPane}
+        </div>`;
+}
 
-       <div class="fh-divider"></div>
-       <div class="fh-field">
-         <label class="fh-label">Reminder time (-1 = off, e.g. 1900 for 7:00 PM)</label>
-         <input class="fh-input" id="m-reminder-time" type="number" min="-1" max="2359"
-                placeholder="-1 (off)" value="${c.reminder_time !== undefined ? c.reminder_time : -1}">
-       </div>`,
-        isEdit ? "Save changes" : "Add chore",
-        okAct
-    );
+/**
+ * Chore form modal — wraps choreFormFields() in the standard modal shell.
+ * @param {object|null} chore      - Existing chore for edit mode, null for add
+ * @param {boolean}     isEdit     - Whether this is an edit operation
+ * @param {object[]}    people     - All people from sensor
+ * @param {string[]}    catLabels  - Available category label strings
+ * @param {string}      activeTab  - Active tab key (passed through to choreFormFields)
+ */
+export function mChoreForm(chore, isEdit, people, catLabels, activeTab = "details") {
+    const c     = chore || {};
+    const title = isEdit ? `Edit — ${c.name}` : "Add chore";
+    const okAct = isEdit ? "ok-edit-chore" : "ok-add-chore";
+    return mWrap(title, choreFormFields(chore, isEdit, people, catLabels, activeTab),
+        isEdit ? "Save changes" : "Add chore", okAct);
 }
 
 // ---------------------------------------------------------------------------
@@ -455,59 +538,144 @@ export function mEditPerson(d) {
         `<option value="${day}" ${d.allowanceMday === day ? "selected" : ""}>${day}</option>`
     ).join("");
 
+    // Theme metadata — accent shown in the swatch preview next to the dropdown.
+    const THEMES = [
+        { value: "classic",  label: "Classic",        accent: d.pcolor || "#4A90E2" },
+        { value: "engineer", label: "Engineer",       accent: "#E0B84C" },
+        { value: "baker",    label: "Baker",          accent: "#8B3A2A" },
+        { value: "dinos",    label: "Dinos",          accent: "#8B6A20" },
+        { value: "hp",       label: "Harry Potter",   accent: "#1F4F3C" },
+        { value: "dbz",      label: "Dragon Ball Z",  accent: "#FF6A1A" },
+    ];
+    const currentTheme  = THEMES.find(t => t.value === d.theme) || THEMES[0];
+    const themeOpts = THEMES.map(t =>
+        `<option value="${t.value}" ${d.theme === t.value ? "selected" : ""}>${t.label}</option>`
+    ).join("");
+
+    const section = (label, sub, body) => `
+      <div class="fh-modal-section">
+        <div class="fh-modal-section-hdr">
+          <span class="fh-modal-section-lbl">${escHTML(label)}</span>
+          ${sub ? `<span class="fh-modal-section-sub">${escHTML(sub)}</span>` : ""}
+        </div>
+        ${body}
+      </div>`;
+
     return mWrap(`Edit — ${d.pname}`,
-        `<div class="fh-field">
-         <label class="fh-label">Name *</label>
-         <input class="fh-input" id="m-pname" type="text" value="${escAttr(d.pname)}" autofocus>
-       </div>
-       <div class="fh-row">
-         <div class="fh-field">
-           <label class="fh-label">Type</label>
-           <select class="fh-select" id="m-ptype">
-             <option value="kid"    ${d.ptype === "kid"    ? "selected" : ""}>Kid</option>
-             <option value="parent" ${d.ptype === "parent" ? "selected" : ""}>Parent</option>
-           </select>
-         </div>
-         <div class="fh-field">
-           <label class="fh-label">Avatar colour</label>
-           <input class="fh-input" id="m-pcolor" type="color"
-                  value="${d.pcolor}" style="height:42px;padding:4px">
-         </div>
-       </div>
-       <div class="fh-section-title" style="margin-top:var(--fh-gap-sm)">Allowance</div>
-       <div class="fh-row">
-         <div class="fh-field">
-           <label class="fh-label">Amount (pts, 0 = off)</label>
-           <input class="fh-input" id="m-allowance-pts" type="number" min="0"
-                  value="${d.allowancePts}" style="width:100%">
-         </div>
-         <div class="fh-field">
-           <label class="fh-label">Schedule</label>
-           <select class="fh-select" id="m-allowance-schedule">
-             <option value="weekly"   ${d.allowanceSched === "weekly"   ? "selected" : ""}>Weekly</option>
-             <option value="biweekly" ${d.allowanceSched === "biweekly" ? "selected" : ""}>Bi-weekly</option>
-             <option value="monthly"  ${d.allowanceSched === "monthly"  ? "selected" : ""}>Monthly</option>
-           </select>
-         </div>
-       </div>
-       <div class="fh-row">
-         <div class="fh-field">
-           <label class="fh-label">Day of week (weekly / bi-weekly)</label>
-           <select class="fh-select" id="m-allowance-weekday">${wdayOpts}</select>
-         </div>
-         <div class="fh-field">
-           <label class="fh-label">Day of month (monthly)</label>
-           <select class="fh-select" id="m-allowance-monthday">${mdayOpts}</select>
-         </div>
-       </div>
-       <div class="fh-section-title" style="margin-top:var(--fh-gap-sm)">Notifications</div>
-       <div class="fh-field">
-         <label class="fh-label">Notify target (HA service name, blank = off)</label>
-         <input class="fh-input" id="m-pnotify" type="text"
-                value="${escAttr(d.notifyTarget || "")}"
-                placeholder="e.g. mobile_app_jackson_iphone">
-       </div>
-       <input type="hidden" id="m-pid" value="${d.pid}">`,
+        `${section("Identity", "name, codename, avatar color", `
+           <div class="fh-field">
+             <label class="fh-label">Name *</label>
+             <input class="fh-input" id="m-pname" type="text" value="${escAttr(d.pname)}" autofocus>
+           </div>
+           <div class="fh-row">
+             <div class="fh-field">
+               <label class="fh-label">Codename</label>
+               <input class="fh-input" id="m-pcode" type="text"
+                      value="${escAttr(d.code || "")}"
+                      placeholder="e.g. T-REX, SNITCH, KODIAK"
+                      style="text-transform:uppercase">
+               <div class="fh-field-help">Shown on Mission Control mini buttons and agent cards.</div>
+             </div>
+             <div class="fh-field">
+               <label class="fh-label">Type</label>
+               <select class="fh-select" id="m-ptype">
+                 <option value="kid"    ${d.ptype === "kid"    ? "selected" : ""}>Kid</option>
+                 <option value="parent" ${d.ptype === "parent" ? "selected" : ""}>Parent</option>
+               </select>
+             </div>
+           </div>
+           <div class="fh-field">
+             <label class="fh-label">Avatar color</label>
+             <input class="fh-input" id="m-pcolor" type="color"
+                    value="${d.pcolor}" style="height:42px;padding:4px;width:100%">
+             <div class="fh-field-help">Used for chips, accents, and the Mission Control row tint.</div>
+           </div>
+        `)}
+
+        ${section("Theme", "personal-page look & feel", `
+           <div class="fh-field">
+             <label class="fh-label">Theme</label>
+             <div class="fh-theme-pick">
+               <span class="fh-theme-swatch" style="background:${currentTheme.accent}"></span>
+               <select class="fh-select" id="m-ptheme" style="flex:1">${themeOpts}</select>
+             </div>
+             <div class="fh-field-help">Changes the personal dashboard skin. Swatch shows current accent.</div>
+           </div>
+           <div class="fh-toggle-row">
+             <div>
+               <div style="font-size:.9rem;font-weight:600">Large-button mode</div>
+               <div style="font-size:.75rem;color:var(--fh-text-sec)">
+                 Card grid layout, bigger icons &amp; buttons — best for pre-readers.
+               </div>
+             </div>
+             <label class="fh-toggle">
+               <input type="checkbox" id="m-pchildmode" ${d.childMode ? "checked" : ""}>
+               <span class="fh-toggle-slider"></span>
+             </label>
+           </div>
+        `)}
+
+        ${section("Allowance", "scheduled point payouts", `
+           <div class="fh-row">
+             <div class="fh-field">
+               <label class="fh-label">Amount (pts, 0 = off)</label>
+               <input class="fh-input" id="m-allowance-pts" type="number" min="0"
+                      value="${d.allowancePts}" style="width:100%">
+             </div>
+             <div class="fh-field">
+               <label class="fh-label">Schedule</label>
+               <select class="fh-select" id="m-allowance-schedule">
+                 <option value="weekly"   ${d.allowanceSched === "weekly"   ? "selected" : ""}>Weekly</option>
+                 <option value="biweekly" ${d.allowanceSched === "biweekly" ? "selected" : ""}>Bi-weekly</option>
+                 <option value="monthly"  ${d.allowanceSched === "monthly"  ? "selected" : ""}>Monthly</option>
+               </select>
+             </div>
+           </div>
+           <div class="fh-row">
+             <div class="fh-field">
+               <label class="fh-label">Day of week (weekly / bi-weekly)</label>
+               <select class="fh-select" id="m-allowance-weekday">${wdayOpts}</select>
+             </div>
+             <div class="fh-field">
+               <label class="fh-label">Day of month (monthly)</label>
+               <select class="fh-select" id="m-allowance-monthday">${mdayOpts}</select>
+             </div>
+           </div>
+        `)}
+
+        ${section("Notifications", "push targets for approvals & reminders", `
+           <div class="fh-field">
+             <label class="fh-label">Notify target (HA service name, blank = off)</label>
+             <input class="fh-input" id="m-pnotify" type="text"
+                    value="${escAttr(d.notifyTarget || "")}"
+                    placeholder="e.g. mobile_app_jackson_iphone">
+             <div class="fh-field-help">HA <code>notify.*</code> service name. Works with the Companion App or Alexa Media.</div>
+           </div>
+        `)}
+
+        ${section("Rank", "weekly evaluation overrides", `
+           <div class="fh-row">
+             <div class="fh-field">
+               <label class="fh-label">Rank index (admin override)</label>
+               <input class="fh-input" id="m-prankidx" type="number" min="0"
+                      value="${d.rankIdx !== undefined ? d.rankIdx : 0}">
+             </div>
+             <div class="fh-field">
+               <label class="fh-label">Drop threshold (pts/wk, blank = global)</label>
+               <input class="fh-input" id="m-pdropThr" type="number" min="0"
+                      value="${d.dropThr !== "" ? d.dropThr : ""}"
+                      placeholder="Global default">
+             </div>
+           </div>
+           <div class="fh-field">
+             <label class="fh-label">Gain threshold (pts/wk, blank = global)</label>
+             <input class="fh-input" id="m-pgainThr" type="number" min="0"
+                    value="${d.gainThr !== "" ? d.gainThr : ""}"
+                    placeholder="Global default">
+           </div>
+        `)}
+
+        <input type="hidden" id="m-pid" value="${d.pid}">`,
         "Save", "ok-edit-person");
 }
 
@@ -570,6 +738,11 @@ export function mEditStreaks(pid, pname, chores, personStreaks) {
 // ---------------------------------------------------------------------------
 
 export function mEditSettings(d) {
+    const WEEKDAY_NAMES = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+    const wdayOpts = WEEKDAY_NAMES.map((n, i) =>
+        `<option value="${i}" ${d.rankWeekday == i ? "selected" : ""}>${n}</option>`
+    ).join("");
+
     return mWrap("Edit settings",
         `<div class="fh-field">
          <label class="fh-label">Family name</label>
@@ -584,6 +757,23 @@ export function mEditSettings(d) {
          <label class="fh-label">Penalty alert time (-1 = off, e.g. 800 for 8:00 AM)</label>
          <input class="fh-input" id="m-alert-time" type="number" min="-1" max="2359"
                 placeholder="800" value="${d.penaltyAlertTime !== undefined ? d.penaltyAlertTime : 800}">
+       </div>
+       <div class="fh-section-title" style="margin-top:var(--fh-gap-sm)">Rank evaluation</div>
+       <div class="fh-field">
+         <label class="fh-label">Evaluate ranks on</label>
+         <select class="fh-select" id="m-rank-weekday">${wdayOpts}</select>
+       </div>
+       <div class="fh-row">
+         <div class="fh-field">
+           <label class="fh-label">Drop below (pts/wk)</label>
+           <input class="fh-input" id="m-rank-drop" type="number" min="0"
+                  value="${d.rankDrop !== undefined ? d.rankDrop : 50}">
+         </div>
+         <div class="fh-field">
+           <label class="fh-label">Gain at or above (pts/wk)</label>
+           <input class="fh-input" id="m-rank-gain" type="number" min="0"
+                  value="${d.rankGain !== undefined ? d.rankGain : 75}">
+         </div>
        </div>`,
         "Save", "ok-edit-settings");
 }

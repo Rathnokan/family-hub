@@ -359,11 +359,33 @@ class FamilyHubDataStore:
         s.setdefault(CONF_PENALTIES_PAUSED_GLOBAL, DEFAULT_PENALTIES_PAUSED_GLOBAL)
         # v0.5.0: notification settings
         s.setdefault("penalty_alert_time", 800)  # HHMM; -1 = disabled
+        # v0.6.0: hub layout settings
+        s.setdefault("rooms_config", {})
+        s.setdefault("weather_entity", "")
+        s.setdefault("today_calendar_entities", [])
+        # v0.6.0 S5: rank evaluation settings (also migrated after people loop below)
 
         # Migrate all records
         self._data["chores"]         = [_migrate_chore(c)         for c in self._data.get("chores", [])]
         self._data["store_items"]    = [_migrate_store_item(i)     for i in self._data.get("store_items", [])]
         self._data["task_instances"] = [_migrate_task_instance(t)  for t in self._data.get("task_instances", [])]
+
+        # v0.6.0: ensure all people have code, theme_key, and rank fields
+        for person in self._data.get("people", []):
+            person.setdefault("code", "")
+            person.setdefault("theme_key", "classic")
+            # v0.6.0 S5: rank mechanic — parents get 999 (always max), kids start at 0
+            if "rank_index" not in person:
+                person["rank_index"] = 999 if person.get("type") == "parent" else 0
+            person.setdefault("rank_drop_threshold", None)  # None = use global setting
+            person.setdefault("rank_gain_threshold", None)  # None = use global setting
+            # v0.6.0 S6: large-button mode for pre-readers
+            person.setdefault("child_mode", False)
+
+        # v0.6.0 S5: rank evaluation settings
+        s.setdefault("rank_eval_weekday",   0)   # 0 = Monday
+        s.setdefault("rank_drop_threshold", 50)
+        s.setdefault("rank_gain_threshold", 75)
 
         # v0.5.0: remove people records with blank id (orphans from early development).
         _before = len(self._data["people"])
@@ -506,6 +528,82 @@ class FamilyHubDataStore:
         await self.async_save()
         return True
 
+    # ------------------------------------------------------------------
+    # Rank helpers (v0.6.0 S5)
+    # ------------------------------------------------------------------
+
+    async def async_set_rank(self, person_id: str, rank_index: int) -> bool:
+        """Admin override: set a person's rank_index directly."""
+        person = self.get_person(person_id)
+        if not person:
+            return False
+        person["rank_index"] = max(0, rank_index)
+        await self.async_save()
+        return True
+
+    async def _async_process_weekly_ranks(self, tick_date: date) -> None:
+        """
+        Evaluate last week's point performance and adjust rank_index.
+        Fires only on the configured rank_eval_weekday (default Monday = 0).
+        Parents are always max rank — skipped.
+        Each person moves at most ±1 rank per evaluation cycle.
+        """
+        s = self._data["settings"]
+        eval_weekday = s.get("rank_eval_weekday", 0)  # 0 = Monday
+
+        if tick_date.weekday() != eval_weekday:
+            return
+
+        global_drop = s.get("rank_drop_threshold", 50)
+        global_gain = s.get("rank_gain_threshold", 75)
+
+        # Week we're evaluating: the 7 days ending (exclusive) on tick_date
+        week_end   = tick_date.isoformat()
+        week_start = (tick_date - timedelta(days=7)).isoformat()
+
+        for person in self.get_active_people():
+            if person.get("type") == "parent":
+                continue
+
+            drop_thr = (
+                person["rank_drop_threshold"]
+                if person.get("rank_drop_threshold") is not None
+                else global_drop
+            )
+            gain_thr = (
+                person["rank_gain_threshold"]
+                if person.get("rank_gain_threshold") is not None
+                else global_gain
+            )
+
+            weekly_pts = sum(
+                e.get("points_delta", 0)
+                for e in self._data.get("history", [])
+                if (
+                    e.get("person_id") == person["id"]
+                    and e.get("points_delta", 0) > 0
+                    and week_start <= e.get("timestamp", "")[:10] < week_end
+                )
+            )
+
+            current_idx = person.get("rank_index", 0)
+
+            if weekly_pts >= gain_thr:
+                new_idx = current_idx + 1  # frontend clamps to theme ladder length
+            elif weekly_pts < drop_thr:
+                new_idx = max(0, current_idx - 1)
+            else:
+                new_idx = current_idx
+
+            if new_idx != current_idx:
+                person["rank_index"] = new_idx
+                direction = "up" if new_idx > current_idx else "down"
+                _LOGGER.info(
+                    "Family Hub: rank %s for %s — weekly_pts=%d (drop<%d gain>=%d) idx %d→%d",
+                    direction, person.get("name", person["id"]),
+                    weekly_pts, drop_thr, gain_thr, current_idx, new_idx,
+                )
+
     async def async_update_settings(
         self,
         family_name: str | None = None,
@@ -514,6 +612,12 @@ class FamilyHubDataStore:
         category_labels: list[str] | None = None,
         penalties_paused: bool | None = None,
         penalty_alert_time: int | None = None,
+        rooms_config: dict | None = None,
+        weather_entity: str | None = None,
+        today_calendar_entities: list[str] | None = None,
+        rank_eval_weekday: int | None = None,
+        rank_drop_threshold: int | None = None,
+        rank_gain_threshold: int | None = None,
     ) -> None:
         s = self._data["settings"]
         if family_name is not None:
@@ -528,6 +632,18 @@ class FamilyHubDataStore:
             s[CONF_PENALTIES_PAUSED_GLOBAL] = penalties_paused
         if penalty_alert_time is not None:
             s["penalty_alert_time"] = penalty_alert_time
+        if rooms_config is not None:
+            s["rooms_config"] = rooms_config
+        if weather_entity is not None:
+            s["weather_entity"] = weather_entity
+        if today_calendar_entities is not None:
+            s["today_calendar_entities"] = today_calendar_entities
+        if rank_eval_weekday is not None:
+            s["rank_eval_weekday"] = rank_eval_weekday
+        if rank_drop_threshold is not None:
+            s["rank_drop_threshold"] = rank_drop_threshold
+        if rank_gain_threshold is not None:
+            s["rank_gain_threshold"] = rank_gain_threshold
         await self.async_save()
 
     # ------------------------------------------------------------------
@@ -561,6 +677,13 @@ class FamilyHubDataStore:
             "points_balance": 0,
             "points_lifetime": 0,
             "created_at": _now_iso(),
+            "code": "",
+            "theme_key": "classic",
+            # v0.6.0 S5: rank
+            "rank_index": 999 if person_type == "parent" else 0,
+            "rank_drop_threshold": None,
+            "rank_gain_threshold": None,
+            "child_mode": False,
         }
         self._data["people"].append(person)
         self._append_history(
@@ -582,6 +705,12 @@ class FamilyHubDataStore:
             "allowance_points", "allowance_schedule", "allowance_weekday", "allowance_monthday",
             # v0.5.0: notification target
             "notify_target",
+            # v0.6.0: codename + theme
+            "code", "theme_key",
+            # v0.6.0 S5: rank
+            "rank_index", "rank_drop_threshold", "rank_gain_threshold",
+            # v0.6.0 S6: large-button mode
+            "child_mode",
         }
         for key, val in kwargs.items():
             if key in allowed:
@@ -1405,6 +1534,7 @@ class FamilyHubDataStore:
         while current <= today:
             await self._async_tick_for_date(current)
             await self._async_process_allowances(current)
+            await self._async_process_weekly_ranks(current)
             current += timedelta(days=1)
 
         # --- Expire overdue one-time / claimable instances -------------------
@@ -2495,6 +2625,7 @@ class FamilyHubDataStore:
                 "chore_id":              t["chore_id"],
                 "name":                  chore["name"],
                 "description":           chore.get("description", ""),
+                "icon":                  chore.get("icon", ""),
                 "points":                chore.get("points", 0),
                 "due_date":              t["due_date"],
                 "status":                t["status"],
@@ -2713,25 +2844,38 @@ class FamilyHubDataStore:
                 days_until_reset = _days_until_reset(chore, today)
                 days_delta       = 0  # treat as today
 
+            dp_threshold = chore.get("daily_penalty_after_days")
+            dp_firing    = bool(
+                dp_threshold
+                and chore.get("penalty_enabled")
+                and chore.get("penalty_points", 0)
+                and (today - due_date).days > dp_threshold
+            )
+
             items.append({
-                "task_id":            task["id"],
-                "chore_id":           task["chore_id"],
-                "name":               chore["name"],
-                "description":        chore.get("description", ""),
-                "points":             chore.get("points", 0),
-                "due_date":           task["due_date"],
-                "days_delta":         days_delta,
-                "recurrence_type":    recurrence_type,
-                "recurrence_weekdays":recurrence_weekdays,
-                "days_until_reset":   days_until_reset,
-                "status":             task["status"],
-                "category_label":     chore.get("category_label", ""),
-                "assigned_to":        assigned,
-                "person_name":        person["name"] if person else None,
-                "person_color":       person.get("avatar_color", "#7F77DD") if person else "#7F77DD",
-                "approval_required":  chore.get("approval_required", True),
-                "penalty_enabled":    chore.get("penalty_enabled", False),
-                "penalty_points":     chore.get("penalty_points", 0),
+                "task_id":                 task["id"],
+                "chore_id":                task["chore_id"],
+                "name":                    chore["name"],
+                "description":             chore.get("description", ""),
+                "icon":                    chore.get("icon", ""),
+                "points":                  chore.get("points", 0),
+                "due_date":                task["due_date"],
+                "days_delta":              days_delta,
+                "recurrence_type":         recurrence_type,
+                "recurrence_weekdays":     recurrence_weekdays,
+                "days_until_reset":        days_until_reset,
+                "status":                  task["status"],
+                "category_label":          chore.get("category_label", ""),
+                "assigned_to":             assigned,
+                "person_name":             person["name"] if person else None,
+                "person_color":            person.get("avatar_color", "#7F77DD") if person else "#7F77DD",
+                "approval_required":       chore.get("approval_required", True),
+                "penalty_enabled":         chore.get("penalty_enabled", False),
+                "penalty_points":          chore.get("penalty_points", 0),
+                "daily_penalty_after_days": dp_threshold,
+                "daily_penalty_firing":    dp_firing,
+                "streak":                  self._get_streak(assigned, task["chore_id"]) if assigned else 0,
+                "streak_milestone":        chore.get("streak_milestone", 0),
             })
 
         # Show today + overdue only on command center
@@ -2760,6 +2904,7 @@ class FamilyHubDataStore:
                 "chore_id":               c["id"],
                 "name":                   c["name"],
                 "description":            c.get("description", ""),
+                "icon":                   c.get("icon", ""),
                 "chore_type":             c.get("chore_type", CHORE_TYPE_ASSIGNED),
                 "category_label":         c.get("category_label", ""),
                 "sort_order":             c.get("sort_order", 0),

@@ -14,10 +14,11 @@ All data lives in a single JSON file — no cloud, no third-party accounts.
 
 Card registration:
   - www/ is registered as a static HTTP path so the JS file is served.
-  - add_extra_js_url() loads the card JS on every HA frontend page load.
-    This is the reliable, officially-supported way to register custom cards
-    from within an integration — it makes the card available in the picker
-    without manually touching Lovelace resource storage.
+  - The card JS is registered as a persistent Lovelace resource (same storage
+    layer that HACS uses). The URL includes the JS file's mtime as a cache-bust
+    token, so it updates automatically on every Samba deploy without requiring
+    a manual version bump or an HA restart. Registration runs in async_setup_entry
+    so it fires at both HA startup and on every integration reload.
   - manifest.json declares "frontend" and "http" as dependencies.
 
 v0.4.1 changes:
@@ -33,7 +34,6 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
-from homeassistant.components.frontend import add_extra_js_url
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
@@ -41,12 +41,12 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
 from .const import (
+    CARD_JS_FILENAME,
     CARD_JS_URL,
     CARD_URL_PATH,
     CONF_FAMILY_NAME,
     CONF_POINTS_PER_DOLLAR,
     DOMAIN,
-    VERSION,
 )
 from .coordinator import FamilyHubCoordinator
 from .data_store import FamilyHubDataStore
@@ -64,9 +64,10 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """
     Called once when the integration is loaded (before any config entries).
 
-    Registers the static HTTP path so the card JS is served, then registers
-    the JS with the HA frontend so it loads on every page and appears in the
-    Lovelace card picker automatically.
+    Registers the static HTTP path so the card JS is served.
+    Lovelace resource registration happens in async_setup_entry so it also
+    fires on every integration reload, keeping the URL in sync with the
+    deployed JS file.
     """
     hass.data.setdefault(DOMAIN, {})
 
@@ -84,19 +85,67 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     except Exception as err:  # noqa: BLE001
         _LOGGER.warning("Family Hub: could not register static path: %s", err)
 
-    # --- Register the card JS with the HA frontend ---
-    # add_extra_js_url() is the supported public API for loading custom JS
-    # on every HA frontend page. The ?v= query parameter forces the browser
-    # to re-fetch the file on every integration update.
-    versioned_url = f"{CARD_JS_URL}?v={VERSION}"
-    add_extra_js_url(hass, versioned_url)
-    _LOGGER.info(
-        "Family Hub: card JS registered — family-hub-card is available in the "
-        "Lovelace card picker (%s)",
-        versioned_url,
-    )
-
     return True
+
+
+async def _async_register_card_resource(hass: HomeAssistant) -> None:
+    """Register or update the Family Hub card JS as a persistent Lovelace resource.
+
+    Uses the JS file's mtime as the cache-bust token so the URL changes
+    automatically on every Samba deploy — no manual version bump or HA restart
+    required. Falls back to add_extra_js_url if Lovelace storage is unavailable.
+    """
+    # Cache-bust token = JS file mtime. Changes whenever the file is redeployed.
+    try:
+        stat = await hass.async_add_executor_job((_WWW_PATH / CARD_JS_FILENAME).stat)
+        cache_bust = str(int(stat.st_mtime))
+    except OSError as err:
+        import time
+        _LOGGER.warning("Family Hub: could not stat JS file (%s), using timestamp", err)
+        cache_bust = str(int(time.time()))
+
+    versioned_url = f"{CARD_JS_URL}?v={cache_bust}"
+
+    try:
+        lovelace = hass.data.get("lovelace")
+        if lovelace is None or not hasattr(lovelace, "resources") or lovelace.resources is None:
+            raise RuntimeError("Lovelace resource storage not available")
+
+        resources = lovelace.resources
+        await resources.async_load()
+
+        existing = next(
+            (r for r in resources.async_items()
+             if r.get("url", "").split("?")[0] == CARD_JS_URL),
+            None,
+        )
+
+        if existing is None:
+            await resources.async_create_item({"res_type": "module", "url": versioned_url})
+            _LOGGER.info("Family Hub: Lovelace resource created — %s", versioned_url)
+        elif existing.get("url") != versioned_url:
+            await resources.async_update_item(
+                existing["id"], {"res_type": "module", "url": versioned_url}
+            )
+            _LOGGER.info(
+                "Family Hub: Lovelace resource updated (%s → %s)",
+                existing.get("url"), versioned_url,
+            )
+        else:
+            _LOGGER.debug("Family Hub: Lovelace resource already current (%s)", versioned_url)
+
+        return
+
+    except Exception as err:  # noqa: BLE001
+        _LOGGER.warning(
+            "Family Hub: Lovelace resource registration failed (%s) — "
+            "falling back to add_extra_js_url (HA restart required after JS changes)",
+            err,
+        )
+
+    from homeassistant.components.frontend import add_extra_js_url
+    add_extra_js_url(hass, versioned_url)
+    _LOGGER.info("Family Hub: card JS registered via add_extra_js_url — %s", versioned_url)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -164,6 +213,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # --- Stale entity cleanup ---
     await _async_cleanup_stale_entities(hass, entry, store)
+
+    # --- Card resource registration ---
+    # Runs at startup and on every integration reload so the Lovelace resource
+    # URL stays in sync with the deployed JS file without requiring an HA restart.
+    await _async_register_card_resource(hass)
 
     _LOGGER.info(
         "Family Hub: ready — %s, %d people, %d active chores",

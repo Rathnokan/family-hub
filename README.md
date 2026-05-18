@@ -4,6 +4,8 @@ A private, self-hosted family chore and rewards integration for Home Assistant.
 
 > Built for one family, designed to be shared. HACS-compatible.
 
+**Current release:** v0.6.0 "The Front Door" — see [`RELEASE-NOTES-v0.6.0.md`](RELEASE-NOTES-v0.6.0.md).
+
 ---
 
 ## What it does
@@ -16,7 +18,11 @@ A private, self-hosted family chore and rewards integration for Home Assistant.
 - **Penalty system** — missed chores at reset deduct points. Optional daily penalty threshold: if a chore isn't started within N days, penalties begin accumulating before the reset.
 - **HA notifications** — parents get push notifications for approval and redemption requests. Kids receive time reminders and penalty warnings.
 - **History log** — every completion, approval, denial, and redemption recorded. 30-day rolling window.
-- **Four card modes** — command center, personal dashboard, home maintenance, admin panel.
+- **Command Center home page** — kitchen-display landing screen with per-person tiles (live balance + open task count) and room tiles (Chores, Maintenance, plus coming-soon scaffolds for Meals / Calendar / Smart Home).
+- **Six themed personal dashboards** — Classic (parent default), Engineer (blueprint), Baker (recipe-card), Dinos (field-journal), Harry Potter (parchment), DBZ (comic-card). Each carries the family member's rank, streaks, KPIs, and tasks in one unified anatomy with theme-specific palette/fonts/borders.
+- **Kid-large card grid** — `child_mode` flips any theme into a chunky big-icon-grid for pre-readers without losing the theme's personality.
+- **Mission Control** — agent roster + grouped chore queue + Intel Alerts + Open Ops, designed for the kitchen Echo Show.
+- **Desktop admin layout** — at ≥1280px viewports, the chore manager opens a 480px side panel with a tabbed editor (Details / Schedule / Points & Rewards / Reminders) for fast master-detail editing.
 - **One JSON file** — all data in `/config/family_hub_data.json`. Easy to back up.
 
 ---
@@ -58,10 +64,10 @@ Family Hub ships a custom Lovelace card. After installation, add a card and choo
 
 | Mode | Description |
 |---|---|
-| `command_center` | Kitchen display — all active tasks for all people, approval dots, claimable tasks |
-| `personal` | Per-person view — their tasks, history tab, and rewards store |
-| `admin` | Full management — overview, approvals, redemptions, chore editor, settings |
-| `maintenance` | Home maintenance tracker — overdue, due this week, due next week |
+| `command_center` | Kitchen-display landing screen — Front Door home with person tiles, room tiles, today strip. Tap a person tile to drop into their themed personal dashboard; tap a room tile to drop into its drill-down (Chores → Mission Control; Maintenance → drill-down list; others → coming-soon scaffold). |
+| `personal` | Per-person themed dashboard. Six themes pick the look (Classic, Engineer, Baker, Dinos, Harry Potter, DBZ) via the person's `theme_key`. Each theme renders the same row anatomy and rail layout — only the palette, fonts, borders, and button shape change. |
+| `admin` | Full management — Today (action queue + activity), Family, Tasks (sortable + collapsible chore table with inline editor side panel at ≥1280px), History, Settings (Hub Config + Hub Layout + Store). |
+| `maintenance` | Home maintenance tracker — overdue, due this week, due next week. |
 
 ### Card configuration options
 
@@ -70,6 +76,25 @@ Family Hub ships a custom Lovelace card. After installation, add a card and choo
 | `mode` | One of the modes above |
 | `person` | Person name (lowercase) — required for `personal` mode |
 | `text_scale` | `0.9` Small · `1.0` Default · `1.25` Large · `1.5` XL. Use Large/XL for Echo Show or tablets. |
+
+---
+
+## Per-person options
+
+Each family member has the following editable fields (Admin → Family → Edit person):
+
+| Field | Description |
+|---|---|
+| `name` | Display name |
+| `type` | `parent` or `kid` (parents see admin tools; kids see the kid-side flows) |
+| `avatar_color` | Hex color used for chips, accents, and Mission Control row tints |
+| `code` | Codename shown on Mission Control mini buttons and agent cards (e.g. `T-REX`, `KODIAK`) |
+| `theme_key` | Personal-dashboard theme: `classic`, `engineer`, `baker`, `dinos`, `hp`, `dbz` |
+| `child_mode` | Flip the personal dashboard to a chunky big-icon-grid for pre-readers |
+| `allowance_*` | Scheduled point deposits — see Allowance below |
+| `notify_target` | HA `notify.*` service for this person (Companion App, alexa_media_player, etc.) |
+| `penalties_paused` | Per-person pause flag — pauses both penalties and streak breaks |
+| `rank_*` overrides | Per-person rank thresholds (otherwise inherits global) |
 
 ---
 
@@ -163,6 +188,40 @@ Family Hub uses standard HA `notify.*` services. Set a `notify_target` on each p
 | Chore reminder | When current time reaches the chore's `reminder_time` and it's still pending |
 
 Global penalty alert time and per-chore reminder times are configurable from the Admin Panel → Settings.
+
+---
+
+## Hub layout (Command Center home page)
+
+The Command Center mode opens to a Front Door home page with person tiles and room tiles. Both are configured in Admin → Settings → **Hub layout**:
+
+| Setting | Description |
+|---|---|
+| Room visibility | Per-room toggle. Hidden rooms still exist but no tile renders. |
+| Weather entity | HA `weather.*` entity used in the today strip. Blank to hide. |
+| Calendar entities | List of `calendar.*` entities — populates the today strip when the Calendar room ships in v0.8.0. |
+
+Live rooms in v0.6.0: **Chores** (Mission Control), **Maintenance** (drill-down).
+Coming-soon scaffolds: **Meals** (v0.7.0), **Calendar** (v0.8.0), **Smart Home** (v0.9.0).
+
+---
+
+## Themes
+
+`personal` mode renders one of six themes, picked per person via `theme_key`:
+
+| Key | Owner archetype | Aesthetic |
+|---|---|---|
+| `classic` | Parent default | Dark UI with avatar-color accent rail |
+| `engineer` | Technical | Blueprint cyanotype, mono fonts, WO-### work orders |
+| `baker` | Cooking | Cream paper, recipe-card ticket layout |
+| `dinos` | Young naturalist | Kraft paper, specimen tags, dig journal |
+| `hp` | Wizardry | Parchment + emerald wax-seals, period-number tracking |
+| `dbz` | Comic-action | Bright comic-card with halftone energy auras |
+
+Each theme renders the **same row anatomy** — only palette, fonts, borders, button shape, and accent labels change. Adding a new theme is one config object (~10 keys) plus one `.fh-row--<key>` CSS color block.
+
+Setting `child_mode = true` on a person flips their theme into a chunky big-icon-grid layout (card deck instead of compact rows) for pre-readers, without losing the theme's personality.
 
 ---
 

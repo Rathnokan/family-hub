@@ -236,6 +236,15 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             vol.Optional("allowance_monthday"):  vol.All(vol.Coerce(int), vol.Range(min=1, max=28)),
             # v0.5.0: notification target (HA notify service name, empty = disabled)
             vol.Optional("notify_target"):       cv.string,
+            # v0.6.0: codename + theme
+            vol.Optional("code"):                cv.string,
+            vol.Optional("theme_key"):           cv.string,
+            # v0.6.0 S5: rank overrides (None = use global setting)
+            vol.Optional("rank_index"):          vol.All(vol.Coerce(int), vol.Range(min=0)),
+            vol.Optional("rank_drop_threshold"): vol.Any(None, vol.All(vol.Coerce(int), vol.Range(min=0))),
+            vol.Optional("rank_gain_threshold"): vol.Any(None, vol.All(vol.Coerce(int), vol.Range(min=0))),
+            # v0.6.0 S6: large-button mode
+            vol.Optional("child_mode"):          cv.boolean,
         }),
     )
 
@@ -557,15 +566,21 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
 
     async def handle_update_settings(call: ServiceCall) -> None:
         labels = call.data.get("category_labels")
+        cal_entities = call.data.get("today_calendar_entities")
         await store.async_update_settings(
             family_name=call.data.get("family_name"),
             points_per_dollar=call.data.get("points_per_dollar"),
             show_dollar_value_to_kids=call.data.get("show_dollar_value_to_kids"),
             category_labels=list(labels) if labels is not None else None,
-            # v0.4.2: global penalty pause toggle
             penalties_paused=call.data.get("penalties_paused"),
-            # v0.5.0: penalty alert time
             penalty_alert_time=call.data.get("penalty_alert_time"),
+            rooms_config=call.data.get("rooms_config"),
+            weather_entity=call.data.get("weather_entity"),
+            today_calendar_entities=list(cal_entities) if cal_entities is not None else None,
+            # v0.6.0 S5: rank evaluation settings
+            rank_eval_weekday=call.data.get("rank_eval_weekday"),
+            rank_drop_threshold=call.data.get("rank_drop_threshold"),
+            rank_gain_threshold=call.data.get("rank_gain_threshold"),
         )
         await coordinator.async_refresh()
 
@@ -576,10 +591,15 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             vol.Optional("points_per_dollar"):          vol.All(vol.Coerce(int), vol.Range(min=1, max=1000)),
             vol.Optional("show_dollar_value_to_kids"): cv.boolean,
             vol.Optional("category_labels"):            [cv.string],
-            # v0.4.2: global penalty pause
             vol.Optional("penalties_paused"):           cv.boolean,
-            # v0.5.0: penalty alert time (HHMM int, -1 = disabled)
             vol.Optional("penalty_alert_time"):         vol.Any(-1, vol.All(vol.Coerce(int), vol.Range(min=0, max=2359))),
+            vol.Optional("rooms_config"):               dict,
+            vol.Optional("weather_entity"):             cv.string,
+            vol.Optional("today_calendar_entities"):    [cv.string],
+            # v0.6.0 S5: rank evaluation
+            vol.Optional("rank_eval_weekday"):          vol.All(vol.Coerce(int), vol.Range(min=0, max=6)),
+            vol.Optional("rank_drop_threshold"):        vol.All(vol.Coerce(int), vol.Range(min=0)),
+            vol.Optional("rank_gain_threshold"):        vol.All(vol.Coerce(int), vol.Range(min=0)),
         }),
     )
 
@@ -712,6 +732,27 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             vol.Required("person_id"): cv.string,
             vol.Required("chore_id"):  cv.string,
             vol.Required("count"):     vol.All(vol.Coerce(int), vol.Range(min=0)),
+        }),
+    )
+
+    # ------------------------------------------------------------------
+    # Rank correction (v0.6.0 S5)
+    # ------------------------------------------------------------------
+
+    async def handle_set_rank(call: ServiceCall) -> None:
+        success = await store.async_set_rank(
+            call.data["person_id"], call.data["rank_index"],
+        )
+        if success:
+            await coordinator.async_refresh()
+        else:
+            _LOGGER.warning("Family Hub: set_rank — person not found: %s", call.data["person_id"])
+
+    hass.services.async_register(
+        DOMAIN, "set_rank", handle_set_rank,
+        schema=vol.Schema({
+            vol.Required("person_id"):  cv.string,
+            vol.Required("rank_index"): vol.All(vol.Coerce(int), vol.Range(min=0)),
         }),
     )
 

@@ -92,6 +92,7 @@ async def async_setup_entry(
     entities.append(FamilyHubMaintenanceOverdueSensor(coordinator))
     entities.append(FamilyHubNeedsAttentionSensor(coordinator))
     entities.append(FamilyHubClaimableTasksSensor(coordinator))
+    entities.append(FamilyHubTodaySensor(coordinator))
 
     async_add_entities(entities, update_before_add=True)
 
@@ -217,6 +218,9 @@ class FamilyHubPersonSensor(FamilyHubBaseSensor):
             "person_type": person.get("type", "kid"),
             "avatar_color":person.get("avatar_color", "#7F77DD"),
             "active":      person.get("active", True),
+            # v0.6.0: codename + theme
+            "code":        person.get("code", ""),
+            "theme_key":   person.get("theme_key", "classic"),
 
             # Point summary
             "lifetime_points": person.get("points_lifetime", 0),
@@ -445,6 +449,15 @@ class FamilyHubNeedsAttentionSensor(FamilyHubBaseSensor):
                     "allowance_monthday": p.get("allowance_monthday", 1),
                     # v0.5.0: notification target
                     "notify_target":      p.get("notify_target", ""),
+                    # v0.6.0: codename + theme
+                    "code":               p.get("code", ""),
+                    "theme_key":          p.get("theme_key", "classic"),
+                    # v0.6.0 S5: rank
+                    "rank_index":          p.get("rank_index", 999 if p.get("type") == "parent" else 0),
+                    "rank_drop_threshold": p.get("rank_drop_threshold"),   # None = use global
+                    "rank_gain_threshold": p.get("rank_gain_threshold"),   # None = use global
+                    # v0.6.0 S6: large-button mode for pre-readers
+                    "child_mode":          p.get("child_mode", False),
                 }
                 for p in store.people if p.get("active", True)
             ],
@@ -466,6 +479,14 @@ class FamilyHubNeedsAttentionSensor(FamilyHubBaseSensor):
             "penalties_paused_global":  store.penalties_paused_global,
             # v0.5.0: penalty alert time for admin Settings
             "penalty_alert_time":       store.settings.get("penalty_alert_time", 800),
+            # v0.6.0: hub layout settings
+            "rooms_config":             store.settings.get("rooms_config", {}),
+            "weather_entity":           store.settings.get("weather_entity", ""),
+            "today_calendar_entities":  store.settings.get("today_calendar_entities", []),
+            # v0.6.0 S5: rank evaluation settings
+            "rank_eval_weekday":        store.settings.get("rank_eval_weekday", 0),
+            "rank_drop_threshold":      store.settings.get("rank_drop_threshold", 50),
+            "rank_gain_threshold":      store.settings.get("rank_gain_threshold", 75),
 
             # v0.4.0: enriched history log for admin log/approvals UI
             # Includes person name/color, chore_name, reversible action hint.
@@ -499,3 +520,31 @@ class FamilyHubClaimableTasksSensor(FamilyHubBaseSensor):
             "tasks":     store.get_claimable_tasks_for_card(),
             "all_tasks": store.get_all_tasks_for_command_center(),
         }
+
+
+# ---------------------------------------------------------------------------
+# Global — today (v0.6.0 placeholder; populated when calendar room ships)
+# ---------------------------------------------------------------------------
+
+class FamilyHubTodaySensor(FamilyHubBaseSensor):
+    """
+    Today's scheduled items.
+    State = count of items for today. Initially always 0.
+    Populated when the Calendar room ships in v0.8.0.
+    Defining it now avoids a sensor add mid-flight.
+    """
+
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = "items"
+    _attr_icon      = "mdi:calendar-today"
+    _attr_unique_id = f"{DOMAIN}_today"
+    _attr_name      = "Today"
+    entity_id       = "sensor.family_hub_today"
+
+    @property
+    def native_value(self) -> int:
+        return 0
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        return {"schedule": []}

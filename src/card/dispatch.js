@@ -21,6 +21,23 @@ export function dispatch(act, el, card) {
     switch (act) {
 
         // ---- Navigation ----------------------------------------------------
+
+        // Navigate to a view (pushes current view onto back stack)
+        case "nav": {
+            const target = el.dataset.navView;
+            if (!target) break;
+            card._backStack.push(card._view || "home");
+            card._view = target;
+            card._doRender(true);
+            break;
+        }
+
+        // Navigate back (pops back stack, falls back to home)
+        case "nav-back":
+            card._view = card._backStack.pop() || "home";
+            card._doRender(true);
+            break;
+
         case "filter":
             card._filter = card._filter === el.dataset.pid ? null : el.dataset.pid;
             card._doRender(true);
@@ -46,23 +63,106 @@ export function dispatch(act, el, card) {
             card._doRender(true);
             break;
 
+        // ---- Admin chore table (S9 P3 item 5) --------------------------------
+
+        // Select a chore row → open inline editor panel at ≥1280px
+        case "select-chore-row":
+            card._adminSelectedChoreId = el.dataset.cid || null;
+            card._doRender(true);
+            break;
+
+        // Close inline editor panel (✕ button or after save)
+        case "close-chore-panel":
+            card._adminSelectedChoreId = null;
+            card._choreFormTab = "details";
+            card._doRender(true);
+            break;
+
+        // Chore form tab switch (modal + inline panel) — CSS-only swap to preserve
+        // user input on inactive panes. NO _doRender call: panes are all already in DOM.
+        case "chore-tab": {
+            const tab = el.dataset.tab;
+            if (!tab) break;
+            card._choreFormTab = tab;
+            sr.querySelectorAll(".fh-chore-tab").forEach(btn => {
+                btn.classList.toggle("active", btn.dataset.tab === tab);
+            });
+            sr.querySelectorAll(".fh-chore-tab-pane").forEach(p => {
+                p.style.display = p.dataset.tab === tab ? "" : "none";
+            });
+            card._syncModalUI();   // re-evaluate conditional sub-sections on the newly visible pane
+            break;
+        }
+
+        // Sort chore table — click same col twice reverses, third click clears
+        case "sort-admin-chores": {
+            const col = el.dataset.col || null;
+            if (!col) {
+                card._adminSort = { col: null, dir: "asc" };
+            } else {
+                const cur = card._adminSort || { col: null, dir: "asc" };
+                if (cur.col === col) {
+                    card._adminSort = cur.dir === "asc"
+                        ? { col, dir: "desc" }
+                        : { col: null, dir: "asc" };  // third click clears
+                } else {
+                    card._adminSort = { col, dir: "asc" };
+                }
+            }
+            card._doRender(true);
+            break;
+        }
+
+        // Collapse / expand a category group header
+        case "toggle-admin-cat": {
+            const cat = el.dataset.cat;
+            if (!cat) break;
+            if (!card._adminCollapsedCats) card._adminCollapsedCats = new Set();
+            if (card._adminCollapsedCats.has(cat)) card._adminCollapsedCats.delete(cat);
+            else card._adminCollapsedCats.add(cat);
+            card._doRender(true);
+            break;
+        }
+
         // ---- Task completion -----------------------------------------------
         case "complete": {
-            const tid = el.dataset.tid;
-            const pid = el.dataset.pid;
+            const tid      = el.dataset.tid;
+            const pid      = el.dataset.pid;
             if (!tid || !pid) break;
+
+            // Milestone celebration: fires when completing this task would hit the threshold
+            const streak    = parseInt(el.dataset.streak    || "0");
+            const milestone = parseInt(el.dataset.milestone || "0");
+            if (milestone > 0 && (streak + 1) % milestone === 0) {
+                card._celebration = { name: el.dataset.name || "Mission", streak: streak + 1 };
+                setTimeout(() => {
+                    if (card._celebration) { card._celebration = null; card._doRender(true); }
+                }, 3000);
+            }
+
             card._svc("complete_task", { task_id: tid, person_id: pid });
             card._flashing.add(tid);
+            card._pendingSubmit.add(tid);   // optimistic — button shows "Pending Approval" until sensor refresh
             card._doRender(true);
             setTimeout(() => {
                 card._flashing.delete(tid);
-                const row = card.shadowRoot.querySelector(
-                    `[data-tid="${tid}"], [data-act="complete"][data-tid="${tid}"]`
-                )?.closest(".fh-task-row");
-                row?.remove();
+                card._doRender(false);
             }, FLASH_MS + 50);
+            // Clear optimistic state after the 30s sensor poll has surely landed.
+            setTimeout(() => {
+                if (card._pendingSubmit.has(tid)) {
+                    card._pendingSubmit.delete(tid);
+                    card._doRender(false);
+                }
+            }, 35000);
             break;
         }
+
+        // ---- Dismiss milestone celebration ---------------------------------
+        case "dismiss-celebration":
+            card._celebration = null;
+            card._doRender(true);
+            break;
 
         // ---- Description toggle --------------------------------------------
         case "toggle-desc": {
@@ -135,6 +235,7 @@ export function dispatch(act, el, card) {
         // ---- Delete chore --------------------------------------------------
         case "delete-chore":
             if (!confirm(`Delete "${el.dataset.cname}"?\n\nThis cannot be undone.`)) break;
+            card._adminSelectedChoreId = null;  // close inline panel if it was showing this chore
             card._svc("delete_chore", { chore_id: el.dataset.cid });
             break;
 
@@ -160,6 +261,30 @@ export function dispatch(act, el, card) {
                 card._svc("update_settings", { category_labels: [...current, newLabel] });
             }
             if (input) input.value = "";
+            break;
+        }
+
+        // ---- Hub Layout save (S9 P3) ---------------------------------------
+        // Reads all room visibility toggles + weather entity + calendar
+        // entities from the panel and pushes one update_settings call.
+        case "save-hub-layout": {
+            const roomsCfg = {};
+            sr.querySelectorAll(".fh-hub-room-toggle").forEach(input => {
+                const id = input.dataset.roomId;
+                if (!id) return;
+                roomsCfg[id] = { status: input.checked ? "live" : "hidden" };
+            });
+            const weather = sr.getElementById("m-hub-weather")?.value?.trim() || "";
+            const calRaw  = sr.getElementById("m-hub-calendars")?.value || "";
+            const calendars = calRaw
+                .split(/[\n,]+/)
+                .map(s => s.trim())
+                .filter(Boolean);
+            card._svc("update_settings", {
+                rooms_config:            roomsCfg,
+                weather_entity:          weather,
+                today_calendar_entities: calendars,
+            });
             break;
         }
 
@@ -213,6 +338,8 @@ export function dispatch(act, el, card) {
             card._doRender(true);
             break;
         case "open-add-chore":
+            // Close inline panel first — modal and panel share m-* element IDs
+            card._adminSelectedChoreId = null;
             card._modal = { type: "add-chore", data: {} };
             card._doRender(true);
             break;
@@ -220,6 +347,8 @@ export function dispatch(act, el, card) {
             const chores = card._attrs("sensor.family_hub_needs_attention").active_chores || [];
             const chore  = chores.find(c => c.chore_id === el.dataset.cid);
             if (!chore) break;
+            // Close inline panel first — modal and panel share m-* element IDs
+            card._adminSelectedChoreId = null;
             card._modal = { type: "edit-chore", data: { chore } };
             card._doRender(true);
             break;
@@ -253,6 +382,12 @@ export function dispatch(act, el, card) {
                     allowanceWday:  parseInt(el.dataset.pallowwday  ?? "5"),
                     allowanceMday:  parseInt(el.dataset.pallowmday  || "1"),
                     notifyTarget:   el.dataset.pnotify               || "",
+                    code:           el.dataset.pcode                 || "",
+                    theme:          el.dataset.ptheme                || "classic",
+                    rankIdx:        parseInt(el.dataset.prankidx     || "0"),
+                    dropThr:        el.dataset.pdropThr              || "",
+                    gainThr:        el.dataset.pgainThr              || "",
+                    childMode:      el.dataset.pchildmode === "true",
                 }
             };
             card._doRender(true);
@@ -262,7 +397,14 @@ export function dispatch(act, el, card) {
             card._doRender(true);
             break;
         case "open-edit-settings":
-            card._modal = { type: "edit-settings", data: { fname: el.dataset.fname, ppd: el.dataset.ppd, penaltyAlertTime: parseInt(el.dataset.palerttime ?? "800") } };
+            card._modal = { type: "edit-settings", data: {
+                fname:          el.dataset.fname,
+                ppd:            el.dataset.ppd,
+                penaltyAlertTime: parseInt(el.dataset.palerttime  ?? "800"),
+                rankWeekday:    parseInt(el.dataset.rankweekday   ?? "0"),
+                rankDrop:       parseInt(el.dataset.rankdrop      ?? "50"),
+                rankGain:       parseInt(el.dataset.rankgain      ?? "75"),
+            } };
             card._doRender(true);
             break;
         case "open-claim":
@@ -357,6 +499,7 @@ export function dispatch(act, el, card) {
             const weekdays  = Array.from(sr.querySelectorAll(".m-wd-day:checked")).map(cb => parseInt(cb.value));
             const dayFilter = Array.from(sr.querySelectorAll(".m-df-day:checked")).map(cb => parseInt(cb.value));
 
+            const iconVal = v("m-cicon").trim().toLowerCase();
             const data = {
                 name,
                 chore_type:        ctype,
@@ -366,6 +509,7 @@ export function dispatch(act, el, card) {
                 approval_required: b("m-cappr"),
                 penalty_enabled:   b("m-cpenalty"),
                 penalty_points:    int("m-cpenalty-pts"),
+                icon:              iconVal,
             };
 
             // Daily penalty threshold — only when penalty enabled and value > 0
@@ -429,6 +573,76 @@ export function dispatch(act, el, card) {
             break;
         }
 
+        // Inline panel save — same logic as ok-edit-chore but closes panel instead of modal
+        case "ok-edit-chore-inline": {
+            const name = v("m-cname").trim();
+            if (!name) break;
+            const recType   = v("m-crec");
+            const ctype     = v("m-ctype");
+            const assigned  = _selectedPersonIds("m-assign-person", sr);
+            const weekdays  = Array.from(sr.querySelectorAll(".m-wd-day:checked")).map(cb => parseInt(cb.value));
+            const dayFilter = Array.from(sr.querySelectorAll(".m-df-day:checked")).map(cb => parseInt(cb.value));
+            const iconVal   = v("m-cicon").trim().toLowerCase();
+
+            const data = {
+                chore_id:          v("m-cid"),
+                name,
+                chore_type:        ctype,
+                category_label:    v("m-clabel"),
+                assigned_to:       assigned,
+                points:            int("m-cpts"),
+                approval_required: b("m-cappr"),
+                penalty_enabled:   b("m-cpenalty"),
+                penalty_points:    int("m-cpenalty-pts"),
+                icon:              iconVal,
+                weekdays,
+                day_filter:        dayFilter,
+                recurrence: {
+                    type:       recType,
+                    weekdays,
+                    day_filter: dayFilter,
+                    ...(recType === "monthly_on_date"
+                            ? { day_of_month: Math.max(1, Math.min(31, int("m-dom"))) }
+                            : {}),
+                },
+            };
+
+            if (b("m-cpenalty")) {
+                const thresh = parseInt(v("m-daily-threshold") || "0");
+                if (thresh > 0) data.daily_penalty_after_days = thresh;
+            }
+
+            if (ctype === "claimable") {
+                data.claimable_subtype = v("m-csubtype") || "fcfs";
+                if (data.claimable_subtype === "multi_claim") {
+                    data.max_claimants          = Math.max(2, int("m-max-claimants") || 2);
+                    data.multi_claim_points_mode = v("m-points-mode") || "full";
+                }
+            }
+
+            const desc = v("m-cdesc").trim();
+            if (desc) data.description = desc;
+
+            const expirySection = sr.getElementById("m-chore-expiry-section");
+            const expiryVisible = expirySection && expirySection.style.display !== "none";
+            if (expiryVisible) {
+                const expiryVal = parseInt(v("m-cexpiry") || "0");
+                if (expiryVal > 0) data.expires_after_days = expiryVal;
+            }
+
+            data.streak_milestone    = Math.max(0, int("m-streak-milestone") || 0);
+            data.streak_bonus_points = Math.max(0, int("m-streak-bonus") || 0);
+
+            const rtRaw = parseInt(v("m-reminder-time") ?? "-1");
+            data.reminder_time = isNaN(rtRaw) ? -1 : rtRaw;
+
+            card._svc("update_chore", data);
+            card._adminSelectedChoreId = null;  // close panel after save
+            card._choreFormTab = "details";
+            card._doRender(true);
+            break;
+        }
+
         case "set-streak": {
             const cid   = el.dataset.cid;
             const pid   = el.dataset.pid;
@@ -477,16 +691,24 @@ export function dispatch(act, el, card) {
         case "ok-edit-person": {
             const name = v("m-pname").trim();
             if (!name) break;
+            const dropThrStr = v("m-pdropThr").trim();
+            const gainThrStr = v("m-pgainThr").trim();
             card._svc("update_person", {
-                person_id:          v("m-pid"),
+                person_id:              v("m-pid"),
                 name,
-                avatar_color:       v("m-pcolor"),
-                type:               v("m-ptype"),
-                allowance_points:   parseInt(v("m-allowance-pts")   || "0"),
-                allowance_schedule: v("m-allowance-schedule"),
-                allowance_weekday:  parseInt(v("m-allowance-weekday")),
-                allowance_monthday: parseInt(v("m-allowance-monthday")),
-                notify_target:      v("m-pnotify").trim(),
+                avatar_color:           v("m-pcolor"),
+                type:                   v("m-ptype"),
+                allowance_points:       parseInt(v("m-allowance-pts")   || "0"),
+                allowance_schedule:     v("m-allowance-schedule"),
+                allowance_weekday:      parseInt(v("m-allowance-weekday")),
+                allowance_monthday:     parseInt(v("m-allowance-monthday")),
+                notify_target:          v("m-pnotify").trim(),
+                code:                   v("m-pcode").trim().toUpperCase(),
+                theme_key:              v("m-ptheme"),
+                rank_index:             parseInt(v("m-prankidx") || "0"),
+                rank_drop_threshold:    dropThrStr !== "" ? parseInt(dropThrStr) : null,
+                rank_gain_threshold:    gainThrStr !== "" ? parseInt(gainThrStr) : null,
+                child_mode:             b("m-pchildmode"),
             });
             card._closeModal();
             break;
@@ -506,9 +728,12 @@ export function dispatch(act, el, card) {
             const alertTime = parseInt(v("m-alert-time") ?? "-1");
             if (!fname) break;
             card._svc("update_settings", {
-                family_name:        fname,
-                points_per_dollar:  ppd,
-                penalty_alert_time: isNaN(alertTime) ? 800 : alertTime,
+                family_name:          fname,
+                points_per_dollar:    ppd,
+                penalty_alert_time:   isNaN(alertTime) ? 800 : alertTime,
+                rank_eval_weekday:    parseInt(v("m-rank-weekday")  || "0"),
+                rank_drop_threshold:  parseInt(v("m-rank-drop")     || "50"),
+                rank_gain_threshold:  parseInt(v("m-rank-gain")     || "75"),
             });
             card._closeModal();
             break;
@@ -537,6 +762,19 @@ export function dispatch(act, el, card) {
                 category_label:    "",
             });
             card._closeModal();
+            break;
+        }
+
+        // ---- Icon picker (always-visible grid, no dropdown) -----------------
+        // Selection only — no preview/grid-toggle DOM. The hidden m-cicon input
+        // carries the value to the save handlers.
+        case "pick-icon": {
+            const key    = el.dataset.icon;
+            const hidden = sr.getElementById("m-cicon");
+            if (hidden) hidden.value = key;
+            sr.querySelectorAll(".fh-icon-cell").forEach(
+                cell => cell.classList.toggle("selected", cell.dataset.icon === key)
+            );
             break;
         }
     }

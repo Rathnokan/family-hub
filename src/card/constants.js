@@ -4,7 +4,7 @@
  */
 
 export const DOMAIN        = "family_hub";
-export const VERSION       = "0.5.0";
+export const VERSION       = "0.6.0";
 export const DEFAULT_COLOR = "#7F77DD";
 export const FLASH_MS      = 1400;
 
