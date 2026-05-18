@@ -17,7 +17,7 @@
 import { escHTML, escAttr, fPts, ini, relTime,
          groupHistorySkipped }                            from "../utils.js";
 import { HISTORY_META }                                   from "../constants.js";
-import { getEffectiveRank, getWeeklyPts, htmlRankBar,
+import { getEffectiveRank, getWeeklyPts, htmlRankBar, htmlSuccessStreak,
          groupByCategory, getActiveStreaks,
          computeStreakProgress, htmlChoreRow }            from "./_shared.js";
 
@@ -173,7 +173,7 @@ function _railPanels({ attr, naAttr, person, balance, weekly, openCount,
                        rankIdx, dropThr, gainThr, nextItem, fillPct }) {
     return `
         ${_railPanelKPIs(balance, weekly, openCount)}
-        ${_railPanelRank(rankIdx, weekly, dropThr, gainThr)}
+        ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, person)}
         ${_railPanelStreaks(attr, naAttr, person)}
         ${_railPanelNextUp(nextItem, fillPct)}`;
 }
@@ -204,13 +204,14 @@ function _railPanelKPIs(balance, weekly, openCount) {
     return _railPanel("POWER LEVEL", body);
 }
 
-function _railPanelRank(rankIdx, weekly, dropThr, gainThr) {
-    const bar = htmlRankBar(rankIdx, weekly, dropThr, gainThr, DBZ_RANKS, DBZ.orange);
+function _railPanelRank(rankIdx, weekly, dropThr, gainThr, person) {
+    const bar    = htmlRankBar(rankIdx, weekly, dropThr, gainThr, DBZ_RANKS, DBZ.orange);
+    const streak = htmlSuccessStreak(person, DBZ.orange);
     if (!bar) {
         return _railPanel("NEXT FORM",
-            `<div class="fh-dbz-rmax">${escHTML(getEffectiveRank(rankIdx, DBZ_RANKS).name)} · MAX</div>`);
+            `<div class="fh-dbz-rmax">${escHTML(getEffectiveRank(rankIdx, DBZ_RANKS).name)} · MAX</div>${streak}`);
     }
-    return _railPanel("NEXT FORM", bar);
+    return _railPanel("NEXT FORM", bar + streak);
 }
 
 function _railPanelStreaks(attr, naAttr, person) {

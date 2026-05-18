@@ -13,7 +13,7 @@
 import { escHTML, escAttr, fPts, ini, relTime,
          groupHistorySkipped }                            from "../utils.js";
 import { HISTORY_META }                                   from "../constants.js";
-import { getEffectiveRank, getWeeklyPts, htmlRankBar,
+import { getEffectiveRank, getWeeklyPts, htmlRankBar, htmlSuccessStreak,
          groupByCategory, getActiveStreaks,
          computeStreakProgress, htmlChoreRow }            from "./_shared.js";
 
@@ -165,7 +165,7 @@ function _railPanels({ attr, naAttr, person, balance, weekly, openCount,
                        rankIdx, dropThr, gainThr, rank }) {
     return `
         ${_railPanelKPIs(balance, weekly, openCount)}
-        ${_railPanelRank(rankIdx, weekly, dropThr, gainThr)}
+        ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, person)}
         ${_railPanelStreaks(attr, naAttr, person)}
         ${_railPanelOwlPost(person, naAttr)}`;
 }
@@ -196,13 +196,14 @@ function _railPanelKPIs(balance, weekly, openCount) {
     return _railPanel("HOUSE STANDINGS", body);
 }
 
-function _railPanelRank(rankIdx, weekly, dropThr, gainThr) {
-    const bar = htmlRankBar(rankIdx, weekly, dropThr, gainThr, HP_RANKS, HP.emerald);
+function _railPanelRank(rankIdx, weekly, dropThr, gainThr, person) {
+    const bar    = htmlRankBar(rankIdx, weekly, dropThr, gainThr, HP_RANKS, HP.emerald);
+    const streak = htmlSuccessStreak(person, HP.emerald);
     if (!bar) {
         return _railPanel("O.W.L. PROGRESS",
-            `<div class="fh-hp-rmax">${escHTML(getEffectiveRank(rankIdx, HP_RANKS).name)} · max marks</div>`);
+            `<div class="fh-hp-rmax">${escHTML(getEffectiveRank(rankIdx, HP_RANKS).name)} · max marks</div>${streak}`);
     }
-    return _railPanel("O.W.L. PROGRESS", bar);
+    return _railPanel("O.W.L. PROGRESS", bar + streak);
 }
 
 function _railPanelStreaks(attr, naAttr, person) {

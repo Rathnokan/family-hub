@@ -13,7 +13,7 @@
 import { escHTML, escAttr, fPts, ini, relTime,
          groupHistorySkipped }                            from "../utils.js";
 import { HISTORY_META }                                   from "../constants.js";
-import { getEffectiveRank, getWeeklyPts, htmlRankBar,
+import { getEffectiveRank, getWeeklyPts, htmlRankBar, htmlSuccessStreak,
          groupByCategory, getActiveStreaks,
          computeStreakProgress, htmlChoreRow }            from "./_shared.js";
 
@@ -152,7 +152,7 @@ function _railPanels({ attr, naAttr, person, balance, weekly, openCount,
                        rankIdx, dropThr, gainThr, rank }) {
     return `
         ${_railPanelKPIs(balance, weekly, openCount)}
-        ${_railPanelRank(rankIdx, weekly, dropThr, gainThr)}
+        ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, person)}
         ${_railPanelStreaks(attr, naAttr, person)}
         ${_railPanelRecent(person, naAttr)}`;
 }
@@ -183,13 +183,14 @@ function _railPanelKPIs(balance, weekly, openCount) {
     return _railPanel("the pantry today", body);
 }
 
-function _railPanelRank(rankIdx, weekly, dropThr, gainThr) {
-    const bar = htmlRankBar(rankIdx, weekly, dropThr, gainThr, BAKER_RANKS, BK.terra);
+function _railPanelRank(rankIdx, weekly, dropThr, gainThr, person) {
+    const bar    = htmlRankBar(rankIdx, weekly, dropThr, gainThr, BAKER_RANKS, BK.terra);
+    const streak = htmlSuccessStreak(person, BK.terra);
     if (!bar) {
         return _railPanel("promotion track",
-            `<div class="fh-bk-rmax">${escHTML(getEffectiveRank(rankIdx, BAKER_RANKS).name)} · top of the line</div>`);
+            `<div class="fh-bk-rmax">${escHTML(getEffectiveRank(rankIdx, BAKER_RANKS).name)} · top of the line</div>${streak}`);
     }
-    return _railPanel("promotion track", bar);
+    return _railPanel("promotion track", bar + streak);
 }
 
 function _railPanelStreaks(attr, naAttr, person) {

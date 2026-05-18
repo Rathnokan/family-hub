@@ -279,6 +279,9 @@ function _htmlAdFamily(people, attr) {
                         data-pdropThr="${p.rank_drop_threshold !== null && p.rank_drop_threshold !== undefined ? p.rank_drop_threshold : ""}"
                         data-pgainThr="${p.rank_gain_threshold !== null && p.rank_gain_threshold !== undefined ? p.rank_gain_threshold : ""}"
                         data-pchildmode="${p.child_mode === true}"
+                        data-pcompletionthreshold="${p.completion_threshold_pct ?? 80}"
+                        data-pcompletionmilestone="${p.completion_milestone ?? 7}"
+                        data-pcompletionbonus="${p.completion_bonus_points ?? 50}"
                         title="Edit person">${I.edit}</button>
                 <button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="open-confirm-remove-person"
                         data-pid="${p.person_id}" data-pname="${escAttr(p.name)}"

@@ -229,6 +229,17 @@ function _htmlAgentRoster(people, allTasks, approvalQ, card) {
         const alerts   = approvalQ.filter(a => a.person_id === p.person_id).length;
         const code     = (p.code || p.name || "AGT").toUpperCase();
         const balance  = parseInt(card._states(card._personEntityId(p.name))?.state || "0");
+        // v0.6.1: success-rate streak line — only shown when feature is enabled
+        // for this person AND they have an active streak. Otherwise the row stays
+        // visually clean.
+        const ssMilestone = p.completion_milestone || 0;
+        const ssStreak    = p.completion_streak || 0;
+        const ssThreshold = p.completion_threshold_pct || 80;
+        const streakLine  = (ssMilestone > 0 && ssStreak > 0)
+            ? `<div class="fh-mc-agent-streak" title="${ssThreshold}% of daily chores for ${ssStreak} days running">
+                   🔥 ${ssStreak}d · ${ssThreshold}%
+               </div>`
+            : "";
 
         return `
             <button class="fh-mc-agent ${active ? "active" : ""} ${dim ? "dim" : ""}"
@@ -246,6 +257,7 @@ function _htmlAgentRoster(people, allTasks, approvalQ, card) {
                         <div class="fh-mc-agent-name">${escHTML(p.name)}</div>
                     </div>
                 </div>
+                ${streakLine}
                 <div class="fh-mc-agent-foot">
                     <span class="fh-mc-agent-bal">${fPts(balance)}<span class="fh-mc-agent-lbl">pts</span></span>
                     <span class="fh-mc-agent-open ${missions > 0 ? "live" : ""}">${missions} OPEN</span>

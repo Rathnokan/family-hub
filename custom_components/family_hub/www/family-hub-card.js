@@ -11,7 +11,7 @@
   var VERSION;
   var init_constants = __esm({
     "src/card/constants.js"() {
-      VERSION = "0.6.0";
+      VERSION = "0.6.1";
     }
   });
 

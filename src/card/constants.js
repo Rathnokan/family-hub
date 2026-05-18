@@ -4,7 +4,7 @@
  */
 
 export const DOMAIN        = "family_hub";
-export const VERSION       = "0.6.0";
+export const VERSION       = "0.6.1";
 export const DEFAULT_COLOR = "#7F77DD";
 export const FLASH_MS      = 1400;
 
@@ -36,6 +36,7 @@ export const HISTORY_META = {
     task_added:           { label: "Task added",         color: "var(--fh-text-sec)" },
     person_added:         { label: "Person added",       color: "var(--fh-text-sec)" },
     allowance:            { label: "Allowance",          color: "var(--fh-success)"  },
+    completion_streak_milestone: { label: "Success streak",  color: "var(--fh-success)"  },
 };
 
 // Inline SVG icons — no external dependency

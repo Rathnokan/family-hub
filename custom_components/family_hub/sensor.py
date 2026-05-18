@@ -458,6 +458,11 @@ class FamilyHubNeedsAttentionSensor(FamilyHubBaseSensor):
                     "rank_gain_threshold": p.get("rank_gain_threshold"),   # None = use global
                     # v0.6.0 S6: large-button mode for pre-readers
                     "child_mode":          p.get("child_mode", False),
+                    # v0.6.1: success-rate person streak
+                    "completion_streak":        p.get("completion_streak", 0),
+                    "completion_threshold_pct": p.get("completion_threshold_pct", 80),
+                    "completion_milestone":     p.get("completion_milestone", 7),
+                    "completion_bonus_points":  p.get("completion_bonus_points", 50),
                 }
                 for p in store.people if p.get("active", True)
             ],

@@ -113,6 +113,36 @@ export function htmlRankBar(rankIndex, weeklyPts, dropThr, gainThr, ranks, color
 }
 
 // ---------------------------------------------------------------------------
+// Success-rate streak line (v0.6.1)
+// ---------------------------------------------------------------------------
+
+/**
+ * Render a single success-rate streak line for the rank/streaks rail panel.
+ * Only renders when the feature is enabled for this person AND the person
+ * has an active streak (count > 0). Otherwise returns empty string so themes
+ * can drop it in unconditionally without checking visibility themselves.
+ *
+ *   🔥 7d streak · 80% target
+ *
+ * Themes can override the `.fh-success-streak` class for per-theme styling.
+ */
+export function htmlSuccessStreak(person, accentColor) {
+    if (!person) return "";
+    const milestone = person.completion_milestone || 0;
+    const streak    = person.completion_streak || 0;
+    if (milestone <= 0 || streak <= 0) return "";
+    const threshold = person.completion_threshold_pct || 80;
+    const tone = accentColor || "#F8D38A";
+    return `
+        <div class="fh-success-streak" style="--ss-tone:${tone}">
+            <span class="fh-success-streak-icon">🔥</span>
+            <span class="fh-success-streak-val">${streak}d streak</span>
+            <span class="fh-success-streak-sep">·</span>
+            <span class="fh-success-streak-target">${threshold}% target</span>
+        </div>`;
+}
+
+// ---------------------------------------------------------------------------
 // Streak rail data helper (S8 — used by all themed personal pages)
 // ---------------------------------------------------------------------------
 

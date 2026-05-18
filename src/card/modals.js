@@ -643,6 +643,32 @@ export function mEditPerson(d) {
            </div>
         `)}
 
+        ${section("Success streak", "bonus for consistent days", `
+           <div class="fh-row">
+             <div class="fh-field">
+               <label class="fh-label">Threshold (% of due chores done)</label>
+               <input class="fh-input" id="m-completion-threshold" type="number"
+                      min="1" max="100" value="${d.completionThreshold ?? 80}">
+             </div>
+             <div class="fh-field">
+               <label class="fh-label">Milestone (days, 0 = off)</label>
+               <input class="fh-input" id="m-completion-milestone" type="number"
+                      min="0" value="${d.completionMilestone ?? 7}">
+             </div>
+           </div>
+           <div class="fh-field">
+             <label class="fh-label">Bonus points at each milestone</label>
+             <input class="fh-input" id="m-completion-bonus" type="number"
+                    min="0" value="${d.completionBonusPoints ?? 50}">
+             <div class="fh-field-help">
+               Awards bonus points when this person completes at least the threshold
+               share of their daily assigned chores for N consecutive days.
+               Rest days (no chores due) and excused chores don't count either way.
+               Set milestone to 0 to disable.
+             </div>
+           </div>
+        `)}
+
         ${section("Notifications", "push targets for approvals & reminders", `
            <div class="fh-field">
              <label class="fh-label">Notify target (HA service name, blank = off)</label>
@@ -782,16 +808,53 @@ export function mEditSettings(d) {
 // Claim task
 // ---------------------------------------------------------------------------
 
+/**
+ * Claim modal — v0.6.1 redesign.
+ * Card-grid picker of tappable person tiles. Tap a tile = claim instantly
+ * (no separate OK button). Designed for Echo Show touch input.
+ *
+ * Backward compat: legacy ok-claim handler still reads m-clperson/m-cltid as
+ * fallbacks, so any other code path that opens this modal differently still works.
+ */
 export function mClaim(m, people) {
-    return mWrap(`Claim — ${escHTML(m.data.name)}`,
-        `<div class="fh-field">
-         <label class="fh-label">Who is claiming?</label>
-         <select class="fh-select" id="m-clperson">
-           ${people.map(p => `<option value="${p.person_id}">${escHTML(p.name)}</option>`).join("")}
-         </select>
-       </div>
-       <input type="hidden" id="m-cltid" value="${m.data.tid}">`,
-        "Claim", "ok-claim");
+    // Only kids can claim chores — parents shouldn't pick up bonus chores.
+    const eligible = people.filter(p => p.type === "kid");
+
+    if (!eligible.length) {
+        return `
+          <div class="fh-modal">
+            <div class="fh-modal-title">Claim — ${escHTML(m.data.name)}</div>
+            <p class="fh-empty">No eligible people to claim this chore.</p>
+            <div class="fh-modal-footer">
+              <button class="fh-btn fh-btn-ghost" data-act="close-modal">Close</button>
+            </div>
+          </div>`;
+    }
+
+    const tiles = eligible.map(p => {
+        const color = p.avatar_color || DEFAULT_COLOR;
+        return `
+          <button class="fh-claim-tile" data-act="ok-claim"
+                  data-tid="${m.data.tid}" data-pid="${p.person_id}"
+                  style="--tile-color:${color}">
+            <div class="fh-claim-tile-avatar" style="background:${color}">${ini(p.name)}</div>
+            ${p.code ? `<div class="fh-claim-tile-code">${escHTML(p.code)}</div>` : ""}
+            <div class="fh-claim-tile-name">${escHTML(p.name)}</div>
+          </button>`;
+    }).join("");
+
+    return `
+      <div class="fh-modal">
+        <div class="fh-modal-title">Claim — ${escHTML(m.data.name)}</div>
+        <p style="font-size:.88rem;color:var(--fh-text-sec);margin:0 0 12px;line-height:1.4">
+          Who's claiming this chore?
+        </p>
+        <div class="fh-claim-grid">${tiles}</div>
+        <input type="hidden" id="m-cltid" value="${m.data.tid}">
+        <div class="fh-modal-footer">
+          <button class="fh-btn fh-btn-ghost" data-act="close-modal">Cancel</button>
+        </div>
+      </div>`;
 }
 
 // ---------------------------------------------------------------------------

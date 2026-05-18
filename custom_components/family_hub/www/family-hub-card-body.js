@@ -503,6 +503,53 @@ var init_css = __esm({
   .fh-checkbox-row { display:flex; align-items:center; gap:8px; }
   .fh-checkbox-row input[type=checkbox] { width:17px; height:17px; cursor:pointer; }
 
+  /* Claim picker \u2014 card grid of tappable person tiles (v0.6.1).
+     Replaces the previous <select> dropdown for Echo Show touch input. */
+  .fh-claim-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+    margin: 4px 0 12px;
+  }
+  .fh-claim-tile {
+    all: unset;
+    box-sizing: border-box;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 14px 10px 12px;
+    background: var(--fh-surface);
+    border: 1.5px solid var(--fh-border);
+    border-radius: 10px;
+    cursor: pointer;
+    text-align: center;
+    transition: transform .1s, border-color .15s, background .15s;
+  }
+  .fh-claim-tile:hover {
+    border-color: var(--tile-color, var(--fh-accent));
+    background: rgba(127,119,221,.06);
+  }
+  .fh-claim-tile:active { transform: scale(.96); }
+  .fh-claim-tile:focus-visible {
+    outline: 2px solid var(--tile-color, var(--fh-accent));
+    outline-offset: 2px;
+  }
+  .fh-claim-tile-avatar {
+    width: 52px; height: 52px; border-radius: 50%;
+    display: grid; place-items: center;
+    color: #fff; font-weight: 800; font-size: 1.25rem;
+    font-family: var(--fh-font-display, 'Bricolage Grotesque', sans-serif);
+    flex-shrink: 0;
+  }
+  .fh-claim-tile-code {
+    font-family: var(--fh-font-mono, 'JetBrains Mono', monospace);
+    font-size: var(--fh-text-xs); font-weight: 700;
+    letter-spacing: .08em; color: #F5C24A;
+  }
+  .fh-claim-tile-name {
+    font-size: var(--fh-text-sm); font-weight: 600; color: var(--fh-text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
   /* Icon picker category headers and per-category subgrids (S9 P3) \u2014 used by
      the always-visible .fh-chore-icon-grid block (see further down). */
   .fh-icon-picker-cat-hdr {
@@ -1077,6 +1124,17 @@ var init_css = __esm({
   .fh-mc-agent-lbl    { color:var(--mc-text-mute); margin-left:3px; font-weight:500; }
   .fh-mc-agent-open   { color:var(--mc-text-mute); }
   .fh-mc-agent-open.live { color:var(--mc-cyan); }
+  /* v0.6.1: success-rate streak line \u2014 only renders when streak > 0 */
+  .fh-mc-agent-streak {
+    margin-top:7px; padding:4px 6px;
+    background:rgba(248, 211, 138, .08);
+    border:1px solid rgba(248, 211, 138, .25);
+    border-radius:4px;
+    color:#F8D38A;
+    font-family:"JetBrains Mono",monospace;
+    font-size:var(--fh-text-xs); font-weight:700; letter-spacing:.04em;
+    text-align:center;
+  }
 
   /* ---- Section headers (// LABEL \u2500\u2500\u2500 sub) ---- */
   .fh-mc-section-hdr {
@@ -1159,11 +1217,13 @@ var init_css = __esm({
   .fh-mc-go-group {
     display:flex; align-items:stretch; gap:6px; flex-shrink:0;
   }
+  /* Per-assignee GO mini button \u2014 v0.6.1: bumped from 48px\xD7~52px to 64px\xD760px
+     for confident touch input on Echo Show kitchen displays. */
   .fh-mc-go-mini {
     all:unset; cursor:pointer; box-sizing:border-box;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
-    min-width:48px; padding:5px 6px;
-    border-radius:9px;
+    min-width:64px; min-height:60px; padding:8px 10px; gap:3px;
+    border-radius:10px;
     background:var(--mc-accent, var(--mc-cyan));
     color:var(--mc-ink);
     box-shadow:0 3px 0 rgba(0,0,0,.25);
@@ -1720,6 +1780,37 @@ var init_css = __esm({
   .fh-rank-bar-status {
     font-size:.75rem; color:var(--fh-rb-status, rgba(255,255,255,.55));
     white-space:nowrap; flex-shrink:0; font-weight:700;
+  }
+  /* Success-rate person streak \u2014 appended below the rank bar in all themes.
+     Renders only when the kid has an active streak (count > 0). Themes can
+     override --ss-tone via the inline style on the element. */
+  .fh-success-streak {
+    display:flex; align-items:center; gap:6px;
+    margin-top:8px; padding:5px 8px;
+    background:color-mix(in srgb, var(--ss-tone, #F8D38A) 14%, transparent);
+    border:1px solid color-mix(in srgb, var(--ss-tone, #F8D38A) 35%, transparent);
+    border-radius:4px;
+    font-family:var(--fh-font-mono, "JetBrains Mono", monospace);
+    font-size:var(--fh-text-xs); font-weight:700; letter-spacing:.04em;
+    color:var(--ss-tone, #F8D38A);
+  }
+  .fh-success-streak-icon { font-size:.95em; line-height:1; }
+  .fh-success-streak-sep  { opacity:.55; margin:0 1px; }
+  .fh-success-streak-target { opacity:.85; font-weight:600; }
+  /* Paper-theme tone \u2014 sit on warm parchment, not bright amber */
+  .fh-dn-page .fh-success-streak,
+  .fh-bk-page .fh-success-streak,
+  .fh-hp-page .fh-success-streak {
+    background:color-mix(in srgb, var(--ss-tone) 18%, #f6ead0);
+    color:#5a3a1a;
+    border-color:color-mix(in srgb, var(--ss-tone) 45%, #c9a062);
+  }
+  /* DBZ comic tone \u2014 sit on white card with strong border */
+  .fh-dbz-rpanel .fh-success-streak {
+    background:#FFF6E8;
+    color:#1A2B5E;
+    border:2px solid #1A2B5E;
+    box-shadow:0 3px 0 #1A2B5E;
   }
   /* Themed overrides \xE2\u20AC\u201D light/paper themes need darker rank bar chrome */
   .fh-dn-page, .fh-bk-page, .fh-hp-page {
@@ -3325,13 +3416,16 @@ var init_css = __esm({
   }
   .fh-row-pts:empty { display:none; }
 
-  /* Action button (themes override shape/color/transform) */
+  /* Action button (themes override shape/color/transform).
+     v0.6.1: bumped from min-width:64px / 8px padding to min-width:72px / 60px height
+     for thumb-confidence on Echo Show. Kid-large still overrides to its own bigger
+     size via the .kid-large block. */
   .fh-row-btn {
     display:inline-flex; align-items:center; justify-content:center;
-    flex-shrink:0; gap:6px; min-width:64px;
-    padding:8px 10px;
+    flex-shrink:0; gap:6px; min-width:72px; min-height:60px;
+    padding:10px 14px;
     font-family:var(--fh-font-mono);
-    font-size:var(--fh-text-xs); font-weight:800;
+    font-size:var(--fh-text-sm); font-weight:800;
     letter-spacing:.06em; text-transform:uppercase;
     cursor:pointer; text-align:center;
     white-space:normal; line-height:1.1;
@@ -3775,7 +3869,7 @@ var DOMAIN, VERSION, DEFAULT_COLOR, FLASH_MS, FH_SENSORS, WEEKDAY_LABELS, HISTOR
 var init_constants = __esm({
   "src/card/constants.js"() {
     DOMAIN = "family_hub";
-    VERSION = "0.6.0";
+    VERSION = "0.6.1";
     DEFAULT_COLOR = "#7F77DD";
     FLASH_MS = 1400;
     FH_SENSORS = [
@@ -3800,7 +3894,8 @@ var init_constants = __esm({
       redemption_declined: { label: "Redeem declined", color: "var(--fh-overdue)" },
       task_added: { label: "Task added", color: "var(--fh-text-sec)" },
       person_added: { label: "Person added", color: "var(--fh-text-sec)" },
-      allowance: { label: "Allowance", color: "var(--fh-success)" }
+      allowance: { label: "Allowance", color: "var(--fh-success)" },
+      completion_streak_milestone: { label: "Success streak", color: "var(--fh-success)" }
     };
     I = {
       check: `<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>`,
@@ -4246,6 +4341,21 @@ function htmlRankBar(rankIndex, weeklyPts, dropThr, gainThr, ranks, color) {
             <span class="fh-rank-bar-status">${escHTML(statusText)}</span>
         </div>`;
 }
+function htmlSuccessStreak(person, accentColor) {
+  if (!person) return "";
+  const milestone = person.completion_milestone || 0;
+  const streak = person.completion_streak || 0;
+  if (milestone <= 0 || streak <= 0) return "";
+  const threshold = person.completion_threshold_pct || 80;
+  const tone = accentColor || "#F8D38A";
+  return `
+        <div class="fh-success-streak" style="--ss-tone:${tone}">
+            <span class="fh-success-streak-icon">\u{1F525}</span>
+            <span class="fh-success-streak-val">${streak}d streak</span>
+            <span class="fh-success-streak-sep">\xB7</span>
+            <span class="fh-success-streak-target">${threshold}% target</span>
+        </div>`;
+}
 function getActiveStreaks(attr, naAttr, person, max = 8) {
   const choreById = new Map(
     (naAttr.active_chores || []).map((c) => [c.chore_id, c])
@@ -4437,7 +4547,7 @@ function _railPanels({
 }) {
   return `
         ${_railPanelKPIs(balance, weekly, openCount, pendingCount)}
-        ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, color)}
+        ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, color, person)}
         ${_railPanelStreaks(attr, naAttr, person, color)}
         ${_railPanelRecent(person, naAttr, color)}`;
 }
@@ -4466,15 +4576,16 @@ function _railPanelKPIs(balance, weekly, openCount, pendingCount) {
         </div>`;
   return _railPanel("OVERVIEW", body);
 }
-function _railPanelRank(rankIdx, weekly, dropThr, gainThr, color) {
+function _railPanelRank(rankIdx, weekly, dropThr, gainThr, color, person) {
   const bar = htmlRankBar(rankIdx, weekly, dropThr, gainThr, CLASSIC_RANKS, color);
+  const streak = htmlSuccessStreak(person, color);
   if (!bar) {
     return _railPanel(
       "RANK",
-      `<div class="fh-classic-rmax">${escHTML(getEffectiveRank(rankIdx, CLASSIC_RANKS).name)} \xB7 max</div>`
+      `<div class="fh-classic-rmax">${escHTML(getEffectiveRank(rankIdx, CLASSIC_RANKS).name)} \xB7 max</div>${streak}`
     );
   }
-  return _railPanel("RANK", bar);
+  return _railPanel("RANK", bar + streak);
 }
 function _railPanelStreaks(attr, naAttr, person, color) {
   const active = getActiveStreaks(attr, naAttr, person, 8);
@@ -4792,7 +4903,7 @@ function _railPanels2({
 }) {
   return `
         ${_railPanelKPIs2(balance, openCount, weekly)}
-        ${_railPanelRank2(rankIdx, weekly, dropThr, gainThr)}
+        ${_railPanelRank2(rankIdx, weekly, dropThr, gainThr, person)}
         ${_railPanelStreaks2(attr, naAttr, person)}
         ${_railPanelSheet(person, rank, plotDate)}`;
 }
@@ -4825,15 +4936,16 @@ function _railPanelKPIs2(balance, openCount, weekly) {
         </div>`;
   return _railPanel2("TODAY \xB7 KPIS", body, { dense: true });
 }
-function _railPanelRank2(rankIdx, weekly, dropThr, gainThr) {
+function _railPanelRank2(rankIdx, weekly, dropThr, gainThr, person) {
   const bar = htmlRankBar(rankIdx, weekly, dropThr, gainThr, ENGINEER_RANKS, ENG.amber);
+  const streak = htmlSuccessStreak(person, ENG.amber);
   if (!bar) {
     return _railPanel2(
       "RANK \xB7 TRACK",
-      `<div class="fh-eng-rmax">${escHTML(getEffectiveRank(rankIdx, ENGINEER_RANKS).name)} &middot; MAX</div>`
+      `<div class="fh-eng-rmax">${escHTML(getEffectiveRank(rankIdx, ENGINEER_RANKS).name)} &middot; MAX</div>${streak}`
     );
   }
-  return _railPanel2("RANK \xB7 TRACK", bar);
+  return _railPanel2("RANK \xB7 TRACK", bar + streak);
 }
 function _railPanelStreaks2(attr, naAttr, person) {
   const active = getActiveStreaks(attr, naAttr, person, 8);
@@ -5151,7 +5263,7 @@ function _railPanels3({
 }) {
   return `
         ${_railPanelKPIs3(balance, weekly, openCount)}
-        ${_railPanelRank3(rankIdx, weekly, dropThr, gainThr)}
+        ${_railPanelRank3(rankIdx, weekly, dropThr, gainThr, person)}
         ${_railPanelStreaks3(attr, naAttr, person)}
         ${_railPanelRecent2(person, naAttr)}`;
 }
@@ -5179,15 +5291,16 @@ function _railPanelKPIs3(balance, weekly, openCount) {
         </div>`;
   return _railPanel3("the pantry today", body);
 }
-function _railPanelRank3(rankIdx, weekly, dropThr, gainThr) {
+function _railPanelRank3(rankIdx, weekly, dropThr, gainThr, person) {
   const bar = htmlRankBar(rankIdx, weekly, dropThr, gainThr, BAKER_RANKS, BK.terra);
+  const streak = htmlSuccessStreak(person, BK.terra);
   if (!bar) {
     return _railPanel3(
       "promotion track",
-      `<div class="fh-bk-rmax">${escHTML(getEffectiveRank(rankIdx, BAKER_RANKS).name)} \xB7 top of the line</div>`
+      `<div class="fh-bk-rmax">${escHTML(getEffectiveRank(rankIdx, BAKER_RANKS).name)} \xB7 top of the line</div>${streak}`
     );
   }
-  return _railPanel3("promotion track", bar);
+  return _railPanel3("promotion track", bar + streak);
 }
 function _railPanelStreaks3(attr, naAttr, person) {
   const active = getActiveStreaks(attr, naAttr, person, 8);
@@ -5475,7 +5588,7 @@ function _railPanels4({
 }) {
   return `
         ${_railPanelKPIs4(balance, weekly, openCount)}
-        ${_railPanelRank4(rankIdx, weekly, dropThr, gainThr)}
+        ${_railPanelRank4(rankIdx, weekly, dropThr, gainThr, person)}
         ${_railPanelStreaks4(attr, naAttr, person)}
         ${_railPanelFindings(person, naAttr)}`;
 }
@@ -5503,15 +5616,16 @@ function _railPanelKPIs4(balance, weekly, openCount) {
         </div>`;
   return _railPanel4("FIELD KIT \xB7 TODAY", body);
 }
-function _railPanelRank4(rankIdx, weekly, dropThr, gainThr) {
+function _railPanelRank4(rankIdx, weekly, dropThr, gainThr, person) {
   const bar = htmlRankBar(rankIdx, weekly, dropThr, gainThr, DINOS_RANKS, DN.amber);
+  const streak = htmlSuccessStreak(person, DN.amber);
   if (!bar) {
     return _railPanel4(
       "DIG STATUS",
-      `<div class="fh-dn-rmax">${escHTML(getEffectiveRank(rankIdx, DINOS_RANKS).name)} \xB7 MAX</div>`
+      `<div class="fh-dn-rmax">${escHTML(getEffectiveRank(rankIdx, DINOS_RANKS).name)} \xB7 MAX</div>${streak}`
     );
   }
-  return _railPanel4("DIG STATUS", bar);
+  return _railPanel4("DIG STATUS", bar + streak);
 }
 function _railPanelStreaks4(attr, naAttr, person) {
   const active = getActiveStreaks(attr, naAttr, person, 8);
@@ -5813,7 +5927,7 @@ function _railPanels5({
 }) {
   return `
         ${_railPanelKPIs5(balance, weekly, openCount)}
-        ${_railPanelRank5(rankIdx, weekly, dropThr, gainThr)}
+        ${_railPanelRank5(rankIdx, weekly, dropThr, gainThr, person)}
         ${_railPanelStreaks5(attr, naAttr, person)}
         ${_railPanelOwlPost(person, naAttr)}`;
 }
@@ -5841,15 +5955,16 @@ function _railPanelKPIs5(balance, weekly, openCount) {
         </div>`;
   return _railPanel5("HOUSE STANDINGS", body);
 }
-function _railPanelRank5(rankIdx, weekly, dropThr, gainThr) {
+function _railPanelRank5(rankIdx, weekly, dropThr, gainThr, person) {
   const bar = htmlRankBar(rankIdx, weekly, dropThr, gainThr, HP_RANKS, HP.emerald);
+  const streak = htmlSuccessStreak(person, HP.emerald);
   if (!bar) {
     return _railPanel5(
       "O.W.L. PROGRESS",
-      `<div class="fh-hp-rmax">${escHTML(getEffectiveRank(rankIdx, HP_RANKS).name)} \xB7 max marks</div>`
+      `<div class="fh-hp-rmax">${escHTML(getEffectiveRank(rankIdx, HP_RANKS).name)} \xB7 max marks</div>${streak}`
     );
   }
-  return _railPanel5("O.W.L. PROGRESS", bar);
+  return _railPanel5("O.W.L. PROGRESS", bar + streak);
 }
 function _railPanelStreaks5(attr, naAttr, person) {
   const active = getActiveStreaks(attr, naAttr, person, 8);
@@ -6150,7 +6265,7 @@ function _railPanels6({
 }) {
   return `
         ${_railPanelKPIs6(balance, weekly, openCount)}
-        ${_railPanelRank6(rankIdx, weekly, dropThr, gainThr)}
+        ${_railPanelRank6(rankIdx, weekly, dropThr, gainThr, person)}
         ${_railPanelStreaks6(attr, naAttr, person)}
         ${_railPanelNextUp(nextItem, fillPct)}`;
 }
@@ -6178,15 +6293,16 @@ function _railPanelKPIs6(balance, weekly, openCount) {
         </div>`;
   return _railPanel6("POWER LEVEL", body);
 }
-function _railPanelRank6(rankIdx, weekly, dropThr, gainThr) {
+function _railPanelRank6(rankIdx, weekly, dropThr, gainThr, person) {
   const bar = htmlRankBar(rankIdx, weekly, dropThr, gainThr, DBZ_RANKS, DBZ.orange);
+  const streak = htmlSuccessStreak(person, DBZ.orange);
   if (!bar) {
     return _railPanel6(
       "NEXT FORM",
-      `<div class="fh-dbz-rmax">${escHTML(getEffectiveRank(rankIdx, DBZ_RANKS).name)} \xB7 MAX</div>`
+      `<div class="fh-dbz-rmax">${escHTML(getEffectiveRank(rankIdx, DBZ_RANKS).name)} \xB7 MAX</div>${streak}`
     );
   }
-  return _railPanel6("NEXT FORM", bar);
+  return _railPanel6("NEXT FORM", bar + streak);
 }
 function _railPanelStreaks6(attr, naAttr, person) {
   const active = getActiveStreaks(attr, naAttr, person, 8);
@@ -6684,6 +6800,12 @@ function _htmlAgentRoster(people, allTasks, approvalQ, card) {
     const alerts = approvalQ.filter((a) => a.person_id === p.person_id).length;
     const code = (p.code || p.name || "AGT").toUpperCase();
     const balance = parseInt(((_a = card._states(card._personEntityId(p.name))) == null ? void 0 : _a.state) || "0");
+    const ssMilestone = p.completion_milestone || 0;
+    const ssStreak = p.completion_streak || 0;
+    const ssThreshold = p.completion_threshold_pct || 80;
+    const streakLine = ssMilestone > 0 && ssStreak > 0 ? `<div class="fh-mc-agent-streak" title="${ssThreshold}% of daily chores for ${ssStreak} days running">
+                   \u{1F525} ${ssStreak}d \xB7 ${ssThreshold}%
+               </div>` : "";
     return `
             <button class="fh-mc-agent ${active ? "active" : ""} ${dim ? "dim" : ""}"
                     style="--agent-color:${color}"
@@ -6698,6 +6820,7 @@ function _htmlAgentRoster(people, allTasks, approvalQ, card) {
                         <div class="fh-mc-agent-name">${escHTML(p.name)}</div>
                     </div>
                 </div>
+                ${streakLine}
                 <div class="fh-mc-agent-foot">
                     <span class="fh-mc-agent-bal">${fPts(balance)}<span class="fh-mc-agent-lbl">pts</span></span>
                     <span class="fh-mc-agent-open ${missions > 0 ? "live" : ""}">${missions} OPEN</span>
@@ -7786,6 +7909,32 @@ function mEditPerson(d) {
            </div>
         `)}
 
+        ${section("Success streak", "bonus for consistent days", `
+           <div class="fh-row">
+             <div class="fh-field">
+               <label class="fh-label">Threshold (% of due chores done)</label>
+               <input class="fh-input" id="m-completion-threshold" type="number"
+                      min="1" max="100" value="${d.completionThreshold ?? 80}">
+             </div>
+             <div class="fh-field">
+               <label class="fh-label">Milestone (days, 0 = off)</label>
+               <input class="fh-input" id="m-completion-milestone" type="number"
+                      min="0" value="${d.completionMilestone ?? 7}">
+             </div>
+           </div>
+           <div class="fh-field">
+             <label class="fh-label">Bonus points at each milestone</label>
+             <input class="fh-input" id="m-completion-bonus" type="number"
+                    min="0" value="${d.completionBonusPoints ?? 50}">
+             <div class="fh-field-help">
+               Awards bonus points when this person completes at least the threshold
+               share of their daily assigned chores for N consecutive days.
+               Rest days (no chores due) and excused chores don't count either way.
+               Set milestone to 0 to disable.
+             </div>
+           </div>
+        `)}
+
         ${section("Notifications", "push targets for approvals & reminders", `
            <div class="fh-field">
              <label class="fh-label">Notify target (HA service name, blank = off)</label>
@@ -7912,18 +8061,40 @@ function mEditSettings(d) {
   );
 }
 function mClaim(m, people) {
-  return mWrap(
-    `Claim \u2014 ${escHTML(m.data.name)}`,
-    `<div class="fh-field">
-         <label class="fh-label">Who is claiming?</label>
-         <select class="fh-select" id="m-clperson">
-           ${people.map((p) => `<option value="${p.person_id}">${escHTML(p.name)}</option>`).join("")}
-         </select>
-       </div>
-       <input type="hidden" id="m-cltid" value="${m.data.tid}">`,
-    "Claim",
-    "ok-claim"
-  );
+  const eligible = people.filter((p) => p.type === "kid");
+  if (!eligible.length) {
+    return `
+          <div class="fh-modal">
+            <div class="fh-modal-title">Claim \u2014 ${escHTML(m.data.name)}</div>
+            <p class="fh-empty">No eligible people to claim this chore.</p>
+            <div class="fh-modal-footer">
+              <button class="fh-btn fh-btn-ghost" data-act="close-modal">Close</button>
+            </div>
+          </div>`;
+  }
+  const tiles = eligible.map((p) => {
+    const color = p.avatar_color || DEFAULT_COLOR;
+    return `
+          <button class="fh-claim-tile" data-act="ok-claim"
+                  data-tid="${m.data.tid}" data-pid="${p.person_id}"
+                  style="--tile-color:${color}">
+            <div class="fh-claim-tile-avatar" style="background:${color}">${ini(p.name)}</div>
+            ${p.code ? `<div class="fh-claim-tile-code">${escHTML(p.code)}</div>` : ""}
+            <div class="fh-claim-tile-name">${escHTML(p.name)}</div>
+          </button>`;
+  }).join("");
+  return `
+      <div class="fh-modal">
+        <div class="fh-modal-title">Claim \u2014 ${escHTML(m.data.name)}</div>
+        <p style="font-size:.88rem;color:var(--fh-text-sec);margin:0 0 12px;line-height:1.4">
+          Who's claiming this chore?
+        </p>
+        <div class="fh-claim-grid">${tiles}</div>
+        <input type="hidden" id="m-cltid" value="${m.data.tid}">
+        <div class="fh-modal-footer">
+          <button class="fh-btn fh-btn-ghost" data-act="close-modal">Cancel</button>
+        </div>
+      </div>`;
 }
 function mAddReminder(m, people) {
   return mWrap(
@@ -8235,6 +8406,9 @@ function _htmlAdFamily(people, attr) {
                         data-pdropThr="${p.rank_drop_threshold !== null && p.rank_drop_threshold !== void 0 ? p.rank_drop_threshold : ""}"
                         data-pgainThr="${p.rank_gain_threshold !== null && p.rank_gain_threshold !== void 0 ? p.rank_gain_threshold : ""}"
                         data-pchildmode="${p.child_mode === true}"
+                        data-pcompletionthreshold="${p.completion_threshold_pct ?? 80}"
+                        data-pcompletionmilestone="${p.completion_milestone ?? 7}"
+                        data-pcompletionbonus="${p.completion_bonus_points ?? 50}"
                         title="Edit person">${I.edit}</button>
                 <button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="open-confirm-remove-person"
                         data-pid="${p.person_id}" data-pname="${escAttr(p.name)}"
@@ -9353,7 +9527,11 @@ This cannot be undone.`)) break;
           rankIdx: parseInt(el.dataset.prankidx || "0"),
           dropThr: el.dataset.pdropThr || "",
           gainThr: el.dataset.pgainThr || "",
-          childMode: el.dataset.pchildmode === "true"
+          childMode: el.dataset.pchildmode === "true",
+          // v0.6.1: success-rate streak knobs (set via Edit Person modal)
+          completionThreshold: parseInt(el.dataset.pcompletionthreshold ?? "80"),
+          completionMilestone: parseInt(el.dataset.pcompletionmilestone ?? "7"),
+          completionBonusPoints: parseInt(el.dataset.pcompletionbonus ?? "50")
         }
       };
       card._doRender(true);
@@ -9634,7 +9812,11 @@ This cannot be undone.`)) break;
         rank_index: parseInt(v("m-prankidx") || "0"),
         rank_drop_threshold: dropThrStr !== "" ? parseInt(dropThrStr) : null,
         rank_gain_threshold: gainThrStr !== "" ? parseInt(gainThrStr) : null,
-        child_mode: b("m-pchildmode")
+        child_mode: b("m-pchildmode"),
+        // v0.6.1: success-rate person streak knobs
+        completion_threshold_pct: Math.max(1, Math.min(100, int("m-completion-threshold") || 80)),
+        completion_milestone: Math.max(0, int("m-completion-milestone") || 0),
+        completion_bonus_points: Math.max(0, int("m-completion-bonus") || 0)
       });
       card._closeModal();
       break;
@@ -9663,8 +9845,8 @@ This cannot be undone.`)) break;
       break;
     }
     case "ok-claim": {
-      const tid = v("m-cltid");
-      const pid = v("m-clperson");
+      const tid = el.dataset.tid || v("m-cltid");
+      const pid = el.dataset.pid || v("m-clperson");
       if (!tid || !pid) break;
       card._svc("claim_task", { task_id: tid, person_id: pid });
       card._closeModal();

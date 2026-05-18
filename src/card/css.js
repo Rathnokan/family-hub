@@ -496,6 +496,53 @@ export const CSS = `
   .fh-checkbox-row { display:flex; align-items:center; gap:8px; }
   .fh-checkbox-row input[type=checkbox] { width:17px; height:17px; cursor:pointer; }
 
+  /* Claim picker — card grid of tappable person tiles (v0.6.1).
+     Replaces the previous <select> dropdown for Echo Show touch input. */
+  .fh-claim-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+    margin: 4px 0 12px;
+  }
+  .fh-claim-tile {
+    all: unset;
+    box-sizing: border-box;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 14px 10px 12px;
+    background: var(--fh-surface);
+    border: 1.5px solid var(--fh-border);
+    border-radius: 10px;
+    cursor: pointer;
+    text-align: center;
+    transition: transform .1s, border-color .15s, background .15s;
+  }
+  .fh-claim-tile:hover {
+    border-color: var(--tile-color, var(--fh-accent));
+    background: rgba(127,119,221,.06);
+  }
+  .fh-claim-tile:active { transform: scale(.96); }
+  .fh-claim-tile:focus-visible {
+    outline: 2px solid var(--tile-color, var(--fh-accent));
+    outline-offset: 2px;
+  }
+  .fh-claim-tile-avatar {
+    width: 52px; height: 52px; border-radius: 50%;
+    display: grid; place-items: center;
+    color: #fff; font-weight: 800; font-size: 1.25rem;
+    font-family: var(--fh-font-display, 'Bricolage Grotesque', sans-serif);
+    flex-shrink: 0;
+  }
+  .fh-claim-tile-code {
+    font-family: var(--fh-font-mono, 'JetBrains Mono', monospace);
+    font-size: var(--fh-text-xs); font-weight: 700;
+    letter-spacing: .08em; color: #F5C24A;
+  }
+  .fh-claim-tile-name {
+    font-size: var(--fh-text-sm); font-weight: 600; color: var(--fh-text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
   /* Icon picker category headers and per-category subgrids (S9 P3) — used by
      the always-visible .fh-chore-icon-grid block (see further down). */
   .fh-icon-picker-cat-hdr {
@@ -1070,6 +1117,17 @@ export const CSS = `
   .fh-mc-agent-lbl    { color:var(--mc-text-mute); margin-left:3px; font-weight:500; }
   .fh-mc-agent-open   { color:var(--mc-text-mute); }
   .fh-mc-agent-open.live { color:var(--mc-cyan); }
+  /* v0.6.1: success-rate streak line — only renders when streak > 0 */
+  .fh-mc-agent-streak {
+    margin-top:7px; padding:4px 6px;
+    background:rgba(248, 211, 138, .08);
+    border:1px solid rgba(248, 211, 138, .25);
+    border-radius:4px;
+    color:#F8D38A;
+    font-family:"JetBrains Mono",monospace;
+    font-size:var(--fh-text-xs); font-weight:700; letter-spacing:.04em;
+    text-align:center;
+  }
 
   /* ---- Section headers (// LABEL ─── sub) ---- */
   .fh-mc-section-hdr {
@@ -1152,11 +1210,13 @@ export const CSS = `
   .fh-mc-go-group {
     display:flex; align-items:stretch; gap:6px; flex-shrink:0;
   }
+  /* Per-assignee GO mini button — v0.6.1: bumped from 48px×~52px to 64px×60px
+     for confident touch input on Echo Show kitchen displays. */
   .fh-mc-go-mini {
     all:unset; cursor:pointer; box-sizing:border-box;
     display:flex; flex-direction:column; align-items:center; justify-content:center;
-    min-width:48px; padding:5px 6px;
-    border-radius:9px;
+    min-width:64px; min-height:60px; padding:8px 10px; gap:3px;
+    border-radius:10px;
     background:var(--mc-accent, var(--mc-cyan));
     color:var(--mc-ink);
     box-shadow:0 3px 0 rgba(0,0,0,.25);
@@ -1713,6 +1773,37 @@ export const CSS = `
   .fh-rank-bar-status {
     font-size:.75rem; color:var(--fh-rb-status, rgba(255,255,255,.55));
     white-space:nowrap; flex-shrink:0; font-weight:700;
+  }
+  /* Success-rate person streak — appended below the rank bar in all themes.
+     Renders only when the kid has an active streak (count > 0). Themes can
+     override --ss-tone via the inline style on the element. */
+  .fh-success-streak {
+    display:flex; align-items:center; gap:6px;
+    margin-top:8px; padding:5px 8px;
+    background:color-mix(in srgb, var(--ss-tone, #F8D38A) 14%, transparent);
+    border:1px solid color-mix(in srgb, var(--ss-tone, #F8D38A) 35%, transparent);
+    border-radius:4px;
+    font-family:var(--fh-font-mono, "JetBrains Mono", monospace);
+    font-size:var(--fh-text-xs); font-weight:700; letter-spacing:.04em;
+    color:var(--ss-tone, #F8D38A);
+  }
+  .fh-success-streak-icon { font-size:.95em; line-height:1; }
+  .fh-success-streak-sep  { opacity:.55; margin:0 1px; }
+  .fh-success-streak-target { opacity:.85; font-weight:600; }
+  /* Paper-theme tone — sit on warm parchment, not bright amber */
+  .fh-dn-page .fh-success-streak,
+  .fh-bk-page .fh-success-streak,
+  .fh-hp-page .fh-success-streak {
+    background:color-mix(in srgb, var(--ss-tone) 18%, #f6ead0);
+    color:#5a3a1a;
+    border-color:color-mix(in srgb, var(--ss-tone) 45%, #c9a062);
+  }
+  /* DBZ comic tone — sit on white card with strong border */
+  .fh-dbz-rpanel .fh-success-streak {
+    background:#FFF6E8;
+    color:#1A2B5E;
+    border:2px solid #1A2B5E;
+    box-shadow:0 3px 0 #1A2B5E;
   }
   /* Themed overrides â€” light/paper themes need darker rank bar chrome */
   .fh-dn-page, .fh-bk-page, .fh-hp-page {
@@ -3318,13 +3409,16 @@ export const CSS = `
   }
   .fh-row-pts:empty { display:none; }
 
-  /* Action button (themes override shape/color/transform) */
+  /* Action button (themes override shape/color/transform).
+     v0.6.1: bumped from min-width:64px / 8px padding to min-width:72px / 60px height
+     for thumb-confidence on Echo Show. Kid-large still overrides to its own bigger
+     size via the .kid-large block. */
   .fh-row-btn {
     display:inline-flex; align-items:center; justify-content:center;
-    flex-shrink:0; gap:6px; min-width:64px;
-    padding:8px 10px;
+    flex-shrink:0; gap:6px; min-width:72px; min-height:60px;
+    padding:10px 14px;
     font-family:var(--fh-font-mono);
-    font-size:var(--fh-text-xs); font-weight:800;
+    font-size:var(--fh-text-sm); font-weight:800;
     letter-spacing:.06em; text-transform:uppercase;
     cursor:pointer; text-align:center;
     white-space:normal; line-height:1.1;

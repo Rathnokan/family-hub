@@ -133,6 +133,7 @@ HISTORY_REDEMPTION_DECLINED   = "redemption_declined"
 HISTORY_TASK_ADDED            = "task_added"
 HISTORY_PERSON_ADDED          = "person_added"
 HISTORY_ALLOWANCE             = "allowance"
+HISTORY_COMPLETION_STREAK_MILESTONE = "completion_streak_milestone"  # v0.6.1 success-rate streak bonus
 
 # Rolling retention window — history entries older than this are trimmed on each
 # daily tick to keep the data file from growing unbounded.

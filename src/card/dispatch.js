@@ -388,6 +388,10 @@ export function dispatch(act, el, card) {
                     dropThr:        el.dataset.pdropThr              || "",
                     gainThr:        el.dataset.pgainThr              || "",
                     childMode:      el.dataset.pchildmode === "true",
+                    // v0.6.1: success-rate streak knobs (set via Edit Person modal)
+                    completionThreshold:   parseInt(el.dataset.pcompletionthreshold ?? "80"),
+                    completionMilestone:   parseInt(el.dataset.pcompletionmilestone ?? "7"),
+                    completionBonusPoints: parseInt(el.dataset.pcompletionbonus     ?? "50"),
                 }
             };
             card._doRender(true);
@@ -709,6 +713,10 @@ export function dispatch(act, el, card) {
                 rank_drop_threshold:    dropThrStr !== "" ? parseInt(dropThrStr) : null,
                 rank_gain_threshold:    gainThrStr !== "" ? parseInt(gainThrStr) : null,
                 child_mode:             b("m-pchildmode"),
+                // v0.6.1: success-rate person streak knobs
+                completion_threshold_pct: Math.max(1, Math.min(100, int("m-completion-threshold") || 80)),
+                completion_milestone:     Math.max(0, int("m-completion-milestone") || 0),
+                completion_bonus_points:  Math.max(0, int("m-completion-bonus")     || 0),
             });
             card._closeModal();
             break;
@@ -740,8 +748,10 @@ export function dispatch(act, el, card) {
         }
 
         case "ok-claim": {
-            const tid = v("m-cltid");
-            const pid = v("m-clperson");
+            // v0.6.1: card-grid picker passes data-tid + data-pid on the tile button.
+            // Fall back to hidden inputs from any legacy modal path that still uses them.
+            const tid = el.dataset.tid || v("m-cltid");
+            const pid = el.dataset.pid || v("m-clperson");
             if (!tid || !pid) break;
             card._svc("claim_task", { task_id: tid, person_id: pid });
             card._closeModal();

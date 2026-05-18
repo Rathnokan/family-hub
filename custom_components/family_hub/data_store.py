@@ -94,6 +94,7 @@ from .const import (
     DEFAULT_SHOW_DOLLAR_VALUE_TO_KIDS,
     DOMAIN,
     HISTORY_ALLOWANCE,
+    HISTORY_COMPLETION_STREAK_MILESTONE,
     HISTORY_PERSON_ADDED,
     HISTORY_POINTS_AWARDED,
     HISTORY_REDEMPTION_APPROVED,
@@ -381,6 +382,12 @@ class FamilyHubDataStore:
             person.setdefault("rank_gain_threshold", None)  # None = use global setting
             # v0.6.0 S6: large-button mode for pre-readers
             person.setdefault("child_mode", False)
+            # v0.6.1: success-rate person streak — bonus for consecutive days at threshold%
+            person.setdefault("completion_streak",          0)
+            person.setdefault("completion_threshold_pct",   80)   # % of due chores done that day
+            person.setdefault("completion_milestone",       7)    # bonus every N days (0 = off)
+            person.setdefault("completion_bonus_points",    50)
+            person.setdefault("last_completion_eval_date",  None) # ISO date string
 
         # v0.6.0 S5: rank evaluation settings
         s.setdefault("rank_eval_weekday",   0)   # 0 = Monday
@@ -541,6 +548,19 @@ class FamilyHubDataStore:
         await self.async_save()
         return True
 
+    # ------------------------------------------------------------------
+    # Success-rate streak admin override (v0.6.1)
+    # ------------------------------------------------------------------
+
+    async def async_set_completion_streak(self, person_id: str, count: int) -> bool:
+        """Admin override: set a person's success-rate streak count directly."""
+        person = self.get_person(person_id)
+        if not person:
+            return False
+        person["completion_streak"] = max(0, count)
+        await self.async_save()
+        return True
+
     async def _async_process_weekly_ranks(self, tick_date: date) -> None:
         """
         Evaluate last week's point performance and adjust rank_index.
@@ -684,6 +704,12 @@ class FamilyHubDataStore:
             "rank_drop_threshold": None,
             "rank_gain_threshold": None,
             "child_mode": False,
+            # v0.6.1: success-rate person streak
+            "completion_streak":          0,
+            "completion_threshold_pct":   80,
+            "completion_milestone":       7,
+            "completion_bonus_points":    50,
+            "last_completion_eval_date":  None,
         }
         self._data["people"].append(person)
         self._append_history(
@@ -711,6 +737,9 @@ class FamilyHubDataStore:
             "rank_index", "rank_drop_threshold", "rank_gain_threshold",
             # v0.6.0 S6: large-button mode
             "child_mode",
+            # v0.6.1: success-rate person streak (admin-configurable knobs)
+            "completion_streak",
+            "completion_threshold_pct", "completion_milestone", "completion_bonus_points",
         }
         for key, val in kwargs.items():
             if key in allowed:
@@ -1494,6 +1523,113 @@ class FamilyHubDataStore:
             )
 
     # ------------------------------------------------------------------
+    # v0.6.1: Success-rate person streak
+    # ------------------------------------------------------------------
+
+    async def _async_process_completion_streaks(self, tick_date: date) -> None:
+        """
+        Evaluate yesterday's completion rate per kid and update their
+        person-level success-rate streak.
+
+        Definition: hit_pct = completed / (completed + skipped) over assigned chores
+        that were actually due to this kid yesterday. If hit_pct >= threshold_pct,
+        increment streak. Otherwise reset to 0. On reaching a milestone (every N
+        consecutive days at threshold), award bonus points and log a history event.
+
+        Rules:
+          - Skip if penalties_paused (global or per-person) — no streak motion
+          - Skip parents
+          - Skip if completion_milestone == 0 (feature disabled per-person)
+          - Skip if already evaluated for yesterday (catch-up safety via
+            last_completion_eval_date)
+          - If zero chores were due yesterday, treat as rest day: cursor advances,
+            streak unchanged
+
+        Only ASSIGNED chores count. Claimable/reminder chores don't contribute
+        because they have no "due to person X" semantics.
+        """
+        settings = self._data["settings"]
+        global_paused = settings.get("penalties_paused", False)
+
+        yesterday = tick_date - timedelta(days=1)
+        yesterday_str = yesterday.isoformat()
+
+        chores_by_id = {c["id"]: c for c in self._data.get("chores", [])}
+
+        for person in self.get_active_people():
+            if person.get("type") != "kid":
+                continue
+            if global_paused or person.get("penalties_paused"):
+                continue
+            if person.get("completion_milestone", 0) == 0:
+                continue
+
+            last_eval = person.get("last_completion_eval_date")
+            if last_eval and last_eval >= yesterday_str:
+                continue  # already evaluated this day
+
+            # Count assigned chores due to THIS person yesterday.
+            # Excused instances are treated as rest days (not counted either way).
+            COMPLETED_STATUSES = (STATUS_APPROVED, STATUS_SELF_REPORTED, STATUS_PENDING_APPROVAL)
+            EXCLUDED_STATUSES  = (STATUS_EXCUSED,)  # don't count in numerator OR denominator
+
+            due_count       = 0
+            completed_count = 0
+            for inst in self.task_instances:
+                if inst.get("due_date") != yesterday_str:
+                    continue
+                if inst.get("assigned_to") != person["id"]:
+                    continue
+                chore = chores_by_id.get(inst.get("chore_id"))
+                if not chore or chore.get("chore_type") != CHORE_TYPE_ASSIGNED:
+                    continue
+                status = inst.get("status")
+                if status in EXCLUDED_STATUSES:
+                    continue
+                due_count += 1
+                if status in COMPLETED_STATUSES:
+                    completed_count += 1
+
+            if due_count == 0:
+                # Rest day — no chores were due, advance cursor without touching streak
+                person["last_completion_eval_date"] = yesterday_str
+                continue
+
+            hit_pct   = (completed_count / due_count) * 100
+            threshold = person.get("completion_threshold_pct", 80)
+
+            if hit_pct >= threshold:
+                person["completion_streak"] = person.get("completion_streak", 0) + 1
+                milestone = person.get("completion_milestone", 7)
+                if milestone > 0 and person["completion_streak"] % milestone == 0:
+                    bonus = person.get("completion_bonus_points", 50)
+                    person["points_balance"]  = person.get("points_balance", 0)  + bonus
+                    person["points_lifetime"] = person.get("points_lifetime", 0) + bonus
+                    self._append_history(
+                        event_type=HISTORY_COMPLETION_STREAK_MILESTONE,
+                        person_id=person["id"],
+                        reference_id=_new_id(),
+                        points_delta=bonus,
+                        balance_after=person["points_balance"],
+                        note=f"{person['completion_streak']}-day success streak",
+                    )
+                    _LOGGER.info(
+                        "Family Hub: success-streak bonus — %s %dpts (streak=%d, hit=%.0f%%)",
+                        person.get("name", person["id"]),
+                        bonus, person["completion_streak"], hit_pct,
+                    )
+            else:
+                if person.get("completion_streak", 0) > 0:
+                    _LOGGER.info(
+                        "Family Hub: success-streak broken — %s (was %d days, hit=%.0f%%)",
+                        person.get("name", person["id"]),
+                        person.get("completion_streak", 0), hit_pct,
+                    )
+                person["completion_streak"] = 0
+
+            person["last_completion_eval_date"] = yesterday_str
+
+    # ------------------------------------------------------------------
     # Daily tick — persistent stateful, with catch-up and penalty/replace
     # ------------------------------------------------------------------
 
@@ -1533,6 +1669,11 @@ class FamilyHubDataStore:
         current = last_tick + timedelta(days=1)
         while current <= today:
             await self._async_tick_for_date(current)
+            # v0.6.1: evaluate yesterday's completion rate AFTER the tick has
+            # finalised yesterday's skipped-state. Must run before allowance so
+            # the bonus and allowance show as separate history entries on the
+            # same day rather than commingling.
+            await self._async_process_completion_streaks(current)
             await self._async_process_allowances(current)
             await self._async_process_weekly_ranks(current)
             current += timedelta(days=1)

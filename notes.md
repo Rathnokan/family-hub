@@ -35,12 +35,12 @@ Before closing any session, update this file:
 
 | Item | State |
 |---|---|
-| **Last HACS release** | v0.5.0 (tag `0f4469e`) — holding for v0.6.0 |
-| **Live on HA (Samba)** | v0.6.0 — stub 6.4 KB + body 447.1 KB (lazy-loaded) |
-| **manifest.json / hacs.json** | 0.6.0 ✓ |
-| **GitHub** | v0.5.0 committed (`0f4469e`). v0.6.0 ready to commit + tag. |
-| **Next formal release** | v0.6.0 "The Front Door" — SHIPPING |
-| **Phase** | S11 release — docs + version bumps complete, ready for commit + tag + HACS push |
+| **Last HACS release** | v0.6.0 (GitHub Release published, HACS-detectable) |
+| **Live on HA (Samba)** | v0.6.1 — stub 6.0 KB + body 455.9 KB (lazy-loaded) |
+| **manifest.json / hacs.json** | 0.6.1 ✓ |
+| **GitHub** | v0.6.0 tagged + released. v0.6.1 ready to ship. |
+| **Next formal release** | v0.6.1 — three carry-overs from v0.6.0 deferrals |
+| **Phase** | v0.6.1 polish — success-rate streak + claimable picker + bigger buttons. Commit + tag + release. |
 
 ---
 
@@ -442,6 +442,85 @@ Full architecture and rationale in [PLAN-v0.6.0.md](PLAN-v0.6.0.md). Summary que
 - ✓ Build: stub 6.4 KB + body 447.1 KB. Deploy via Samba.
 - ✓ Committed + tagged + pushed.
 
+### ~~v0.6.0 post-release patch — stub URL bug fix~~ COMPLETE (2026-05-17)
+
+The initial v0.6.0 stub scanned `<script>` tags to derive its own URL and the
+body bundle URL by extension. That approach FAILED in modern Lovelace because
+"module" resources are loaded via `import(url)` directly — no `<script>` tag
+is ever inserted into the DOM. The scan returned empty, fallback URL
+`/hacsfiles/family_hub/` was wrong for this integration's layout (it serves
+at `/family_hub/`), and every dashboard rendered "Family Hub card failed to
+load. See browser console."
+
+Fix: hardcode the body URL to `/family_hub/family-hub-card-body.js?v=VERSION`.
+The integration registers `/family_hub` as a static path in `__init__.py`,
+so all files in the `www/` folder are always reachable there. VERSION
+(baked at build time) acts as the cache-bust token.
+
+Also: GitHub Release for v0.6.0 was missing — only the git tag was pushed,
+and HACS reads from Releases not tags. Created the Release via
+`gh release create v0.6.0 --notes-file RELEASE-NOTES-v0.6.0.md` so HACS
+detects it. Tag moved forward to the fix commit (force-push acceptable
+since the broken tag had never been picked up by anyone).
+
+### ~~v0.6.1 — Success-rate streak + claim picker + bigger buttons~~ COMPLETE (2026-05-17)
+
+Three carry-overs from v0.6.0 deferrals, shipped as a focused polish release.
+
+**Success-rate person streak (the headline).**
+- Per-person fields added with `setdefault` migration: `completion_streak`,
+  `completion_threshold_pct` (default 80), `completion_milestone` (default 7,
+  0 = off), `completion_bonus_points` (default 50), `last_completion_eval_date`.
+- New `_async_process_completion_streaks(tick_date)` runs in the catch-up
+  loop AFTER `_async_tick_for_date` finalizes yesterday's status. Counts
+  assigned chores due to the kid yesterday; numerator includes
+  APPROVED/SELF_REPORTED/PENDING_APPROVAL; EXCUSED pulled from both
+  numerator and denominator (rest-day semantics). Hit-rate ≥ threshold →
+  streak++. Below → reset to 0. At each milestone, fires bonus points and
+  logs a `completion_streak_milestone` history event.
+- Skips evaluation entirely when penalties are paused (global or per-person).
+- Rest days (zero chores due) leave streak untouched, cursor advances.
+- `update_person` service accepts the three configurable knobs.
+- New `set_completion_streak` admin-override service.
+- Sensor exposes all four streak fields in `people[]`.
+- Frontend: Edit Person modal gains a "Success streak" section. Mission
+  Control agent card grows an `🔥 7d · 80%` chip when streak > 0 (hidden
+  for quiet kids). Each of the six themes' Rank rail panel grows a streak
+  line below the rank bar via new `htmlSuccessStreak(person, color)` helper
+  in `_shared.js`. Theme-specific CSS tones (amber on dark, sepia on paper,
+  white-card on DBZ).
+
+**Claimable picker UX redesign.**
+- `mClaim` modal in `modals.js` switched from `<select>` to a card grid
+  of tappable person tiles. Each tile is `data-act="ok-claim"` with
+  `data-tid` + `data-pid` baked in — tap = instant claim, no separate OK
+  button. Parents filtered out (kid-only). Backward-compat fallback in
+  the `ok-claim` dispatch reads the old `m-clperson` hidden input if any
+  legacy code path still uses it.
+- New `.fh-claim-grid` / `.fh-claim-tile` / `.fh-claim-tile-avatar` /
+  `.fh-claim-tile-code` / `.fh-claim-tile-name` CSS block.
+
+**Bigger completion buttons.**
+- `.fh-row-btn`: `min-width: 64px` → 72px, `min-height: 60px` added,
+  `padding: 8px 10px` → `10px 14px`, font-size bumped from xs to sm.
+- `.fh-mc-go-mini`: `min-width: 48px` → 64px, `min-height: 60px` added,
+  `padding: 5px 6px` → `8px 10px`, gap added between code + check.
+- `.kid-large .fh-row-btn` untouched — kid-large was already the reference
+  size that adult buttons now match.
+
+**Dead CSS swept.** `.fh-icon-picker-trigger`, `-grid` (old toggleable),
+`-chevron`, `-trigger-label`, plus the orphaned admin-context overrides.
+
+**Release.**
+- ✓ `manifest.json` 0.6.0 → 0.6.1
+- ✓ `hacs.json` 0.6.0 → 0.6.1
+- ✓ `constants.js` VERSION 0.6.0 → 0.6.1
+- ✓ `HISTORY_META.completion_streak_milestone` added in
+  `constants.js` ("Success streak", green)
+- ✓ Build: stub 6.0 KB + body 455.9 KB. Deploy via Samba.
+- ✓ Committed + tagged + pushed.
+- ✓ GitHub Release created via `gh release create`.
+
 ---
 
 ## Deferred (not in v0.5.0 or v0.6.0)
@@ -532,3 +611,4 @@ Each task row includes: `task_id`, `chore_id`, `name`, `description`, `icon`, `p
 | v0.4.2 | Penalty pause (global + per-person). B1–B5 backend+card bug fixes. F1 text_scale. Personal history tab. CC approval dots. Editor status indicator. Deployed via Samba; HACS release held for v0.5.0. |
 | v0.5.0 | Data health infrastructure, mental model alignment, history collapsing, claimable subtypes, recurrence redesign, streaks, allowance, notifications. First clean public release. |
 | v0.6.0 | "The Front Door". Command Center home page with person tiles + room tiles. Six personal themes (Classic, Engineer, Baker, Dinos, Harry Potter, DBZ) with shared row anatomy. Kid-mode card grid. Mission Control chores HQ. Maintenance drill-down. Desktop admin master-detail layout with tabbed chore editor. Card-stub split fixes Echo Show cold-load race. |
+| v0.6.1 | Polish release. Person-level success-rate streak (% of daily chores done for N consecutive days = bonus). Claimable picker redesign (card grid replacing `<select>` dropdown). Bigger completion buttons across adult themes + Mission Control. |

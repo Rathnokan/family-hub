@@ -245,6 +245,10 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             vol.Optional("rank_gain_threshold"): vol.Any(None, vol.All(vol.Coerce(int), vol.Range(min=0))),
             # v0.6.0 S6: large-button mode
             vol.Optional("child_mode"):          cv.boolean,
+            # v0.6.1: success-rate person streak (knobs only — streak count is admin-overridden via set_completion_streak)
+            vol.Optional("completion_threshold_pct"): vol.All(vol.Coerce(int), vol.Range(min=1, max=100)),
+            vol.Optional("completion_milestone"):     vol.All(vol.Coerce(int), vol.Range(min=0, max=365)),
+            vol.Optional("completion_bonus_points"):  vol.All(vol.Coerce(int), vol.Range(min=0, max=10000)),
         }),
     )
 
@@ -731,6 +735,27 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
         schema=vol.Schema({
             vol.Required("person_id"): cv.string,
             vol.Required("chore_id"):  cv.string,
+            vol.Required("count"):     vol.All(vol.Coerce(int), vol.Range(min=0)),
+        }),
+    )
+
+    # v0.6.1: success-rate person streak admin override
+    async def handle_set_completion_streak(call: ServiceCall) -> None:
+        success = await store.async_set_completion_streak(
+            call.data["person_id"], call.data["count"],
+        )
+        if success:
+            await coordinator.async_refresh()
+        else:
+            _LOGGER.warning(
+                "Family Hub: set_completion_streak — person not found: %s",
+                call.data["person_id"],
+            )
+
+    hass.services.async_register(
+        DOMAIN, "set_completion_streak", handle_set_completion_streak,
+        schema=vol.Schema({
+            vol.Required("person_id"): cv.string,
             vol.Required("count"):     vol.All(vol.Coerce(int), vol.Range(min=0)),
         }),
     )

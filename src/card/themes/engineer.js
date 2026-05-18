@@ -11,7 +11,7 @@
 import { escHTML, fPts, ini,
          groupHistorySkipped }                            from "../utils.js";
 import { DEFAULT_COLOR, HISTORY_META, WEEKDAY_LABELS }   from "../constants.js";
-import { getEffectiveRank, getWeeklyPts, htmlRankBar,
+import { getEffectiveRank, getWeeklyPts, htmlRankBar, htmlSuccessStreak,
          getActiveStreaks,
          computeStreakProgress,
          htmlChoreRow }                                   from "./_shared.js";
@@ -179,7 +179,7 @@ function _railPanels({ attr, naAttr, person, balance, openCount, weekly, rank,
                        rankIdx, dropThr, gainThr, plotDate }) {
     return `
         ${_railPanelKPIs(balance, openCount, weekly)}
-        ${_railPanelRank(rankIdx, weekly, dropThr, gainThr)}
+        ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, person)}
         ${_railPanelStreaks(attr, naAttr, person)}
         ${_railPanelSheet(person, rank, plotDate)}`;
 }
@@ -215,14 +215,15 @@ function _railPanelKPIs(balance, openCount, weekly) {
     return _railPanel("TODAY · KPIS", body, { dense: true });
 }
 
-function _railPanelRank(rankIdx, weekly, dropThr, gainThr) {
-    const bar = htmlRankBar(rankIdx, weekly, dropThr, gainThr, ENGINEER_RANKS, ENG.amber);
+function _railPanelRank(rankIdx, weekly, dropThr, gainThr, person) {
+    const bar    = htmlRankBar(rankIdx, weekly, dropThr, gainThr, ENGINEER_RANKS, ENG.amber);
+    const streak = htmlSuccessStreak(person, ENG.amber);
     if (!bar) {
         // Parent — rank bar is empty string; show a static "MAX RANK" note.
         return _railPanel("RANK · TRACK",
-            `<div class="fh-eng-rmax">${escHTML(getEffectiveRank(rankIdx, ENGINEER_RANKS).name)} &middot; MAX</div>`);
+            `<div class="fh-eng-rmax">${escHTML(getEffectiveRank(rankIdx, ENGINEER_RANKS).name)} &middot; MAX</div>${streak}`);
     }
-    return _railPanel("RANK · TRACK", bar);
+    return _railPanel("RANK · TRACK", bar + streak);
 }
 
 function _railPanelStreaks(attr, naAttr, person) {

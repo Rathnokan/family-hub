@@ -13,7 +13,7 @@
 import { escHTML, escAttr, fPts, ini, relTime,
          groupHistorySkipped }                            from "../utils.js";
 import { HISTORY_META }                                   from "../constants.js";
-import { getEffectiveRank, getWeeklyPts, htmlRankBar,
+import { getEffectiveRank, getWeeklyPts, htmlRankBar, htmlSuccessStreak,
          groupByCategory, getActiveStreaks,
          computeStreakProgress, htmlChoreRow }            from "./_shared.js";
 
@@ -160,7 +160,7 @@ function _railPanels({ attr, naAttr, person, balance, weekly, openCount,
                        rankIdx, dropThr, gainThr, dateStr }) {
     return `
         ${_railPanelKPIs(balance, weekly, openCount)}
-        ${_railPanelRank(rankIdx, weekly, dropThr, gainThr)}
+        ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, person)}
         ${_railPanelStreaks(attr, naAttr, person)}
         ${_railPanelFindings(person, naAttr)}`;
 }
@@ -191,13 +191,14 @@ function _railPanelKPIs(balance, weekly, openCount) {
     return _railPanel("FIELD KIT · TODAY", body);
 }
 
-function _railPanelRank(rankIdx, weekly, dropThr, gainThr) {
-    const bar = htmlRankBar(rankIdx, weekly, dropThr, gainThr, DINOS_RANKS, DN.amber);
+function _railPanelRank(rankIdx, weekly, dropThr, gainThr, person) {
+    const bar    = htmlRankBar(rankIdx, weekly, dropThr, gainThr, DINOS_RANKS, DN.amber);
+    const streak = htmlSuccessStreak(person, DN.amber);
     if (!bar) {
         return _railPanel("DIG STATUS",
-            `<div class="fh-dn-rmax">${escHTML(getEffectiveRank(rankIdx, DINOS_RANKS).name)} · MAX</div>`);
+            `<div class="fh-dn-rmax">${escHTML(getEffectiveRank(rankIdx, DINOS_RANKS).name)} · MAX</div>${streak}`);
     }
-    return _railPanel("DIG STATUS", bar);
+    return _railPanel("DIG STATUS", bar + streak);
 }
 
 function _railPanelStreaks(attr, naAttr, person) {

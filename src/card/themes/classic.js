@@ -11,7 +11,7 @@
 import { DEFAULT_COLOR, FLASH_MS, HISTORY_META, WEEKDAY_LABELS } from "../constants.js";
 import { I } from "../constants.js";
 import { escHTML, escAttr, ini, fPts, fUSD, cap, relTime, groupHistorySkipped } from "../utils.js";
-import { getEffectiveRank, getWeeklyPts, htmlRankBar,
+import { getEffectiveRank, getWeeklyPts, htmlRankBar, htmlSuccessStreak,
          getActiveStreaks, computeStreakProgress,
          htmlChoreRow, htmlAddReminderCTA } from "./_shared.js";
 
@@ -112,7 +112,7 @@ function _railPanels({ attr, naAttr, person, balance, weekly, openCount,
                        pendingCount, rankIdx, dropThr, gainThr, color }) {
     return `
         ${_railPanelKPIs(balance, weekly, openCount, pendingCount)}
-        ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, color)}
+        ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, color, person)}
         ${_railPanelStreaks(attr, naAttr, person, color)}
         ${_railPanelRecent(person, naAttr, color)}`;
 }
@@ -144,13 +144,14 @@ function _railPanelKPIs(balance, weekly, openCount, pendingCount) {
     return _railPanel("OVERVIEW", body);
 }
 
-function _railPanelRank(rankIdx, weekly, dropThr, gainThr, color) {
-    const bar = htmlRankBar(rankIdx, weekly, dropThr, gainThr, CLASSIC_RANKS, color);
+function _railPanelRank(rankIdx, weekly, dropThr, gainThr, color, person) {
+    const bar    = htmlRankBar(rankIdx, weekly, dropThr, gainThr, CLASSIC_RANKS, color);
+    const streak = htmlSuccessStreak(person, color);
     if (!bar) {
         return _railPanel("RANK",
-            `<div class="fh-classic-rmax">${escHTML(getEffectiveRank(rankIdx, CLASSIC_RANKS).name)} · max</div>`);
+            `<div class="fh-classic-rmax">${escHTML(getEffectiveRank(rankIdx, CLASSIC_RANKS).name)} · max</div>${streak}`);
     }
-    return _railPanel("RANK", bar);
+    return _railPanel("RANK", bar + streak);
 }
 
 function _railPanelStreaks(attr, naAttr, person, color) {
