@@ -19,29 +19,15 @@
   var require_main = __commonJS({
     "src/main.js"() {
       init_constants();
-      var BODY_FILE = "family-hub-card-body.js";
+      var BODY_URL = `/family_hub/family-hub-card-body.js?v=${VERSION}`;
       var _bodyPromise = null;
       function _loadBody() {
         if (_bodyPromise) return _bodyPromise;
-        let stubSrc = "";
-        const scripts = document.getElementsByTagName("script");
-        for (let i = scripts.length - 1; i >= 0; i--) {
-          const s = scripts[i].src || "";
-          if (s && /\/family-hub-card\.js(?:$|\?)/.test(s)) {
-            stubSrc = s;
-            break;
-          }
-        }
-        const qIdx = stubSrc.indexOf("?");
-        const path = qIdx >= 0 ? stubSrc.slice(0, qIdx) : stubSrc;
-        const search = qIdx >= 0 ? stubSrc.slice(qIdx) : "";
-        const base = path ? path.replace(/[^/]*$/, "") : "/hacsfiles/family_hub/";
-        const url = base + BODY_FILE + search;
         _bodyPromise = import(
           /* @vite-ignore */
-          url
+          BODY_URL
         ).catch((err) => {
-          console.error("[family-hub-card] Failed to load body bundle:", err);
+          console.error("[family-hub-card] Failed to load body bundle from", BODY_URL, err);
           _bodyPromise = null;
           throw err;
         });

@@ -22,7 +22,25 @@
 
 import { VERSION } from "./card/constants.js";
 
-const BODY_FILE = "family-hub-card-body.js";
+// ---------------------------------------------------------------------------
+// Body URL — hardcoded to the integration's registered static path.
+//
+// custom_components/family_hub/__init__.py registers CARD_URL_PATH ("/family_hub")
+// as a static HTTP route that serves everything in the integration's www/ folder.
+// Both family-hub-card.js (this stub) and family-hub-card-body.js (the heavy bundle)
+// live there, so the body is always reachable at this exact path.
+//
+// We tried script-tag scanning in the first cut of v0.6.0 to derive a base URL
+// from the stub's own <script src>. That approach FAILS in modern Lovelace because
+// "module" resources are loaded via `import(url)` directly — no <script> tag is
+// ever inserted into document.head, so the scan returned an empty string and the
+// fallback URL was wrong for this integration's layout.
+//
+// VERSION is baked at build time and serves as the cache-bust token. Bump VERSION
+// in constants.js (which we do on every release) and browsers fetch fresh.
+// ---------------------------------------------------------------------------
+
+const BODY_URL = `/family_hub/family-hub-card-body.js?v=${VERSION}`;
 
 // ---------------------------------------------------------------------------
 // Lazy body loader — single shared promise across all card instances on page
@@ -32,32 +50,8 @@ let _bodyPromise = null;
 
 function _loadBody() {
     if (_bodyPromise) return _bodyPromise;
-
-    // Locate this stub's own <script> tag to build the body URL.
-    // document.currentScript doesn't survive past the initial sync exec, so we
-    // scan instead — match family-hub-card.js but exclude family-hub-card-body.js.
-    let stubSrc = "";
-    const scripts = document.getElementsByTagName("script");
-    for (let i = scripts.length - 1; i >= 0; i--) {
-        const s = scripts[i].src || "";
-        if (s && /\/family-hub-card\.js(?:$|\?)/.test(s)) {
-            stubSrc = s;
-            break;
-        }
-    }
-
-    // Split into base + search so we can inherit any cache-bust suffix
-    // (?hacstag=… or ?v=…) onto the body URL — both refresh together.
-    const qIdx   = stubSrc.indexOf("?");
-    const path   = qIdx >= 0 ? stubSrc.slice(0, qIdx) : stubSrc;
-    const search = qIdx >= 0 ? stubSrc.slice(qIdx)    : "";
-    const base   = path
-        ? path.replace(/[^/]*$/, "")
-        : "/hacsfiles/family_hub/";          // sensible fallback
-
-    const url = base + BODY_FILE + search;
-    _bodyPromise = import(/* @vite-ignore */ url).catch(err => {
-        console.error("[family-hub-card] Failed to load body bundle:", err);
+    _bodyPromise = import(/* @vite-ignore */ BODY_URL).catch(err => {
+        console.error("[family-hub-card] Failed to load body bundle from", BODY_URL, err);
         _bodyPromise = null;                  // allow retry on next instance
         throw err;
     });
