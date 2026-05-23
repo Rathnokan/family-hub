@@ -347,7 +347,10 @@ export function htmlChoreRow(t, cfg, person, card, opts = {}) {
     // Body lines.
     const descLine = t.description
         ? `<div class="fh-row-desc">${escHTML(t.description)}</div>` : "";
-    const penaltyLine = (!isReminder && t.penalty_enabled && t.penalty_points > 0)
+    // Penalty value is shown in the dual points medal below; keep the descriptive
+    // line only when there are no positive points (penalty-only chore).
+    const hasPenalty = !isReminder && t.penalty_enabled && t.penalty_points > 0;
+    const penaltyLine = (hasPenalty && !pts)
         ? `<div class="fh-row-penalty">−${t.penalty_points}pts if skipped</div>` : "";
 
     // Chips (streak / status / firing / expiry).
@@ -393,10 +396,24 @@ export function htmlChoreRow(t, cfg, person, card, opts = {}) {
 
     const chipsHtml = `<div class="fh-row-chips">${chips.join("")}</div>`;
 
-    // Points.
-    const ptsHtml = (!isReminder && pts)
-        ? `<div class="fh-row-pts">+${pts}</div>`
-        : `<div class="fh-row-pts"></div>`;
+    // Points medal. Dual display when both reward + penalty are configured so
+    // kids see "+15 / −5" at a glance instead of burying the penalty in copy.
+    let ptsHtml;
+    if (isReminder) {
+        ptsHtml = `<div class="fh-row-pts"></div>`;
+    } else if (pts && hasPenalty) {
+        ptsHtml = `<div class="fh-row-pts fh-row-pts--dual">`
+                +   `<span class="fh-row-pts-pos">+${pts}</span>`
+                +   `<span class="fh-row-pts-sep">/</span>`
+                +   `<span class="fh-row-pts-neg">−${t.penalty_points}</span>`
+                + `</div>`;
+    } else if (pts) {
+        ptsHtml = `<div class="fh-row-pts">+${pts}</div>`;
+    } else if (hasPenalty) {
+        ptsHtml = `<div class="fh-row-pts"><span class="fh-row-pts-neg">−${t.penalty_points}</span></div>`;
+    } else {
+        ptsHtml = `<div class="fh-row-pts"></div>`;
+    }
 
     // Optional extra data-* attrs on the action button (e.g. Mission Control's
     // streak/milestone/name for celebration trigger).

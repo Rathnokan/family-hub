@@ -247,6 +247,14 @@ def _migrate_chore(chore: dict) -> dict:
     # v0.5.0: per-chore reminder time (HHMM int, -1 = off)
     chore.setdefault("reminder_time", -1)
 
+    # v0.6.2: rotation pool. Empty list = no rotation (legacy behavior).
+    # When populated, the active assignee cycles through pool[rotation_index]
+    # on the configured cadence; advance logic lives in coordinator.py.
+    chore.setdefault("rotation_pool", [])
+    chore.setdefault("rotation_cadence", "")     # "" when rotation_pool is empty
+    chore.setdefault("rotation_index", 0)
+    chore.setdefault("rotation_last_advanced", "")  # iso date string of last advance
+
     return chore
 
 
@@ -473,6 +481,88 @@ class FamilyHubDataStore:
     # ------------------------------------------------------------------
     # Streak helpers (v0.5.0)
     # ------------------------------------------------------------------
+
+    # ------------------------------------------------------------------
+    # Rotation helpers (v0.6.2)
+    # ------------------------------------------------------------------
+
+    def _active_rotation_ids(self, pool: list[str]) -> list[str]:
+        """Return pool members whose person record is active, preserving order.
+
+        Inactive (paused, removed) pool members get skipped so the rotation
+        never stalls on a kid who isn't around. Order is preserved so the
+        cycle visits members in the parent-configured sequence.
+        """
+        active = {p["person_id"] for p in self.get_active_people()}
+        return [pid for pid in pool if pid in active]
+
+    def _advance_rotation(self, chore: dict, today: date) -> bool:
+        """Move the rotation forward by one active pool member.
+
+        Updates `assigned_to`, `rotation_index`, and `rotation_last_advanced`
+        in-place. Returns True when the assignee actually changed (so callers
+        can decide whether to log history or refresh sensors).
+
+        Edge cases:
+          - Empty / all-inactive pool: no-op, assigned_to is left alone so
+            existing instances don't get orphaned.
+          - First advance (rotation_index unset or pointing at inactive id):
+            falls back to the first active id.
+        """
+        pool = chore.get("rotation_pool") or []
+        if not pool:
+            return False
+        active_ids = self._active_rotation_ids(pool)
+        if not active_ids:
+            return False
+
+        current = chore.get("assigned_to") or []
+        cur_id  = current[0] if current else None
+
+        # Find next active id after the current one in the pool order.
+        try:
+            cur_pool_idx = pool.index(cur_id) if cur_id in pool else -1
+        except ValueError:
+            cur_pool_idx = -1
+
+        next_id = None
+        n = len(pool)
+        for step in range(1, n + 1):
+            candidate = pool[(cur_pool_idx + step) % n]
+            if candidate in active_ids:
+                next_id = candidate
+                break
+        if next_id is None:
+            return False
+
+        chore["rotation_index"]         = pool.index(next_id)
+        chore["rotation_last_advanced"] = today.isoformat()
+        if cur_id == next_id:
+            return False
+        chore["assigned_to"] = [next_id]
+        return True
+
+    async def _maybe_advance_rotation(self, chore: dict, tick_date: date) -> bool:
+        """Advance rotation once per tick_date and skip the previous assignee's
+        leftover instances. Returns True when the assignee actually changed.
+
+        Idempotent across catch-up loops: `rotation_last_advanced` is the
+        date guard, so multiple calls on the same date are no-ops.
+        """
+        if chore.get("rotation_last_advanced") == tick_date.isoformat():
+            return False
+        previous = list(chore.get("assigned_to") or [])
+        if not self._advance_rotation(chore, tick_date):
+            return False
+        new_assigned = chore.get("assigned_to") or []
+        # Sweep any pending instances belonging to people no longer in the
+        # active assignment so they don't linger as overdue on a kid who
+        # has rotated off.
+        for prev_pid in previous:
+            if prev_pid in new_assigned:
+                continue
+            await self._skip_incomplete_instances(chore, person_id=prev_pid)
+        return True
 
     def _get_streak(self, person_id: str, chore_id: str) -> int:
         """Return current streak count for this person+chore (0 if none)."""
@@ -873,6 +963,8 @@ class FamilyHubDataStore:
         streak_milestone: int = 0,
         streak_bonus_points: int = 0,
         reminder_time: int = -1,
+        rotation_pool: list[str] | None = None,
+        rotation_cadence: str = "",
         icon: str | None = None,
         created_by: str | None = None,
     ) -> dict:
@@ -911,11 +1003,24 @@ class FamilyHubDataStore:
             "streak_milestone":        streak_milestone,
             "streak_bonus_points":     streak_bonus_points,
             "reminder_time":           reminder_time,
+            "rotation_pool":           list(rotation_pool or []),
+            "rotation_cadence":        rotation_cadence or "",
+            "rotation_index":          0,
+            "rotation_last_advanced":  "",
             "recurrence": rec,
             "active": True,
             "created_at": _now_iso(),
             "created_by": created_by,
         }
+        # Rotation: when a pool is configured, override assigned_to with the
+        # first active pool member. This keeps "active assignee" as the single
+        # source of truth — assigned_to + rotation_index always agree.
+        if chore["rotation_pool"]:
+            active_ids = self._active_rotation_ids(chore["rotation_pool"])
+            if active_ids:
+                chore["assigned_to"] = [active_ids[0]]
+                chore["rotation_index"] = chore["rotation_pool"].index(active_ids[0])
+
         self._data["chores"].append(chore)
         self._append_history(
             event_type=HISTORY_TASK_ADDED,
@@ -960,10 +1065,11 @@ class FamilyHubDataStore:
             "penalty_enabled", "penalty_points", "daily_penalty_after_days",
             "expires_after_days", "claimable_subtype", "max_claimants",
             "multi_claim_points_mode", "streak_milestone", "streak_bonus_points",
-            "reminder_time",
+            "reminder_time", "rotation_pool", "rotation_cadence",
             "recurrence", "active", "weekdays", "day_filter", "interval",
         }
         old_assigned = list(chore.get("assigned_to", []))
+        old_pool     = list(chore.get("rotation_pool", []))
 
         for key, val in kwargs.items():
             if key not in allowed:
@@ -974,12 +1080,28 @@ class FamilyHubDataStore:
             elif key == "assigned_to":
                 # Ensure it's always a list
                 chore["assigned_to"] = val if isinstance(val, list) else ([val] if val else [])
+            elif key == "rotation_pool":
+                chore["rotation_pool"] = list(val) if isinstance(val, list) else []
             else:
                 chore[key] = val
 
         # Keep legacy category field in sync with chore_type
         if "chore_type" in kwargs:
             chore["category"] = chore["chore_type"]
+
+        # Rotation pool changes: reset the index, then snap assigned_to to the
+        # first active pool member so the next instance generated is correct.
+        # When the pool is cleared, leave assigned_to untouched — the parent
+        # may want to manually re-assign.
+        if "rotation_pool" in kwargs and chore.get("rotation_pool") != old_pool:
+            chore["rotation_index"]         = 0
+            chore["rotation_last_advanced"] = ""
+            new_pool = chore.get("rotation_pool") or []
+            if new_pool:
+                active_ids = self._active_rotation_ids(new_pool)
+                if active_ids:
+                    chore["assigned_to"]    = [active_ids[0]]
+                    chore["rotation_index"] = new_pool.index(active_ids[0])
 
         new_assigned = chore.get("assigned_to", [])
 
@@ -1703,12 +1825,37 @@ class FamilyHubDataStore:
         they do not linger in the overdue list on off-days (e.g. a Mon–Fri chore
         should not show overdue on Saturday).
         """
+        # Rotation pre-pass (v0.6.2). For "daily" cadence, advance once per
+        # tick_date regardless of whether the chore is due today — that keeps
+        # the rotation in sync with calendar time even across catch-up days.
+        # For "weekly" cadence, advance on Mondays only. The "per_instance"
+        # cadence is handled inline below at instance-creation time so it
+        # naturally tracks the chore's own recurrence. Only assigned chores
+        # rotate; claimable/reminder ignore the pool even if one is configured.
+        for chore in self.get_active_chores():
+            if chore.get("chore_type") != CHORE_TYPE_ASSIGNED:
+                continue
+            if not chore.get("rotation_pool"):
+                continue
+            cadence = chore.get("rotation_cadence", "")
+            if cadence == "daily":
+                await self._maybe_advance_rotation(chore, tick_date)
+            elif cadence == "weekly" and tick_date.weekday() == 0:
+                await self._maybe_advance_rotation(chore, tick_date)
+
         for chore in self.get_active_chores():
             r_type = chore["recurrence"].get("type", RECURRENCE_DAILY)
             if r_type == RECURRENCE_ONE_TIME:
                 continue
             if not self._is_due_on_date(chore, tick_date):
                 continue
+
+            # Per-instance rotation: advance just before generating today's
+            # instance. Idempotent on catch-up loops (last_advanced dedupes).
+            if (chore.get("chore_type") == CHORE_TYPE_ASSIGNED
+                    and chore.get("rotation_pool")
+                    and chore.get("rotation_cadence") == "per_instance"):
+                await self._maybe_advance_rotation(chore, tick_date)
 
             if chore.get("chore_type") == CHORE_TYPE_CLAIMABLE:
                 # Claimable: one shared instance, no person
@@ -3063,6 +3210,9 @@ class FamilyHubDataStore:
                 "recurrence":             c.get("recurrence", {}),
                 "streak_milestone":       c.get("streak_milestone", 0),
                 "streak_bonus_points":    c.get("streak_bonus_points", 0),
+                "rotation_pool":          c.get("rotation_pool", []),
+                "rotation_cadence":       c.get("rotation_cadence", ""),
+                "rotation_index":         c.get("rotation_index", 0),
             })
         return sorted(result, key=lambda x: (x["sort_order"], x["name"]))
 

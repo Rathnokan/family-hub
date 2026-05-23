@@ -444,6 +444,67 @@ export const CSS = `
     background:color-mix(in srgb, var(--chip-color, var(--fh-accent)) 18%, transparent);
   }
 
+  /* Rotation pool editor (v0.6.2) — ordered list with up/down/remove + add chips. */
+  .fh-rot-pool { display:flex; flex-direction:column; gap:6px; }
+  .fh-rot-ordered {
+    display:flex; flex-direction:column; gap:4px;
+    padding:4px; border:1px dashed var(--fh-border); border-radius:6px;
+    background:var(--fh-surface);
+  }
+  .fh-rot-empty {
+    padding:8px 6px; font-size:.82rem;
+    color:var(--fh-text-sec); font-style:italic; text-align:center;
+  }
+  .fh-rot-item {
+    display:flex; align-items:center; gap:8px;
+    padding:6px 8px; border-radius:6px;
+    border:1.5px solid var(--chip-color, var(--fh-border));
+    background:color-mix(in srgb, var(--chip-color, var(--fh-accent)) 12%, transparent);
+    font-size:.86rem;
+  }
+  .fh-rot-num {
+    flex-shrink:0;
+    min-width:22px; height:22px; padding:0 6px;
+    display:inline-flex; align-items:center; justify-content:center;
+    font-family:var(--fh-font-mono); font-size:.78rem; font-weight:700;
+    border-radius:11px;
+    background:var(--chip-color, var(--fh-accent)); color:#fff;
+  }
+  .fh-rot-name { flex:1; min-width:0; }
+  .fh-rot-ctrl {
+    width:30px; height:30px; padding:0;
+    display:inline-flex; align-items:center; justify-content:center;
+    font-size:1rem; font-weight:700;
+    border:1px solid var(--fh-border); border-radius:6px;
+    background:var(--fh-bg); color:var(--fh-text); cursor:pointer;
+    transition:background .12s, border-color .12s, opacity .12s;
+  }
+  .fh-rot-ctrl:hover:not([disabled]) { background:var(--fh-surface); border-color:var(--fh-accent); }
+  .fh-rot-ctrl[disabled] { opacity:.35; cursor:not-allowed; }
+  .fh-rot-ctrl-remove { color:#CC2200; }
+  .fh-rot-ctrl-remove:hover { background:rgba(204,34,0,.1); border-color:#CC2200; }
+
+  .fh-rot-available-lbl {
+    font-size:.78rem; font-weight:600;
+    color:var(--fh-text-sec); letter-spacing:.02em;
+    margin-top:2px;
+  }
+  .fh-rot-available { display:flex; flex-wrap:wrap; gap:6px; }
+  .fh-rot-add {
+    display:inline-flex; align-items:center; gap:5px;
+    padding:4px 10px; border-radius:20px;
+    border:1.5px dashed var(--chip-color, var(--fh-border));
+    background:transparent; color:var(--fh-text);
+    font-size:.82rem; cursor:pointer;
+    transition:background .12s;
+  }
+  .fh-rot-add:hover {
+    background:color-mix(in srgb, var(--chip-color, var(--fh-accent)) 14%, transparent);
+  }
+  .fh-rot-add-empty {
+    font-size:.82rem; color:var(--fh-text-sec); font-style:italic;
+  }
+
   /* Weekday selector */
   .fh-weekday-row { display:flex; flex-wrap:wrap; gap:4px; }
   .fh-wd-chip {
@@ -777,6 +838,10 @@ export const CSS = `
   .fh-home-agent-stat-lbl {
     font-family:var(--fh-font-mono); font-size:.78rem; font-weight:700;
     color:var(--fh-text-sec); letter-spacing:.06em;
+  }
+  .fh-home-agent-stat-dollar {
+    font-family:var(--fh-font-mono); font-size:.82rem; font-weight:700;
+    color:var(--fh-text-sec); letter-spacing:.02em; margin-top:2px;
   }
   .fh-home-agent-stat-div {
     width:1px; height:28px; background:var(--fh-border); flex-shrink:0; margin:0 4px;
@@ -1569,6 +1634,13 @@ export const CSS = `
   .fh-eng-rkpi-unit {
     font-family:var(--fh-font-mono); font-size:.75rem;
     color:rgba(242,235,214,.45);
+  }
+
+  /* Shared $X.XX subtitle under a rail KPI cell. Inherits color from the
+     surrounding cell context; opacity tones it down so it reads as secondary. */
+  .fh-rkpi-sub {
+    font-family:var(--fh-font-mono); font-size:.72rem; font-weight:600;
+    letter-spacing:.02em; line-height:1; margin-top:3px; opacity:.7;
   }
 
   /* Rail Â· Streak constellation */
@@ -3409,6 +3481,31 @@ export const CSS = `
   }
   .fh-row-pts:empty { display:none; }
 
+  /* Dual reward/penalty medal: "+15 / −5". Penalty inherits the row's danger
+     tone (each theme already styles .fh-row--<theme> .fh-row-penalty in red);
+     reuse that color via currentColor on a danger-flavored span. */
+  .fh-row-pts--dual {
+    display:inline-flex; align-items:baseline; gap:3px;
+    white-space:nowrap; line-height:1;
+  }
+  .fh-row-pts-sep {
+    opacity:.45; font-weight:600; font-size:.85em;
+  }
+  .fh-row-pts-neg {
+    color:var(--fh-row-neg, #CC2200); font-weight:800;
+  }
+  /* Each theme inherits its existing .fh-row-penalty color for the dual medal.
+     Paper themes (HP burgundy, baker brown, dinos sepia) would otherwise clash
+     against bright red. Dark themes (DBZ) keep the canonical red. */
+  .fh-row--engineer .fh-row-pts-neg { color:#E07A4C; }
+  .fh-row--dinos    .fh-row-pts-neg { color:#8C281E; }
+  .fh-row--hp       .fh-row-pts-neg { color:#A02020; }
+  .fh-row--baker    .fh-row-pts-neg { color:#A02828; }
+  .fh-row--dbz      .fh-row-pts-neg { color:#CC2200; }
+  .fh-row--classic  .fh-row-pts-neg { color:#E07A4C; }
+  /* Kid-mode penalty pop: a touch larger so pre-readers parse it instantly. */
+  .kid-large .fh-row-pts-neg { font-size:1.05em; }
+
   /* Action button (themes override shape/color/transform).
      v0.6.1: bumped from min-width:64px / 8px padding to min-width:72px / 60px height
      for thumb-confidence on Echo Show. Kid-large still overrides to its own bigger
@@ -3694,6 +3791,19 @@ export const CSS = `
     border-radius:50%;
     min-width:0; padding:0;
   }
+  /* Dual medal mode — break the circular seal into a wider pill so
+     "+3 / −1" has room to breathe, and brighten the negative half so it
+     reads against the dark emerald gradient. */
+  .fh-row--hp .fh-row-pts.fh-row-pts--dual {
+    width:auto; height:auto;
+    border-radius:14px;
+    padding:6px 12px;
+    background:linear-gradient(180deg, #1F4F3C 0%, #143427 100%);
+    box-shadow:0 2px 6px rgba(31,79,60,.25);
+    gap:6px;
+  }
+  .fh-row--hp .fh-row-pts-neg { color:#F4B8B8; }
+  .fh-row--hp .fh-row-pts-sep { color:#EFE0BA; opacity:.35; }
   .fh-row--hp .fh-row-btn {
     background:#1F4F3C; color:#FAF0D7; border:1.5px solid #1F4F3C;
     font-family:"Cinzel", serif; letter-spacing:.04em; text-transform:none;
@@ -3853,4 +3963,92 @@ export const CSS = `
     font-size:var(--fh-text-xs);
   }
   .fh-row--classic .fh-row-btn--pending:hover { filter:none; }
+
+  /* ============================================================
+     Phone-friendly pass (v0.6.2)
+     Target: 375-414px (iPhone SE → Pro Max). Themed personal pages
+     were designed for the 400px Lovelace card on Echo Show 15 but
+     compress poorly on actual phones, so this block tightens the
+     row anatomy, drops kid-large to one column, and hides/trims
+     theme chrome (frames, watermarks, corner ornaments, tape strips).
+     ============================================================ */
+  @media (max-width: 500px) {
+    /* --- Row anatomy: stack chips + button below body --- */
+    .fh-row {
+      display:grid;
+      grid-template-columns:auto 1fr auto;
+      grid-template-areas:
+        "lead icon  pts"
+        "body body  body"
+        "chips chips chips"
+        "btn  btn   btn";
+      gap:6px 8px;
+      padding:10px 10px 10px;
+    }
+    .fh-row-lead  { grid-area:lead; }
+    .fh-row-icon  { grid-area:icon; width:40px; height:40px; }
+    .fh-row-icon svg { width:24px; height:24px; }
+    .fh-row-body  { grid-area:body; }
+    .fh-row-chips { grid-area:chips;
+      flex-direction:row; flex-wrap:wrap;
+      justify-content:flex-start; align-items:center;
+      gap:4px; row-gap:4px;
+    }
+    .fh-row-pts   { grid-area:pts; min-width:0; }
+    .fh-row-btn   { grid-area:btn; width:100%; min-height:48px; }
+
+    /* Auto-truncate descriptions instead of expand-toggle (no JS). */
+    .fh-row-desc {
+      display:-webkit-box;
+      -webkit-line-clamp:2;
+      -webkit-box-orient:vertical;
+      overflow:hidden;
+    }
+
+    /* --- Kid-large: drop the grid to a single column. The 190px minmax
+       squeezes two columns onto a 414px viewport and chops the icon. --- */
+    .kid-large .fh-row-list {
+      grid-template-columns:1fr;
+      gap:10px;
+    }
+    .kid-large .fh-row {
+      min-height:auto;
+      grid-template-columns:auto 1fr auto;
+      grid-template-areas:
+        "icon name pts"
+        "icon name btn";
+      flex-direction:row;
+      align-items:center;
+      padding:12px 10px;
+      gap:10px;
+    }
+    .kid-large .fh-row-icon { grid-area:icon; width:72px; height:72px; }
+    .kid-large .fh-row-icon svg { width:100%; height:100%; }
+    .kid-large .fh-row-icon .fh-chore-icon {
+      width:60px !important; height:60px !important;
+    }
+    .kid-large .fh-row-body  { grid-area:name; align-items:flex-start; text-align:left; }
+    .kid-large .fh-row-name  { font-size:var(--fh-text-md); }
+    .kid-large .fh-row-pts   { grid-area:pts; font-size:var(--fh-text-lg); }
+    .kid-large .fh-row-btn   { grid-area:btn; min-height:48px; padding:0 14px; font-size:var(--fh-text-sm); }
+    .kid-large .fh-row-chips { display:none; }
+
+    /* --- Theme chrome: hide/scale ornaments that eat small screens. --- */
+    /* Engineer: blueprint grid + double border are decorative — drop them. */
+    .fh-eng-grid,
+    .fh-eng-border-outer,
+    .fh-eng-border-inner { display:none; }
+
+    /* Baker: paper-card double frame collapses to a single light border. */
+    .fh-bk-frame-inner { display:none; }
+    .fh-bk-frame-outer { inset:4px; }
+
+    /* Dinos: corner tape strips disappear (they spill outside the viewport
+       on narrow screens anyway). */
+    .fh-dn-tape { display:none; }
+
+    /* HP: thin out the heavy inset-shadow frame and shrink corner glyphs. */
+    .fh-hp-frame { box-shadow:inset 0 0 0 2px #241914, inset 0 0 0 3px #C9A22A; }
+    .fh-hp-corner { font-size:.9rem; }
+  }
 `;

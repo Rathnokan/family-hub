@@ -8,7 +8,7 @@
  * list. Below 900px the rail collapses and rows go full width.
  */
 
-import { escHTML, fPts, ini,
+import { escHTML, fPts, fUSD, ini,
          groupHistorySkipped }                            from "../utils.js";
 import { DEFAULT_COLOR, HISTORY_META, WEEKDAY_LABELS }   from "../constants.js";
 import { getEffectiveRank, getWeeklyPts, htmlRankBar, htmlSuccessStreak,
@@ -178,7 +178,7 @@ export const engineerTheme = {
 function _railPanels({ attr, naAttr, person, balance, openCount, weekly, rank,
                        rankIdx, dropThr, gainThr, plotDate }) {
     return `
-        ${_railPanelKPIs(balance, openCount, weekly)}
+        ${_railPanelKPIs(balance, openCount, weekly, attr.show_dollar_value ? attr.dollar_value : null)}
         ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, person)}
         ${_railPanelStreaks(attr, naAttr, person)}
         ${_railPanelSheet(person, rank, plotDate)}`;
@@ -197,18 +197,19 @@ function _railPanel(label, contentHTML, opts = {}) {
         </div>`;
 }
 
-function _railPanelKPIs(balance, openCount, weekly) {
-    const cell = (label, val, unit) => `
+function _railPanelKPIs(balance, openCount, weekly, dollarValue) {
+    const cell = (label, val, unit, sub) => `
         <div class="fh-eng-rkpi">
             <div class="fh-eng-rkpi-lbl">${label}</div>
             <div class="fh-eng-rkpi-val-row">
                 <span class="fh-eng-rkpi-val">${escHTML(String(val))}</span>
                 ${unit ? `<span class="fh-eng-rkpi-unit">${unit}</span>` : ""}
             </div>
+            ${sub ? `<div class="fh-rkpi-sub">${escHTML(sub)}</div>` : ""}
         </div>`;
     const body = `
         <div class="fh-eng-rkpi-row">
-            ${cell("BAL",   fPts(balance), "pts")}
+            ${cell("BAL",   fPts(balance), "pts", dollarValue != null ? fUSD(dollarValue) : null)}
             ${cell("OPEN",  openCount,     "wo")}
             ${cell("WEEK",  `+${weekly}`,  "pts")}
         </div>`;

@@ -10,7 +10,7 @@
  * Design reference: docs/design-reference/theme-dinos.jsx
  */
 
-import { escHTML, escAttr, fPts, ini, relTime,
+import { escHTML, escAttr, fPts, fUSD, ini, relTime,
          groupHistorySkipped }                            from "../utils.js";
 import { HISTORY_META }                                   from "../constants.js";
 import { getEffectiveRank, getWeeklyPts, htmlRankBar, htmlSuccessStreak,
@@ -159,7 +159,7 @@ export const dinosTheme = {
 function _railPanels({ attr, naAttr, person, balance, weekly, openCount,
                        rankIdx, dropThr, gainThr, dateStr }) {
     return `
-        ${_railPanelKPIs(balance, weekly, openCount)}
+        ${_railPanelKPIs(balance, weekly, openCount, attr.show_dollar_value ? attr.dollar_value : null)}
         ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, person)}
         ${_railPanelStreaks(attr, naAttr, person)}
         ${_railPanelFindings(person, naAttr)}`;
@@ -173,18 +173,19 @@ function _railPanel(label, contentHTML) {
         </div>`;
 }
 
-function _railPanelKPIs(balance, weekly, openCount) {
-    const cell = (label, val, unit) => `
+function _railPanelKPIs(balance, weekly, openCount, dollarValue) {
+    const cell = (label, val, unit, sub) => `
         <div class="fh-dn-rkpi">
             <div class="fh-dn-rkpi-lbl">${label}</div>
             <div class="fh-dn-rkpi-val-row">
                 <span class="fh-dn-rkpi-val">${escHTML(String(val))}</span>
                 ${unit ? `<span class="fh-dn-rkpi-unit">${unit}</span>` : ""}
             </div>
+            ${sub ? `<div class="fh-rkpi-sub">${escHTML(sub)}</div>` : ""}
         </div>`;
     const body = `
         <div class="fh-dn-rkpi-row">
-            ${cell("FOSSILS",   fPts(balance), "pts")}
+            ${cell("FOSSILS",   fPts(balance), "pts", dollarValue != null ? fUSD(dollarValue) : null)}
             ${cell("THIS WEEK", `+${weekly}`,  "pts")}
             ${cell("SPECIMENS", openCount,     "open")}
         </div>`;

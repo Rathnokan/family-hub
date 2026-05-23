@@ -12,7 +12,7 @@
 
 import { ROOMS }                        from "../rooms/index.js";
 import { getTheme }                     from "../themes/index.js";
-import { escHTML, escAttr, fPts }       from "../utils.js";
+import { escHTML, escAttr, fPts, fUSD } from "../utils.js";
 import { DEFAULT_COLOR }                from "../constants.js";
 
 export const classicSkin = {
@@ -66,7 +66,9 @@ function _htmlAgents(people, approvalQueue, card) {
         const sigil        = theme.sigil;
 
         const eid          = card._personEntityId(person.name);
+        const personAttr   = card._attrs(eid);
         const balance      = parseInt(card._states(eid)?.state ?? person.lifetime_points ?? 0);
+        const dollar       = personAttr.show_dollar_value ? personAttr.dollar_value : null;
         const rankTitle    = theme.rankTitle(person.rank_index !== undefined ? person.rank_index : 0);
         const subLabel     = theme.homeTileSubLabel(person);
 
@@ -93,6 +95,7 @@ function _htmlAgents(people, approvalQueue, card) {
                     <div class="fh-home-agent-stat">
                         <span class="fh-home-agent-stat-num">${fPts(balance)}</span>
                         <span class="fh-home-agent-stat-lbl">PTS</span>
+                        ${dollar != null ? `<span class="fh-home-agent-stat-dollar">${fUSD(dollar)}</span>` : ""}
                     </div>
                     <div class="fh-home-agent-stat-div"></div>
                     <div class="fh-home-agent-stat">

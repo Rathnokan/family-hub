@@ -344,6 +344,37 @@ export function choreFormFields(chore, isEdit, people, catLabels, activeTab = "d
             </div>
           </div>
         </div>
+
+        <div id="m-rotation-section" class="fh-field" style="display:none">
+          <div class="fh-divider"></div>
+          <div class="fh-form-group-lbl">Rotation</div>
+          <div class="fh-checkbox-row">
+            <input type="checkbox" id="m-crot-enabled"
+                   ${(c.rotation_pool && c.rotation_pool.length) ? "checked" : ""}>
+            <label for="m-crot-enabled" style="font-size:.88rem">Cycle this chore through a pool of people</label>
+          </div>
+          <div id="m-rotation-config" class="fh-field" style="display:none">
+            <label class="fh-label">Pool (top of list takes the next instance)</label>
+            <input type="hidden" id="m-crot-pool-order" value="${escAttr((c.rotation_pool || []).join(","))}">
+            <div id="m-crot-pool-widget" class="fh-rot-pool">
+              ${rotationPoolEditor(people, c.rotation_pool || [])}
+            </div>
+            <label class="fh-label" style="margin-top:6px">Cadence</label>
+            <select class="fh-select" id="m-crot-cadence">
+              ${opts([
+                  { value: "daily",        label: "Daily (advance every day)" },
+                  { value: "weekly",       label: "Weekly (advance on Mondays)" },
+                  { value: "per_instance", label: "Per instance (advance when chore generates)" },
+              ], c.rotation_cadence || "per_instance")}
+            </select>
+            <div class="fh-field-help">
+              Reorder with ↑/↓ to control whose turn is next. Pair a "daily" chore with
+              "weekly" cadence to give each kid a week-long shift; pair daily+daily to
+              cycle every day. The &quot;Assign to&quot; selection above is overridden while
+              rotation is on, and inactive people are skipped automatically.
+            </div>
+          </div>
+        </div>
     `);
 
     // ---- Rewards pane: points / approval / penalty / streak milestone ----
@@ -903,6 +934,67 @@ export function mAddReminder(m, people) {
  * @param {string[]} selectedIds - Pre-selected person_ids
  * @param {string}   cbClass     - CSS class for each <input> for bulk reading
  */
+/**
+ * Render the ordered rotation pool editor. Two stacked sections:
+ *
+ *   1. "In rotation" — numbered chips with ↑/↓/× controls. Order is
+ *      meaningful; top of list is next up.
+ *   2. "Add" — chips for people not yet in the pool; click to append.
+ *
+ * The handlers (rot-pool-add / rot-pool-remove / rot-pool-up / rot-pool-down)
+ * mutate the hidden `#m-crot-pool-order` CSV input and call this helper again
+ * to repaint the widget in place.
+ *
+ * @param {object[]} people    All people from the needs_attention sensor.
+ * @param {string[]} orderedIds Ordered list of person_ids currently in the pool.
+ * @returns {string} Inner HTML for the widget container.
+ */
+export function rotationPoolEditor(people, orderedIds) {
+    const byId     = new Map(people.map(p => [p.person_id, p]));
+    const ordered  = orderedIds.map(pid => byId.get(pid)).filter(Boolean);
+    const inPool   = new Set(orderedIds);
+    const available = people.filter(p => !inPool.has(p.person_id));
+
+    const orderedHtml = ordered.length
+        ? ordered.map((p, i) => {
+            const color  = p.avatar_color || DEFAULT_COLOR;
+            const upDis  = i === 0 ? "disabled" : "";
+            const dnDis  = i === ordered.length - 1 ? "disabled" : "";
+            return `
+              <div class="fh-rot-item" data-pid="${escAttr(p.person_id)}" style="--chip-color:${color}">
+                <span class="fh-rot-num">${i + 1}</span>
+                <span class="fh-avatar" style="background:${color};width:22px;height:22px;font-size:.7rem">${ini(p.name)}</span>
+                <span class="fh-rot-name">${escHTML(p.name)}</span>
+                <button type="button" class="fh-rot-ctrl" data-act="rot-pool-up"
+                        data-pid="${escAttr(p.person_id)}" ${upDis} aria-label="Move up">↑</button>
+                <button type="button" class="fh-rot-ctrl" data-act="rot-pool-down"
+                        data-pid="${escAttr(p.person_id)}" ${dnDis} aria-label="Move down">↓</button>
+                <button type="button" class="fh-rot-ctrl fh-rot-ctrl-remove"
+                        data-act="rot-pool-remove" data-pid="${escAttr(p.person_id)}"
+                        aria-label="Remove from pool">×</button>
+              </div>`;
+        }).join("")
+        : `<div class="fh-rot-empty">No one in the pool yet — add a kid below.</div>`;
+
+    const availableHtml = available.length
+        ? available.map(p => {
+            const color = p.avatar_color || DEFAULT_COLOR;
+            return `
+              <button type="button" class="fh-rot-add"
+                      data-act="rot-pool-add" data-pid="${escAttr(p.person_id)}"
+                      style="--chip-color:${color}">
+                <span class="fh-avatar" style="background:${color};width:18px;height:18px;font-size:.6rem">${ini(p.name)}</span>
+                + ${escHTML(p.name)}
+              </button>`;
+        }).join("")
+        : `<div class="fh-rot-add-empty">Everyone is in the pool.</div>`;
+
+    return `
+      <div class="fh-rot-ordered">${orderedHtml}</div>
+      <div class="fh-rot-available-lbl">Add to pool:</div>
+      <div class="fh-rot-available">${availableHtml}</div>`;
+}
+
 export function multiPersonCheckboxes(people, selectedIds, cbClass) {
     if (!people.length) return `<span style="font-size:.82rem;color:var(--fh-text-sec)">No people found.</span>`;
     return `<div class="fh-person-cb-list">

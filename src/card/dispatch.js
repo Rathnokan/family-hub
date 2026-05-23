@@ -5,6 +5,7 @@
  */
 
 import { FLASH_MS } from "./constants.js";
+import { rotationPoolEditor } from "./modals.js";
 
 /**
  * Dispatch a data-act action.
@@ -572,6 +573,20 @@ export function dispatch(act, el, card) {
             const rtRaw = parseInt(v("m-reminder-time") ?? "-1");
             data.reminder_time = isNaN(rtRaw) ? -1 : rtRaw;
 
+            // Rotation — only honored for assigned chores. Always send the
+            // fields (empty pool = disabled) so toggling off cleanly clears
+            // the prior configuration.
+            if (ctype === "assigned") {
+                const rotOn   = b("m-crot-enabled");
+                const poolStr = v("m-crot-pool-order") || "";
+                const pool    = rotOn && poolStr ? poolStr.split(",").filter(Boolean) : [];
+                data.rotation_pool    = pool;
+                data.rotation_cadence = (rotOn && pool.length) ? (v("m-crot-cadence") || "per_instance") : "";
+            } else {
+                data.rotation_pool    = [];
+                data.rotation_cadence = "";
+            }
+
             card._svc(isEdit ? "update_chore" : "add_chore", data);
             card._closeModal();
             break;
@@ -640,6 +655,17 @@ export function dispatch(act, el, card) {
             const rtRaw = parseInt(v("m-reminder-time") ?? "-1");
             data.reminder_time = isNaN(rtRaw) ? -1 : rtRaw;
 
+            if (ctype === "assigned") {
+                const rotOn   = b("m-crot-enabled");
+                const poolStr = v("m-crot-pool-order") || "";
+                const pool    = rotOn && poolStr ? poolStr.split(",").filter(Boolean) : [];
+                data.rotation_pool    = pool;
+                data.rotation_cadence = (rotOn && pool.length) ? (v("m-crot-cadence") || "per_instance") : "";
+            } else {
+                data.rotation_pool    = [];
+                data.rotation_cadence = "";
+            }
+
             card._svc("update_chore", data);
             card._adminSelectedChoreId = null;  // close panel after save
             card._choreFormTab = "details";
@@ -652,6 +678,34 @@ export function dispatch(act, el, card) {
             const pid   = el.dataset.pid;
             const count = Math.max(0, parseInt(sr.getElementById(`m-streak-${cid}`)?.value || "0"));
             card._svc("set_streak", { person_id: pid, chore_id: cid, count });
+            break;
+        }
+
+        // ---- Rotation pool editor (chore form) -----------------------------
+        // All four handlers read the hidden CSV input, mutate the order, and
+        // repaint the widget in place. The hidden input is the source of
+        // truth; chore-save reads it directly.
+        case "rot-pool-add":
+        case "rot-pool-remove":
+        case "rot-pool-up":
+        case "rot-pool-down": {
+            const pid     = el.dataset.pid;
+            const hidden  = sr.getElementById("m-crot-pool-order");
+            const widget  = sr.getElementById("m-crot-pool-widget");
+            if (!pid || !hidden || !widget) break;
+            const order = hidden.value ? hidden.value.split(",").filter(Boolean) : [];
+            const idx   = order.indexOf(pid);
+            if (act === "rot-pool-add") {
+                if (idx === -1) order.push(pid);
+            } else if (act === "rot-pool-remove") {
+                if (idx !== -1) order.splice(idx, 1);
+            } else if (act === "rot-pool-up" && idx > 0) {
+                [order[idx - 1], order[idx]] = [order[idx], order[idx - 1]];
+            } else if (act === "rot-pool-down" && idx !== -1 && idx < order.length - 1) {
+                [order[idx + 1], order[idx]] = [order[idx], order[idx + 1]];
+            }
+            hidden.value = order.join(",");
+            widget.innerHTML = rotationPoolEditor(card._people(), order);
             break;
         }
 

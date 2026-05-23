@@ -4,7 +4,7 @@ A private, self-hosted family chore and rewards integration for Home Assistant.
 
 > Built for one family, designed to be shared. HACS-compatible.
 
-**Current release:** v0.6.0 "The Front Door" — see [`RELEASE-NOTES-v0.6.0.md`](RELEASE-NOTES-v0.6.0.md).
+**Current release:** v0.6.1 — see [`RELEASE-NOTES-v0.6.1.md`](RELEASE-NOTES-v0.6.1.md).
 
 ---
 
@@ -75,6 +75,7 @@ Family Hub ships a custom Lovelace card. After installation, add a card and choo
 |---|---|
 | `mode` | One of the modes above |
 | `person` | Person name (lowercase) — required for `personal` mode |
+| `initial_view` | `command_center` only. Opens directly into a person or room view instead of the home screen. Format: `person:<id>` or `room:<id>` (e.g. `person:spencer`, `room:chores`). The back arrow returns to home. Lets a kid's dedicated device skip straight to their themed page without a separate dashboard. |
 | `text_scale` | `0.9` Small · `1.0` Default · `1.25` Large · `1.5` XL. Use Large/XL for Echo Show or tablets. |
 
 ---
@@ -94,6 +95,9 @@ Each family member has the following editable fields (Admin → Family → Edit 
 | `allowance_*` | Scheduled point deposits — see Allowance below |
 | `notify_target` | HA `notify.*` service for this person (Companion App, alexa_media_player, etc.) |
 | `penalties_paused` | Per-person pause flag — pauses both penalties and streak breaks |
+| `completion_threshold_pct` | Success-streak threshold — % of assigned chores due that day that must be done to count as a "good day" (default 80) |
+| `completion_milestone` | Success-streak milestone — good-day streak length that earns a bonus (default 7, set 0 to disable) |
+| `completion_bonus_points` | Points awarded at each success-streak milestone (default 50) |
 | `rank_*` overrides | Per-person rank thresholds (otherwise inherits global) |
 
 ---
@@ -152,7 +156,7 @@ Each family member has the following editable fields (Admin → Family → Edit 
 | `mark_complete` | Retroactively mark a skipped task done and award points |
 | `add_task` | Quick-add a one-time task |
 | `add_person` | Add a family member |
-| `update_person` | Edit a person (name, type, color, allowance, notification target) |
+| `update_person` | Edit a person (name, type, color, allowance, notification target, success-streak settings) |
 | `remove_person` | Deactivate a family member |
 | `add_chore` | Add a recurring chore |
 | `update_chore` | Edit a chore |
@@ -168,7 +172,8 @@ Each family member has the following editable fields (Admin → Family → Edit 
 | `update_settings` | Update family name, points rate, penalty alert time |
 | `add_category_label` | Add a chore category label |
 | `remove_category_label` | Remove a chore category label |
-| `set_streak` | Manually correct a streak count (admin override) |
+| `set_streak` | Manually correct a per-chore streak count (admin override) |
+| `set_completion_streak` | Manually correct a person's success-rate streak count (admin override) |
 | `force_daily_tick` | Trigger the daily tick immediately (testing / recovery) |
 | `rebuild_data` | Clean up ghost instances, orphans, and duplicates. Posts a summary notification. |
 | `export_backup` | Save a timestamped backup to `/config/family_hub_backups/` |
@@ -201,8 +206,9 @@ The Command Center mode opens to a Front Door home page with person tiles and ro
 | Weather entity | HA `weather.*` entity used in the today strip. Blank to hide. |
 | Calendar entities | List of `calendar.*` entities — populates the today strip when the Calendar room ships in v0.8.0. |
 
-Live rooms in v0.6.0: **Chores** (Mission Control), **Maintenance** (drill-down).
-Coming-soon scaffolds: **Meals** (v0.7.0), **Calendar** (v0.8.0), **Smart Home** (v0.9.0).
+Live rooms in v0.6.1: **Chores** (Mission Control), **Maintenance** (drill-down).
+Coming-soon scaffolds: **Meals** (v0.8.0), **Calendar** (v0.9.0), **Smart Home** (v1.0.0).
+v0.7.0 will expand the Maintenance room with full CRUD and scheduling from the card.
 
 ---
 

@@ -451,6 +451,67 @@ var init_css = __esm({
     background:color-mix(in srgb, var(--chip-color, var(--fh-accent)) 18%, transparent);
   }
 
+  /* Rotation pool editor (v0.6.2) \u2014 ordered list with up/down/remove + add chips. */
+  .fh-rot-pool { display:flex; flex-direction:column; gap:6px; }
+  .fh-rot-ordered {
+    display:flex; flex-direction:column; gap:4px;
+    padding:4px; border:1px dashed var(--fh-border); border-radius:6px;
+    background:var(--fh-surface);
+  }
+  .fh-rot-empty {
+    padding:8px 6px; font-size:.82rem;
+    color:var(--fh-text-sec); font-style:italic; text-align:center;
+  }
+  .fh-rot-item {
+    display:flex; align-items:center; gap:8px;
+    padding:6px 8px; border-radius:6px;
+    border:1.5px solid var(--chip-color, var(--fh-border));
+    background:color-mix(in srgb, var(--chip-color, var(--fh-accent)) 12%, transparent);
+    font-size:.86rem;
+  }
+  .fh-rot-num {
+    flex-shrink:0;
+    min-width:22px; height:22px; padding:0 6px;
+    display:inline-flex; align-items:center; justify-content:center;
+    font-family:var(--fh-font-mono); font-size:.78rem; font-weight:700;
+    border-radius:11px;
+    background:var(--chip-color, var(--fh-accent)); color:#fff;
+  }
+  .fh-rot-name { flex:1; min-width:0; }
+  .fh-rot-ctrl {
+    width:30px; height:30px; padding:0;
+    display:inline-flex; align-items:center; justify-content:center;
+    font-size:1rem; font-weight:700;
+    border:1px solid var(--fh-border); border-radius:6px;
+    background:var(--fh-bg); color:var(--fh-text); cursor:pointer;
+    transition:background .12s, border-color .12s, opacity .12s;
+  }
+  .fh-rot-ctrl:hover:not([disabled]) { background:var(--fh-surface); border-color:var(--fh-accent); }
+  .fh-rot-ctrl[disabled] { opacity:.35; cursor:not-allowed; }
+  .fh-rot-ctrl-remove { color:#CC2200; }
+  .fh-rot-ctrl-remove:hover { background:rgba(204,34,0,.1); border-color:#CC2200; }
+
+  .fh-rot-available-lbl {
+    font-size:.78rem; font-weight:600;
+    color:var(--fh-text-sec); letter-spacing:.02em;
+    margin-top:2px;
+  }
+  .fh-rot-available { display:flex; flex-wrap:wrap; gap:6px; }
+  .fh-rot-add {
+    display:inline-flex; align-items:center; gap:5px;
+    padding:4px 10px; border-radius:20px;
+    border:1.5px dashed var(--chip-color, var(--fh-border));
+    background:transparent; color:var(--fh-text);
+    font-size:.82rem; cursor:pointer;
+    transition:background .12s;
+  }
+  .fh-rot-add:hover {
+    background:color-mix(in srgb, var(--chip-color, var(--fh-accent)) 14%, transparent);
+  }
+  .fh-rot-add-empty {
+    font-size:.82rem; color:var(--fh-text-sec); font-style:italic;
+  }
+
   /* Weekday selector */
   .fh-weekday-row { display:flex; flex-wrap:wrap; gap:4px; }
   .fh-wd-chip {
@@ -784,6 +845,10 @@ var init_css = __esm({
   .fh-home-agent-stat-lbl {
     font-family:var(--fh-font-mono); font-size:.78rem; font-weight:700;
     color:var(--fh-text-sec); letter-spacing:.06em;
+  }
+  .fh-home-agent-stat-dollar {
+    font-family:var(--fh-font-mono); font-size:.82rem; font-weight:700;
+    color:var(--fh-text-sec); letter-spacing:.02em; margin-top:2px;
   }
   .fh-home-agent-stat-div {
     width:1px; height:28px; background:var(--fh-border); flex-shrink:0; margin:0 4px;
@@ -1576,6 +1641,13 @@ var init_css = __esm({
   .fh-eng-rkpi-unit {
     font-family:var(--fh-font-mono); font-size:.75rem;
     color:rgba(242,235,214,.45);
+  }
+
+  /* Shared $X.XX subtitle under a rail KPI cell. Inherits color from the
+     surrounding cell context; opacity tones it down so it reads as secondary. */
+  .fh-rkpi-sub {
+    font-family:var(--fh-font-mono); font-size:.72rem; font-weight:600;
+    letter-spacing:.02em; line-height:1; margin-top:3px; opacity:.7;
   }
 
   /* Rail \xC2\xB7 Streak constellation */
@@ -3416,6 +3488,31 @@ var init_css = __esm({
   }
   .fh-row-pts:empty { display:none; }
 
+  /* Dual reward/penalty medal: "+15 / \u22125". Penalty inherits the row's danger
+     tone (each theme already styles .fh-row--<theme> .fh-row-penalty in red);
+     reuse that color via currentColor on a danger-flavored span. */
+  .fh-row-pts--dual {
+    display:inline-flex; align-items:baseline; gap:3px;
+    white-space:nowrap; line-height:1;
+  }
+  .fh-row-pts-sep {
+    opacity:.45; font-weight:600; font-size:.85em;
+  }
+  .fh-row-pts-neg {
+    color:var(--fh-row-neg, #CC2200); font-weight:800;
+  }
+  /* Each theme inherits its existing .fh-row-penalty color for the dual medal.
+     Paper themes (HP burgundy, baker brown, dinos sepia) would otherwise clash
+     against bright red. Dark themes (DBZ) keep the canonical red. */
+  .fh-row--engineer .fh-row-pts-neg { color:#E07A4C; }
+  .fh-row--dinos    .fh-row-pts-neg { color:#8C281E; }
+  .fh-row--hp       .fh-row-pts-neg { color:#A02020; }
+  .fh-row--baker    .fh-row-pts-neg { color:#A02828; }
+  .fh-row--dbz      .fh-row-pts-neg { color:#CC2200; }
+  .fh-row--classic  .fh-row-pts-neg { color:#E07A4C; }
+  /* Kid-mode penalty pop: a touch larger so pre-readers parse it instantly. */
+  .kid-large .fh-row-pts-neg { font-size:1.05em; }
+
   /* Action button (themes override shape/color/transform).
      v0.6.1: bumped from min-width:64px / 8px padding to min-width:72px / 60px height
      for thumb-confidence on Echo Show. Kid-large still overrides to its own bigger
@@ -3701,6 +3798,19 @@ var init_css = __esm({
     border-radius:50%;
     min-width:0; padding:0;
   }
+  /* Dual medal mode \u2014 break the circular seal into a wider pill so
+     "+3 / \u22121" has room to breathe, and brighten the negative half so it
+     reads against the dark emerald gradient. */
+  .fh-row--hp .fh-row-pts.fh-row-pts--dual {
+    width:auto; height:auto;
+    border-radius:14px;
+    padding:6px 12px;
+    background:linear-gradient(180deg, #1F4F3C 0%, #143427 100%);
+    box-shadow:0 2px 6px rgba(31,79,60,.25);
+    gap:6px;
+  }
+  .fh-row--hp .fh-row-pts-neg { color:#F4B8B8; }
+  .fh-row--hp .fh-row-pts-sep { color:#EFE0BA; opacity:.35; }
   .fh-row--hp .fh-row-btn {
     background:#1F4F3C; color:#FAF0D7; border:1.5px solid #1F4F3C;
     font-family:"Cinzel", serif; letter-spacing:.04em; text-transform:none;
@@ -3860,6 +3970,94 @@ var init_css = __esm({
     font-size:var(--fh-text-xs);
   }
   .fh-row--classic .fh-row-btn--pending:hover { filter:none; }
+
+  /* ============================================================
+     Phone-friendly pass (v0.6.2)
+     Target: 375-414px (iPhone SE \u2192 Pro Max). Themed personal pages
+     were designed for the 400px Lovelace card on Echo Show 15 but
+     compress poorly on actual phones, so this block tightens the
+     row anatomy, drops kid-large to one column, and hides/trims
+     theme chrome (frames, watermarks, corner ornaments, tape strips).
+     ============================================================ */
+  @media (max-width: 500px) {
+    /* --- Row anatomy: stack chips + button below body --- */
+    .fh-row {
+      display:grid;
+      grid-template-columns:auto 1fr auto;
+      grid-template-areas:
+        "lead icon  pts"
+        "body body  body"
+        "chips chips chips"
+        "btn  btn   btn";
+      gap:6px 8px;
+      padding:10px 10px 10px;
+    }
+    .fh-row-lead  { grid-area:lead; }
+    .fh-row-icon  { grid-area:icon; width:40px; height:40px; }
+    .fh-row-icon svg { width:24px; height:24px; }
+    .fh-row-body  { grid-area:body; }
+    .fh-row-chips { grid-area:chips;
+      flex-direction:row; flex-wrap:wrap;
+      justify-content:flex-start; align-items:center;
+      gap:4px; row-gap:4px;
+    }
+    .fh-row-pts   { grid-area:pts; min-width:0; }
+    .fh-row-btn   { grid-area:btn; width:100%; min-height:48px; }
+
+    /* Auto-truncate descriptions instead of expand-toggle (no JS). */
+    .fh-row-desc {
+      display:-webkit-box;
+      -webkit-line-clamp:2;
+      -webkit-box-orient:vertical;
+      overflow:hidden;
+    }
+
+    /* --- Kid-large: drop the grid to a single column. The 190px minmax
+       squeezes two columns onto a 414px viewport and chops the icon. --- */
+    .kid-large .fh-row-list {
+      grid-template-columns:1fr;
+      gap:10px;
+    }
+    .kid-large .fh-row {
+      min-height:auto;
+      grid-template-columns:auto 1fr auto;
+      grid-template-areas:
+        "icon name pts"
+        "icon name btn";
+      flex-direction:row;
+      align-items:center;
+      padding:12px 10px;
+      gap:10px;
+    }
+    .kid-large .fh-row-icon { grid-area:icon; width:72px; height:72px; }
+    .kid-large .fh-row-icon svg { width:100%; height:100%; }
+    .kid-large .fh-row-icon .fh-chore-icon {
+      width:60px !important; height:60px !important;
+    }
+    .kid-large .fh-row-body  { grid-area:name; align-items:flex-start; text-align:left; }
+    .kid-large .fh-row-name  { font-size:var(--fh-text-md); }
+    .kid-large .fh-row-pts   { grid-area:pts; font-size:var(--fh-text-lg); }
+    .kid-large .fh-row-btn   { grid-area:btn; min-height:48px; padding:0 14px; font-size:var(--fh-text-sm); }
+    .kid-large .fh-row-chips { display:none; }
+
+    /* --- Theme chrome: hide/scale ornaments that eat small screens. --- */
+    /* Engineer: blueprint grid + double border are decorative \u2014 drop them. */
+    .fh-eng-grid,
+    .fh-eng-border-outer,
+    .fh-eng-border-inner { display:none; }
+
+    /* Baker: paper-card double frame collapses to a single light border. */
+    .fh-bk-frame-inner { display:none; }
+    .fh-bk-frame-outer { inset:4px; }
+
+    /* Dinos: corner tape strips disappear (they spill outside the viewport
+       on narrow screens anyway). */
+    .fh-dn-tape { display:none; }
+
+    /* HP: thin out the heavy inset-shadow frame and shrink corner glyphs. */
+    .fh-hp-frame { box-shadow:inset 0 0 0 2px #241914, inset 0 0 0 3px #C9A22A; }
+    .fh-hp-corner { font-size:.9rem; }
+  }
 `;
   }
 });
@@ -3869,7 +4067,7 @@ var DOMAIN, VERSION, DEFAULT_COLOR, FLASH_MS, FH_SENSORS, WEEKDAY_LABELS, HISTOR
 var init_constants = __esm({
   "src/card/constants.js"() {
     DOMAIN = "family_hub";
-    VERSION = "0.6.1";
+    VERSION = "0.6.2";
     DEFAULT_COLOR = "#7F77DD";
     FLASH_MS = 1400;
     FH_SENSORS = [
@@ -4441,7 +4639,8 @@ function htmlChoreRow(t, cfg, person, card, opts2 = {}) {
   const iconColor = cfg.iconColor ? cfg.iconColor(t, isOverdue) : void 0;
   const iconHtml = `<div class="fh-row-icon">${choreIcon(t.icon, iconColor)}</div>`;
   const descLine = t.description ? `<div class="fh-row-desc">${escHTML(t.description)}</div>` : "";
-  const penaltyLine = !isReminder && t.penalty_enabled && t.penalty_points > 0 ? `<div class="fh-row-penalty">\u2212${t.penalty_points}pts if skipped</div>` : "";
+  const hasPenalty = !isReminder && t.penalty_enabled && t.penalty_points > 0;
+  const penaltyLine = hasPenalty && !pts ? `<div class="fh-row-penalty">\u2212${t.penalty_points}pts if skipped</div>` : "";
   const chips = [];
   if (streak >= 2 && !isReminder) {
     const ico = cfg.streakIcon || "\u{1F525}";
@@ -4471,7 +4670,18 @@ function htmlChoreRow(t, cfg, person, card, opts2 = {}) {
     }
   }
   const chipsHtml = `<div class="fh-row-chips">${chips.join("")}</div>`;
-  const ptsHtml = !isReminder && pts ? `<div class="fh-row-pts">+${pts}</div>` : `<div class="fh-row-pts"></div>`;
+  let ptsHtml;
+  if (isReminder) {
+    ptsHtml = `<div class="fh-row-pts"></div>`;
+  } else if (pts && hasPenalty) {
+    ptsHtml = `<div class="fh-row-pts fh-row-pts--dual"><span class="fh-row-pts-pos">+${pts}</span><span class="fh-row-pts-sep">/</span><span class="fh-row-pts-neg">\u2212${t.penalty_points}</span></div>`;
+  } else if (pts) {
+    ptsHtml = `<div class="fh-row-pts">+${pts}</div>`;
+  } else if (hasPenalty) {
+    ptsHtml = `<div class="fh-row-pts"><span class="fh-row-pts-neg">\u2212${t.penalty_points}</span></div>`;
+  } else {
+    ptsHtml = `<div class="fh-row-pts"></div>`;
+  }
   const extraBtnData = opts2.btnData ? Object.entries(opts2.btnData).map(([k, v]) => ` data-${k}="${escAttr(String(v ?? ""))}"`).join("") : "";
   let btnHtml;
   if (isSubmitted) {
@@ -4902,7 +5112,7 @@ function _railPanels2({
   plotDate
 }) {
   return `
-        ${_railPanelKPIs2(balance, openCount, weekly)}
+        ${_railPanelKPIs2(balance, openCount, weekly, attr.show_dollar_value ? attr.dollar_value : null)}
         ${_railPanelRank2(rankIdx, weekly, dropThr, gainThr, person)}
         ${_railPanelStreaks2(attr, naAttr, person)}
         ${_railPanelSheet(person, rank, plotDate)}`;
@@ -4919,18 +5129,19 @@ function _railPanel2(label, contentHTML, opts2 = {}) {
             <div class="fh-eng-rpanel-body">${contentHTML}</div>
         </div>`;
 }
-function _railPanelKPIs2(balance, openCount, weekly) {
-  const cell = (label, val, unit) => `
+function _railPanelKPIs2(balance, openCount, weekly, dollarValue) {
+  const cell = (label, val, unit, sub) => `
         <div class="fh-eng-rkpi">
             <div class="fh-eng-rkpi-lbl">${label}</div>
             <div class="fh-eng-rkpi-val-row">
                 <span class="fh-eng-rkpi-val">${escHTML(String(val))}</span>
                 ${unit ? `<span class="fh-eng-rkpi-unit">${unit}</span>` : ""}
             </div>
+            ${sub ? `<div class="fh-rkpi-sub">${escHTML(sub)}</div>` : ""}
         </div>`;
   const body = `
         <div class="fh-eng-rkpi-row">
-            ${cell("BAL", fPts(balance), "pts")}
+            ${cell("BAL", fPts(balance), "pts", dollarValue != null ? fUSD(dollarValue) : null)}
             ${cell("OPEN", openCount, "wo")}
             ${cell("WEEK", `+${weekly}`, "pts")}
         </div>`;
@@ -5262,7 +5473,7 @@ function _railPanels3({
   rank
 }) {
   return `
-        ${_railPanelKPIs3(balance, weekly, openCount)}
+        ${_railPanelKPIs3(balance, weekly, openCount, attr.show_dollar_value ? attr.dollar_value : null)}
         ${_railPanelRank3(rankIdx, weekly, dropThr, gainThr, person)}
         ${_railPanelStreaks3(attr, naAttr, person)}
         ${_railPanelRecent2(person, naAttr)}`;
@@ -5274,18 +5485,19 @@ function _railPanel3(label, contentHTML) {
             <div class="fh-bk-rpanel-body">${contentHTML}</div>
         </div>`;
 }
-function _railPanelKPIs3(balance, weekly, openCount) {
-  const cell = (label, val, unit) => `
+function _railPanelKPIs3(balance, weekly, openCount, dollarValue) {
+  const cell = (label, val, unit, sub) => `
         <div class="fh-bk-rkpi">
             <div class="fh-bk-rkpi-lbl">${label}</div>
             <div class="fh-bk-rkpi-val-row">
                 <span class="fh-bk-rkpi-val">${escHTML(String(val))}</span>
                 ${unit ? `<span class="fh-bk-rkpi-unit">${unit}</span>` : ""}
             </div>
+            ${sub ? `<div class="fh-rkpi-sub">${escHTML(sub)}</div>` : ""}
         </div>`;
   const body = `
         <div class="fh-bk-rkpi-row">
-            ${cell("balance", fPts(balance), "pts")}
+            ${cell("balance", fPts(balance), "pts", dollarValue != null ? fUSD(dollarValue) : null)}
             ${cell("this week", `+${weekly}`, "pts")}
             ${cell("on prep", openCount, "items")}
         </div>`;
@@ -5587,7 +5799,7 @@ function _railPanels4({
   dateStr
 }) {
   return `
-        ${_railPanelKPIs4(balance, weekly, openCount)}
+        ${_railPanelKPIs4(balance, weekly, openCount, attr.show_dollar_value ? attr.dollar_value : null)}
         ${_railPanelRank4(rankIdx, weekly, dropThr, gainThr, person)}
         ${_railPanelStreaks4(attr, naAttr, person)}
         ${_railPanelFindings(person, naAttr)}`;
@@ -5599,18 +5811,19 @@ function _railPanel4(label, contentHTML) {
             <div class="fh-dn-rpanel-body">${contentHTML}</div>
         </div>`;
 }
-function _railPanelKPIs4(balance, weekly, openCount) {
-  const cell = (label, val, unit) => `
+function _railPanelKPIs4(balance, weekly, openCount, dollarValue) {
+  const cell = (label, val, unit, sub) => `
         <div class="fh-dn-rkpi">
             <div class="fh-dn-rkpi-lbl">${label}</div>
             <div class="fh-dn-rkpi-val-row">
                 <span class="fh-dn-rkpi-val">${escHTML(String(val))}</span>
                 ${unit ? `<span class="fh-dn-rkpi-unit">${unit}</span>` : ""}
             </div>
+            ${sub ? `<div class="fh-rkpi-sub">${escHTML(sub)}</div>` : ""}
         </div>`;
   const body = `
         <div class="fh-dn-rkpi-row">
-            ${cell("FOSSILS", fPts(balance), "pts")}
+            ${cell("FOSSILS", fPts(balance), "pts", dollarValue != null ? fUSD(dollarValue) : null)}
             ${cell("THIS WEEK", `+${weekly}`, "pts")}
             ${cell("SPECIMENS", openCount, "open")}
         </div>`;
@@ -5926,7 +6139,7 @@ function _railPanels5({
   rank
 }) {
   return `
-        ${_railPanelKPIs5(balance, weekly, openCount)}
+        ${_railPanelKPIs5(balance, weekly, openCount, attr.show_dollar_value ? attr.dollar_value : null)}
         ${_railPanelRank5(rankIdx, weekly, dropThr, gainThr, person)}
         ${_railPanelStreaks5(attr, naAttr, person)}
         ${_railPanelOwlPost(person, naAttr)}`;
@@ -5938,18 +6151,19 @@ function _railPanel5(label, contentHTML) {
             <div class="fh-hp-rpanel-body">${contentHTML}</div>
         </div>`;
 }
-function _railPanelKPIs5(balance, weekly, openCount) {
-  const cell = (label, val, unit) => `
+function _railPanelKPIs5(balance, weekly, openCount, dollarValue) {
+  const cell = (label, val, unit, sub) => `
         <div class="fh-hp-rkpi">
             <div class="fh-hp-rkpi-lbl">${label}</div>
             <div class="fh-hp-rkpi-val-row">
                 <span class="fh-hp-rkpi-val">${escHTML(String(val))}</span>
                 ${unit ? `<span class="fh-hp-rkpi-unit">${unit}</span>` : ""}
             </div>
+            ${sub ? `<div class="fh-rkpi-sub">${escHTML(sub)}</div>` : ""}
         </div>`;
   const body = `
         <div class="fh-hp-rkpi-row">
-            ${cell("HOUSE PTS", fPts(balance), "")}
+            ${cell("HOUSE PTS", fPts(balance), "", dollarValue != null ? fUSD(dollarValue) : null)}
             ${cell("THIS WEEK", `+${weekly}`, "pts")}
             ${cell("CLASSES", openCount, "open")}
         </div>`;
@@ -6264,7 +6478,7 @@ function _railPanels6({
   fillPct
 }) {
   return `
-        ${_railPanelKPIs6(balance, weekly, openCount)}
+        ${_railPanelKPIs6(balance, weekly, openCount, attr.show_dollar_value ? attr.dollar_value : null)}
         ${_railPanelRank6(rankIdx, weekly, dropThr, gainThr, person)}
         ${_railPanelStreaks6(attr, naAttr, person)}
         ${_railPanelNextUp(nextItem, fillPct)}`;
@@ -6276,18 +6490,19 @@ function _railPanel6(label, contentHTML) {
             <div class="fh-dbz-rpanel-body">${contentHTML}</div>
         </div>`;
 }
-function _railPanelKPIs6(balance, weekly, openCount) {
-  const cell = (label, val, unit) => `
+function _railPanelKPIs6(balance, weekly, openCount, dollarValue) {
+  const cell = (label, val, unit, sub) => `
         <div class="fh-dbz-rkpi">
             <div class="fh-dbz-rkpi-lbl">${label}</div>
             <div class="fh-dbz-rkpi-val-row">
                 <span class="fh-dbz-rkpi-val">${escHTML(String(val))}</span>
                 ${unit ? `<span class="fh-dbz-rkpi-unit">${unit}</span>` : ""}
             </div>
+            ${sub ? `<div class="fh-rkpi-sub">${escHTML(sub)}</div>` : ""}
         </div>`;
   const body = `
         <div class="fh-dbz-rkpi-row">
-            ${cell("POWER", fPts(balance), "\u26A1")}
+            ${cell("POWER", fPts(balance), "\u26A1", dollarValue != null ? fUSD(dollarValue) : null)}
             ${cell("WEEK", `+${weekly}`, "\u26A1")}
             ${cell("OPEN", openCount, "")}
         </div>`;
@@ -7626,6 +7841,37 @@ function choreFormFields(chore, isEdit, people, catLabels, activeTab = "details"
             </div>
           </div>
         </div>
+
+        <div id="m-rotation-section" class="fh-field" style="display:none">
+          <div class="fh-divider"></div>
+          <div class="fh-form-group-lbl">Rotation</div>
+          <div class="fh-checkbox-row">
+            <input type="checkbox" id="m-crot-enabled"
+                   ${c.rotation_pool && c.rotation_pool.length ? "checked" : ""}>
+            <label for="m-crot-enabled" style="font-size:.88rem">Cycle this chore through a pool of people</label>
+          </div>
+          <div id="m-rotation-config" class="fh-field" style="display:none">
+            <label class="fh-label">Pool (top of list takes the next instance)</label>
+            <input type="hidden" id="m-crot-pool-order" value="${escAttr((c.rotation_pool || []).join(","))}">
+            <div id="m-crot-pool-widget" class="fh-rot-pool">
+              ${rotationPoolEditor(people, c.rotation_pool || [])}
+            </div>
+            <label class="fh-label" style="margin-top:6px">Cadence</label>
+            <select class="fh-select" id="m-crot-cadence">
+              ${opts([
+    { value: "daily", label: "Daily (advance every day)" },
+    { value: "weekly", label: "Weekly (advance on Mondays)" },
+    { value: "per_instance", label: "Per instance (advance when chore generates)" }
+  ], c.rotation_cadence || "per_instance")}
+            </select>
+            <div class="fh-field-help">
+              Reorder with \u2191/\u2193 to control whose turn is next. Pair a "daily" chore with
+              "weekly" cadence to give each kid a week-long shift; pair daily+daily to
+              cycle every day. The &quot;Assign to&quot; selection above is overridden while
+              rotation is on, and inactive people are skipped automatically.
+            </div>
+          </div>
+        </div>
     `);
   const rewardsPane = pane("rewards", `
         <div class="fh-field">
@@ -8132,6 +8378,44 @@ function mAddReminder(m, people) {
     "Add",
     "ok-add-reminder"
   );
+}
+function rotationPoolEditor(people, orderedIds) {
+  const byId = new Map(people.map((p) => [p.person_id, p]));
+  const ordered = orderedIds.map((pid) => byId.get(pid)).filter(Boolean);
+  const inPool = new Set(orderedIds);
+  const available = people.filter((p) => !inPool.has(p.person_id));
+  const orderedHtml = ordered.length ? ordered.map((p, i) => {
+    const color = p.avatar_color || DEFAULT_COLOR;
+    const upDis = i === 0 ? "disabled" : "";
+    const dnDis = i === ordered.length - 1 ? "disabled" : "";
+    return `
+              <div class="fh-rot-item" data-pid="${escAttr(p.person_id)}" style="--chip-color:${color}">
+                <span class="fh-rot-num">${i + 1}</span>
+                <span class="fh-avatar" style="background:${color};width:22px;height:22px;font-size:.7rem">${ini(p.name)}</span>
+                <span class="fh-rot-name">${escHTML(p.name)}</span>
+                <button type="button" class="fh-rot-ctrl" data-act="rot-pool-up"
+                        data-pid="${escAttr(p.person_id)}" ${upDis} aria-label="Move up">\u2191</button>
+                <button type="button" class="fh-rot-ctrl" data-act="rot-pool-down"
+                        data-pid="${escAttr(p.person_id)}" ${dnDis} aria-label="Move down">\u2193</button>
+                <button type="button" class="fh-rot-ctrl fh-rot-ctrl-remove"
+                        data-act="rot-pool-remove" data-pid="${escAttr(p.person_id)}"
+                        aria-label="Remove from pool">\xD7</button>
+              </div>`;
+  }).join("") : `<div class="fh-rot-empty">No one in the pool yet \u2014 add a kid below.</div>`;
+  const availableHtml = available.length ? available.map((p) => {
+    const color = p.avatar_color || DEFAULT_COLOR;
+    return `
+              <button type="button" class="fh-rot-add"
+                      data-act="rot-pool-add" data-pid="${escAttr(p.person_id)}"
+                      style="--chip-color:${color}">
+                <span class="fh-avatar" style="background:${color};width:18px;height:18px;font-size:.6rem">${ini(p.name)}</span>
+                + ${escHTML(p.name)}
+              </button>`;
+  }).join("") : `<div class="fh-rot-add-empty">Everyone is in the pool.</div>`;
+  return `
+      <div class="fh-rot-ordered">${orderedHtml}</div>
+      <div class="fh-rot-available-lbl">Add to pool:</div>
+      <div class="fh-rot-available">${availableHtml}</div>`;
 }
 function multiPersonCheckboxes(people, selectedIds, cbClass) {
   if (!people.length) return `<span style="font-size:.82rem;color:var(--fh-text-sec)">No people found.</span>`;
@@ -8971,7 +9255,9 @@ function _htmlAgents(people, approvalQueue, card) {
     const tint = theme.tint;
     const sigil = theme.sigil;
     const eid = card._personEntityId(person.name);
+    const personAttr = card._attrs(eid);
     const balance = parseInt(((_a = card._states(eid)) == null ? void 0 : _a.state) ?? person.lifetime_points ?? 0);
+    const dollar = personAttr.show_dollar_value ? personAttr.dollar_value : null;
     const rankTitle = theme.rankTitle(person.rank_index !== void 0 ? person.rank_index : 0);
     const subLabel = theme.homeTileSubLabel(person);
     const openCount = allTasks.filter(
@@ -8993,6 +9279,7 @@ function _htmlAgents(people, approvalQueue, card) {
                     <div class="fh-home-agent-stat">
                         <span class="fh-home-agent-stat-num">${fPts(balance)}</span>
                         <span class="fh-home-agent-stat-lbl">PTS</span>
+                        ${dollar != null ? `<span class="fh-home-agent-stat-dollar">${fUSD(dollar)}</span>` : ""}
                     </div>
                     <div class="fh-home-agent-stat-div"></div>
                     <div class="fh-home-agent-stat">
@@ -9688,6 +9975,16 @@ This cannot be undone.`)) break;
       data.streak_bonus_points = Math.max(0, int("m-streak-bonus") || 0);
       const rtRaw = parseInt(v("m-reminder-time") ?? "-1");
       data.reminder_time = isNaN(rtRaw) ? -1 : rtRaw;
+      if (ctype === "assigned") {
+        const rotOn = b("m-crot-enabled");
+        const poolStr = v("m-crot-pool-order") || "";
+        const pool = rotOn && poolStr ? poolStr.split(",").filter(Boolean) : [];
+        data.rotation_pool = pool;
+        data.rotation_cadence = rotOn && pool.length ? v("m-crot-cadence") || "per_instance" : "";
+      } else {
+        data.rotation_pool = [];
+        data.rotation_cadence = "";
+      }
       card._svc(isEdit ? "update_chore" : "add_chore", data);
       card._closeModal();
       break;
@@ -9745,6 +10042,16 @@ This cannot be undone.`)) break;
       data.streak_bonus_points = Math.max(0, int("m-streak-bonus") || 0);
       const rtRaw = parseInt(v("m-reminder-time") ?? "-1");
       data.reminder_time = isNaN(rtRaw) ? -1 : rtRaw;
+      if (ctype === "assigned") {
+        const rotOn = b("m-crot-enabled");
+        const poolStr = v("m-crot-pool-order") || "";
+        const pool = rotOn && poolStr ? poolStr.split(",").filter(Boolean) : [];
+        data.rotation_pool = pool;
+        data.rotation_cadence = rotOn && pool.length ? v("m-crot-cadence") || "per_instance" : "";
+      } else {
+        data.rotation_pool = [];
+        data.rotation_cadence = "";
+      }
       card._svc("update_chore", data);
       card._adminSelectedChoreId = null;
       card._choreFormTab = "details";
@@ -9756,6 +10063,33 @@ This cannot be undone.`)) break;
       const pid = el.dataset.pid;
       const count = Math.max(0, parseInt(((_h = sr.getElementById(`m-streak-${cid}`)) == null ? void 0 : _h.value) || "0"));
       card._svc("set_streak", { person_id: pid, chore_id: cid, count });
+      break;
+    }
+    // ---- Rotation pool editor (chore form) -----------------------------
+    // All four handlers read the hidden CSV input, mutate the order, and
+    // repaint the widget in place. The hidden input is the source of
+    // truth; chore-save reads it directly.
+    case "rot-pool-add":
+    case "rot-pool-remove":
+    case "rot-pool-up":
+    case "rot-pool-down": {
+      const pid = el.dataset.pid;
+      const hidden = sr.getElementById("m-crot-pool-order");
+      const widget = sr.getElementById("m-crot-pool-widget");
+      if (!pid || !hidden || !widget) break;
+      const order = hidden.value ? hidden.value.split(",").filter(Boolean) : [];
+      const idx = order.indexOf(pid);
+      if (act === "rot-pool-add") {
+        if (idx === -1) order.push(pid);
+      } else if (act === "rot-pool-remove") {
+        if (idx !== -1) order.splice(idx, 1);
+      } else if (act === "rot-pool-up" && idx > 0) {
+        [order[idx - 1], order[idx]] = [order[idx], order[idx - 1]];
+      } else if (act === "rot-pool-down" && idx !== -1 && idx < order.length - 1) {
+        [order[idx + 1], order[idx]] = [order[idx], order[idx + 1]];
+      }
+      hidden.value = order.join(",");
+      widget.innerHTML = rotationPoolEditor(card._people(), order);
       break;
     }
     case "ok-add-store-item": {
@@ -9890,6 +10224,7 @@ function _selectedPersonIds(cbClass, sr) {
 var init_dispatch = __esm({
   "src/card/dispatch.js"() {
     init_constants();
+    init_modals();
   }
 });
 
@@ -9994,7 +10329,7 @@ var init_FamilyHubCard = __esm({
           if (t.classList.contains("m-wd-day") || t.classList.contains("m-df-day")) {
             (_a = t.closest(".fh-wd-chip")) == null ? void 0 : _a.classList.toggle("checked", t.checked);
           }
-          if (t.classList.contains("m-assign-person") || t.classList.contains("m-sp-person")) {
+          if (t.classList.contains("m-assign-person") || t.classList.contains("m-sp-person") || t.classList.contains("m-rot-person")) {
             (_b = t.closest(".fh-person-cb-chip")) == null ? void 0 : _b.classList.toggle("checked", t.checked);
           }
           this._syncModalUI();
@@ -10074,7 +10409,15 @@ var init_FamilyHubCard = __esm({
         if (!cfg.mode) throw new Error("Family Hub: 'mode' is required");
         if (!modes.includes(cfg.mode)) throw new Error(`Family Hub: mode must be one of ${modes.join(", ")}`);
         if (cfg.mode === "personal" && !cfg.person) throw new Error("Family Hub: 'person' is required for personal mode");
+        if (cfg.initial_view && !/^(person|room):[A-Za-z0-9_-]+$/.test(cfg.initial_view)) {
+          throw new Error(`Family Hub: 'initial_view' must be 'person:<id>' or 'room:<id>'`);
+        }
         this._cfg = cfg;
+        if (cfg.mode === "command_center" && cfg.initial_view && !this._initialViewApplied) {
+          this._view = cfg.initial_view;
+          this._backStack = ["home"];
+          this._initialViewApplied = true;
+        }
         this._doRender(true);
       }
       set hass(hass) {
@@ -10386,6 +10729,16 @@ var init_FamilyHubCard = __esm({
         if (scopeEl && personSecEl) {
           personSecEl.style.display = scopeEl.value === "personal" ? "" : "none";
         }
+        const rotSec = sr.getElementById("m-rotation-section");
+        const rotCfg = sr.getElementById("m-rotation-config");
+        const rotEnabled = sr.getElementById("m-crot-enabled");
+        const ctypeEl3 = sr.getElementById("m-ctype");
+        if (rotSec) {
+          rotSec.style.display = (ctypeEl3 == null ? void 0 : ctypeEl3.value) === "assigned" ? "" : "none";
+        }
+        if (rotCfg && rotEnabled) {
+          rotCfg.style.display = rotEnabled.checked ? "" : "none";
+        }
       }
     };
   }
@@ -10409,13 +10762,21 @@ var init_editor = __esm({
         this._render();
       }
       _render() {
-        var _a, _b, _c, _d, _e;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _i;
         const cfg = this._cfg || {};
         const people = this._people || [];
         const mode = cfg.mode || "command_center";
         const person = cfg.person || "";
+        const initialView = cfg.initial_view || "";
         const textScale = cfg.text_scale != null ? cfg.text_scale : 1;
-        const sensorState = (_b = (_a = this._hass) == null ? void 0 : _a.states) == null ? void 0 : _b["sensor.family_hub_needs_attention"];
+        const naAttr = ((_c = (_b = (_a = this._hass) == null ? void 0 : _a.states) == null ? void 0 : _b["sensor.family_hub_needs_attention"]) == null ? void 0 : _c.attributes) || {};
+        const roomsCfg = naAttr.rooms_config || {};
+        const initialViewOptions = [
+          ["", "Home (default)"],
+          ...people.map((p) => [`person:${p.person_id}`, `${p.name}'s page`]),
+          ...Object.keys(roomsCfg).map((rid) => [`room:${rid}`, `Room: ${rid}`])
+        ];
+        const sensorState = (_e = (_d = this._hass) == null ? void 0 : _d.states) == null ? void 0 : _e["sensor.family_hub_needs_attention"];
         const connected = !!sensorState;
         const statusDot = `<span style="
             display:inline-block;width:8px;height:8px;border-radius:50%;
@@ -10466,6 +10827,17 @@ var init_editor = __esm({
           <span class="fhe-hint">Enter the person's name (lowercase)</span>
         </div>
 
+        <div class="fhe-field" id="initial-view-field"
+             style="display:${mode === "command_center" ? "flex" : "none"}">
+          <label class="fhe-label">Initial view</label>
+          <select class="fhe-select" id="e-initial-view">
+            ${initialViewOptions.map(
+          ([v, l]) => `<option value="${v}" ${v === initialView ? "selected" : ""}>${escHTML(l)}</option>`
+        ).join("")}
+          </select>
+          <span class="fhe-hint">Open this view directly. Back arrow returns to home.</span>
+        </div>
+
         <div class="fhe-field">
           <label class="fhe-label">Text scale</label>
           <select class="fhe-select" id="e-scale">
@@ -10479,17 +10851,25 @@ var init_editor = __esm({
           <span class="fhe-hint">Increase for Echo Show / tablet screens.</span>
         </div>
       </div>`;
-        (_c = this.querySelector("#e-mode")) == null ? void 0 : _c.addEventListener("change", (e) => {
+        (_f = this.querySelector("#e-mode")) == null ? void 0 : _f.addEventListener("change", (e) => {
           this._cfg = { ...this._cfg, mode: e.target.value };
           if (e.target.value !== "personal") delete this._cfg.person;
+          if (e.target.value !== "command_center") delete this._cfg.initial_view;
           this._fireChange();
           this._render();
         });
-        (_d = this.querySelector("#e-person")) == null ? void 0 : _d.addEventListener("change", (e) => {
+        (_g = this.querySelector("#e-initial-view")) == null ? void 0 : _g.addEventListener("change", (e) => {
+          const v = e.target.value;
+          this._cfg = { ...this._cfg };
+          if (v) this._cfg.initial_view = v;
+          else delete this._cfg.initial_view;
+          this._fireChange();
+        });
+        (_h = this.querySelector("#e-person")) == null ? void 0 : _h.addEventListener("change", (e) => {
           this._cfg = { ...this._cfg, person: e.target.value };
           this._fireChange();
         });
-        (_e = this.querySelector("#e-scale")) == null ? void 0 : _e.addEventListener("change", (e) => {
+        (_i = this.querySelector("#e-scale")) == null ? void 0 : _i.addEventListener("change", (e) => {
           this._cfg = { ...this._cfg, text_scale: parseFloat(e.target.value) };
           this._fireChange();
         });

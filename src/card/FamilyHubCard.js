@@ -147,7 +147,7 @@ export class FamilyHubCard extends HTMLElement {
                 t.closest(".fh-wd-chip")?.classList.toggle("checked", t.checked);
             }
             // Person cb chip visual feedback
-            if (t.classList.contains("m-assign-person") || t.classList.contains("m-sp-person")) {
+            if (t.classList.contains("m-assign-person") || t.classList.contains("m-sp-person") || t.classList.contains("m-rot-person")) {
                 t.closest(".fh-person-cb-chip")?.classList.toggle("checked", t.checked);
             }
             // Sync conditional modal fields after any change
@@ -241,7 +241,15 @@ export class FamilyHubCard extends HTMLElement {
         if (!cfg.mode) throw new Error("Family Hub: 'mode' is required");
         if (!modes.includes(cfg.mode)) throw new Error(`Family Hub: mode must be one of ${modes.join(", ")}`);
         if (cfg.mode === "personal" && !cfg.person) throw new Error("Family Hub: 'person' is required for personal mode");
+        if (cfg.initial_view && !/^(person|room):[A-Za-z0-9_-]+$/.test(cfg.initial_view)) {
+            throw new Error(`Family Hub: 'initial_view' must be 'person:<id>' or 'room:<id>'`);
+        }
         this._cfg = cfg;
+        if (cfg.mode === "command_center" && cfg.initial_view && !this._initialViewApplied) {
+            this._view      = cfg.initial_view;
+            this._backStack = ["home"];
+            this._initialViewApplied = true;
+        }
         this._doRender(true);
     }
 
@@ -554,6 +562,19 @@ export class FamilyHubCard extends HTMLElement {
         const personSecEl = sr.getElementById("m-sperson-section");
         if (scopeEl && personSecEl) {
             personSecEl.style.display = scopeEl.value === "personal" ? "" : "none";
+        }
+
+        // Chore rotation: only meaningful for assigned chores; pool/cadence
+        // fields collapse when the toggle is off.
+        const rotSec     = sr.getElementById("m-rotation-section");
+        const rotCfg     = sr.getElementById("m-rotation-config");
+        const rotEnabled = sr.getElementById("m-crot-enabled");
+        const ctypeEl3   = sr.getElementById("m-ctype");
+        if (rotSec) {
+            rotSec.style.display = (ctypeEl3?.value === "assigned") ? "" : "none";
+        }
+        if (rotCfg && rotEnabled) {
+            rotCfg.style.display = rotEnabled.checked ? "" : "none";
         }
     }
 }

@@ -32,6 +32,23 @@ CHORE_TYPE_REMINDER  = "reminder"   # Personal or house reminder, no points requ
 
 CHORE_TYPES = [CHORE_TYPE_ASSIGNED, CHORE_TYPE_CLAIMABLE, CHORE_TYPE_REMINDER]
 
+# ---------------------------------------------------------------------------
+# Chore rotation (v0.6.2)
+# ---------------------------------------------------------------------------
+# When `rotation_pool` is non-empty on an ASSIGNED chore, the active assignee
+# cycles through the pool on a cadence. `rotation_index` is the current position
+# in the pool; `assigned_to` is replaced with `[pool[index]]` whenever the
+# cadence advances. Inactive pool members are skipped (and the index advances
+# past them) so a paused/removed kid never "blocks" the rotation.
+ROTATION_CADENCE_DAILY        = "daily"          # advance once per daily tick
+ROTATION_CADENCE_WEEKLY       = "weekly"         # advance on Monday daily tick
+ROTATION_CADENCE_PER_INSTANCE = "per_instance"   # advance each time an instance is generated
+ROTATION_CADENCES = [
+    ROTATION_CADENCE_DAILY,
+    ROTATION_CADENCE_WEEKLY,
+    ROTATION_CADENCE_PER_INSTANCE,
+]
+
 # Legacy category values — kept for migration only
 CATEGORY_ASSIGNED         = "assigned"
 CATEGORY_CLAIMABLE        = "claimable"

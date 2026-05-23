@@ -10,7 +10,7 @@
  * Design reference: docs/design-reference/theme-baker.jsx
  */
 
-import { escHTML, escAttr, fPts, ini, relTime,
+import { escHTML, escAttr, fPts, fUSD, ini, relTime,
          groupHistorySkipped }                            from "../utils.js";
 import { HISTORY_META }                                   from "../constants.js";
 import { getEffectiveRank, getWeeklyPts, htmlRankBar, htmlSuccessStreak,
@@ -151,7 +151,7 @@ export const bakerTheme = {
 function _railPanels({ attr, naAttr, person, balance, weekly, openCount,
                        rankIdx, dropThr, gainThr, rank }) {
     return `
-        ${_railPanelKPIs(balance, weekly, openCount)}
+        ${_railPanelKPIs(balance, weekly, openCount, attr.show_dollar_value ? attr.dollar_value : null)}
         ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, person)}
         ${_railPanelStreaks(attr, naAttr, person)}
         ${_railPanelRecent(person, naAttr)}`;
@@ -165,18 +165,19 @@ function _railPanel(label, contentHTML) {
         </div>`;
 }
 
-function _railPanelKPIs(balance, weekly, openCount) {
-    const cell = (label, val, unit) => `
+function _railPanelKPIs(balance, weekly, openCount, dollarValue) {
+    const cell = (label, val, unit, sub) => `
         <div class="fh-bk-rkpi">
             <div class="fh-bk-rkpi-lbl">${label}</div>
             <div class="fh-bk-rkpi-val-row">
                 <span class="fh-bk-rkpi-val">${escHTML(String(val))}</span>
                 ${unit ? `<span class="fh-bk-rkpi-unit">${unit}</span>` : ""}
             </div>
+            ${sub ? `<div class="fh-rkpi-sub">${escHTML(sub)}</div>` : ""}
         </div>`;
     const body = `
         <div class="fh-bk-rkpi-row">
-            ${cell("balance",   fPts(balance), "pts")}
+            ${cell("balance",   fPts(balance), "pts", dollarValue != null ? fUSD(dollarValue) : null)}
             ${cell("this week", `+${weekly}`,  "pts")}
             ${cell("on prep",   openCount,     "items")}
         </div>`;

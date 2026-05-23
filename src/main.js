@@ -150,12 +150,36 @@ class FamilyHubCardWrapper extends HTMLElement {
 
 class FamilyHubCardEditorWrapper extends HTMLElement {
 
+    // IMPORTANT: do not touch children/attributes in the constructor — the HTML
+    // spec forbids it for custom elements and any attempt (e.g. `this.innerHTML = …`)
+    // throws InvalidStateError, leaving the element in a "failed upgrade" state
+    // with no prototype methods. That's how HA ended up saying
+    // "this._configElement.setConfig is not a function".
+    //
+    // The body load can still kick off in the constructor (it's just a Promise),
+    // and any DOM writes are deferred to connectedCallback / _upgrade / _showError.
     constructor() {
         super();
-        this.innerHTML = `<div style="padding:24px;color:var(--secondary-text-color);font-family:system-ui">Loading editor…</div>`;
-        _loadBody().then(() => this._upgrade()).catch(() => {
-            this.innerHTML = `<div style="padding:24px;color:#E8553E">Editor failed to load. See browser console.</div>`;
-        });
+        this._loadStarted = false;
+    }
+
+    connectedCallback() {
+        // Kick off the body load on first insertion. Multiple connect/disconnect
+        // cycles (HA can re-parent editors during dashboard nav) are no-ops.
+        if (this._loadStarted) {
+            // If already loaded and we have a buffered cfg, make sure the impl
+            // is still attached (HA may have stripped our children).
+            if (this._impl && !this._impl.isConnected) this.appendChild(this._impl);
+            return;
+        }
+        this._loadStarted = true;
+
+        // Paint the loading state now — safe here, we're connected.
+        if (!this._impl) {
+            this.innerHTML = `<div style="padding:24px;color:var(--secondary-text-color);font-family:system-ui">Loading editor…</div>`;
+        }
+
+        _loadBody().then(() => this._upgrade()).catch(() => this._showError());
     }
 
     _upgrade() {
@@ -170,6 +194,10 @@ class FamilyHubCardEditorWrapper extends HTMLElement {
         this.innerHTML = "";
         this.appendChild(impl);
         this._impl = impl;
+    }
+
+    _showError() {
+        this.innerHTML = `<div style="padding:24px;color:#E8553E">Editor failed to load. See browser console.</div>`;
     }
 
     setConfig(cfg) {

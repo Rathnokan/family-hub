@@ -22,11 +22,21 @@ export class FamilyHubCardEditor extends HTMLElement {
     }
 
     _render() {
-        const cfg       = this._cfg    || {};
-        const people    = this._people  || [];
-        const mode      = cfg.mode      || "command_center";
-        const person    = cfg.person    || "";
-        const textScale = cfg.text_scale != null ? cfg.text_scale : 1.0;
+        const cfg         = this._cfg    || {};
+        const people      = this._people  || [];
+        const mode        = cfg.mode      || "command_center";
+        const person      = cfg.person    || "";
+        const initialView = cfg.initial_view || "";
+        const textScale   = cfg.text_scale != null ? cfg.text_scale : 1.0;
+
+        // initial_view dropdown options: home + per-person + per-room.
+        const naAttr      = this._hass?.states?.["sensor.family_hub_needs_attention"]?.attributes || {};
+        const roomsCfg    = naAttr.rooms_config || {};
+        const initialViewOptions = [
+            ["", "Home (default)"],
+            ...people.map(p => [`person:${p.person_id}`, `${p.name}'s page`]),
+            ...Object.keys(roomsCfg).map(rid => [`room:${rid}`, `Room: ${rid}`]),
+        ];
 
         // Connection indicator — green if needs_attention sensor exists, red if not
         const sensorState   = this._hass?.states?.["sensor.family_hub_needs_attention"];
@@ -85,6 +95,17 @@ export class FamilyHubCardEditor extends HTMLElement {
           <span class="fhe-hint">Enter the person's name (lowercase)</span>
         </div>
 
+        <div class="fhe-field" id="initial-view-field"
+             style="display:${mode === "command_center" ? "flex" : "none"}">
+          <label class="fhe-label">Initial view</label>
+          <select class="fhe-select" id="e-initial-view">
+            ${initialViewOptions.map(([v, l]) =>
+                `<option value="${v}" ${v === initialView ? "selected" : ""}>${escHTML(l)}</option>`
+            ).join("")}
+          </select>
+          <span class="fhe-hint">Open this view directly. Back arrow returns to home.</span>
+        </div>
+
         <div class="fhe-field">
           <label class="fhe-label">Text scale</label>
           <select class="fhe-select" id="e-scale">
@@ -102,8 +123,17 @@ export class FamilyHubCardEditor extends HTMLElement {
         this.querySelector("#e-mode")?.addEventListener("change", e => {
             this._cfg = { ...this._cfg, mode: e.target.value };
             if (e.target.value !== "personal") delete this._cfg.person;
+            if (e.target.value !== "command_center") delete this._cfg.initial_view;
             this._fireChange();
             this._render();
+        });
+
+        this.querySelector("#e-initial-view")?.addEventListener("change", e => {
+            const v = e.target.value;
+            this._cfg = { ...this._cfg };
+            if (v) this._cfg.initial_view = v;
+            else delete this._cfg.initial_view;
+            this._fireChange();
         });
 
         this.querySelector("#e-person")?.addEventListener("change", e => {

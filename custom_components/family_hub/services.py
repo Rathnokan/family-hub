@@ -47,6 +47,7 @@ from .const import (
     MULTI_CLAIM_POINTS_SPLIT,
     PERSON_TYPES,
     RECURRENCE_TYPES,
+    ROTATION_CADENCES,
     SCOPE_COMMON,
     STORE_SCOPES,
 )
@@ -307,6 +308,8 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             streak_milestone=call.data.get("streak_milestone", 0),
             streak_bonus_points=call.data.get("streak_bonus_points", 0),
             reminder_time=call.data.get("reminder_time", -1),
+            rotation_pool=call.data.get("rotation_pool", []),
+            rotation_cadence=call.data.get("rotation_cadence", ""),
             icon=call.data.get("icon"),
             created_by=call.data.get("created_by"),
         )
@@ -340,6 +343,8 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             vol.Optional("streak_milestone", default=0):       vol.All(vol.Coerce(int), vol.Range(min=0)),
             vol.Optional("streak_bonus_points", default=0):    vol.All(vol.Coerce(int), vol.Range(min=0)),
             vol.Optional("reminder_time", default=-1):         vol.Any(-1, vol.All(vol.Coerce(int), vol.Range(min=0, max=2359))),
+            vol.Optional("rotation_pool", default=[]):         [cv.string],
+            vol.Optional("rotation_cadence", default=""):      vol.Any("", vol.In(ROTATION_CADENCES)),
             vol.Optional("icon"):                              cv.string,
             vol.Optional("created_by"):                        cv.string,
         }),
@@ -396,6 +401,8 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             vol.Optional("streak_milestone"):                vol.Any(None, vol.All(vol.Coerce(int), vol.Range(min=0))),
             vol.Optional("streak_bonus_points"):             vol.Any(None, vol.All(vol.Coerce(int), vol.Range(min=0))),
             vol.Optional("reminder_time"):                   vol.Any(-1, None, vol.All(vol.Coerce(int), vol.Range(min=0, max=2359))),
+            vol.Optional("rotation_pool"):                   [cv.string],
+            vol.Optional("rotation_cadence"):                vol.Any("", vol.In(ROTATION_CADENCES)),
         }),
     )
 
