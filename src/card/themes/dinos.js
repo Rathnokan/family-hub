@@ -15,7 +15,11 @@ import { escHTML, escAttr, fPts, fUSD, ini, relTime,
 import { HISTORY_META }                                   from "../constants.js";
 import { getEffectiveRank, getWeeklyPts, htmlRankBar, htmlSuccessStreak,
          groupByCategory, getActiveStreaks,
-         computeStreakProgress, htmlChoreRow }            from "./_shared.js";
+         computeStreakProgress, htmlChoreRow,
+         htmlGoalBanner, htmlRailGoal, htmlGoalToggleBtn,
+         storeItemIcon, htmlStoreItemLimit,
+         htmlStreakFreezeChip, htmlDailyProgress,
+         htmlGroupContributorBars, htmlChipInBtn, htmlGroupProposalBanner } from "./_shared.js";
 
 // ---- Palette ----------------------------------------------------------------
 
@@ -160,7 +164,8 @@ function _railPanels({ attr, naAttr, person, balance, weekly, openCount,
                        rankIdx, dropThr, gainThr, dateStr }) {
     return `
         ${_railPanelKPIs(balance, weekly, openCount, attr.show_dollar_value ? attr.dollar_value : null)}
-        ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, person)}
+        ${htmlRailGoal(attr)}
+        ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, person, attr)}
         ${_railPanelStreaks(attr, naAttr, person)}
         ${_railPanelFindings(person, naAttr)}`;
 }
@@ -192,14 +197,15 @@ function _railPanelKPIs(balance, weekly, openCount, dollarValue) {
     return _railPanel("FIELD KIT · TODAY", body);
 }
 
-function _railPanelRank(rankIdx, weekly, dropThr, gainThr, person) {
+function _railPanelRank(rankIdx, weekly, dropThr, gainThr, person, attr) {
     const bar    = htmlRankBar(rankIdx, weekly, dropThr, gainThr, DINOS_RANKS, DN.amber);
     const streak = htmlSuccessStreak(person, DN.amber);
+    const freeze = htmlStreakFreezeChip(attr);
     if (!bar) {
         return _railPanel("DIG STATUS",
-            `<div class="fh-dn-rmax">${escHTML(getEffectiveRank(rankIdx, DINOS_RANKS).name)} · MAX</div>${streak}`);
+            `<div class="fh-dn-rmax">${escHTML(getEffectiveRank(rankIdx, DINOS_RANKS).name)} · MAX</div>${streak}${freeze}`);
     }
-    return _railPanel("DIG STATUS", bar + streak);
+    return _railPanel("DIG STATUS", bar + streak + freeze);
 }
 
 function _railPanelStreaks(attr, naAttr, person) {
@@ -296,6 +302,7 @@ function _fieldTasks(attr, person, naAttr, card) {
         ${pending.map(t => htmlChoreRow(t, dinosRowConfig, person, card)).join("")}` : "";
 
     return `
+        ${htmlDailyProgress(attr)}
         <div class="fh-row-list">
             ${groupHtml}
             ${pendingSection}
@@ -314,19 +321,31 @@ function _supply(attr, person, balance, card) {
     const pendingByName   = new Set(personPending.filter(r => !r.item_id).map(r => r.item_name));
 
     return `
+        ${htmlGroupProposalBanner(attr.group_proposals, person.person_id)}
+        ${htmlGoalBanner(attr)}
         <div class="fh-dn-supply">
             ${items.map(item => {
+                const isGroup   = !!item.is_group_reward;
                 const can       = balance >= item.points_cost;
                 const requested = pendingByItemId.has(item.item_id) || pendingByName.has(item.name);
+                const blocked   = !!item.next_available;
                 return `
                 <div class="fh-dn-supply-item">
+                    ${storeItemIcon(item)}
                     <div class="fh-dn-supply-body">
                         <div class="fh-dn-supply-name">${escHTML(item.name)}</div>
                         ${item.description ? `<div class="fh-dn-supply-desc">${escHTML(item.description)}</div>` : ""}
+                        ${htmlStoreItemLimit(item)}
+                        ${htmlGroupContributorBars(item, person.person_id)}
                     </div>
-                    <div class="fh-dn-pts-tag" style="color:${DN.amber}">${fPts(item.points_cost)}pts</div>
-                    ${requested
+                    ${isGroup ? "" : `<div class="fh-dn-pts-tag" style="color:${DN.amber}">${fPts(item.points_cost)}pts</div>`}
+                    ${htmlGoalToggleBtn(item, attr, person.person_id)}
+                    ${isGroup
+                        ? htmlChipInBtn(item, person.person_id, balance)
+                        : requested
                         ? `<span style="color:${DN.amber};font-size:.8rem;font-weight:700">CLAIMED ✓</span>`
+                        : blocked
+                        ? `<span style="color:var(--fh-overdue);font-size:.75rem;font-weight:600">NOT AVAILABLE</span>`
                         : `<button class="fh-dn-go-btn ${can ? "" : "disabled"}"
                                    data-act="redeem" data-iid="${escAttr(item.item_id)}" data-pid="${escAttr(person.person_id)}"
                                    ${!can ? 'disabled style="opacity:.4;cursor:not-allowed"' : ""}>

@@ -13,7 +13,11 @@ import { I } from "../constants.js";
 import { escHTML, escAttr, ini, fPts, fUSD, cap, relTime, groupHistorySkipped } from "../utils.js";
 import { getEffectiveRank, getWeeklyPts, htmlRankBar, htmlSuccessStreak,
          getActiveStreaks, computeStreakProgress,
-         htmlChoreRow, htmlAddReminderCTA } from "./_shared.js";
+         htmlChoreRow, htmlAddReminderCTA,
+         htmlGoalBanner, htmlGoalToggleBtn, storeItemIcon,
+         htmlStoreItemLimit,
+         htmlStreakFreezeChip, htmlDailyProgress,
+         htmlGroupContributorBars, htmlChipInBtn, htmlGroupProposalBanner } from "./_shared.js";
 
 const CLASSIC_RANKS = [
     { minXP: 0,    name: "Level 1" },
@@ -112,7 +116,7 @@ function _railPanels({ attr, naAttr, person, balance, weekly, openCount,
                        pendingCount, rankIdx, dropThr, gainThr, color }) {
     return `
         ${_railPanelKPIs(balance, weekly, openCount, pendingCount)}
-        ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, color, person)}
+        ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, color, person, attr)}
         ${_railPanelStreaks(attr, naAttr, person, color)}
         ${_railPanelRecent(person, naAttr, color)}`;
 }
@@ -144,14 +148,15 @@ function _railPanelKPIs(balance, weekly, openCount, pendingCount) {
     return _railPanel("OVERVIEW", body);
 }
 
-function _railPanelRank(rankIdx, weekly, dropThr, gainThr, color, person) {
+function _railPanelRank(rankIdx, weekly, dropThr, gainThr, color, person, attr) {
     const bar    = htmlRankBar(rankIdx, weekly, dropThr, gainThr, CLASSIC_RANKS, color);
     const streak = htmlSuccessStreak(person, color);
+    const freeze = htmlStreakFreezeChip(attr);
     if (!bar) {
         return _railPanel("RANK",
-            `<div class="fh-classic-rmax">${escHTML(getEffectiveRank(rankIdx, CLASSIC_RANKS).name)} · max</div>${streak}`);
+            `<div class="fh-classic-rmax">${escHTML(getEffectiveRank(rankIdx, CLASSIC_RANKS).name)} · max</div>${streak}${freeze}`);
     }
-    return _railPanel("RANK", bar + streak);
+    return _railPanel("RANK", bar + streak + freeze);
 }
 
 function _railPanelStreaks(attr, naAttr, person, color) {
@@ -296,6 +301,7 @@ function _tasks(attr, color, person, card) {
     const empty = !due.length && !overdue.length && !pending.length && !dueReminders.length;
 
     return `
+        ${htmlDailyProgress(attr)}
         ${htmlAddReminderCTA(person)}
         <div class="fh-row-list" style="--row-color:${color}">
             ${overdue.length ? overdue.map(t => renderRow(t, true)).join("") : ""}
@@ -322,23 +328,37 @@ function _store(attr, color, person, balance, card) {
     const pendingByName      = new Set(personPending.filter(r => !r.item_id).map(r => r.item_name));
 
     return `
+        ${htmlGroupProposalBanner(attr.group_proposals, person.person_id)}
+        ${htmlGoalBanner(attr)}
         <div class="fh-store-grid">
             ${items.map(item => {
+                const isGroup   = !!item.is_group_reward;
                 const can       = balance >= item.points_cost;
                 const requested = pendingByItemId.has(item.item_id) || pendingByName.has(item.name);
+                const blocked   = !!item.next_available;
                 return `
                 <div class="fh-store-item">
-                    <div class="fh-store-name">${escHTML(item.name)}</div>
+                    <div class="fh-store-item-head">
+                        ${storeItemIcon(item)}
+                        <div class="fh-store-name">${escHTML(item.name)}</div>
+                        ${htmlGoalToggleBtn(item, attr, person.person_id)}
+                    </div>
                     ${item.description ? `<div class="fh-store-desc">${escHTML(item.description)}</div>` : ""}
-                    <div class="fh-store-price" style="color:${color}">${fPts(item.points_cost)}pts</div>
-                    ${requested
-                        ? `<span class="fh-badge fh-badge-requested" style="text-align:center">Requested ✓</span>`
-                        : `<button class="fh-btn fh-btn-sm ${can ? "fh-btn-primary" : "fh-btn-ghost"}"
-                                   style="${can ? `background:${color}` : ""}"
-                                   data-act="redeem" data-iid="${item.item_id}" data-pid="${person.person_id}"
-                                   ${can ? "" : "disabled"}>
-                               ${can ? "Request" : "Need more pts"}
-                           </button>`}
+                    ${htmlStoreItemLimit(item)}
+                    ${htmlGroupContributorBars(item, person.person_id)}
+                    ${isGroup
+                        ? htmlChipInBtn(item, person.person_id, balance)
+                        : `<div class="fh-store-price" style="color:${color}">${fPts(item.points_cost)}pts</div>
+                           ${requested
+                               ? `<span class="fh-badge fh-badge-requested" style="text-align:center">Requested ✓</span>`
+                               : blocked
+                               ? `<button class="fh-btn fh-btn-sm fh-btn-ghost" disabled style="opacity:.5;cursor:not-allowed">Not available</button>`
+                               : `<button class="fh-btn fh-btn-sm ${can ? "fh-btn-primary" : "fh-btn-ghost"}"
+                                          style="${can ? `background:${color}` : ""}"
+                                          data-act="redeem" data-iid="${item.item_id}" data-pid="${person.person_id}"
+                                          ${can ? "" : "disabled"}>
+                                      ${can ? "Request" : "Need more pts"}
+                                  </button>`}`}
                 </div>`;
             }).join("")}
         </div>`;

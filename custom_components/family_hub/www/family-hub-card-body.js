@@ -133,6 +133,22 @@ var init_css = __esm({
     background:color-mix(in srgb, var(--fh-accent) 8%, var(--fh-surface));
   }
   .fh-task-row.fh-dragging { opacity:.45; }
+
+  /* v0.6.3 P2: drop-position insertion line \u2014 shows on dragover, indicates
+     exactly where the dragged row will land. Works on any [data-drag-id]
+     row (chores, store items, category chips). Themes inherit the accent
+     color via currentColor on the pseudo. */
+  [data-drag-id] { position:relative; }
+  [data-drag-id].fh-dragging { opacity:.45; }
+  [data-drag-id].fh-drop-above::before,
+  [data-drag-id].fh-drop-below::after {
+    content:""; position:absolute; left:4px; right:4px; height:3px;
+    background:var(--fh-accent, #5B8DB9); border-radius:2px;
+    box-shadow:0 0 0 1px color-mix(in srgb, var(--fh-accent, #5B8DB9) 35%, transparent);
+    pointer-events:none; z-index:2;
+  }
+  [data-drag-id].fh-drop-above::before { top:-2px; }
+  [data-drag-id].fh-drop-below::after  { bottom:-2px; }
   .fh-task-row.flash {
     animation: fh-complete var(--flash-dur, 1.4s) ease forwards;
   }
@@ -258,6 +274,8 @@ var init_css = __esm({
   .fh-store-name  { font-size:.88rem; font-weight:700; }
   .fh-store-desc  { font-size:.75rem; color:var(--fh-text-sec); flex:1; }
   .fh-store-price { font-size:1rem; font-weight:800; }
+  .fh-store-limit { font-size:.72rem; color:var(--fh-text-sec); opacity:.85; }
+  .fh-store-limit--blocked { color:var(--fh-overdue); opacity:1; font-weight:600; }
 
   /* Admin store inventory list */
   .fh-store-inv-row {
@@ -534,6 +552,12 @@ var init_css = __esm({
     padding:4px 10px; border-radius:20px;
     background:var(--fh-surface); border:1.5px solid var(--fh-border);
     font-size:.82rem;
+    cursor:grab; user-select:none;
+  }
+  .fh-cat-chip:active { cursor:grabbing; }
+  .fh-cat-chip-handle {
+    color:var(--fh-text-sec); font-size:.72rem; line-height:1;
+    flex-shrink:0;
   }
   .fh-cat-chip-del {
     width:16px; height:16px; border-radius:50%; border:none;
@@ -542,6 +566,18 @@ var init_css = __esm({
     display:flex; align-items:center; justify-content:center;
   }
   .fh-cat-chip-del:hover { color:var(--fh-overdue); }
+  /* Category chips use the horizontal-list variant of the drop indicator:
+     vertical line on left/right edge instead of top/bottom strip. */
+  .fh-cat-chip.fh-drop-above::before,
+  .fh-cat-chip.fh-drop-below::after {
+    content:""; position:absolute; top:2px; bottom:2px; width:3px;
+    background:var(--fh-accent, #5B8DB9); border-radius:2px;
+    left:auto; right:auto; height:auto;
+    box-shadow:0 0 0 1px color-mix(in srgb, var(--fh-accent, #5B8DB9) 35%, transparent);
+    pointer-events:none; z-index:2;
+  }
+  .fh-cat-chip.fh-drop-above::before { left:-3px; top:2px; }
+  .fh-cat-chip.fh-drop-below::after  { right:-3px; top:2px; }
 
   /* Modal */
   .fh-modal-bg {
@@ -633,8 +669,25 @@ var init_css = __esm({
   .fh-icon-cell.selected { border-color:var(--fh-accent); background:var(--fh-bg); }
   .fh-icon-cell-label {
     font-size:.75rem; color:var(--fh-text-sec); text-align:center;
-    line-height:1.2; max-width:56px; overflow:hidden;
+    line-height:1.2; max-width:64px; overflow:hidden;
     text-overflow:ellipsis; white-space:nowrap;
+  }
+
+  /* Icon tab: selected-icon preview bar */
+  .fh-icon-selected-wrap {
+    display:flex; align-items:center; gap:8px; min-height:28px;
+    padding:4px 2px; border-bottom:1px solid var(--fh-border); margin-bottom:4px;
+  }
+  .fh-icon-sel-lbl { font-size:.82rem; font-weight:600; color:var(--fh-text); }
+  .fh-icon-sel-none { font-size:.82rem; color:var(--fh-text-sec); }
+
+  /* Icon tab: scrollable grid container */
+  .fh-icon-tab-grid {
+    display:flex; flex-direction:column; gap:6px; overflow-y:auto; flex:1;
+  }
+  .fh-icon-tab-grid .fh-icon-picker-cat-grid {
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(68px, 1fr)); gap:4px;
+    margin-bottom:4px;
   }
 
   /* Field help text (S9 P3 \u2014 inline guidance under inputs) */
@@ -1884,6 +1937,61 @@ var init_css = __esm({
     border:2px solid #1A2B5E;
     box-shadow:0 3px 0 #1A2B5E;
   }
+
+  /* ---- Streak freeze chip (v0.6.3 item 7) -------------------------------- */
+  .fh-freeze-chip {
+    display:inline-flex; align-items:center; gap:5px;
+    margin-top:6px; padding:4px 8px;
+    border-radius:4px;
+    background:rgba(100,200,255,.12);
+    border:1px solid rgba(100,200,255,.28);
+    font-size:var(--fh-text-xs); font-weight:600;
+    color:rgba(150,220,255,.9);
+    cursor:default;
+  }
+  .fh-freeze-chip-icon { font-size:.9em; line-height:1; }
+  .fh-dn-page .fh-freeze-chip,
+  .fh-bk-page .fh-freeze-chip,
+  .fh-hp-page .fh-freeze-chip {
+    background:rgba(100,160,200,.14);
+    border-color:rgba(80,130,180,.35);
+    color:#2a4a6a;
+  }
+  .fh-dbz-rpanel .fh-freeze-chip {
+    background:#EEF6FF;
+    border:2px solid #1A2B5E;
+    color:#1A2B5E;
+  }
+
+  /* ---- Daily progress bar (v0.6.3 item 9) -------------------------------- */
+  .fh-daily-progress {
+    display:flex; align-items:center; gap:8px;
+    margin-bottom:8px; padding:5px 0 4px;
+  }
+  .fh-daily-progress-bar {
+    flex:1; height:5px; border-radius:3px;
+    background:rgba(255,255,255,.15); overflow:hidden;
+  }
+  .fh-daily-progress-fill {
+    height:100%; border-radius:3px;
+    background:var(--fh-success, #5DB87A);
+    transition:width .4s ease;
+  }
+  .fh-daily-progress-label {
+    font-size:var(--fh-text-xs); font-weight:700;
+    color:var(--fh-text-sec); white-space:nowrap; letter-spacing:.02em;
+  }
+  .fh-daily-progress--complete .fh-daily-progress-label { color:var(--fh-success, #5DB87A); }
+  .fh-dn-page .fh-daily-progress-bar,
+  .fh-bk-page .fh-daily-progress-bar,
+  .fh-hp-page .fh-daily-progress-bar { background:rgba(0,0,0,.12); }
+  .fh-dn-page .fh-daily-progress-label,
+  .fh-bk-page .fh-daily-progress-label,
+  .fh-hp-page .fh-daily-progress-label { color:rgba(60,40,20,.6); }
+  .fh-dn-page .fh-daily-progress--complete .fh-daily-progress-label,
+  .fh-bk-page .fh-daily-progress--complete .fh-daily-progress-label,
+  .fh-hp-page .fh-daily-progress--complete .fh-daily-progress-label { color:#3a7a3a; }
+
   /* Themed overrides \xE2\u20AC\u201D light/paper themes need darker rank bar chrome */
   .fh-dn-page, .fh-bk-page, .fh-hp-page {
     --fh-rb-track:  rgba(43,31,14,.18);
@@ -3010,7 +3118,7 @@ var init_css = __esm({
     border-top: 1px solid #2A3852;
   }
 
-  /* ---- Settings grid (S9 P3 \u2014 3 panels: config + hub layout stacked left, store right) ---- */
+  /* ---- Settings grid \u2014 2 panels: config (left) + hub layout (right) ---- */
   .fh-ad-settings-grid {
     display: grid; gap: 14px;
     grid-template-columns: 1fr;
@@ -3018,14 +3126,11 @@ var init_css = __esm({
   @media (min-width: 900px) {
     .fh-ad-settings-grid {
       grid-template-columns: 1.15fr 1fr;
-      grid-template-areas:
-        "config  store"
-        "hub     store";
+      grid-template-areas: "config hub";
       align-items: start;
     }
-    .fh-ad-settings-left  { grid-area: config; }
-    .fh-ad-settings-hub   { grid-area: hub; }
-    .fh-ad-settings-right { grid-area: store; }
+    .fh-ad-settings-left { grid-area: config; }
+    .fh-ad-settings-hub  { grid-area: hub; }
   }
 
   /* ---- Hub layout room toggle rows (S9 P3) ---- */
@@ -3122,6 +3227,49 @@ var init_css = __esm({
     text-transform: uppercase;
   }
 
+  /* ---- Rewards section \u2014 same grid/panel structure as Tasks ---- */
+  .fh-ad-rewards-wrap {
+    display: flex; flex-direction: column; gap: 14px; min-width: 0;
+  }
+  @media (min-width: 1280px) {
+    .fh-ad-rewards-wrap {
+      display: grid; grid-template-columns: 1fr 480px;
+      gap: 16px; align-items: start;
+    }
+  }
+  .fh-ad-rewards-panel { display: none; }
+  @media (min-width: 1280px) {
+    .fh-ad-rewards-panel {
+      display: flex; flex-direction: column;
+      background: #1A2538;
+      border: 1px solid #2A3852;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+  }
+  /* Inactive store rows \u2014 desaturated, italic name */
+  .fh-store-row--inactive { opacity: .55; }
+  /* Extend tasks-panel dark-theme overrides to rewards-panel */
+  .fh-ad-rewards-panel .fh-label { color: #6F7E9C; }
+  .fh-ad-rewards-panel .fh-input { background: #202D45; border-color: #3A4B6B; color: #ECEFF6; }
+  .fh-ad-rewards-panel .fh-input::placeholder { color: #6F7E9C; }
+  .fh-ad-rewards-panel .fh-select { background: #202D45; border-color: #3A4B6B; color: #ECEFF6; }
+  .fh-ad-rewards-panel .fh-field-help { color: #6F7E9C; }
+  .fh-ad-rewards-panel .fh-checkbox-row { color: #A6B3CC; }
+  .fh-ad-rewards-panel .fh-person-cb-chip { border-color: #3A4B6B; color: #A6B3CC; }
+  /* Rank ladder inputs in settings */
+  .fh-ad-rank-ladder-input { text-align: right; }
+
+  /* ---- Template picker (v0.6.3 item 8) ---- */
+  .fh-tpl-picker-row {
+    display:flex; gap:6px; align-items:center;
+  }
+  .fh-tpl-apply-btn {
+    white-space:nowrap; flex-shrink:0;
+    font-size:var(--fh-text-xs); padding:0 10px;
+  }
+  .fh-tpl-picker-field { margin-bottom:2px; }
+
   /* ---- Chore form tab strip (modal + inline panel) ---- */
   .fh-chore-tabs {
     display: flex; gap: 2px;
@@ -3156,47 +3304,43 @@ var init_css = __esm({
     margin-top: 2px;
   }
 
-  /* ---- Inline icon grid (always-visible, embedded in Details tab) ---- */
-  .fh-chore-icon-grid {
-    background: #202D45;
-    border: 1px solid #3A4B6B;
-    border-radius: 8px;
-    padding: 10px;
-    display: flex; flex-direction: column; gap: 6px;
-    max-height: 320px;
-    overflow-y: auto;
+  /* ---- Icon tab grid (engineer theme overrides) ---- */
+  .fh-icon-tab-grid {
+    max-height: 380px;
   }
-  .fh-chore-icon-grid .fh-icon-picker-cat-hdr {
+  .fh-icon-tab-grid .fh-icon-picker-cat-hdr {
     font-family: 'JetBrains Mono', monospace;
     font-size: var(--fh-text-xs); font-weight: 700;
     color: #6F7E9C; letter-spacing: .08em; text-transform: uppercase;
-    padding: 6px 2px 2px;
+    padding: 6px 2px 2px; border-bottom-color: #2A3852;
   }
-  .fh-chore-icon-grid .fh-icon-picker-cat-hdr:first-child { padding-top: 0; }
-  .fh-chore-icon-grid .fh-icon-picker-cat-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
-    gap: 4px;
+  .fh-icon-tab-grid .fh-icon-picker-cat-hdr:first-child { padding-top: 0; }
+  .fh-icon-tab-grid .fh-icon-picker-cat-grid {
+    grid-template-columns: repeat(auto-fill, minmax(68px, 1fr));
   }
-  .fh-chore-icon-grid .fh-icon-cell {
+  .fh-icon-tab-grid .fh-icon-cell {
     background: transparent; border: 1px solid transparent;
-    border-radius: 6px; cursor: pointer;
-    color: #ECEFF6;
+    border-radius: 6px; cursor: pointer; color: #ECEFF6;
     display: flex; flex-direction: column; align-items: center; gap: 4px;
-    padding: 8px 4px;
-    transition: background .1s, border-color .1s;
+    padding: 8px 4px; transition: background .1s, border-color .1s;
   }
-  .fh-chore-icon-grid .fh-icon-cell:hover {
+  .fh-icon-tab-grid .fh-icon-cell:hover {
     background: rgba(91,141,239,.08); border-color: rgba(91,141,239,.2);
   }
-  .fh-chore-icon-grid .fh-icon-cell.selected {
+  .fh-icon-tab-grid .fh-icon-cell.selected {
     background: rgba(91,141,239,.15); border-color: #5B8DEF;
   }
-  .fh-chore-icon-grid .fh-icon-cell-label {
+  .fh-icon-tab-grid .fh-icon-cell-label {
     font-size: var(--fh-text-xs); color: #A6B3CC;
     text-align: center; line-height: 1.2;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
   }
+  /* Icon tab: selected preview and search */
+  .fh-icon-selected-wrap {
+    border-bottom-color: #2A3852;
+  }
+  .fh-icon-sel-lbl { color: #ECEFF6; }
+  .fh-icon-sel-none { color: #6F7E9C; }
 
   /* ---- Sort bar ---- */
   .fh-ad-sort-bar {
@@ -3553,6 +3697,169 @@ var init_css = __esm({
     padding:6px 10px; cursor:pointer; border-radius:2px;
   }
   .fh-row-add-reminder:hover { opacity:1; }
+
+  /* ---------- Store goal (v0.6.3) ---------- */
+  /* All three pieces inherit currentColor so themes get their accent for free.
+     Themes that need explicit overrides (paper-textured backgrounds, etc.) can
+     follow up with .fh-<theme>-page .fh-goal-* rules. */
+  .fh-goal-banner {
+    display:flex; flex-direction:column; gap:6px;
+    padding:10px 12px; margin-bottom:12px;
+    border:1px solid color-mix(in srgb, currentColor 24%, transparent);
+    border-radius:8px;
+    background:color-mix(in srgb, currentColor 6%, transparent);
+  }
+  .fh-goal-banner-head {
+    display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 10px;
+    font-size:var(--fh-text-sm);
+  }
+  .fh-goal-banner-lbl {
+    font-family:var(--fh-font-mono); font-size:var(--fh-text-xs);
+    letter-spacing:.08em; text-transform:uppercase; opacity:.65;
+  }
+  .fh-goal-banner-name { font-weight:700; }
+  .fh-goal-banner-amt {
+    margin-left:auto; font-family:var(--fh-font-mono);
+    font-size:var(--fh-text-xs); opacity:.85;
+  }
+  /* Shared bar \u2014 reused by rail variant. Track inherits, fill = solid current. */
+  .fh-goal-bar {
+    height:8px; border-radius:4px; overflow:hidden;
+    background:color-mix(in srgb, currentColor 14%, transparent);
+  }
+  .fh-goal-bar-fill {
+    height:100%; background:currentColor;
+    transition:width .25s ease-out;
+  }
+  /* Rail variant \u2014 vertical stack, more compact. */
+  .fh-goal-rail {
+    display:flex; flex-direction:column; gap:4px;
+    padding:8px 10px; margin-bottom:8px;
+    border:1px solid color-mix(in srgb, currentColor 22%, transparent);
+    border-radius:6px;
+  }
+  .fh-goal-rail-lbl {
+    font-family:var(--fh-font-mono); font-size:.7rem;
+    letter-spacing:.1em; opacity:.65;
+  }
+  .fh-goal-rail-name { font-weight:700; font-size:var(--fh-text-sm); line-height:1.2; }
+  .fh-goal-rail-rem  { font-size:var(--fh-text-xs); opacity:.75; }
+  /* Toggle button \u2014 inline-positioned near a store item by its theme. */
+  .fh-goal-tog {
+    background:transparent; color:inherit;
+    border:none; padding:2px 6px; cursor:pointer;
+    font-size:1.2em; line-height:1;
+    opacity:.55; transition:opacity .15s, transform .15s;
+  }
+  .fh-goal-tog:hover { opacity:1; transform:scale(1.15); }
+  .fh-goal-tog.is-goal { opacity:1; }
+
+  /* -------------------------------------------------------------------------
+     Group reward UI (v0.6.3 item 13)
+     ------------------------------------------------------------------------- */
+
+  /* Proposal banner: one or more cards at the top of the store tab */
+  .fh-group-proposals {
+    display:flex; flex-direction:column; gap:8px; margin-bottom:12px;
+  }
+  .fh-group-proposal-card {
+    background:var(--fh-surface); border:1px solid var(--fh-accent);
+    border-radius:8px; padding:10px 12px;
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .fh-group-proposal-from { font-size:.85rem; color:var(--fh-text); line-height:1.35; }
+  .fh-group-proposal-share { font-size:.78rem; color:var(--fh-text-sec); }
+  .fh-group-proposal-btns { display:flex; gap:8px; margin-top:2px; }
+  .fh-group-proposal-accept {
+    flex:1; padding:6px 0; border:none; border-radius:6px; cursor:pointer;
+    background:var(--fh-success,#4caf7d); color:#fff;
+    font-size:.8rem; font-weight:700;
+  }
+  .fh-group-proposal-decline {
+    flex:1; padding:6px 0; border:none; border-radius:6px; cursor:pointer;
+    background:var(--fh-surface2,rgba(0,0,0,.07)); color:var(--fh-text-sec);
+    font-size:.8rem; font-weight:600;
+  }
+  .fh-group-proposal-accept:hover { filter:brightness(1.08); }
+  .fh-group-proposal-decline:hover { filter:brightness(.9); }
+
+  /* Group reward info block \u2014 compact single-line layout */
+  .fh-group-reward-info { margin-top:4px; }
+  .fh-group-reward-line {
+    display:flex; align-items:center; gap:10px;
+    flex-wrap:wrap;
+    font-size:.78rem;
+  }
+  .fh-group-reward-tag {
+    font-size:.72rem; font-weight:700; color:var(--fh-accent);
+    letter-spacing:.03em; text-transform:uppercase; white-space:nowrap;
+  }
+  .fh-group-reward-pills {
+    display:inline-flex; flex-wrap:wrap; gap:4px; align-items:center;
+  }
+  .fh-gcp {
+    display:inline-flex; align-items:center; gap:4px;
+    padding:2px 6px 2px 2px;
+    border-radius:999px;
+    /* Use the theme surface token so pts text always reads on an opaque background.
+       The old rgba(.08) tint was nearly transparent and blended with the card surface. */
+    background:var(--fh-surface, rgba(127,119,221,.16));
+    border:1px solid var(--fh-border);
+    font-size:.7rem;
+  }
+  .fh-gcp--me   { border-color:var(--fh-accent); background:rgba(127,119,221,.26); }
+  .fh-gcp--done { border-color:var(--fh-success,#30d158); background:rgba(48,209,88,.18); }
+  .fh-gcp--done .fh-gcp-pts { color:var(--fh-success,#30d158); font-weight:700; }
+  .fh-gcp-av {
+    width:18px; height:18px; border-radius:50%;
+    color:#fff; font-size:.65rem; font-weight:700;
+    display:inline-flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+    /* Dark halo ensures the initial letter is readable on any avatar_color \u2014
+       light yellow, pale green, etc. \u2014 without needing to know the luminance. */
+    text-shadow:0 0 3px rgba(0,0,0,.75), 0 1px 2px rgba(0,0,0,.5);
+  }
+  .fh-gcp-pts { color:var(--fh-text); font-weight:600; white-space:nowrap; }
+
+  /* Chip In button */
+  .fh-group-chip-btn {
+    padding:6px 14px; border:none; border-radius:6px; cursor:pointer;
+    background:var(--fh-accent); color:#fff;
+    font-size:.82rem; font-weight:700; display:inline-block;
+    margin-top:4px;
+  }
+  .fh-group-chip-btn:hover { filter:brightness(1.1); }
+  .fh-group-chip-btn--disabled { opacity:.4; cursor:not-allowed; }
+  .fh-group-chip-done {
+    display:inline-block; margin-top:4px;
+    font-size:.78rem; color:var(--fh-success,#30d158); font-weight:700;
+  }
+
+  /* Admin: fully-funded group reward in redemption queue */
+  .fh-ad-group-funded {
+    display:flex; flex-direction:column; gap:4px; padding:10px 12px;
+    border:1px solid var(--fh-success,#4caf7d); border-radius:8px;
+    margin-bottom:8px; background:rgba(76,175,125,.06);
+  }
+  .fh-ad-group-funded-hdr { font-weight:700; font-size:.9rem; color:var(--fh-text); }
+  .fh-ad-group-funded-meta { font-size:.78rem; color:var(--fh-text-sec); }
+
+  /* Store item icon (v0.6.3) \u2014 themes call storeItemIcon() to drop this in
+     ahead of each item's body. Color inherits, so it picks up the theme accent. */
+  .fh-store-item-icon {
+    display:inline-flex; align-items:center; justify-content:center;
+    flex-shrink:0; width:28px; height:28px;
+    color:inherit;
+  }
+  .fh-store-inv-icon {
+    display:inline-flex; align-items:center; justify-content:center;
+    flex-shrink:0; width:24px; height:24px; color:var(--fh-text-sec);
+  }
+  /* Classic store item head row \u2014 icon + name + goal star */
+  .fh-store-item-head {
+    display:flex; align-items:center; gap:8px;
+  }
+  .fh-store-item-head .fh-store-name { flex:1; min-width:0; }
 
   /* ---------- Kid-large (card-grid layout) ---------- */
   /* Triggered by .kid-large on the page wrapper; same DOM, different layout. */
@@ -4063,11 +4370,11 @@ var init_css = __esm({
 });
 
 // src/card/constants.js
-var DOMAIN, VERSION, DEFAULT_COLOR, FLASH_MS, FH_SENSORS, WEEKDAY_LABELS, HISTORY_META, I;
+var DOMAIN, VERSION, DEFAULT_COLOR, FLASH_MS, FH_SENSORS, WEEKDAY_LABELS, HISTORY_META, I, CHORE_TEMPLATES;
 var init_constants = __esm({
   "src/card/constants.js"() {
     DOMAIN = "family_hub";
-    VERSION = "0.6.2";
+    VERSION = "0.6.3";
     DEFAULT_COLOR = "#7F77DD";
     FLASH_MS = 1400;
     FH_SENSORS = [
@@ -4109,8 +4416,38 @@ var init_constants = __esm({
       store: `<svg viewBox="0 0 24 24"><path d="M20 4H4v2l16-2zm1 5H3l1 11h16l1-11zm-9 8H10v-4h2v4zm0-6H10v-2h2v2z"/></svg>`,
       remove: `<svg viewBox="0 0 24 24"><path d="M15 16h4v2h-4zm0-8h7v2h-7zm0 4h6v2h-6zM2 6v14c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V6H2zm8 13H4v-1h6v1zm0-3H4v-1h6v1zm0-3H4v-1h6v1zm1-7H3V8h8V6zm-2-3H5V2h4v1z"/></svg>`,
       history: `<svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>`,
-      excuse: `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>`
+      excuse: `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>`,
+      print: `<svg viewBox="0 0 24 24"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7a1 1 0 1 1 0-2 1 1 0 0 1 0 2zm-1-9H6v4h12V3z"/></svg>`,
+      rewards: `<svg viewBox="0 0 24 24"><path d="M20 6h-2.18c.07-.44.18-.88.18-1.36C18 2.53 15.89.36 13.36.36c-1.38 0-2.56.6-3.36 1.55C9.2.96 8.02.36 6.64.36 4.11.36 2 2.53 2 4.64c0 .48.11.92.18 1.36H0v4h1v10h22V10h1V6h-4zm-8 12H6V10h6v8zm0-10H4V8h8v2zm4 10h-2v-8h2v8zm2-10h-6V8h6v2zm-5.36-4c-.45 0-1.09-.49-1.09-1.36 0-.87.64-1.36 1.09-1.36.46 0 1.1.49 1.1 1.36C13.74 3.51 13.1 4 12.64 4zM6.64 4c-.45 0-1.09-.49-1.09-1.36 0-.87.64-1.36 1.09-1.36.46 0 1.1.49 1.1 1.36C7.74 3.51 7.1 4 6.64 4z"/></svg>`,
+      toggle: `<svg viewBox="0 0 24 24"><path d="M17 7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h10c2.76 0 5-2.24 5-5s-2.24-5-5-5zm0 8c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"/></svg>`
     };
+    CHORE_TEMPLATES = [
+      // Morning Routine
+      { key: "brush-teeth-am", name: "Brush teeth", description: "Morning \u2014 brush for 2 minutes", category: "Morning", points: 5 },
+      { key: "make-bed", name: "Make bed", description: "Pull up covers and fluff pillow", category: "Morning", points: 10 },
+      { key: "get-dressed", name: "Get dressed", description: "Clothes on, shoes tied, ready to go", category: "Morning", points: 5 },
+      { key: "take-vitamins", name: "Take vitamins", description: "", category: "Morning", points: 5 },
+      { key: "eat-breakfast", name: "Eat breakfast", description: "", category: "Morning", points: 5 },
+      // Evening Routine
+      { key: "brush-teeth-pm", name: "Brush teeth (evening)", description: "Before bed \u2014 brush for 2 minutes", category: "Evening", points: 5 },
+      { key: "pajamas-on", name: "Pajamas on", description: "", category: "Evening", points: 5 },
+      { key: "pick-up-room", name: "Pick up room", description: "Put toys away and tidy floor", category: "Evening", points: 10 },
+      { key: "pack-backpack", name: "Pack backpack", description: "Ready for tomorrow", category: "Evening", points: 10 },
+      // Kitchen
+      { key: "clear-table", name: "Clear table", description: "After dinner \u2014 dishes to the sink", category: "Kitchen", points: 10 },
+      { key: "load-dishwasher", name: "Load dishwasher", description: "", category: "Kitchen", points: 15 },
+      { key: "unload-dishwasher", name: "Unload dishwasher", description: "", category: "Kitchen", points: 15 },
+      { key: "wipe-counters", name: "Wipe counters", description: "", category: "Kitchen", points: 10 },
+      // Household
+      { key: "take-out-trash", name: "Take out trash", description: "", category: "Chores", points: 15 },
+      { key: "vacuum", name: "Vacuum living room", description: "", category: "Chores", points: 20 },
+      { key: "sweep-floor", name: "Sweep/mop floor", description: "", category: "Chores", points: 15 },
+      { key: "feed-pets", name: "Feed pets", description: "", category: "Chores", points: 10 },
+      { key: "water-plants", name: "Water plants", description: "", category: "Chores", points: 10 },
+      // School
+      { key: "homework", name: "Homework", description: "Complete all assigned homework", category: "School", points: 20 },
+      { key: "reading", name: "Reading time", description: "Read for 20 minutes", category: "School", points: 15 }
+    ];
   }
 });
 
@@ -4199,242 +4536,284 @@ var init_utils = __esm({
 
 // src/card/icons.js
 function choreIcon(key, fallbackColor, size = "28px") {
+  if (typeof key === "string" && key.startsWith("data:image/")) {
+    return `<span class="fh-chore-icon" style="width:${size};height:${size};display:inline-flex;align-items:center;justify-content:center;flex-shrink:0"><img src="${key}" style="width:100%;height:100%;object-fit:contain;border-radius:4px" alt=""></span>`;
+  }
   if (key && FH_ICONS[key]) {
-    return `<span class="fh-chore-icon" style="width:${size};height:${size};display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:currentColor">
-          ${FH_ICONS[key]}
-        </span>`;
+    return `<span class="fh-chore-icon" style="width:${size};height:${size};display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:currentColor">` + FH_ICONS[key] + `</span>`;
   }
   const color = fallbackColor || DOT_COLORS[0];
   return `<span class="fh-chore-dot" style="width:12px;height:12px;border-radius:50%;background:${color};display:inline-block;flex-shrink:0"></span>`;
 }
-var FH_ICONS, FH_ICON_META, DOT_COLORS, FH_ICON_KEYS;
+var _s, FH_ICONS, FH_ICON_META, FH_REWARD_ICON_META, DOT_COLORS, FH_ICON_KEYS;
 var init_icons = __esm({
   "src/card/icons.js"() {
+    _s = (p) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
     FH_ICONS = {
-      // --- Bedroom & Self-Care ---
-      bed: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M3 22V10M3 22H29M3 22v3M29 22V14a3 3 0 0 0-3-3H14v6h-3v-2H3"/>
-      <circle cx="9" cy="14.5" r="1.5"/>
-    </svg>`,
-      tooth: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M10 4c-3 0-5 2-5 6 0 3 2 6 2 11 0 4 1 7 3 7s3-3 3-7c0-2 1-3 3-3s3 1 3 3c0 4 1 7 3 7s3-3 3-7c0-5 2-8 2-11 0-4-2-6-5-6-2 0-3 1-6 1S12 4 10 4Z"/>
-    </svg>`,
-      shower: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M16 2v6M22 8H10M8 12h16l-1 4H9z"/>
-      <path d="M11 20v1M14 22v1M17 20v1M20 22v1M13 25v1M18 26v1"/>
-    </svg>`,
-      laundry: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="5" y="3" width="22" height="26" rx="2"/>
-      <circle cx="16" cy="19" r="6"/>
-      <circle cx="16" cy="19" r="3"/>
-      <path d="M8 8h3M13 8h1"/>
-    </svg>`,
-      room: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M4 28V8l12-5 12 5v20H4z"/>
-      <path d="M13 28v-8h6v8"/>
-    </svg>`,
-      // --- Pets ---
-      dog: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M6 12c0-3 2-5 4-5l2 3 5-1 5 1 2-3c2 0 4 2 4 5v6c0 2-2 4-4 4h-3v3h-3v-3h-6v3H9v-3H6c-1 0-2-1-2-2v-4c0-2 1-4 2-4Z"/>
-      <circle cx="12" cy="15" r="1" fill="currentColor" stroke="none"/>
-      <circle cx="20" cy="15" r="1" fill="currentColor" stroke="none"/>
-    </svg>`,
-      cat: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M6 6l4 6h12l4-6v14a8 8 0 0 1-8 8h-4a8 8 0 0 1-8-8z"/>
-      <path d="M12 16l1 2M20 16l-1 2M14 22h4"/>
-    </svg>`,
-      pet: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <ellipse cx="10" cy="10" rx="3" ry="4"/>
-      <ellipse cx="22" cy="10" rx="3" ry="4"/>
-      <ellipse cx="6"  cy="20" rx="2.5" ry="3.5"/>
-      <ellipse cx="26" cy="20" rx="2.5" ry="3.5"/>
-      <ellipse cx="16" cy="22" rx="7" ry="6"/>
-    </svg>`,
-      fish: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M26 16c0 5-4.5 9-10 9S6 21 6 16s4.5-9 10-9c3 0 5.5 1.5 7 4l4-4-1 9 1 9-4-4c-1.5 2.5-4 4-7 4"/>
-      <circle cx="10" cy="14" r="1.5" fill="currentColor" stroke="none"/>
-    </svg>`,
-      // --- Kitchen ---
-      dishes: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="16" cy="16" r="11"/>
-      <circle cx="16" cy="16" r="6"/>
-      <path d="M6 16h2M24 16h2M16 6v2M16 24v2"/>
-    </svg>`,
-      plate: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M8 6v8a8 8 0 0 0 16 0V6M12 6v22M20 6v22M8 6h16"/>
-    </svg>`,
-      snack: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M6 16a10 10 0 0 1 20 0v8a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2z"/>
-      <path d="M11 12v2M16 11v2M21 12v2"/>
-    </svg>`,
-      bread: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M4 14a8 5 0 0 1 24 0v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/>
-      <path d="M10 14v8M16 14v8M22 14v8"/>
-    </svg>`,
-      menu: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="6" y="4" width="20" height="24" rx="2"/>
-      <path d="M10 10h12M10 14h12M10 18h12M10 22h8"/>
-    </svg>`,
-      cooking: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M6 20h20l-2 6H8zM10 10c0-3 2-5 6-5s6 2 6 5"/>
-      <path d="M8 14h16v6H8z"/>
-      <path d="M13 7v3M19 7v3"/>
-    </svg>`,
-      meals: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M6 14a10 10 0 0 1 20 0M3 18h26v2a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z"/>
-      <path d="M14 8V4M16 4h-4M12 12c1-1 3-1 4 0"/>
-    </svg>`,
-      // --- Cleaning ---
-      trash: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M5 8h22M12 8V5h8v3M8 8v18a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8M13 13v11M19 13v11"/>
-    </svg>`,
-      broom: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M22 4 12 14M9 17l6 6M5 25l4 4M8 28l3-3M14 22l3-3"/>
-      <path d="m12 14 6 6-3 3-9 1 1-9z"/>
-    </svg>`,
-      vacuum: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="16" cy="20" r="8"/>
-      <circle cx="16" cy="20" r="3"/>
-      <path d="M16 12V6h-4M22 12V8h-2"/>
-    </svg>`,
-      wipe: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="4" y="14" width="24" height="10" rx="2"/>
-      <path d="M9 18l4 4M14 18l4 4M19 18l4 4M8 14V8a4 4 0 0 1 4-4h8a4 4 0 0 1 4 4v6"/>
-    </svg>`,
-      mop: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M10 4l12 12M18 10l4 4"/>
-      <path d="M6 22l6-6 8 8-6 4-8-6z"/>
-    </svg>`,
-      sweep: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M8 4l4 16H8l-2 6h20l-2-6h-4L16 4z"/>
-      <path d="M10 20h12"/>
-    </svg>`,
-      bathroom: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M5 18h22v4a4 4 0 0 1-4 4H9a4 4 0 0 1-4-4z"/>
-      <path d="M5 18V8a3 3 0 0 1 6 0v10"/>
-      <path d="M9 12h2"/>
-    </svg>`,
-      windows: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="4" y="4" width="24" height="24" rx="2"/>
-      <path d="M4 16h24M16 4v24"/>
-    </svg>`,
-      recycling: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M16 4l4 7h-3l3 6H8l3-6H8zM8 24l2-3h12l2 3M4 28h24"/>
-    </svg>`,
-      // --- Outdoors ---
-      lawn: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M4 24h24M8 24v-4a8 8 0 0 1 16 0v4"/>
-      <path d="M12 16c0-2 2-5 4-7 2 2 4 5 4 7"/>
-    </svg>`,
-      garden: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M16 28V14M16 14c-4-2-7-1-7-7 4 0 7 2 7 7Zm0 0c4-2 7-1 7-7-4 0-7 2-7 7Z"/>
-      <path d="M10 28h12"/>
-    </svg>`,
-      plant: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M16 28V14M16 14c-4-2-7-1-7-7 4 0 7 2 7 7Zm0 0c4-2 7-1 7-7-4 0-7 2-7 7Z"/>
-      <path d="M10 28h12"/>
-    </svg>`,
-      leaves: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M6 26c2-8 8-14 16-14-2 8-8 14-16 14z"/>
-      <path d="M6 26l8-8"/>
-    </svg>`,
-      snow: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M16 4v24M4 10l12 6 12-6M4 22l12-6 12 6"/>
-      <path d="M10 7l2 3-2 3M22 7l-2 3 2 3M10 25l2-3-2-3M22 25l-2-3 2-3"/>
-    </svg>`,
-      // --- School & Learning ---
-      homework: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="5" y="3" width="22" height="26" rx="2"/>
-      <path d="M10 10h12M10 15h12M10 20h8"/>
-      <path d="M21 22l2 2 4-4"/>
-    </svg>`,
-      reading: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M4 6c4-2 8-2 12 0 4-2 8-2 12 0v18c-4-2-8-2-12 0-4-2-8-2-12 0zM16 6v18"/>
-    </svg>`,
-      book: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M4 6c4-2 8-2 12 0 4-2 8-2 12 0v18c-4-2-8-2-12 0-4-2-8-2-12 0zM16 6v18"/>
-    </svg>`,
-      pencil: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="m22 4 6 6L12 26l-7 1 1-7zM18 8l6 6M5 27l3-3"/>
-    </svg>`,
-      piano: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="3" y="8" width="26" height="16" rx="1"/>
-      <path d="M3 18h26M10 8v10h-2v6M16 8v10h-2v6M22 8v10h-2v6"/>
-    </svg>`,
-      backpack: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M9 12V8a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v4"/>
-      <rect x="5" y="10" width="22" height="18" rx="3"/>
-      <path d="M10 16h12v6H10z"/>
-    </svg>`,
-      practice: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="16" cy="16" r="12"/>
-      <path d="M16 10v6l4 4"/>
-    </svg>`,
-      // --- Tools & Home ---
-      tools: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="m6 26 9-9-4-4-3 1-3-3 4-4 3 3-1 3 4 4M20 4l5 5-3 3 4 4-4 4-4-4-3 3-5-5z"/>
-    </svg>`,
-      smarthome: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M4 16 16 4l12 12M7 14v12h18V14"/>
-      <circle cx="16" cy="20" r="3"/>
-      <path d="M16 16v1M16 23v1M12 20h1M19 20h1"/>
-    </svg>`,
-      // --- Generic ---
-      chore: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M6 8h14l4 4v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2z"/>
-      <path d="m9 18 3 3 7-7M20 8v4h4"/>
-    </svg>`,
-      errand: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="4" y="8" width="24" height="18" rx="2"/>
-      <path d="M10 8V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v2"/>
-      <path d="M4 16h24"/>
-    </svg>`,
-      pack: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 1C8.14 1 5 4.14 5 8v1H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h24a2 2 0 0 0 2-2V11a2 2 0 0 0-2-2h-1V8c0-3.86-3.14-7-7-7h-8z"/>
-      <path d="M12 20a4 4 0 1 0 8 0 4 4 0 0 0-8 0z"/>
-    </svg>`,
-      screen: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="2" y="4" width="28" height="18" rx="2"/>
-      <path d="M10 28h12M16 22v6"/>
-    </svg>`,
-      exercise: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="22" cy="6" r="3"/>
-      <path d="M4 18l6-8 4 4 4-6 6 8"/>
-      <path d="M2 26h28"/>
-    </svg>`,
-      // --- Parents ---
-      car: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M5 16l3-7h16l3 7"/>
-      <rect x="3" y="16" width="26" height="10" rx="2"/>
-      <circle cx="9" cy="26" r="3"/>
-      <circle cx="23" cy="26" r="3"/>
-      <path d="M3 20h26"/>
-    </svg>`,
-      shop: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M6 4h20l2 8H4z"/>
-      <path d="M4 12a4 4 0 0 0 4 4M12 12a4 4 0 0 0 8 0M20 12a4 4 0 0 0 4 4M8 16v10h16V16"/>
-      <path d="M13 26v-6h6v6"/>
-    </svg>`,
-      folding: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M4 8h10v16H4zM18 8h10v16H18z"/>
-      <path d="M14 16h4M14 12l4 4-4 4"/>
-    </svg>`,
-      lunch: `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M6 12h20v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2z"/>
-      <path d="M10 8V6M16 7V5M22 8V6"/>
-      <path d="M6 17h20"/>
-    </svg>`
+      // ── Self-Care ─────────────────────────────────────────────────────────
+      bed: _s(
+        `<rect x="2" y="8" width="20" height="12" rx="1"/><path d="M2 14h20"/><path d="M7 14V9a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v5"/><circle cx="6" cy="11" r="1" fill="currentColor" stroke="none"/>`
+      ),
+      tooth: _s(
+        `<path d="M9 3h6a4 4 0 0 1 4 4c0 5-1.5 9-3 12-.5 1-1.5 1-2 0l-.5-2c-.3-.9-1.7-.9-2 0l-.5 2c-.5 1-1.5 1-2 0C7.5 16 6 12 6 7a4 4 0 0 1 3-4z"/>`
+      ),
+      shower: _s(
+        `<path d="M5 5l4 4"/><path d="M19 4a9 9 0 0 0-9 9"/><path d="M14 4a9 9 0 0 0-5 5"/><path d="M4 22l5-5"/><circle cx="11" cy="15" r=".6" fill="currentColor" stroke="none"/><circle cx="14" cy="17" r=".6" fill="currentColor" stroke="none"/><circle cx="8.5" cy="17" r=".6" fill="currentColor" stroke="none"/><circle cx="11" cy="19" r=".6" fill="currentColor" stroke="none"/>`
+      ),
+      hair: _s(
+        `<path d="M4 4h16v3H4z"/><path d="M6 7v9M9 7v12M12 7v12M15 7v9M18 7v9"/>`
+      ),
+      sleep: _s(
+        `<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/>`
+      ),
+      laundry: _s(
+        `<rect x="3" y="2" width="18" height="20" rx="2"/><circle cx="12" cy="13" r="5"/><circle cx="12" cy="13" r="2.5"/><path d="M7 6h.5M10 6h.5"/>`
+      ),
+      folding: _s(
+        `<path d="M3 6l3-4h4l2 3 2-3h4l3 4-4 2v12a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V8z"/>`
+      ),
+      room: _s(
+        `<path d="M3 21V9.5L12 3l9 6.5V21H3z"/><path d="M9 21v-7h6v7"/>`
+      ),
+      pack: _s(
+        `<path d="M5 7h14l-1.5 12a2 2 0 0 1-2 2H8.5a2 2 0 0 1-2-2z"/><path d="M8 7V6a4 4 0 0 1 8 0v1"/><path d="M9 13h6"/>`
+      ),
+      backpack: _s(
+        `<path d="M9 4a3 3 0 0 1 6 0v1a7 7 0 0 1-6 0z"/><rect x="4" y="7" width="16" height="14" rx="2"/><path d="M8 14h8M8 17h5"/>`
+      ),
+      // ── Pets ──────────────────────────────────────────────────────────────
+      dog: _s(
+        `<path d="M3 11a9 9 0 0 0 18 0V8l-3-1-1-5-5 3-5-3-1 5-3 1z"/><path d="M7 19v3M17 19v3"/><circle cx="10" cy="11" r=".8" fill="currentColor" stroke="none"/><circle cx="14" cy="11" r=".8" fill="currentColor" stroke="none"/><path d="M10 14c1.5 1.5 2.5 1.5 4 0"/>`
+      ),
+      cat: _s(
+        `<path d="M5 7l-1-5 4 4h4l4-4-1 5a7 7 0 0 1-10 0z"/><circle cx="10" cy="12" r=".5" fill="currentColor" stroke="none"/><circle cx="14" cy="12" r=".5" fill="currentColor" stroke="none"/><path d="M10 14l1 2h2l1-2M12 17v1.5"/>`
+      ),
+      pet: _s(
+        `<ellipse cx="7.5" cy="7.5" rx="2.5" ry="3"/><ellipse cx="16.5" cy="7.5" rx="2.5" ry="3"/><ellipse cx="4" cy="14" rx="2" ry="2.5"/><ellipse cx="20" cy="14" rx="2" ry="2.5"/><ellipse cx="12" cy="16.5" rx="5.5" ry="4.5"/>`
+      ),
+      fish: _s(
+        `<path d="M20 12a8 8 0 0 1-8 6 8 8 0 0 1-8-6 8 8 0 0 1 8-6 8 8 0 0 1 8 6z"/><path d="M20 12l4-5v10z"/><circle cx="9" cy="11" r="1" fill="currentColor" stroke="none"/>`
+      ),
+      // ── Kitchen ───────────────────────────────────────────────────────────
+      dishes: _s(
+        `<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M3 12h3M18 12h3M12 3v3M12 18v3"/>`
+      ),
+      plate: _s(
+        `<path d="M5 3v8a4 4 0 0 0 8 0V3M9 3v17"/><path d="M19 3v17M17 7a2 2 0 0 1 4 0v4h-4z"/>`
+      ),
+      cooking: _s(
+        `<path d="M4 15h16l-1.5 5a2 2 0 0 1-1.9 1.5H7.4A2 2 0 0 1 5.5 20z"/><path d="M8 7V5M12 6V4M16 7V5"/><path d="M5 12h14a6 6 0 0 0-6-6h-2a6 6 0 0 0-6 6z"/>`
+      ),
+      meals: _s(
+        `<path d="M4 15a8 8 0 0 0 16 0H4z"/><path d="M8 10c0-1 1-2 1-3M12 10c0-1 1-2 1-3M16 10c0-1 1-2 1-3"/>`
+      ),
+      lunch: _s(
+        `<rect x="3" y="10" width="18" height="11" rx="2"/><path d="M8 10V8a4 4 0 0 1 8 0v2"/><path d="M8 15h8M8 18h5"/>`
+      ),
+      coffee: _s(
+        `<path d="M6 10h12v6a4 4 0 0 1-4 4H10a4 4 0 0 1-4-4z"/><path d="M18 12h2a2 2 0 0 1 0 4h-2"/><path d="M9 6c0-1.5 1-2 1-3M13 6c0-1.5 1-2 1-3"/>`
+      ),
+      snack: _s(
+        `<path d="M14 3c1 0 2 1 2 2 0 2-2 3-3 4-1-1-3-2-3-4a2 2 0 0 1 2-2h2z"/><path d="M12 9a6 6 0 1 0 0 12 6 6 0 0 0 0-12z"/>`
+      ),
+      bread: _s(
+        `<path d="M3 11a5 5 0 0 1 10 0v9H3z"/><path d="M13 11a5 5 0 0 1 5-5h1a2 2 0 0 1 2 2v11H13z"/><path d="M3 14h10"/>`
+      ),
+      menu: _s(
+        `<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M9 11h6M9 15h4"/>`
+      ),
+      table: _s(
+        `<circle cx="12" cy="13" r="5"/><path d="M5 3v8M5 11a3 3 0 0 0 6 0"/><path d="M19 3v17M17 7a2 2 0 0 1 4 0v4h-4z"/>`
+      ),
+      // ── Cleaning ──────────────────────────────────────────────────────────
+      trash: _s(
+        `<path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12"/><path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/>`
+      ),
+      broom: _s(
+        `<path d="M19 3 9 13"/><path d="M7 15.5l5 5M5 21l2-2M10 20.5l3-3"/><path d="m9 13 5 5-3 3-7 1 1-7z"/>`
+      ),
+      vacuum: _s(
+        `<circle cx="14" cy="15" r="5"/><circle cx="14" cy="15" r="2"/><path d="M9 15H6a4 4 0 0 1-4-4V8a4 4 0 0 1 4-4h5l3-2h6l-3 6"/>`
+      ),
+      wipe: _s(
+        `<rect x="3" y="10" width="18" height="10" rx="2"/><path d="M7 14l3 3M11 14l3 3M15 14l3 3"/><path d="M7 10V5a3 3 0 0 1 6 0v5"/>`
+      ),
+      mop: _s(
+        `<path d="M4 3l12 12"/><path d="M14 4l6 6"/><path d="M4 15l6-6 8 8-6 4-8-6z"/>`
+      ),
+      sweep: _s(
+        `<path d="M16 3 4 15"/><path d="M2 22l4-4.5"/><path d="M4 15h12a4 4 0 0 1 0 8H4z"/>`
+      ),
+      bathroom: _s(
+        `<path d="M3 14h18v4a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z"/><path d="M3 14V9a4 4 0 0 1 4-4h0a4 4 0 0 1 4 4v1"/><path d="M5 10h4"/>`
+      ),
+      windows: _s(
+        `<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h18M12 3v18"/>`
+      ),
+      recycling: _s(
+        `<path d="M7 11l-4 4 4 4M3 15h10a4 4 0 0 0 3.46-6"/><path d="M17 13l4-4-4-4M21 9H11a4 4 0 0 0-3.46 6"/>`
+      ),
+      bucket: _s(
+        `<path d="M7 6h10l1.5 13a2 2 0 0 1-2 2H7.5a2 2 0 0 1-2-2z"/><path d="M5.5 6a6.5 6.5 0 0 1 13 0"/><path d="M9 12c0 2 1 3 3 3s3-1 3-3"/>`
+      ),
+      dusting: _s(
+        `<path d="M3 21l10-10"/><path d="M12 8l2-5 4 4-5 2z"/><path d="M14 12l3 3"/><path d="M17 7c1.5 1.5 1.5 3.5 0 5"/><path d="M15 5c2.5 1.5 3.5 4.5 1 7"/>`
+      ),
+      // ── Outdoors ──────────────────────────────────────────────────────────
+      lawn: _s(
+        `<path d="M3 21h18"/><path d="M6 21V14a6 6 0 0 1 12 0v7"/><path d="M12 8v6"/><path d="M10 11c-.5-1.5 0-3.5 2-3.5s2.5 2 2 3.5"/>`
+      ),
+      garden: _s(
+        `<path d="M3 14a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M17 15h3l1-6"/><path d="M5 14V9a4 4 0 0 1 8 0v5"/><path d="M7 20l1 3M10 20l1 3M13 20l1 3"/>`
+      ),
+      plant: _s(
+        `<path d="M12 20V12"/><path d="M12 12c-3-2-6-1-7-6 5-1 8 2 7 6z"/><path d="M12 12c3-2 6-1 7-6-5-1-8 2-7 6z"/><path d="M8 20h8"/>`
+      ),
+      leaves: _s(
+        `<path d="M5 21c3-8 9-14 16-14-2 8-8 14-16 14z"/><path d="M5 21l8-8"/>`
+      ),
+      snow: _s(
+        `<path d="M12 3v18M4.5 7.5l15 9M19.5 7.5l-15 9"/><path d="M9 6l3-3 3 3M9 18l3 3 3-3"/><path d="M4.5 10.5l-3 2 3 2M19.5 10.5l3 2-3 2"/>`
+      ),
+      garage: _s(
+        `<rect x="2" y="10" width="20" height="11" rx="1"/><path d="M2 10L12 3l10 7"/><path d="M6 15h12M6 18h8"/>`
+      ),
+      // ── School ────────────────────────────────────────────────────────────
+      homework: _s(
+        `<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/><path d="M16 17l2 2 4-4"/>`
+      ),
+      reading: _s(
+        `<path d="M3 6c3-1.5 6-1.5 9 0 3-1.5 6-1.5 9 0v13c-3-1.5-6-1.5-9 0-3-1.5-6-1.5-9 0z"/><path d="M12 6v13"/>`
+      ),
+      book: _s(
+        `<path d="M4 19V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12H6a2 2 0 0 1-2-2z"/><path d="M4 17h14"/><path d="M8 7v5l2-2 2 2V7"/>`
+      ),
+      pencil: _s(
+        `<path d="M4 20l12-12 4 4-12 12z"/><path d="M14 6l4 4"/><path d="M4 20l-2 2"/>`
+      ),
+      piano: _s(
+        `<rect x="2" y="6" width="20" height="13" rx="1"/><path d="M7 6v7M10 6v7M15 6v7M18 6v7"/><path d="M2 13h20"/>`
+      ),
+      practice: _s(
+        `<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>`
+      ),
+      calculator: _s(
+        `<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8"/><rect x="7" y="10" width="3" height="2" rx=".5"/><rect x="10.5" y="10" width="3" height="2" rx=".5"/><rect x="14" y="10" width="3" height="2" rx=".5"/><rect x="7" y="13.5" width="3" height="2" rx=".5"/><rect x="10.5" y="13.5" width="3" height="2" rx=".5"/><rect x="14" y="13" width="3" height="5" rx=".5"/><rect x="7" y="17" width="3" height="2" rx=".5"/><rect x="10.5" y="17" width="3" height="2" rx=".5"/>`
+      ),
+      // ── Health ────────────────────────────────────────────────────────────
+      medicine: _s(
+        `<path d="M8.5 14.5l-5-5a5 5 0 0 1 7-7l5 5"/><path d="M14.5 9.5l-5 5"/><path d="M14.5 14.5l5-5a5 5 0 0 1 0 7l-2 2a5 5 0 0 1-7 0l-1-1"/>`
+      ),
+      water: _s(
+        `<path d="M12 2l7 11a7 7 0 1 1-14 0z"/>`
+      ),
+      exercise: _s(
+        `<path d="M6 12h12"/><path d="M6 10v4M18 10v4"/><path d="M4 9v6M20 9v6"/>`
+      ),
+      sport: _s(
+        `<circle cx="12" cy="12" r="9"/><path d="M12 3a15 15 0 0 1 4 9 15 15 0 0 1-4 9"/><path d="M12 3a15 15 0 0 0-4 9 15 15 0 0 0 4 9"/><path d="M3 9h18M3 15h18"/>`
+      ),
+      walk: _s(
+        `<circle cx="12" cy="4" r="2"/><path d="M8 20l2-6h4l-1 6"/><path d="M16 20l-1-6"/><path d="M9 10h6l-1 4H9l-1-4z"/><path d="M8 7l-2 3M16 7l2 3"/>`
+      ),
+      // ── Hobbies ───────────────────────────────────────────────────────────
+      art: _s(
+        `<path d="M12 21a9 9 0 1 0-.5 0"/><circle cx="8.5" cy="9" r="1.5"/><circle cx="14.5" cy="8" r="1.5"/><circle cx="16.5" cy="13.5" r="1.5"/><circle cx="10" cy="15.5" r="1.5"/>`
+      ),
+      music: _s(
+        `<path d="M9 20V9l12-2v11"/><circle cx="6" cy="20" r="3"/><circle cx="18" cy="18" r="3"/>`
+      ),
+      bike: _s(
+        `<circle cx="6" cy="15" r="4"/><circle cx="18" cy="15" r="4"/><path d="M6 15l4-8 2 3h6"/><path d="M14 10l4 5"/>`
+      ),
+      games: _s(
+        `<rect x="2" y="7" width="20" height="13" rx="2"/><path d="M6 13v-2M5 12h2"/><circle cx="15.5" cy="11.5" r=".5" fill="currentColor" stroke="none"/><circle cx="17.5" cy="13.5" r=".5" fill="currentColor" stroke="none"/><path d="M11 16h2"/>`
+      ),
+      // ── Home ──────────────────────────────────────────────────────────────
+      tools: _s(
+        `<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.77 3.77z"/>`
+      ),
+      smarthome: _s(
+        `<path d="M3 21V9.5L12 3l9 6.5V21H3z"/><circle cx="12" cy="15" r="2"/><path d="M9.17 12.17a5 5 0 0 1 5.66 0"/><path d="M6.34 9.34a9 9 0 0 1 11.32 0"/>`
+      ),
+      screen: _s(
+        `<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>`
+      ),
+      car: _s(
+        `<path d="M5 17H3a2 2 0 0 1-2-2v-4l3-6h16l3 6v4a2 2 0 0 1-2 2h-2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M5 9h14"/>`
+      ),
+      shop: _s(
+        `<path d="M6 2l3 6h10l-1.5 7H7.5L6 2z"/><circle cx="10" cy="19" r="2"/><circle cx="17" cy="19" r="2"/><path d="M4 2H2"/>`
+      ),
+      phone: _s(
+        `<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>`
+      ),
+      mail: _s(
+        `<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 7 10-7"/>`
+      ),
+      errand: _s(
+        `<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><path d="M8 11h8M8 15h5"/>`
+      ),
+      // ── Generic ───────────────────────────────────────────────────────────
+      chore: _s(
+        `<path d="M4 6h10l3 3v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"/><path d="M8 11l2 2 4-4"/><path d="M14 6V3h6v6h-6z"/>`
+      ),
+      star: _s(
+        `<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>`
+      ),
+      check: _s(
+        `<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-5"/>`
+      ),
+      timer: _s(
+        `<circle cx="12" cy="13" r="8"/><path d="M12 5V3M9 3h6"/><path d="M16.95 8.05l1.41-1.41"/><path d="M12 9v4h4"/>`
+      ),
+      // ── Rewards-specific ─────────────────────────────────────────────────
+      gift: _s(
+        `<rect x="3" y="8" width="18" height="13" rx="1"/><path d="M3 12h18"/><path d="M12 8v13"/><path d="M7.5 8a2.5 2.5 0 1 1 0-5C9 3 11 5 12 8c1-3 3-5 4.5-5a2.5 2.5 0 1 1 0 5"/>`
+      ),
+      cash: _s(
+        `<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 9.5h.01M18 14.5h.01"/>`
+      ),
+      candy: _s(
+        `<circle cx="12" cy="12" r="5"/><path d="M7 12L3 8v8z"/><path d="M17 12l4-4v8z"/>`
+      ),
+      icecream: _s(
+        `<path d="M8 11a4 4 0 0 1 8 0"/><path d="M7 11h10l-5 11z"/><path d="M9.5 11l.5-2M14.5 11l-.5-2"/>`
+      ),
+      cake: _s(
+        `<rect x="3" y="13" width="18" height="8" rx="1"/><path d="M3 17h18"/><path d="M7 13v-2a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v2"/><path d="M13 13v-2a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v2"/><path d="M9 5v2M15 5v2"/>`
+      ),
+      party: _s(
+        `<path d="M3 21l5-14 8 8z"/><circle cx="17" cy="6" r="1"/><circle cx="20" cy="10" r="1"/><circle cx="14" cy="3" r="1"/><path d="M19 14l2 2M15 14l3 2"/>`
+      ),
+      controller: _s(
+        `<path d="M6 18a4 4 0 0 1-4-4V11a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4v3a4 4 0 0 1-4 4h-1l-2-3H9l-2 3z"/><path d="M7 11v3M5.5 12.5h3"/><circle cx="16" cy="11.5" r=".7" fill="currentColor"/><circle cx="18" cy="13.5" r=".7" fill="currentColor"/>`
+      ),
+      trophy: _s(
+        `<path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 6H4v2a3 3 0 0 0 3 3"/><path d="M17 6h3v2a3 3 0 0 1-3 3"/><path d="M9 15h6v3H9z"/><path d="M8 21h8"/>`
+      ),
+      movie: _s(
+        `<rect x="2" y="6" width="20" height="12" rx="1"/><path d="M2 10h20M2 14h20"/><path d="M5 6v12M19 6v12"/>`
+      ),
+      toy: _s(
+        `<rect x="4" y="8" width="16" height="12" rx="2"/><circle cx="9" cy="13" r="1.2"/><circle cx="15" cy="13" r="1.2"/><path d="M9 17h6"/><path d="M9 8V5h6v3"/>`
+      ),
+      sticker: _s(
+        `<path d="M12 3a9 9 0 1 1-9 9 9 9 0 0 1 9-9z"/><path d="M9 10h.01M15 10h.01"/><path d="M9 14s1 1.5 3 1.5 3-1.5 3-1.5"/>`
+      )
     };
     FH_ICON_META = [
-      // Bedroom & self-care
-      { key: "bed", label: "Make Bed", category: "Self-care" },
-      { key: "tooth", label: "Brush Teeth", category: "Self-care" },
-      { key: "shower", label: "Shower", category: "Self-care" },
-      { key: "laundry", label: "Laundry", category: "Self-care" },
-      { key: "folding", label: "Fold Clothes", category: "Self-care" },
-      { key: "room", label: "Clean Room", category: "Self-care" },
-      { key: "pack", label: "Pack Bag", category: "Self-care" },
-      { key: "backpack", label: "Backpack", category: "Self-care" },
+      // Self-Care
+      { key: "bed", label: "Make Bed", category: "Self-Care" },
+      { key: "tooth", label: "Brush Teeth", category: "Self-Care" },
+      { key: "shower", label: "Shower", category: "Self-Care" },
+      { key: "hair", label: "Groom Hair", category: "Self-Care" },
+      { key: "sleep", label: "Bedtime", category: "Self-Care" },
+      { key: "laundry", label: "Laundry", category: "Self-Care" },
+      { key: "folding", label: "Fold Clothes", category: "Self-Care" },
+      { key: "room", label: "Clean Room", category: "Self-Care" },
+      { key: "pack", label: "Pack Bag", category: "Self-Care" },
+      { key: "backpack", label: "Backpack", category: "Self-Care" },
       // Pets
       { key: "dog", label: "Walk Dog", category: "Pets" },
       { key: "cat", label: "Feed Cat", category: "Pets" },
@@ -4443,19 +4822,23 @@ var init_icons = __esm({
       // Kitchen
       { key: "dishes", label: "Dishes", category: "Kitchen" },
       { key: "plate", label: "Set Table", category: "Kitchen" },
+      { key: "table", label: "Place Setting", category: "Kitchen" },
       { key: "cooking", label: "Cooking", category: "Kitchen" },
-      { key: "meals", label: "Meals", category: "Kitchen" },
+      { key: "meals", label: "Meal Prep", category: "Kitchen" },
       { key: "lunch", label: "Pack Lunch", category: "Kitchen" },
+      { key: "coffee", label: "Make Coffee", category: "Kitchen" },
       { key: "snack", label: "Snack", category: "Kitchen" },
       { key: "bread", label: "Baking", category: "Kitchen" },
       { key: "menu", label: "Menu Plan", category: "Kitchen" },
       // Cleaning
       { key: "trash", label: "Trash", category: "Cleaning" },
       { key: "broom", label: "Sweep", category: "Cleaning" },
+      { key: "sweep", label: "Sweep Floor", category: "Cleaning" },
       { key: "vacuum", label: "Vacuum", category: "Cleaning" },
-      { key: "wipe", label: "Wipe Down", category: "Cleaning" },
       { key: "mop", label: "Mop", category: "Cleaning" },
-      { key: "sweep", label: "Sweep Up", category: "Cleaning" },
+      { key: "wipe", label: "Wipe Down", category: "Cleaning" },
+      { key: "dusting", label: "Dusting", category: "Cleaning" },
+      { key: "bucket", label: "Deep Clean", category: "Cleaning" },
       { key: "bathroom", label: "Bathroom", category: "Cleaning" },
       { key: "windows", label: "Windows", category: "Cleaning" },
       { key: "recycling", label: "Recycling", category: "Cleaning" },
@@ -4463,25 +4846,76 @@ var init_icons = __esm({
       { key: "lawn", label: "Lawn", category: "Outdoors" },
       { key: "garden", label: "Garden", category: "Outdoors" },
       { key: "plant", label: "Plants", category: "Outdoors" },
-      { key: "leaves", label: "Leaves", category: "Outdoors" },
-      { key: "snow", label: "Snow", category: "Outdoors" },
+      { key: "leaves", label: "Rake Leaves", category: "Outdoors" },
+      { key: "snow", label: "Shovel Snow", category: "Outdoors" },
+      { key: "garage", label: "Garage", category: "Outdoors" },
       // School
       { key: "homework", label: "Homework", category: "School" },
       { key: "reading", label: "Reading", category: "School" },
-      { key: "book", label: "Book", category: "School" },
+      { key: "book", label: "Books", category: "School" },
       { key: "pencil", label: "Study", category: "School" },
+      { key: "calculator", label: "Math", category: "School" },
       { key: "piano", label: "Piano", category: "School" },
       { key: "practice", label: "Practice", category: "School" },
-      // Home & tools
+      // Health
+      { key: "medicine", label: "Medicine", category: "Health" },
+      { key: "water", label: "Drink Water", category: "Health" },
+      { key: "exercise", label: "Exercise", category: "Health" },
+      { key: "sport", label: "Sport", category: "Health" },
+      { key: "walk", label: "Walk", category: "Health" },
+      // Hobbies
+      { key: "art", label: "Art", category: "Hobbies" },
+      { key: "music", label: "Music", category: "Hobbies" },
+      { key: "bike", label: "Bike", category: "Hobbies" },
+      { key: "games", label: "Games", category: "Hobbies" },
+      // Home
       { key: "tools", label: "Tools", category: "Home" },
       { key: "smarthome", label: "Smart Home", category: "Home" },
       { key: "screen", label: "Devices", category: "Home" },
-      { key: "exercise", label: "Exercise", category: "Home" },
+      { key: "car", label: "Car", category: "Home" },
+      { key: "shop", label: "Shopping", category: "Home" },
+      { key: "phone", label: "Phone", category: "Home" },
+      { key: "mail", label: "Mail", category: "Home" },
+      { key: "errand", label: "Errand", category: "Home" },
       // Generic
       { key: "chore", label: "Chore", category: "Generic" },
-      { key: "errand", label: "Errand", category: "Generic" },
-      { key: "car", label: "Car", category: "Generic" },
-      { key: "shop", label: "Shopping", category: "Generic" }
+      { key: "star", label: "Star Task", category: "Generic" },
+      { key: "check", label: "Done", category: "Generic" },
+      { key: "timer", label: "Timed Task", category: "Generic" }
+    ];
+    FH_REWARD_ICON_META = [
+      // Treats
+      { key: "candy", label: "Candy", category: "Treats" },
+      { key: "icecream", label: "Ice Cream", category: "Treats" },
+      { key: "snack", label: "Snack", category: "Treats" },
+      { key: "cake", label: "Cake", category: "Treats" },
+      { key: "bread", label: "Baked Good", category: "Treats" },
+      // Money & Gifts
+      { key: "cash", label: "Cash", category: "Money & Gifts" },
+      { key: "gift", label: "Gift", category: "Money & Gifts" },
+      { key: "shop", label: "Shopping", category: "Money & Gifts" },
+      { key: "sticker", label: "Sticker", category: "Money & Gifts" },
+      // Screen Time
+      { key: "screen", label: "Screen Time", category: "Screen Time" },
+      { key: "games", label: "Video Games", category: "Screen Time" },
+      { key: "controller", label: "Gamepad", category: "Screen Time" },
+      { key: "movie", label: "Movie", category: "Screen Time" },
+      { key: "phone", label: "Phone Time", category: "Screen Time" },
+      // Outings & Activities
+      { key: "bike", label: "Bike Ride", category: "Outings" },
+      { key: "car", label: "Car Trip", category: "Outings" },
+      { key: "walk", label: "Walk Out", category: "Outings" },
+      { key: "sport", label: "Sports", category: "Outings" },
+      { key: "pet", label: "Pet Time", category: "Outings" },
+      // Fun & Special
+      { key: "toy", label: "Toy", category: "Fun & Special" },
+      { key: "party", label: "Party", category: "Fun & Special" },
+      { key: "trophy", label: "Trophy", category: "Fun & Special" },
+      { key: "star", label: "Special", category: "Fun & Special" },
+      { key: "music", label: "Music", category: "Fun & Special" },
+      { key: "art", label: "Art Supplies", category: "Fun & Special" },
+      { key: "book", label: "Book", category: "Fun & Special" },
+      { key: "timer", label: "Extra Time", category: "Fun & Special" }
     ];
     DOT_COLORS = [
       "#7F77DD",
@@ -4497,6 +4931,10 @@ var init_icons = __esm({
 });
 
 // src/card/themes/_shared.js
+function storeItemIcon(item, size = "28px") {
+  if (!(item == null ? void 0 : item.icon)) return "";
+  return `<span class="fh-store-item-icon">${choreIcon(item.icon, null, size)}</span>`;
+}
 function getEffectiveRank(rankIndex, ranks) {
   const idx = Math.min(Math.max(0, rankIndex), ranks.length - 1);
   return ranks[idx];
@@ -4609,6 +5047,32 @@ function computeStreakProgress(streak, milestone, maxSegs = 10) {
     filledN,
     countLbl: `${streak} \xB7 next ${nextIn}`
   };
+}
+function htmlStreakFreezeChip(attr) {
+  const n = (attr == null ? void 0 : attr.streak_freezes_available) || 0;
+  if (n <= 0) return "";
+  const label = n === 1 ? "1 streak freeze" : `${n} streak freezes`;
+  return `
+        <div class="fh-freeze-chip" title="Streak freeze tokens \u2014 auto-spent to protect your streak on a rough day">
+            <span class="fh-freeze-chip-icon">\u{1F9CA}</span>
+            <span class="fh-freeze-chip-label">${label}</span>
+        </div>`;
+}
+function htmlDailyProgress(attr) {
+  const done = (attr == null ? void 0 : attr.tasks_done_today) || 0;
+  const remaining = ((attr == null ? void 0 : attr.tasks_due_today_list) || []).filter((t) => t.chore_type !== "reminder").length;
+  const total = done + remaining;
+  if (total === 0) return "";
+  const pct = Math.round(done / total * 100);
+  const allDone = done >= total;
+  const label = allDone ? `\u2713 All ${total} done today!` : `${done} / ${total} done today`;
+  return `
+        <div class="fh-daily-progress ${allDone ? "fh-daily-progress--complete" : ""}">
+            <div class="fh-daily-progress-bar">
+                <div class="fh-daily-progress-fill" style="width:${pct}%"></div>
+            </div>
+            <span class="fh-daily-progress-label">${label}</span>
+        </div>`;
 }
 function groupByCategory(tasks, catOrder) {
   const overdue = tasks.filter((t) => t._over);
@@ -4734,6 +5198,136 @@ function htmlAddReminderCTA(person) {
             </button>
         </div>`;
 }
+function htmlGoalBanner(attr) {
+  const goal = attr == null ? void 0 : attr.goal;
+  if (!goal) return "";
+  const pct = Math.max(0, Math.min(100, goal.progress_pct | 0));
+  const cost = goal.points_cost | 0;
+  const have = Math.max(0, cost - (goal.remaining | 0));
+  return `
+        <div class="fh-goal-banner">
+            <div class="fh-goal-banner-head">
+                <span class="fh-goal-banner-lbl">Saving for</span>
+                <span class="fh-goal-banner-name">${escHTML(goal.name)}</span>
+                <span class="fh-goal-banner-amt">${have}/${cost} pts</span>
+            </div>
+            <div class="fh-goal-bar"><div class="fh-goal-bar-fill" style="width:${pct}%"></div></div>
+        </div>`;
+}
+function htmlRailGoal(attr) {
+  const goal = attr == null ? void 0 : attr.goal;
+  if (!goal) return "";
+  const pct = Math.max(0, Math.min(100, goal.progress_pct | 0));
+  const remaining = goal.remaining | 0;
+  const remLine = remaining > 0 ? `${remaining} pts to go` : `Goal reached!`;
+  return `
+        <div class="fh-goal-rail">
+            <div class="fh-goal-rail-lbl">SAVING FOR</div>
+            <div class="fh-goal-rail-name">${escHTML(goal.name)}</div>
+            <div class="fh-goal-bar"><div class="fh-goal-bar-fill" style="width:${pct}%"></div></div>
+            <div class="fh-goal-rail-rem">${escHTML(remLine)}</div>
+        </div>`;
+}
+function htmlStoreItemLimit(item) {
+  const max = (item == null ? void 0 : item.max_per_period) || 0;
+  if (!max) return "";
+  const period = (item == null ? void 0 : item.period) || "week";
+  const periodLabel = period === "day" ? "day" : period === "week" ? "week" : "month";
+  const limitText = `${max} per ${periodLabel}`;
+  const nextAvail = item == null ? void 0 : item.next_available;
+  if (!nextAvail) {
+    return `<span class="fh-store-limit">${escHTML(limitText)}</span>`;
+  }
+  const d = /* @__PURE__ */ new Date(nextAvail + "T00:00:00");
+  const dow = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d.getDay()];
+  const mon = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getMonth()];
+  const dateStr = `${dow} ${mon} ${d.getDate()}`;
+  return `<span class="fh-store-limit fh-store-limit--blocked">${escHTML(limitText)} \xB7 Available ${escHTML(dateStr)}</span>`;
+}
+function htmlGoalToggleBtn(item, attr, personId) {
+  const isGoal = (attr == null ? void 0 : attr.goal_item_id) && attr.goal_item_id === item.item_id;
+  return `
+        <button class="fh-goal-tog ${isGoal ? "is-goal" : ""}"
+                data-act="toggle-goal"
+                data-pid="${escAttr(personId)}"
+                data-iid="${escAttr(item.item_id)}"
+                title="${isGoal ? "Clear goal" : "Save toward this"}">
+            ${isGoal ? "\u2605" : "\u2606"}
+        </button>`;
+}
+function htmlGroupContributorBars(item, personId) {
+  if (!(item == null ? void 0 : item.is_group_reward)) return "";
+  const contribs = item.contributors || [];
+  if (!contribs.length) return "";
+  const totalContrib = contribs.reduce((s, c) => s + (c.contributed_pts || 0), 0);
+  const totalTarget = contribs.reduce((s, c) => s + (c.target_pts || 0), 0);
+  const overallPct = totalTarget > 0 ? Math.round(totalContrib / totalTarget * 100) : 0;
+  const pills = contribs.map((c) => {
+    const isMe = c.person_id === personId;
+    const done = c.contributed_pts >= (c.target_pts || 1);
+    const color = c.person_color || "#7F77DD";
+    const initial = (c.person_name || "?").charAt(0).toUpperCase();
+    return `
+            <span class="fh-gcp ${isMe ? "fh-gcp--me" : ""} ${done ? "fh-gcp--done" : ""}"
+                  title="${escAttr(c.person_name || "?")} \u2014 ${c.contributed_pts}/${c.target_pts} pts${isMe ? " (you)" : ""}">
+                <span class="fh-gcp-av" style="background:${color}">${escHTML(initial)}</span>
+                <span class="fh-gcp-pts">${c.contributed_pts}/${c.target_pts}</span>
+            </span>`;
+  }).join("");
+  return `
+        <div class="fh-group-reward-info">
+            <div class="fh-group-reward-line">
+                <span class="fh-group-reward-tag">\u{1F91D} GROUP \xB7 ${totalContrib}/${totalTarget} pts \xB7 ${overallPct}%</span>
+                <span class="fh-group-reward-pills">${pills}</span>
+            </div>
+        </div>`;
+}
+function htmlChipInBtn(item, personId, balance) {
+  if (!(item == null ? void 0 : item.is_group_reward)) return "";
+  const contrib = (item.contributors || []).find((c) => c.person_id === personId);
+  if (!contrib) return "";
+  const remaining = Math.max(0, (contrib.target_pts || 0) - (contrib.contributed_pts || 0));
+  if (remaining <= 0) {
+    return `<span class="fh-group-chip-done">\u2713 Your share complete</span>`;
+  }
+  const canAfford = balance >= 1;
+  return `
+        <button class="fh-group-chip-btn ${canAfford ? "" : "fh-group-chip-btn--disabled"}"
+                data-act="open-chip-in"
+                data-iid="${escAttr(item.item_id)}"
+                data-pid="${escAttr(personId)}"
+                data-remaining="${remaining}"
+                data-balance="${balance}"
+                ${canAfford ? "" : "disabled"}>
+            \u{1F91D} Chip In (${remaining} left)
+        </button>`;
+}
+function htmlGroupProposalBanner(proposals, personId) {
+  if (!proposals || !proposals.length) return "";
+  const rows = proposals.map((p) => `
+        <div class="fh-group-proposal-card">
+            <div class="fh-group-proposal-from">
+                \u{1F91D} <strong>${escHTML(p.proposer_name)}</strong> wants to save for
+                <strong>${escHTML(p.item_name)}</strong> with you
+            </div>
+            <div class="fh-group-proposal-share">Your share: ${p.my_share_pct}%</div>
+            <div class="fh-group-proposal-btns">
+                <button class="fh-group-proposal-accept"
+                        data-act="accept-group-proposal"
+                        data-propid="${escAttr(p.proposal_id)}"
+                        data-pid="${escAttr(personId)}">
+                    Accept
+                </button>
+                <button class="fh-group-proposal-decline"
+                        data-act="decline-group-proposal"
+                        data-propid="${escAttr(p.proposal_id)}"
+                        data-pid="${escAttr(personId)}">
+                    Decline
+                </button>
+            </div>
+        </div>`).join("");
+  return `<div class="fh-group-proposals">${rows}</div>`;
+}
 var init_shared = __esm({
   "src/card/themes/_shared.js"() {
     init_icons();
@@ -4757,7 +5351,7 @@ function _railPanels({
 }) {
   return `
         ${_railPanelKPIs(balance, weekly, openCount, pendingCount)}
-        ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, color, person)}
+        ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, color, person, attr)}
         ${_railPanelStreaks(attr, naAttr, person, color)}
         ${_railPanelRecent(person, naAttr, color)}`;
 }
@@ -4786,16 +5380,17 @@ function _railPanelKPIs(balance, weekly, openCount, pendingCount) {
         </div>`;
   return _railPanel("OVERVIEW", body);
 }
-function _railPanelRank(rankIdx, weekly, dropThr, gainThr, color, person) {
+function _railPanelRank(rankIdx, weekly, dropThr, gainThr, color, person, attr) {
   const bar = htmlRankBar(rankIdx, weekly, dropThr, gainThr, CLASSIC_RANKS, color);
   const streak = htmlSuccessStreak(person, color);
+  const freeze = htmlStreakFreezeChip(attr);
   if (!bar) {
     return _railPanel(
       "RANK",
-      `<div class="fh-classic-rmax">${escHTML(getEffectiveRank(rankIdx, CLASSIC_RANKS).name)} \xB7 max</div>${streak}`
+      `<div class="fh-classic-rmax">${escHTML(getEffectiveRank(rankIdx, CLASSIC_RANKS).name)} \xB7 max</div>${streak}${freeze}`
     );
   }
-  return _railPanel("RANK", bar + streak);
+  return _railPanel("RANK", bar + streak + freeze);
 }
 function _railPanelStreaks(attr, naAttr, person, color) {
   const active = getActiveStreaks(attr, naAttr, person, 8);
@@ -4918,6 +5513,7 @@ function _tasks(attr, color, person, card) {
         ${dueReminders.map((t) => renderRow(t, false)).join("")}` : "";
   const empty = !due.length && !overdue.length && !pending.length && !dueReminders.length;
   return `
+        ${htmlDailyProgress(attr)}
         ${htmlAddReminderCTA(person)}
         <div class="fh-row-list" style="--row-color:${color}">
             ${overdue.length ? overdue.map((t) => renderRow(t, true)).join("") : ""}
@@ -4937,21 +5533,31 @@ function _store(attr, color, person, balance, card) {
   const pendingByItemId = new Set(personPending.map((r) => r.item_id).filter(Boolean));
   const pendingByName = new Set(personPending.filter((r) => !r.item_id).map((r) => r.item_name));
   return `
+        ${htmlGroupProposalBanner(attr.group_proposals, person.person_id)}
+        ${htmlGoalBanner(attr)}
         <div class="fh-store-grid">
             ${items.map((item) => {
+    const isGroup = !!item.is_group_reward;
     const can = balance >= item.points_cost;
     const requested = pendingByItemId.has(item.item_id) || pendingByName.has(item.name);
+    const blocked = !!item.next_available;
     return `
                 <div class="fh-store-item">
-                    <div class="fh-store-name">${escHTML(item.name)}</div>
+                    <div class="fh-store-item-head">
+                        ${storeItemIcon(item)}
+                        <div class="fh-store-name">${escHTML(item.name)}</div>
+                        ${htmlGoalToggleBtn(item, attr, person.person_id)}
+                    </div>
                     ${item.description ? `<div class="fh-store-desc">${escHTML(item.description)}</div>` : ""}
-                    <div class="fh-store-price" style="color:${color}">${fPts(item.points_cost)}pts</div>
-                    ${requested ? `<span class="fh-badge fh-badge-requested" style="text-align:center">Requested \u2713</span>` : `<button class="fh-btn fh-btn-sm ${can ? "fh-btn-primary" : "fh-btn-ghost"}"
-                                   style="${can ? `background:${color}` : ""}"
-                                   data-act="redeem" data-iid="${item.item_id}" data-pid="${person.person_id}"
-                                   ${can ? "" : "disabled"}>
-                               ${can ? "Request" : "Need more pts"}
-                           </button>`}
+                    ${htmlStoreItemLimit(item)}
+                    ${htmlGroupContributorBars(item, person.person_id)}
+                    ${isGroup ? htmlChipInBtn(item, person.person_id, balance) : `<div class="fh-store-price" style="color:${color}">${fPts(item.points_cost)}pts</div>
+                           ${requested ? `<span class="fh-badge fh-badge-requested" style="text-align:center">Requested \u2713</span>` : blocked ? `<button class="fh-btn fh-btn-sm fh-btn-ghost" disabled style="opacity:.5;cursor:not-allowed">Not available</button>` : `<button class="fh-btn fh-btn-sm ${can ? "fh-btn-primary" : "fh-btn-ghost"}"
+                                          style="${can ? `background:${color}` : ""}"
+                                          data-act="redeem" data-iid="${item.item_id}" data-pid="${person.person_id}"
+                                          ${can ? "" : "disabled"}>
+                                      ${can ? "Request" : "Need more pts"}
+                                  </button>`}`}
                 </div>`;
   }).join("")}
         </div>`;
@@ -5113,7 +5719,8 @@ function _railPanels2({
 }) {
   return `
         ${_railPanelKPIs2(balance, openCount, weekly, attr.show_dollar_value ? attr.dollar_value : null)}
-        ${_railPanelRank2(rankIdx, weekly, dropThr, gainThr, person)}
+        ${htmlRailGoal(attr)}
+        ${_railPanelRank2(rankIdx, weekly, dropThr, gainThr, person, attr)}
         ${_railPanelStreaks2(attr, naAttr, person)}
         ${_railPanelSheet(person, rank, plotDate)}`;
 }
@@ -5147,16 +5754,17 @@ function _railPanelKPIs2(balance, openCount, weekly, dollarValue) {
         </div>`;
   return _railPanel2("TODAY \xB7 KPIS", body, { dense: true });
 }
-function _railPanelRank2(rankIdx, weekly, dropThr, gainThr, person) {
+function _railPanelRank2(rankIdx, weekly, dropThr, gainThr, person, attr) {
   const bar = htmlRankBar(rankIdx, weekly, dropThr, gainThr, ENGINEER_RANKS, ENG.amber);
   const streak = htmlSuccessStreak(person, ENG.amber);
+  const freeze = htmlStreakFreezeChip(attr);
   if (!bar) {
     return _railPanel2(
       "RANK \xB7 TRACK",
-      `<div class="fh-eng-rmax">${escHTML(getEffectiveRank(rankIdx, ENGINEER_RANKS).name)} &middot; MAX</div>${streak}`
+      `<div class="fh-eng-rmax">${escHTML(getEffectiveRank(rankIdx, ENGINEER_RANKS).name)} &middot; MAX</div>${streak}${freeze}`
     );
   }
-  return _railPanel2("RANK \xB7 TRACK", bar + streak);
+  return _railPanel2("RANK \xB7 TRACK", bar + streak + freeze);
 }
 function _railPanelStreaks2(attr, naAttr, person) {
   const active = getActiveStreaks(attr, naAttr, person, 8);
@@ -5233,6 +5841,7 @@ function _workOrders(attr, person, balance, card) {
         <div class="fh-row-section-hdr">// PENDING REVIEW</div>
         ${pending.map((t) => htmlChoreRow(t, engineerRowConfig, person, card, { index: ++pendingIdx })).join("")}` : "";
   return `
+        ${htmlDailyProgress(attr)}
         <div class="fh-row-list">
             ${all.slice(0, 6).map((t, i) => htmlChoreRow(t, engineerRowConfig, person, card, { index: i + 1 })).join("")}
             ${pendingSection}
@@ -5248,21 +5857,29 @@ function _rewards(attr, person, balance, card) {
   const pendingByItemId = new Set(personPending.map((r) => r.item_id).filter(Boolean));
   const pendingByName = new Set(personPending.filter((r) => !r.item_id).map((r) => r.item_name));
   return `
+        ${htmlGroupProposalBanner(attr.group_proposals, person.person_id)}
+        ${htmlGoalBanner(attr)}
         <div class="fh-eng-reward-list">
             ${items.map((item) => {
+    const isGroup = !!item.is_group_reward;
     const can = balance >= item.points_cost;
     const requested = pendingByItemId.has(item.item_id) || pendingByName.has(item.name);
+    const blocked = !!item.next_available;
     return `
                 <div class="fh-eng-reward-row">
+                    ${storeItemIcon(item)}
                     <div class="fh-eng-reward-body">
                         <div class="fh-eng-wo-name" style="font-size:1rem">${escHTML(item.name)}</div>
                         ${item.description ? `<div class="fh-eng-status">${escHTML(item.description)}</div>` : ""}
+                        ${htmlStoreItemLimit(item)}
+                        ${htmlGroupContributorBars(item, person.person_id)}
                     </div>
-                    <div class="fh-eng-pts-stamp" style="min-width:64px">
-                        <div class="fh-eng-pts-num" style="font-size:1.2rem">${fPts(item.points_cost)}</div>
-                        <div class="fh-eng-pts-lbl">POINTS</div>
-                    </div>
-                    ${requested ? `<div class="fh-eng-status" style="color:${ENG.amber}">&#10003; REQUESTED</div>` : `<button class="fh-eng-stamp-btn ${can ? "" : "disabled"}"
+                    ${isGroup ? "" : `<div class="fh-eng-pts-stamp" style="min-width:64px">
+                               <div class="fh-eng-pts-num" style="font-size:1.2rem">${fPts(item.points_cost)}</div>
+                               <div class="fh-eng-pts-lbl">POINTS</div>
+                           </div>`}
+                    ${htmlGoalToggleBtn(item, attr, person.person_id)}
+                    ${isGroup ? htmlChipInBtn(item, person.person_id, balance) : requested ? `<div class="fh-eng-status" style="color:${ENG.amber}">&#10003; REQUESTED</div>` : blocked ? `<div class="fh-eng-status" style="color:${ENG.amber};font-size:.75rem">NOT AVAILABLE</div>` : `<button class="fh-eng-stamp-btn ${can ? "" : "disabled"}"
                                    data-act="redeem" data-iid="${item.item_id}" data-pid="${person.person_id}"
                                    style="font-size:9px;${!can ? "opacity:.4;cursor:not-allowed" : ""}">
                                ${can ? "REQUISITION" : "INSUFFICIENT\nFUNDS"}
@@ -5474,7 +6091,8 @@ function _railPanels3({
 }) {
   return `
         ${_railPanelKPIs3(balance, weekly, openCount, attr.show_dollar_value ? attr.dollar_value : null)}
-        ${_railPanelRank3(rankIdx, weekly, dropThr, gainThr, person)}
+        ${htmlRailGoal(attr)}
+        ${_railPanelRank3(rankIdx, weekly, dropThr, gainThr, person, attr)}
         ${_railPanelStreaks3(attr, naAttr, person)}
         ${_railPanelRecent2(person, naAttr)}`;
 }
@@ -5503,16 +6121,17 @@ function _railPanelKPIs3(balance, weekly, openCount, dollarValue) {
         </div>`;
   return _railPanel3("the pantry today", body);
 }
-function _railPanelRank3(rankIdx, weekly, dropThr, gainThr, person) {
+function _railPanelRank3(rankIdx, weekly, dropThr, gainThr, person, attr) {
   const bar = htmlRankBar(rankIdx, weekly, dropThr, gainThr, BAKER_RANKS, BK.terra);
   const streak = htmlSuccessStreak(person, BK.terra);
+  const freeze = htmlStreakFreezeChip(attr);
   if (!bar) {
     return _railPanel3(
       "promotion track",
-      `<div class="fh-bk-rmax">${escHTML(getEffectiveRank(rankIdx, BAKER_RANKS).name)} \xB7 top of the line</div>${streak}`
+      `<div class="fh-bk-rmax">${escHTML(getEffectiveRank(rankIdx, BAKER_RANKS).name)} \xB7 top of the line</div>${streak}${freeze}`
     );
   }
-  return _railPanel3("promotion track", bar + streak);
+  return _railPanel3("promotion track", bar + streak + freeze);
 }
 function _railPanelStreaks3(attr, naAttr, person) {
   const active = getActiveStreaks(attr, naAttr, person, 8);
@@ -5593,6 +6212,7 @@ function _orders(attr, person, naAttr, card) {
         <div class="fh-row-section-hdr">Awaiting approval</div>
         ${pending.map((t) => htmlChoreRow(t, bakerRowConfig, person, card)).join("")}` : "";
   return `
+        ${htmlDailyProgress(attr)}
         <div class="fh-row-list">
             ${groupHtml}
             ${pendingSection}
@@ -5606,18 +6226,26 @@ function _menu(attr, person, balance, card) {
   const pendingByItemId = new Set(personPending.map((r) => r.item_id).filter(Boolean));
   const pendingByName = new Set(personPending.filter((r) => !r.item_id).map((r) => r.item_name));
   return `
+        ${htmlGroupProposalBanner(attr.group_proposals, person.person_id)}
+        ${htmlGoalBanner(attr)}
         <div class="fh-bk-menu">
             ${items.map((item) => {
+    const isGroup = !!item.is_group_reward;
     const can = balance >= item.points_cost;
     const requested = pendingByItemId.has(item.item_id) || pendingByName.has(item.name);
+    const blocked = !!item.next_available;
     return `
                 <div class="fh-bk-menu-item">
+                    ${storeItemIcon(item)}
                     <div class="fh-bk-menu-body">
                         <div class="fh-bk-menu-name">${escHTML(item.name)}</div>
                         ${item.description ? `<div class="fh-bk-menu-desc">${escHTML(item.description)}</div>` : ""}
+                        ${htmlStoreItemLimit(item)}
+                        ${htmlGroupContributorBars(item, person.person_id)}
                     </div>
-                    <div class="fh-bk-menu-price" style="color:${BK.terra}">${fPts(item.points_cost)}pts</div>
-                    ${requested ? `<span class="fh-bk-badge" style="color:${BK.terra}">Requested \u2713</span>` : `<button class="fh-bk-go-btn ${can ? "" : "disabled"}"
+                    ${isGroup ? "" : `<div class="fh-bk-menu-price" style="color:${BK.terra}">${fPts(item.points_cost)}pts</div>`}
+                    ${htmlGoalToggleBtn(item, attr, person.person_id)}
+                    ${isGroup ? htmlChipInBtn(item, person.person_id, balance) : requested ? `<span class="fh-bk-badge" style="color:${BK.terra}">Requested \u2713</span>` : blocked ? `<span class="fh-bk-badge" style="color:var(--fh-overdue)">Not available</span>` : `<button class="fh-bk-go-btn ${can ? "" : "disabled"}"
                                    data-act="redeem" data-iid="${escAttr(item.item_id)}" data-pid="${escAttr(person.person_id)}"
                                    ${!can ? 'disabled style="opacity:.4;cursor:not-allowed"' : ""}>
                                ${can ? "Request" : "Need more"}
@@ -5800,7 +6428,8 @@ function _railPanels4({
 }) {
   return `
         ${_railPanelKPIs4(balance, weekly, openCount, attr.show_dollar_value ? attr.dollar_value : null)}
-        ${_railPanelRank4(rankIdx, weekly, dropThr, gainThr, person)}
+        ${htmlRailGoal(attr)}
+        ${_railPanelRank4(rankIdx, weekly, dropThr, gainThr, person, attr)}
         ${_railPanelStreaks4(attr, naAttr, person)}
         ${_railPanelFindings(person, naAttr)}`;
 }
@@ -5829,16 +6458,17 @@ function _railPanelKPIs4(balance, weekly, openCount, dollarValue) {
         </div>`;
   return _railPanel4("FIELD KIT \xB7 TODAY", body);
 }
-function _railPanelRank4(rankIdx, weekly, dropThr, gainThr, person) {
+function _railPanelRank4(rankIdx, weekly, dropThr, gainThr, person, attr) {
   const bar = htmlRankBar(rankIdx, weekly, dropThr, gainThr, DINOS_RANKS, DN.amber);
   const streak = htmlSuccessStreak(person, DN.amber);
+  const freeze = htmlStreakFreezeChip(attr);
   if (!bar) {
     return _railPanel4(
       "DIG STATUS",
-      `<div class="fh-dn-rmax">${escHTML(getEffectiveRank(rankIdx, DINOS_RANKS).name)} \xB7 MAX</div>${streak}`
+      `<div class="fh-dn-rmax">${escHTML(getEffectiveRank(rankIdx, DINOS_RANKS).name)} \xB7 MAX</div>${streak}${freeze}`
     );
   }
-  return _railPanel4("DIG STATUS", bar + streak);
+  return _railPanel4("DIG STATUS", bar + streak + freeze);
 }
 function _railPanelStreaks4(attr, naAttr, person) {
   const active = getActiveStreaks(attr, naAttr, person, 8);
@@ -5920,6 +6550,7 @@ function _fieldTasks(attr, person, naAttr, card) {
         <div class="fh-row-section-hdr">AWAITING APPROVAL</div>
         ${pending.map((t) => htmlChoreRow(t, dinosRowConfig, person, card)).join("")}` : "";
   return `
+        ${htmlDailyProgress(attr)}
         <div class="fh-row-list">
             ${groupHtml}
             ${pendingSection}
@@ -5933,18 +6564,26 @@ function _supply(attr, person, balance, card) {
   const pendingByItemId = new Set(personPending.map((r) => r.item_id).filter(Boolean));
   const pendingByName = new Set(personPending.filter((r) => !r.item_id).map((r) => r.item_name));
   return `
+        ${htmlGroupProposalBanner(attr.group_proposals, person.person_id)}
+        ${htmlGoalBanner(attr)}
         <div class="fh-dn-supply">
             ${items.map((item) => {
+    const isGroup = !!item.is_group_reward;
     const can = balance >= item.points_cost;
     const requested = pendingByItemId.has(item.item_id) || pendingByName.has(item.name);
+    const blocked = !!item.next_available;
     return `
                 <div class="fh-dn-supply-item">
+                    ${storeItemIcon(item)}
                     <div class="fh-dn-supply-body">
                         <div class="fh-dn-supply-name">${escHTML(item.name)}</div>
                         ${item.description ? `<div class="fh-dn-supply-desc">${escHTML(item.description)}</div>` : ""}
+                        ${htmlStoreItemLimit(item)}
+                        ${htmlGroupContributorBars(item, person.person_id)}
                     </div>
-                    <div class="fh-dn-pts-tag" style="color:${DN.amber}">${fPts(item.points_cost)}pts</div>
-                    ${requested ? `<span style="color:${DN.amber};font-size:.8rem;font-weight:700">CLAIMED \u2713</span>` : `<button class="fh-dn-go-btn ${can ? "" : "disabled"}"
+                    ${isGroup ? "" : `<div class="fh-dn-pts-tag" style="color:${DN.amber}">${fPts(item.points_cost)}pts</div>`}
+                    ${htmlGoalToggleBtn(item, attr, person.person_id)}
+                    ${isGroup ? htmlChipInBtn(item, person.person_id, balance) : requested ? `<span style="color:${DN.amber};font-size:.8rem;font-weight:700">CLAIMED \u2713</span>` : blocked ? `<span style="color:var(--fh-overdue);font-size:.75rem;font-weight:600">NOT AVAILABLE</span>` : `<button class="fh-dn-go-btn ${can ? "" : "disabled"}"
                                    data-act="redeem" data-iid="${escAttr(item.item_id)}" data-pid="${escAttr(person.person_id)}"
                                    ${!can ? 'disabled style="opacity:.4;cursor:not-allowed"' : ""}>
                                ${can ? "CLAIM" : "NEED MORE"}
@@ -6140,7 +6779,8 @@ function _railPanels5({
 }) {
   return `
         ${_railPanelKPIs5(balance, weekly, openCount, attr.show_dollar_value ? attr.dollar_value : null)}
-        ${_railPanelRank5(rankIdx, weekly, dropThr, gainThr, person)}
+        ${htmlRailGoal(attr)}
+        ${_railPanelRank5(rankIdx, weekly, dropThr, gainThr, person, attr)}
         ${_railPanelStreaks5(attr, naAttr, person)}
         ${_railPanelOwlPost(person, naAttr)}`;
 }
@@ -6169,16 +6809,17 @@ function _railPanelKPIs5(balance, weekly, openCount, dollarValue) {
         </div>`;
   return _railPanel5("HOUSE STANDINGS", body);
 }
-function _railPanelRank5(rankIdx, weekly, dropThr, gainThr, person) {
+function _railPanelRank5(rankIdx, weekly, dropThr, gainThr, person, attr) {
   const bar = htmlRankBar(rankIdx, weekly, dropThr, gainThr, HP_RANKS, HP.emerald);
   const streak = htmlSuccessStreak(person, HP.emerald);
+  const freeze = htmlStreakFreezeChip(attr);
   if (!bar) {
     return _railPanel5(
       "O.W.L. PROGRESS",
-      `<div class="fh-hp-rmax">${escHTML(getEffectiveRank(rankIdx, HP_RANKS).name)} \xB7 max marks</div>${streak}`
+      `<div class="fh-hp-rmax">${escHTML(getEffectiveRank(rankIdx, HP_RANKS).name)} \xB7 max marks</div>${streak}${freeze}`
     );
   }
-  return _railPanel5("O.W.L. PROGRESS", bar + streak);
+  return _railPanel5("O.W.L. PROGRESS", bar + streak + freeze);
 }
 function _railPanelStreaks5(attr, naAttr, person) {
   const active = getActiveStreaks(attr, naAttr, person, 8);
@@ -6259,6 +6900,7 @@ function _assignments(attr, person, naAttr, card) {
         <div class="fh-row-section-hdr">Awaiting approval</div>
         ${pending.map((t) => htmlChoreRow(t, hpRowConfig, person, card)).join("")}` : "";
   return `
+        ${htmlDailyProgress(attr)}
         <div class="fh-row-list">
             ${groupHtml}
             ${pendingSection}
@@ -6272,18 +6914,26 @@ function _vault(attr, person, balance, card) {
   const pendingByItemId = new Set(personPending.map((r) => r.item_id).filter(Boolean));
   const pendingByName = new Set(personPending.filter((r) => !r.item_id).map((r) => r.item_name));
   return `
+        ${htmlGroupProposalBanner(attr.group_proposals, person.person_id)}
+        ${htmlGoalBanner(attr)}
         <div class="fh-hp-vault">
             ${items.map((item) => {
+    const isGroup = !!item.is_group_reward;
     const can = balance >= item.points_cost;
     const requested = pendingByItemId.has(item.item_id) || pendingByName.has(item.name);
+    const blocked = !!item.next_available;
     return `
                 <div class="fh-hp-vault-item">
+                    ${storeItemIcon(item)}
                     <div class="fh-hp-vault-body">
                         <div class="fh-hp-vault-name">${escHTML(item.name)}</div>
                         ${item.description ? `<div class="fh-hp-vault-desc">${escHTML(item.description)}</div>` : ""}
+                        ${htmlStoreItemLimit(item)}
+                        ${htmlGroupContributorBars(item, person.person_id)}
                     </div>
-                    <div class="fh-hp-pts-seal" style="color:${HP.emerald}">${fPts(item.points_cost)}pts</div>
-                    ${requested ? `<span style="color:${HP.emerald};font-size:.8rem;font-weight:700">Requested \u2713</span>` : `<button class="fh-hp-cast-btn ${can ? "" : "disabled"}"
+                    ${isGroup ? "" : `<div class="fh-hp-pts-seal" style="color:${HP.emerald}">${fPts(item.points_cost)}pts</div>`}
+                    ${htmlGoalToggleBtn(item, attr, person.person_id)}
+                    ${isGroup ? htmlChipInBtn(item, person.person_id, balance) : requested ? `<span style="color:${HP.emerald};font-size:.8rem;font-weight:700">Requested \u2713</span>` : blocked ? `<span style="color:var(--fh-overdue);font-size:.75rem;font-weight:600">Not available</span>` : `<button class="fh-hp-cast-btn ${can ? "" : "disabled"}"
                                    data-act="redeem" data-iid="${escAttr(item.item_id)}" data-pid="${escAttr(person.person_id)}"
                                    ${!can ? 'disabled style="opacity:.4;cursor:not-allowed"' : ""}>
                                ${can ? "Request" : "Need more"}
@@ -6479,7 +7129,8 @@ function _railPanels6({
 }) {
   return `
         ${_railPanelKPIs6(balance, weekly, openCount, attr.show_dollar_value ? attr.dollar_value : null)}
-        ${_railPanelRank6(rankIdx, weekly, dropThr, gainThr, person)}
+        ${htmlRailGoal(attr)}
+        ${_railPanelRank6(rankIdx, weekly, dropThr, gainThr, person, attr)}
         ${_railPanelStreaks6(attr, naAttr, person)}
         ${_railPanelNextUp(nextItem, fillPct)}`;
 }
@@ -6508,16 +7159,17 @@ function _railPanelKPIs6(balance, weekly, openCount, dollarValue) {
         </div>`;
   return _railPanel6("POWER LEVEL", body);
 }
-function _railPanelRank6(rankIdx, weekly, dropThr, gainThr, person) {
+function _railPanelRank6(rankIdx, weekly, dropThr, gainThr, person, attr) {
   const bar = htmlRankBar(rankIdx, weekly, dropThr, gainThr, DBZ_RANKS, DBZ.orange);
   const streak = htmlSuccessStreak(person, DBZ.orange);
+  const freeze = htmlStreakFreezeChip(attr);
   if (!bar) {
     return _railPanel6(
       "NEXT FORM",
-      `<div class="fh-dbz-rmax">${escHTML(getEffectiveRank(rankIdx, DBZ_RANKS).name)} \xB7 MAX</div>${streak}`
+      `<div class="fh-dbz-rmax">${escHTML(getEffectiveRank(rankIdx, DBZ_RANKS).name)} \xB7 MAX</div>${streak}${freeze}`
     );
   }
-  return _railPanel6("NEXT FORM", bar + streak);
+  return _railPanel6("NEXT FORM", bar + streak + freeze);
 }
 function _railPanelStreaks6(attr, naAttr, person) {
   const active = getActiveStreaks(attr, naAttr, person, 8);
@@ -6593,6 +7245,7 @@ function _missions(attr, person, naAttr, card) {
         <div class="fh-row-section-hdr">WAITING FOR APPROVAL</div>
         ${pending.map((t) => htmlChoreRow(t, dbzRowConfig, person, card)).join("")}` : "";
   return `
+        ${htmlDailyProgress(attr)}
         <div class="fh-row-list">
             ${groupHtml}
             ${pendingSection}
@@ -6608,17 +7261,25 @@ function _powerUps(attr, person, balance, card) {
   const pendingByItemId = new Set(personPending.map((r) => r.item_id).filter(Boolean));
   const pendingByName = new Set(personPending.filter((r) => !r.item_id).map((r) => r.item_name));
   return `
+        ${htmlGroupProposalBanner(attr.group_proposals, person.person_id)}
+        ${htmlGoalBanner(attr)}
         <div class="fh-dbz-powerup-list">
             ${items.map((item) => {
+    const isGroup = !!item.is_group_reward;
     const can = balance >= item.points_cost;
     const requested = pendingByItemId.has(item.item_id) || pendingByName.has(item.name);
+    const blocked = !!item.next_available;
     return `
-                <div class="fh-dbz-powerup-row ${!can ? "locked" : ""}">
+                <div class="fh-dbz-powerup-row ${!isGroup && !can ? "locked" : ""}">
+                    ${storeItemIcon(item)}
                     <div class="fh-dbz-powerup-body">
                         <div class="fh-dbz-powerup-name">${escHTML(item.name)}</div>
-                        <div class="fh-dbz-powerup-cost">${fPts(item.points_cost)}\u26A1</div>
+                        ${isGroup ? "" : `<div class="fh-dbz-powerup-cost">${fPts(item.points_cost)}\u26A1</div>`}
+                        ${htmlStoreItemLimit(item)}
+                        ${htmlGroupContributorBars(item, person.person_id)}
                     </div>
-                    ${requested ? `<span style="color:${DBZ.orange};font-weight:800;font-size:.9rem">SENT \u2713</span>` : `<button class="fh-dbz-go-btn ${can ? "" : "locked"}"
+                    ${htmlGoalToggleBtn(item, attr, person.person_id)}
+                    ${isGroup ? htmlChipInBtn(item, person.person_id, balance) : requested ? `<span style="color:${DBZ.orange};font-weight:800;font-size:.9rem">SENT \u2713</span>` : blocked ? `<span style="color:var(--fh-overdue);font-weight:700;font-size:.8rem">NOT YET</span>` : `<button class="fh-dbz-go-btn ${can ? "" : "locked"}"
                                    data-act="redeem" data-iid="${escAttr(item.item_id)}" data-pid="${escAttr(person.person_id)}"
                                    ${!can ? 'disabled style="opacity:.35;cursor:not-allowed"' : ""}>
                                ${can ? "GET!" : "NEED \u26A1"}
@@ -7695,30 +8356,80 @@ function mAddTask(people) {
     "ok-add-task"
   );
 }
-function choreFormFields(chore, isEdit, people, catLabels, activeTab = "details") {
-  const c = chore || {};
-  const rec = c.recurrence || {};
-  const recType = rec.type || "daily";
-  const assigned = c.assigned_to || [];
+function iconPickerGrid(selectedKey) {
   const iconsByCat = /* @__PURE__ */ new Map();
   for (const m of FH_ICON_META) {
     const cat = m.category || "Other";
     if (!iconsByCat.has(cat)) iconsByCat.set(cat, []);
     iconsByCat.get(cat).push(m);
   }
-  const iconGridHtml = [...iconsByCat.entries()].map(([cat, items]) => `
+  return [...iconsByCat.entries()].map(([cat, items]) => `
         <div class="fh-icon-picker-cat-hdr">${escHTML(cat)}</div>
         <div class="fh-icon-picker-cat-grid">
           ${items.map(({ key, label }) => `
-            <button class="fh-icon-cell${c.icon === key ? " selected" : ""}"
+            <button class="fh-icon-cell${selectedKey === key ? " selected" : ""}"
                     data-act="pick-icon" data-icon="${key}" type="button"
                     title="${label}">
               <span style="display:inline-flex;width:28px;height:28px;color:var(--fh-text)">${FH_ICONS[key]}</span>
               <span class="fh-icon-cell-label">${label}</span>
             </button>`).join("")}
         </div>`).join("");
+}
+function rewardIconPickerGrid(selectedKey) {
+  const iconsByCat = /* @__PURE__ */ new Map();
+  for (const m of FH_REWARD_ICON_META) {
+    const cat = m.category || "Other";
+    if (!iconsByCat.has(cat)) iconsByCat.set(cat, []);
+    iconsByCat.get(cat).push(m);
+  }
+  return [...iconsByCat.entries()].map(([cat, items]) => `
+        <div class="fh-icon-picker-cat-hdr">${escHTML(cat)}</div>
+        <div class="fh-icon-picker-cat-grid">
+          ${items.map(({ key, label }) => `
+            <button class="fh-icon-cell${selectedKey === key ? " selected" : ""}"
+                    data-act="pick-icon" data-icon="${key}" type="button"
+                    title="${label}">
+              <span style="display:inline-flex;width:28px;height:28px;color:var(--fh-text)">${FH_ICONS[key]}</span>
+              <span class="fh-icon-cell-label">${label}</span>
+            </button>`).join("")}
+        </div>`).join("");
+}
+function rewardIconPickerSection(selectedKey) {
+  const isCustom = typeof selectedKey === "string" && selectedKey.startsWith("data:image/");
+  const previewHTML = isCustom ? `<div id="m-cicon-preview" style="display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:8px;border:1px solid var(--fh-border);border-radius:6px;background:var(--fh-surface)">
+             <img src="${escAttr(selectedKey)}" style="width:48px;height:48px;object-fit:contain;border-radius:4px" alt="">
+             <span style="font-size:.85rem;color:var(--fh-text-sec)">Custom uploaded image</span>
+             <button type="button" class="fh-btn fh-btn-ghost fh-btn-sm" data-act="clear-icon" style="margin-left:auto">Clear</button>
+           </div>` : `<div id="m-cicon-preview"></div>`;
+  return `
+      <div class="fh-field">
+        <label class="fh-label">Icon (optional)</label>
+        <input type="hidden" id="m-cicon" value="${escAttr(selectedKey || "")}">
+        <!-- Persistent file input \u2014 kept in the DOM so the change event fires reliably
+             after the OS picker closes (avoids the GC race when the input is created
+             on-the-fly and removed before the user picks a file). -->
+        <input type="file" id="m-icon-upload" accept="image/png,image/jpeg,image/webp,image/gif" style="display:none">
+        ${previewHTML}
+        <div class="fh-icon-picker-grid">${rewardIconPickerGrid(isCustom ? "" : selectedKey || "")}</div>
+        <div style="display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap">
+          <button type="button" class="fh-btn fh-btn-ghost" data-act="upload-icon">
+            \u{1F4F7} Upload image\u2026
+          </button>
+          <span style="font-size:.78rem;color:var(--fh-text-sec)">PNG/JPG, max ~256 KB</span>
+        </div>
+      </div>`;
+}
+function choreFormFields(chore, isEdit, people, catLabels, activeTab = "details") {
+  const c = chore || {};
+  const rec = c.recurrence || {};
+  const recType = rec.type || "daily";
+  const assigned = c.assigned_to || [];
+  const iconGridHtml = iconPickerGrid(c.icon);
+  const selMeta = FH_ICON_META.find((m) => m.key === c.icon);
+  const selLabel = selMeta ? selMeta.label : c.icon || "";
   const tabs = [
     { key: "details", label: "Details" },
+    { key: "icon", label: "Icon" },
     { key: "schedule", label: "Schedule" },
     { key: "rewards", label: "Points & Rewards" },
     { key: "reminders", label: "Reminders" }
@@ -7736,7 +8447,29 @@ function choreFormFields(chore, isEdit, people, catLabels, activeTab = "details"
            style="${activeTab === key ? "" : "display:none"}">
         ${content}
       </div>`;
+  const tplGroups = /* @__PURE__ */ new Map();
+  for (const t of CHORE_TEMPLATES) {
+    const g = t.category || "Other";
+    if (!tplGroups.has(g)) tplGroups.set(g, []);
+    tplGroups.get(g).push(t);
+  }
+  const tplOptions = [...tplGroups.entries()].map(([group, items]) => `
+        <optgroup label="${escAttr(group)}">
+          ${items.map((t) => `<option value="${escAttr(t.key)}">${escHTML(t.name)}</option>`).join("")}
+        </optgroup>`).join("");
   const detailsPane = pane("details", `
+        ${!isEdit ? `
+        <div class="fh-field fh-tpl-picker-field">
+          <label class="fh-label">From template (optional)</label>
+          <div class="fh-tpl-picker-row">
+            <select class="fh-select" id="m-ctpl" style="flex:1">
+              <option value="">\u2014 Start from scratch \u2014</option>
+              ${tplOptions}
+            </select>
+            <button type="button" class="fh-btn fh-btn-ghost fh-tpl-apply-btn"
+                    data-act="pick-template">Apply</button>
+          </div>
+        </div>` : ""}
         <div class="fh-field">
           <label class="fh-label">Chore name *</label>
           <input class="fh-input" id="m-cname" type="text"
@@ -7746,13 +8479,6 @@ function choreFormFields(chore, isEdit, people, catLabels, activeTab = "details"
           <label class="fh-label">Description (optional)</label>
           <input class="fh-input" id="m-cdesc" type="text"
                  value="${escAttr(c.description || "")}" placeholder="More detail\u2026">
-        </div>
-        <div class="fh-field">
-          <label class="fh-label">Icon</label>
-          <input type="hidden" id="m-cicon" value="${escAttr(c.icon || "")}">
-          <div class="fh-chore-icon-grid">
-            ${iconGridHtml}
-          </div>
         </div>
         <div class="fh-row">
           <div class="fh-field">
@@ -7782,6 +8508,20 @@ function choreFormFields(chore, isEdit, people, catLabels, activeTab = "details"
             <label for="m-everyone" style="font-size:.85rem;font-weight:600;cursor:pointer">Everyone</label>
           </div>
           ${multiPersonCheckboxes(people, assigned, "m-assign-person")}
+        </div>
+    `);
+  const iconSearchHandler = `((el)=>{const q=el.value.toLowerCase().trim(),p=el.closest('.fh-chore-tab-pane');p.querySelectorAll('.fh-icon-picker-cat-hdr').forEach(h=>{const g=h.nextElementSibling;let n=0;g.querySelectorAll('.fh-icon-cell').forEach(b=>{const m=!q||(b.title+' '+b.dataset.icon).toLowerCase().includes(q);b.style.display=m?'':'none';if(m)n++;});h.style.display=n?'':'none';g.style.display=n?'':'none';});})(this)`;
+  const iconPane = pane("icon", `
+        <input type="hidden" id="m-cicon" value="${escAttr(c.icon || "")}">
+        <div class="fh-icon-selected-wrap" id="m-icon-selected">
+          ${c.icon && FH_ICONS[c.icon] ? `<span class="fh-icon-sel-icon" style="display:inline-flex;width:20px;height:20px;color:var(--fh-accent)">${FH_ICONS[c.icon]}</span>
+               <span class="fh-icon-sel-lbl">${escHTML(selLabel)}</span>` : `<span class="fh-icon-sel-none">No icon selected \u2014 pick one below</span>`}
+        </div>
+        <input class="fh-input fh-icon-search" id="m-icon-search" type="search"
+               placeholder="Search icons\u2026" autocomplete="off"
+               oninput="${iconSearchHandler}">
+        <div class="fh-icon-tab-grid">
+          ${iconGridHtml}
         </div>
     `);
   const schedulePane = pane("schedule", `
@@ -7936,6 +8676,7 @@ function choreFormFields(chore, isEdit, people, catLabels, activeTab = "details"
         ${tabStrip}
         <div class="fh-chore-tab-panes">
           ${detailsPane}
+          ${iconPane}
           ${schedulePane}
           ${rewardsPane}
           ${remindersPane}
@@ -7952,69 +8693,138 @@ function mChoreForm(chore, isEdit, people, catLabels, activeTab = "details") {
     okAct
   );
 }
-function mAddStoreItem(people) {
+function storeItemFormFields(item, isEdit, people, catLabels) {
+  const name = (item == null ? void 0 : item.name) || "";
+  const desc = (item == null ? void 0 : item.description) || "";
+  const dollar = (item == null ? void 0 : item.dollar_value) ?? "";
+  const scope = (item == null ? void 0 : item.scope) || "common";
+  const personIds = (item == null ? void 0 : item.person_ids) || [];
+  const icon = (item == null ? void 0 : item.icon) || "";
+  const catLabel = (item == null ? void 0 : item.category_label) || "";
+  const maxPeriod = (item == null ? void 0 : item.max_per_period) ?? 0;
+  const period = (item == null ? void 0 : item.period) || "week";
+  const active = (item == null ? void 0 : item.active) !== false;
+  const isGroupReward = !!(item == null ? void 0 : item.is_group_reward);
+  const catOptions = catLabels.map(
+    (l) => `<option value="${escAttr(l)}" ${catLabel === l ? "selected" : ""}>${escHTML(l)}</option>`
+  ).join("");
+  const kids = people.filter((p) => p.type !== "parent");
+  const existingPct = {};
+  for (const c of (item == null ? void 0 : item.contributors) || []) {
+    existingPct[c.person_id] = c.share_pct || 0;
+  }
+  const scopeToggle = `((sel)=>{const r=sel.getRootNode();const grp=r.getElementById('m-sgroup');if(grp&&grp.checked)return;const pSec=r.getElementById('m-sperson-section');if(pSec)pSec.style.display=sel.value==='personal'?'':'none';})(this)`;
+  const groupToggle = `((cb)=>{const r=cb.getRootNode();const sec=r.getElementById('m-sgroup-section');const pSec=r.getElementById('m-sperson-section');if(sec)sec.style.display=cb.checked?'':'none';if(pSec)pSec.style.display=cb.checked?'none':'';})(this)`;
+  const equalSplit = `((btn)=>{const inputs=[...btn.closest('#m-sgroup-section').querySelectorAll('.m-scontrib')];if(!inputs.length)return;const each=Math.floor(100/inputs.length),rem=100-each*inputs.length;inputs.forEach((inp,i)=>{inp.value=each+(i===0?rem:0);});const tot=btn.closest('#m-sgroup-section').querySelector('#m-sgroup-total');if(tot){tot.textContent='Total: 100%';tot.style.color='var(--fh-success)';}})(this)`;
+  const updateTotal = `((inp)=>{const sec=inp.closest('#m-sgroup-section');if(!sec)return;const tot=[...sec.querySelectorAll('.m-scontrib')].reduce((s,i)=>s+(parseInt(i.value)||0),0);const el=sec.querySelector('#m-sgroup-total');if(el){el.textContent='Total: '+tot+'%';el.style.color=tot===100?'var(--fh-success)':tot>100?'var(--fh-overdue)':'var(--fh-text-sec)';}})(this)`;
+  const contribRows = kids.map((k) => {
+    const pct = existingPct[k.person_id] ?? "";
+    return `
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <span style="flex:1;font-size:.85rem">${escHTML(k.name)}</span>
+            <input type="number" class="fh-input m-scontrib"
+                   data-pid="${escAttr(k.person_id)}"
+                   style="width:72px;text-align:right"
+                   min="0" max="100" step="1" value="${pct}"
+                   oninput="${updateTotal}">
+            <span style="font-size:.85rem">%</span>
+          </div>`;
+  }).join("");
+  const initialTotal = kids.reduce((s, k) => s + (existingPct[k.person_id] || 0), 0);
+  const totalColor = initialTotal === 100 ? "var(--fh-success)" : initialTotal > 100 ? "var(--fh-overdue)" : "var(--fh-text-sec)";
+  return `
+      ${isEdit ? `<input type="hidden" id="m-eiid" value="${item.item_id}">` : ""}
+      <div class="fh-field">
+        <label class="fh-label">Item name *</label>
+        <input class="fh-input" id="m-sname" type="text" value="${escAttr(name)}"${!isEdit ? " autofocus" : ""}>
+      </div>
+      <div class="fh-field">
+        <label class="fh-label">Description (optional)</label>
+        <input class="fh-input" id="m-sdesc" type="text" value="${escAttr(desc)}">
+      </div>
+      <div class="fh-row">
+        <div class="fh-field">
+          <label class="fh-label">Dollar value *</label>
+          <input class="fh-input" id="m-sdollar" type="number" min="0.01"
+                 step="0.01" value="${dollar}" placeholder="e.g. 5.00">
+        </div>
+        <div class="fh-field">
+          <label class="fh-label">Scope</label>
+          <select class="fh-select" id="m-sscope" oninput="${scopeToggle}">
+            <option value="common"   ${scope === "common" ? "selected" : ""}>All kids</option>
+            <option value="personal" ${scope === "personal" ? "selected" : ""}>Specific people</option>
+          </select>
+        </div>
+      </div>
+      <div id="m-sperson-section" class="fh-field" style="${scope === "personal" && !isGroupReward ? "" : "display:none"}">
+        <label class="fh-label">Who can see this reward?</label>
+        ${multiPersonCheckboxes(people, personIds, "m-sp-person")}
+      </div>
+
+      <!-- Group reward toggle -->
+      <div class="fh-field" style="border-top:1px solid var(--fh-border);padding-top:10px;margin-top:4px">
+        <label class="fh-label" style="display:flex;align-items:center;gap:10px;cursor:pointer">
+          <label class="fh-toggle">
+            <input type="checkbox" id="m-sgroup" ${isGroupReward ? "checked" : ""} oninput="${groupToggle}">
+            <span class="fh-toggle-slider"></span>
+          </label>
+          \u{1F91D} Group reward \u2014 kids chip in together
+        </label>
+      </div>
+      <div id="m-sgroup-section" class="fh-field" style="${isGroupReward ? "" : "display:none"}">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <label class="fh-label" style="margin:0">Contributors &amp; share %</label>
+          <button type="button" class="fh-btn fh-btn-ghost fh-btn-sm"
+                  onclick="${equalSplit}">Equal split</button>
+        </div>
+        ${kids.length ? contribRows + `<div id="m-sgroup-total" style="font-size:.8rem;color:${totalColor}">Total: ${initialTotal}%</div>` : `<span style="font-size:.82rem;color:var(--fh-text-sec)">No kids found \u2014 add people first.</span>`}
+      </div>
+
+      <div class="fh-row">
+        <div class="fh-field">
+          <label class="fh-label">Category</label>
+          <select class="fh-select" id="m-scat">
+            <option value="" ${!catLabel ? "selected" : ""}>(none)</option>
+            ${catOptions}
+          </select>
+        </div>
+        <div class="fh-field">
+          <label class="fh-label">Active</label>
+          <label class="fh-toggle" style="margin-top:10px">
+            <input type="checkbox" id="m-sactive" ${active ? "checked" : ""}>
+            <span class="fh-toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+      <div class="fh-row">
+        <div class="fh-field">
+          <label class="fh-label">Max per period (0 = unlimited)</label>
+          <input class="fh-input" id="m-smaxperiod" type="number"
+                 min="0" step="1" value="${maxPeriod}">
+        </div>
+        <div class="fh-field">
+          <label class="fh-label">Period</label>
+          <select class="fh-select" id="m-speriod">
+            <option value="day"   ${period === "day" ? "selected" : ""}>Day</option>
+            <option value="week"  ${period === "week" ? "selected" : ""}>Week</option>
+            <option value="month" ${period === "month" ? "selected" : ""}>Month</option>
+          </select>
+        </div>
+      </div>
+      ${rewardIconPickerSection(icon)}`;
+}
+function mAddStoreItem(people, catLabels = []) {
   return mWrap(
     "Add reward item",
-    `<div class="fh-field">
-         <label class="fh-label">Item name *</label>
-         <input class="fh-input" id="m-sname" type="text" autofocus>
-       </div>
-       <div class="fh-field">
-         <label class="fh-label">Description (optional)</label>
-         <input class="fh-input" id="m-sdesc" type="text">
-       </div>
-       <div class="fh-row">
-         <div class="fh-field">
-           <label class="fh-label">Dollar value *</label>
-           <input class="fh-input" id="m-sdollar" type="number" min="0.01"
-                  step="0.01" placeholder="e.g. 5.00">
-         </div>
-         <div class="fh-field">
-           <label class="fh-label">Scope</label>
-           <select class="fh-select" id="m-sscope">
-             <option value="common">All kids</option>
-             <option value="personal">Specific people</option>
-           </select>
-         </div>
-       </div>
-       <div id="m-sperson-section" class="fh-field" style="display:none">
-         <label class="fh-label">Who can see this reward?</label>
-         ${multiPersonCheckboxes(people, [], "m-sp-person")}
-       </div>`,
+    storeItemFormFields(null, false, people, catLabels),
     "Add reward",
     "ok-add-store-item"
   );
 }
-function mEditStoreItem(item, people) {
+function mEditStoreItem(item, people, catLabels = []) {
   return mWrap(
-    `Edit \u2014 ${item.name}`,
-    `<input type="hidden" id="m-eiid" value="${item.item_id}">
-       <div class="fh-field">
-         <label class="fh-label">Item name *</label>
-         <input class="fh-input" id="m-sname" type="text" value="${escAttr(item.name)}" autofocus>
-       </div>
-       <div class="fh-field">
-         <label class="fh-label">Description (optional)</label>
-         <input class="fh-input" id="m-sdesc" type="text" value="${escAttr(item.description || "")}">
-       </div>
-       <div class="fh-row">
-         <div class="fh-field">
-           <label class="fh-label">Dollar value *</label>
-           <input class="fh-input" id="m-sdollar" type="number" min="0.01"
-                  step="0.01" value="${item.dollar_value}">
-         </div>
-         <div class="fh-field">
-           <label class="fh-label">Scope</label>
-           <select class="fh-select" id="m-sscope">
-             <option value="common"   ${item.scope === "common" ? "selected" : ""}>All kids</option>
-             <option value="personal" ${item.scope === "personal" ? "selected" : ""}>Specific people</option>
-           </select>
-         </div>
-       </div>
-       <div id="m-sperson-section" class="fh-field" style="${item.scope === "personal" ? "" : "display:none"}">
-         <label class="fh-label">Who can see this reward?</label>
-         ${multiPersonCheckboxes(people, item.person_ids || [], "m-sp-person")}
-       </div>`,
+    `Edit \u2014 ${escHTML(item.name)}`,
+    storeItemFormFields(item, true, people, catLabels),
     "Save changes",
     "ok-edit-store-item"
   );
@@ -8417,6 +9227,23 @@ function rotationPoolEditor(people, orderedIds) {
       <div class="fh-rot-available-lbl">Add to pool:</div>
       <div class="fh-rot-available">${availableHtml}</div>`;
 }
+function mChipIn(item, personId, balance, remaining) {
+  const maxPts = Math.min(balance, remaining);
+  const body = `
+        <div class="fh-field">
+            <label>Chip in toward <strong>${escHTML((item == null ? void 0 : item.name) || "reward")}</strong></label>
+            <div style="font-size:.8rem;color:var(--fh-text-sec);margin-bottom:8px">
+                Your share remaining: ${remaining} pts \xB7 Your balance: ${balance} pts
+            </div>
+            <input id="m-chipin-pts" class="fh-input" type="number"
+                   min="1" max="${maxPts}" value="${maxPts}"
+                   style="width:120px">
+            <span style="font-size:.85rem;color:var(--fh-text-sec)">pts</span>
+        </div>
+        <input type="hidden" id="m-chipin-iid" value="${escAttr((item == null ? void 0 : item.item_id) || "")}">
+        <input type="hidden" id="m-chipin-pid" value="${escAttr(personId)}">`;
+  return mWrap("Chip In \u2014 Group Reward", body, "Chip In", "ok-chip-in");
+}
 function multiPersonCheckboxes(people, selectedIds, cbClass) {
   if (!people.length) return `<span style="font-size:.82rem;color:var(--fh-text-sec)">No people found.</span>`;
   return `<div class="fh-person-cb-list">
@@ -8450,15 +9277,17 @@ function htmlAdmin(card) {
   const people = attr.people || [];
   const approvals = attr.approval_queue || [];
   const redemptions = attr.redemption_queue || [];
+  const groupProposals = attr.group_proposal_queue || [];
   const chores = attr.active_chores || [];
   const catLabels = attr.category_labels || [];
   const famName = attr.family_name || "Family Hub";
   const storeItems = attr.store_items || [];
-  const actionCount = approvals.length + redemptions.length;
+  const actionCount = approvals.length + redemptions.length + groupProposals.length;
   const sections = [
     { id: "today", label: "Today", icon: "\u25D0", badge: actionCount },
     { id: "family", label: "Family", icon: "\u25CD", badge: 0 },
     { id: "tasks", label: "Tasks", icon: "\u25C9", badge: 0 },
+    { id: "rewards", label: "Rewards", icon: "\u25C8", badge: 0 },
     { id: "history", label: "History", icon: "\u25D1", badge: 0 },
     { id: "settings", label: "Settings", icon: "\u25CE", badge: 0 }
   ];
@@ -8466,7 +9295,7 @@ function htmlAdmin(card) {
   let body = "";
   switch (sec) {
     case "today":
-      body = _htmlAdToday(approvals, redemptions, attr);
+      body = _htmlAdToday(approvals, redemptions, groupProposals, attr);
       break;
     case "family":
       body = _htmlAdFamily(people, attr);
@@ -8474,11 +9303,14 @@ function htmlAdmin(card) {
     case "tasks":
       body = _htmlAdTasks(chores, people, catLabels, card);
       break;
+    case "rewards":
+      body = _htmlAdRewards(storeItems, people, catLabels, card);
+      break;
     case "history":
       body = _htmlAdHistory(attr, card);
       break;
     case "settings":
-      body = _htmlAdSettings(attr, storeItems, people);
+      body = _htmlAdSettings(attr, people, card);
       break;
     default:
       body = _htmlAdToday(approvals, redemptions, attr);
@@ -8498,14 +9330,16 @@ function htmlAdmin(card) {
     tasks: {
       crumb: "CHORES",
       title: "Tasks",
-      actions: `<button class="fh-ad-btn fh-ad-btn--primary" data-act="open-add-chore">${I.plus} Add chore</button>`
+      actions: `<button class="fh-ad-btn fh-ad-btn--ghost" data-act="print-chore-list" title="Open a printable chore list in a new tab">${I.print} Print</button>
+                              <button class="fh-ad-btn fh-ad-btn--primary" data-act="open-add-chore">${I.plus} Add chore</button>`
+    },
+    rewards: {
+      crumb: "REWARDS",
+      title: "Rewards",
+      actions: `<button class="fh-ad-btn fh-ad-btn--primary" data-act="open-add-store-item">${I.plus} Add reward</button>`
     },
     history: { crumb: "ACTIVITY", title: "History", actions: "" },
-    settings: {
-      crumb: "CONFIGURATION",
-      title: "Settings",
-      actions: `<button class="fh-ad-btn fh-ad-btn--primary" data-act="open-add-store-item">${I.plus} Add reward</button>`
-    }
+    settings: { crumb: "CONFIGURATION", title: "Settings", actions: "" }
   };
   const tb = TB[sec] || TB.today;
   const sidebarItems = sections.map((s) => `
@@ -8551,15 +9385,21 @@ function htmlAdmin(card) {
 
       </div>`;
 }
-function _htmlAdToday(approvals, redemptions, attr) {
+function _htmlAdToday(approvals, redemptions, groupProposals, attr) {
   const people = attr.people || [];
   const chores = attr.active_chores || [];
   const historyLog = attr.history_log || [];
+  const allStoreItems = attr.store_items || [];
+  const fundedGroupItems = allStoreItems.filter((i) => {
+    if (!i.is_group_reward || !i.active) return false;
+    const contribs = i.contributors || [];
+    return contribs.length > 0 && contribs.every((c) => (c.contributed_pts || 0) >= (c.target_pts || 0));
+  });
   const stats = [
     { label: "APPROVAL QUEUE", value: approvals.length, accent: approvals.length > 0 ? "#F5C24A" : "#58D38A" },
     { label: "REDEEM QUEUE", value: redemptions.length, accent: redemptions.length > 0 ? "#E36DA4" : "#58D38A" },
-    { label: "ACTIVE CHORES", value: chores.length, accent: "#5B8DEF" },
-    { label: "FAMILY", value: people.length, accent: "#A6B3CC" }
+    { label: "GROUP PROPOSALS", value: groupProposals.length + fundedGroupItems.length, accent: groupProposals.length + fundedGroupItems.length > 0 ? "#58D38A" : "#A6B3CC" },
+    { label: "ACTIVE CHORES", value: chores.length, accent: "#5B8DEF" }
   ];
   const statCards = stats.map((s) => `
       <div class="fh-ad-stat">
@@ -8568,9 +9408,53 @@ function _htmlAdToday(approvals, redemptions, attr) {
       </div>`).join("");
   const queue = [
     ...approvals.map((a) => ({ ...a, kind: "approval" })),
-    ...redemptions.map((r) => ({ ...r, kind: "redemption" }))
+    ...redemptions.map((r) => ({ ...r, kind: "redemption" })),
+    ...groupProposals.map((p) => ({ ...p, kind: "group-proposal" })),
+    ...fundedGroupItems.map((i) => ({ ...i, kind: "group-funded" }))
   ];
   const queueRows = queue.length > 0 ? queue.map((q) => {
+    if (q.kind === "group-proposal") {
+      const color2 = q.proposer_color || DEFAULT_COLOR;
+      const inviteNames = (q.invitees || []).map((i) => i.person_name || "?").join(", ");
+      return `
+                  <div class="fh-ad-queue-row">
+                    <div class="fh-avatar" style="background:${color2};width:32px;height:32px;font-size:.75rem;flex-shrink:0">${ini(q.proposer_name)}</div>
+                    <div class="fh-ad-queue-info">
+                      <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+                        <span class="fh-ad-pill" style="background:#4CAF7D">GROUP</span>
+                      </div>
+                      <div class="fh-ad-queue-name">${escHTML(q.item_name || "")}</div>
+                      <div class="fh-ad-queue-meta">${escHTML(q.proposer_name)} + ${escHTML(inviteNames)}</div>
+                    </div>
+                    <button class="fh-btn fh-btn-success fh-btn-sm"
+                            data-act="approve-group-proposal"
+                            data-propid="${escAttr(q.proposal_id)}"
+                            data-by="admin">${I.check}</button>
+                    <button class="fh-btn fh-btn-danger fh-btn-sm"
+                            data-act="decline-group-proposal-parent"
+                            data-propid="${escAttr(q.proposal_id)}"
+                            data-by="admin">${I.close}</button>
+                  </div>`;
+    }
+    if (q.kind === "group-funded") {
+      const totalPts = (q.contributors || []).reduce((s, c) => s + (c.contributed_pts || 0), 0);
+      const names = (q.contributors || []).map((c) => c.person_name || "?").join(", ");
+      return `
+                  <div class="fh-ad-queue-row">
+                    <div style="width:32px;height:32px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.2rem">\u{1F91D}</div>
+                    <div class="fh-ad-queue-info">
+                      <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+                        <span class="fh-ad-pill" style="background:#4CAF7D">FUNDED</span>
+                      </div>
+                      <div class="fh-ad-queue-name">${escHTML(q.name || "")}</div>
+                      <div class="fh-ad-queue-meta">${escHTML(names)} \xB7 ${fPts(totalPts)} pts pooled</div>
+                    </div>
+                    <button class="fh-btn fh-btn-success fh-btn-sm"
+                            data-act="redeem-group-reward"
+                            data-iid="${escAttr(q.item_id)}"
+                            data-iname="${escAttr(q.name || "")}">Redeem</button>
+                  </div>`;
+    }
     const color = q.person_color || DEFAULT_COLOR;
     const isAppr = q.kind === "approval";
     const name = isAppr ? q.chore_name || "" : q.item_name || "";
@@ -8809,10 +9693,16 @@ function _htmlAdTasks(chores, people, catLabels, card) {
         ${sort.col ? `<button class="fh-ad-sort-btn" data-act="sort-admin-chores" data-col="">\u2715 Clear</button>` : ""}
       </div>`;
   const groups = /* @__PURE__ */ new Map();
+  for (const lbl of catLabels) {
+    groups.set(lbl, []);
+  }
   for (const c of sorted) {
     const key = c.category_label || "Uncategorized";
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(c);
+  }
+  for (const [k, v] of [...groups.entries()]) {
+    if (!v.length) groups.delete(k);
   }
   const selectedId = card._adminSelectedChoreId || null;
   const collapsedCats = card._adminCollapsedCats || /* @__PURE__ */ new Set();
@@ -8926,6 +9816,182 @@ function _htmlChoreEditorPanel(chore, people, catLabels, card) {
           </div>`;
   return `<div class="fh-ad-tasks-panel">${inner}</div>`;
 }
+function _htmlAdRewards(storeItems, people, catLabels, card) {
+  card._sortedStoreItems = storeItems;
+  const filterChips = `
+      <div class="fh-chips">
+        <div class="fh-chip ${!card._storeItemFilter ? "active" : ""}"
+             data-act="store-item-filter" data-fval="">All</div>
+        <div class="fh-chip ${card._storeItemFilter === "active" ? "active" : ""}"
+             data-act="store-item-filter" data-fval="active">Active</div>
+        <div class="fh-chip ${card._storeItemFilter === "inactive" ? "active" : ""}"
+             data-act="store-item-filter" data-fval="inactive">Inactive</div>
+      </div>`;
+  let visible = storeItems;
+  if (card._storeItemFilter === "active") visible = storeItems.filter((i) => i.active !== false);
+  if (card._storeItemFilter === "inactive") visible = storeItems.filter((i) => i.active === false);
+  const sort = card._adminSortItems || { col: null, dir: "asc" };
+  let sorted = [...visible];
+  if (sort.col) {
+    sorted.sort((a, b) => {
+      let va, vb;
+      switch (sort.col) {
+        case "name":
+          va = a.name.toLowerCase();
+          vb = b.name.toLowerCase();
+          break;
+        case "pts":
+          va = a.points_cost;
+          vb = b.points_cost;
+          break;
+        case "cat":
+          va = a.category_label || "";
+          vb = b.category_label || "";
+          break;
+        case "scope":
+          va = a.scope || "";
+          vb = b.scope || "";
+          break;
+        default:
+          va = vb = "";
+      }
+      if (va < vb) return sort.dir === "asc" ? -1 : 1;
+      if (va > vb) return sort.dir === "asc" ? 1 : -1;
+      return 0;
+    });
+  }
+  const sortCols = [
+    { col: "name", label: "Name" },
+    { col: "pts", label: "Pts" },
+    { col: "cat", label: "Category" },
+    { col: "scope", label: "Scope" }
+  ];
+  const sortBar = `
+      <div class="fh-ad-sort-bar">
+        <span class="fh-ad-sort-lbl">Sort:</span>
+        ${sortCols.map(({ col, label }) => {
+    const isActive = sort.col === col;
+    const arrow = isActive ? sort.dir === "asc" ? " \u2191" : " \u2193" : "";
+    return `<button class="fh-ad-sort-btn${isActive ? " active" : ""}"
+                            data-act="sort-admin-store-items" data-col="${col}">${label}${arrow}</button>`;
+  }).join("")}
+        ${sort.col ? `<button class="fh-ad-sort-btn" data-act="sort-admin-store-items" data-col="">\u2715 Clear</button>` : ""}
+      </div>`;
+  const groups = /* @__PURE__ */ new Map();
+  for (const lbl of catLabels) groups.set(lbl, []);
+  for (const item of sorted) {
+    const key = item.category_label || "Uncategorized";
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(item);
+  }
+  for (const [k, v] of [...groups.entries()]) {
+    if (!v.length) groups.delete(k);
+  }
+  const selectedId = card._adminSelectedItemId || null;
+  const collapsedCats = card._adminCollapsedRewardCats || /* @__PURE__ */ new Set();
+  let content = "";
+  if (!sorted.length) {
+    content = `<div class="fh-empty fh-ad-empty">${card._storeItemFilter ? "No rewards match this filter." : "No rewards yet. Add one above."}</div>`;
+  } else {
+    content = [...groups.entries()].map(([label, list]) => {
+      const collapsed = collapsedCats.has(label);
+      const rows = collapsed ? "" : list.map((i) => _htmlStoreItemTableRow(i, people, card, selectedId)).join("");
+      return `
+              <div class="fh-ad-cat-group">
+                <div class="fh-ad-cat-hdr" data-act="toggle-admin-reward-cat" data-cat="${escAttr(label)}">
+                  <span class="fh-ad-cat-chevron${collapsed ? " collapsed" : ""}">\u25BC</span>
+                  <span class="fh-ad-cat-name">${escHTML(label)}</span>
+                  <span class="fh-ad-cat-count">${list.length}</span>
+                </div>
+                ${collapsed ? "" : `<div class="fh-task-list">${rows}</div>`}
+              </div>`;
+    }).join("");
+  }
+  const selectedItem = selectedId ? storeItems.find((i) => i.item_id === selectedId) : null;
+  const panelHtml = _htmlStoreItemEditorPanel(selectedItem, people, catLabels, card);
+  return `
+      <div class="fh-ad-rewards-wrap">
+
+        <div class="fh-ad-panel fh-ad-rewards-list-panel">
+          <div class="fh-ad-panel-hdr">
+            <span class="fh-ad-panel-title">Reward catalog</span>
+            <span class="fh-ad-panel-sub">${storeItems.filter((i) => i.active !== false).length} active</span>
+          </div>
+          <div class="fh-ad-panel-body">
+            ${filterChips}
+            ${sortBar}
+            ${content}
+          </div>
+        </div>
+
+        ${panelHtml}
+
+      </div>`;
+}
+function _htmlStoreItemTableRow(item, people, card, selectedId) {
+  const personNames = (item.person_ids || []).map((id) => {
+    var _a;
+    return (_a = people.find((p) => p.person_id === id)) == null ? void 0 : _a.name;
+  }).filter(Boolean).join(", ");
+  const isSelected = item.item_id === selectedId;
+  const isInactive = item.active === false;
+  const rateMeta = item.max_per_period > 0 ? `<span class="fh-badge fh-badge-expiry" style="margin-left:4px">Max ${item.max_per_period}/${item.period}</span>` : "";
+  return `
+      <div class="fh-task-row${isSelected ? " fh-task-row--selected" : ""}${isInactive ? " fh-store-row--inactive" : ""}"
+           draggable="true" data-drag-id="${item.item_id}"
+           data-drag-type="store-item"
+           data-act="select-store-row" data-iid="${item.item_id}">
+        <span class="fh-drag-handle" title="Drag to reorder">\u283F</span>
+        ${item.icon ? `<span style="width:24px;height:24px;flex-shrink:0">${choreIcon(item.icon, null, "24px")}</span>` : ""}
+        <div class="fh-task-body">
+          <span class="fh-task-name">${escHTML(item.name)}${isInactive ? ` <span style="font-size:.72rem;color:#6F7E9C;font-weight:400">[inactive]</span>` : ""}</span>
+          <span class="fh-task-sub">
+            ${fUSD(item.dollar_value)} \xB7
+            ${item.scope === "personal" ? `Personal${personNames ? ` (${escHTML(personNames)})` : ""}` : "All kids"}
+          </span>
+        </div>
+        ${rateMeta}
+        <span class="fh-badge fh-badge-pts">${fPts(item.points_cost)}pts</span>
+        <button class="fh-btn fh-btn-ghost fh-btn-sm fh-ad-tasks-edit-btn"
+                data-act="open-edit-store-item" data-iid="${item.item_id}"
+                title="Edit reward">${I.edit}</button>
+        <button class="fh-btn fh-btn-danger fh-btn-sm"
+                data-act="delete-store-item"
+                data-iid="${item.item_id}" data-iname="${escAttr(item.name)}"
+                title="Delete reward">${I.trash}</button>
+      </div>`;
+}
+function _htmlStoreItemEditorPanel(item, people, catLabels, card) {
+  const inner = item ? `
+          <div class="fh-ad-tasks-panel-hdr">
+            <div style="flex:1;min-width:0">
+              <div class="fh-ad-tasks-panel-title">Edit reward</div>
+              <div class="fh-ad-tasks-panel-sub" title="${escAttr(item.name)}">${escHTML(item.name)}</div>
+            </div>
+            <button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="close-store-panel"
+                    style="flex-shrink:0" title="Close panel">\u2715</button>
+          </div>
+          <div class="fh-ad-tasks-panel-body">
+            ${storeItemFormFields(item, true, people, catLabels)}
+          </div>
+          <div class="fh-ad-tasks-panel-footer">
+            <button class="fh-btn fh-btn-primary" style="flex:1"
+                    data-act="ok-edit-store-item-inline">Save changes</button>
+            <button class="fh-btn fh-btn-ghost fh-btn-sm"
+                    data-act="delete-store-item"
+                    data-iid="${item.item_id}" data-iname="${escAttr(item.name)}"
+                    title="Hide from kids (can restore by toggling Active)">Deactivate</button>
+            <button class="fh-btn fh-btn-danger fh-btn-sm"
+                    data-act="hard-delete-store-item"
+                    data-iid="${item.item_id}" data-iname="${escAttr(item.name)}"
+                    title="Permanently delete \u2014 cannot be undone">Delete \u2715</button>
+          </div>` : `
+          <div class="fh-ad-tasks-panel-empty">
+            <div class="fh-ad-tasks-panel-empty-icon">\u2196</div>
+            <div class="fh-ad-tasks-panel-empty-text">Select a reward to edit</div>
+          </div>`;
+  return `<div class="fh-ad-rewards-panel">${inner}</div>`;
+}
 function _htmlAdHistory(attr, card) {
   const historyLog = attr.history_log || [];
   const people = attr.people || [];
@@ -8959,7 +10025,7 @@ function _htmlAdHistory(attr, card) {
         </div>
       </div>`;
 }
-function _htmlAdSettings(attr, storeItems, people) {
+function _htmlAdSettings(attr, people, card) {
   const famName = attr.family_name || "Family Hub";
   const ppdollar = attr.points_per_dollar || 10;
   const showDollar = attr.show_dollar_value_to_kids || false;
@@ -8968,39 +10034,31 @@ function _htmlAdSettings(attr, storeItems, people) {
   const rankEvalWeekday = attr.rank_eval_weekday !== void 0 ? attr.rank_eval_weekday : 0;
   const rankDropThr = attr.rank_drop_threshold !== void 0 ? attr.rank_drop_threshold : 50;
   const rankGainThr = attr.rank_gain_threshold !== void 0 ? attr.rank_gain_threshold : 75;
+  const rankPpdLadder = attr.rank_ppd_ladder || [3, 3.5, 4, 4.5, 5];
   const roomsCfg = attr.rooms_config || {};
   const weatherEntity = attr.weather_entity || "";
   const calendarEntities = attr.today_calendar_entities || [];
   const WEEKDAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   const labelChips = catLabels.map((l) => `
-      <div class="fh-cat-chip">
+      <div class="fh-cat-chip"
+           draggable="true"
+           data-drag-id="${escAttr(l)}"
+           data-drag-type="category"
+           title="Drag to reorder">
+        <span class="fh-cat-chip-handle">\u283F</span>
         <span>${escHTML(l)}</span>
         <button class="fh-cat-chip-del" data-act="remove-cat-label"
                 data-label="${escAttr(l)}" title="Remove">\xD7</button>
       </div>`).join("");
-  const storeRows = storeItems.map((item) => {
-    const personNames = (item.person_ids || []).map((id) => {
-      var _a;
-      return (_a = people.find((p) => p.person_id === id)) == null ? void 0 : _a.name;
-    }).filter(Boolean).join(", ");
-    return `
-          <div class="fh-store-inv-row">
-            <div class="fh-store-inv-info">
-              <div class="fh-store-inv-name">${escHTML(item.name)}</div>
-              <div class="fh-store-inv-meta">
-                ${fUSD(item.dollar_value)} \xB7 ${fPts(item.points_cost)}pts \xB7
-                ${item.scope === "personal" ? `Personal${personNames ? ` (${escHTML(personNames)})` : ""}` : "All kids"}
-              </div>
-            </div>
-            <button class="fh-btn fh-btn-ghost fh-btn-sm"
-                    data-act="open-edit-store-item" data-iid="${item.item_id}"
-                    title="Edit reward">${I.edit}</button>
-            <button class="fh-btn fh-btn-danger fh-btn-sm"
-                    data-act="delete-store-item"
-                    data-iid="${item.item_id}" data-iname="${escAttr(item.name)}"
-                    title="Delete reward">${I.trash}</button>
-          </div>`;
-  }).join("") || `<div class="fh-empty fh-ad-empty">No store items yet.</div>`;
+  const ladderInputs = rankPpdLadder.map((cpt, idx) => `
+      <div class="fh-row" style="gap:6px;align-items:center;margin-bottom:4px">
+        <span style="font-size:.8rem;color:var(--fh-text-sec);width:50px;flex-shrink:0">Rank ${idx}</span>
+        <input class="fh-input fh-ad-rank-ladder-input" type="number"
+               min="0.1" max="100" step="0.1"
+               data-rank-idx="${idx}"
+               value="${cpt}" style="flex:1">
+        <span style="font-size:.8rem;color:var(--fh-text-sec)">\xA2/pt</span>
+      </div>`).join("");
   const roomToggles = ROOMS.map((room) => {
     var _a;
     const status = ((_a = roomsCfg[room.id]) == null ? void 0 : _a.status) ?? room.status;
@@ -9039,7 +10097,7 @@ function _htmlAdSettings(attr, storeItems, people) {
             <div class="fh-point-row">
               <div style="flex:1;min-width:0">
                 <div style="font-size:.9rem;font-weight:600">${escHTML(famName)}</div>
-                <div style="font-size:.75rem;color:var(--fh-text-sec)">${ppdollar} points per dollar</div>
+                <div style="font-size:.75rem;color:var(--fh-text-sec)">${ppdollar} points per dollar (base rate)</div>
               </div>
               <button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="open-edit-settings"
                       data-fname="${escAttr(famName)}" data-ppd="${ppdollar}"
@@ -9059,8 +10117,21 @@ function _htmlAdSettings(attr, storeItems, people) {
               </div>
             </div>
             <div class="fh-divider"></div>
+            <div class="fh-field">
+              <label class="fh-label">Reward value per rank (\xA2/point)</label>
+              <div class="fh-field-help" style="margin-bottom:8px">
+                Higher rank \u2192 more cents per point \u2192 fewer points needed to redeem rewards.
+              </div>
+              ${ladderInputs}
+              <button class="fh-btn fh-btn-primary fh-btn-sm" data-act="save-rank-ppd-ladder"
+                      style="margin-top:8px">Save ladder</button>
+            </div>
+            <div class="fh-divider"></div>
             <div>
               <div class="fh-label" style="margin-bottom:6px">Category labels</div>
+              <div class="fh-field-help" style="margin-bottom:6px;font-size:.78rem;color:var(--fh-text-sec)">
+                Shared by Tasks and Rewards sections.
+              </div>
               <div class="fh-cat-labels" style="margin-bottom:8px">
                 ${labelChips || `<span style="font-size:.82rem;color:var(--fh-text-sec)">No labels yet.</span>`}
               </div>
@@ -9114,18 +10185,6 @@ function _htmlAdSettings(attr, storeItems, people) {
                 One <code>calendar.*</code> entity per line. Powers the today strip when the Calendar room ships in v0.8.0.
               </div>
             </div>
-          </div>
-        </div>
-
-        <div class="fh-ad-panel fh-ad-settings-right">
-          <div class="fh-ad-panel-hdr">
-            <span class="fh-ad-panel-title">Store inventory</span>
-            <button class="fh-btn fh-btn-primary fh-btn-sm" data-act="open-add-store-item">
-              ${I.plus} Add reward
-            </button>
-          </div>
-          <div class="fh-ad-panel-body">
-            <div class="fh-task-list">${storeRows}</div>
           </div>
         </div>
 
@@ -9226,6 +10285,7 @@ var init_modes_admin = __esm({
     init_utils();
     init_rooms();
     init_modals();
+    init_icons();
   }
 });
 
@@ -9470,9 +10530,279 @@ var init_modes_home = __esm({
   }
 });
 
+// src/card/print-chore-list.js
+function _recurrenceLabel(rec) {
+  const t = (rec == null ? void 0 : rec.type) || "daily";
+  if (t === "daily") {
+    const df = rec.day_filter || [];
+    if (!df.length || df.length === 7) return "Every day";
+    const sorted = [...df].sort((a, b) => a - b);
+    let contiguous = true;
+    for (let i = 1; i < sorted.length; i++) {
+      if (sorted[i] !== sorted[i - 1] + 1) {
+        contiguous = false;
+        break;
+      }
+    }
+    if (contiguous && sorted.length >= 3) {
+      return `${_DAY_SHORT[sorted[0]]}\u2013${_DAY_SHORT[sorted[sorted.length - 1]]}`;
+    }
+    return sorted.map((d) => _DAY_SHORT[d]).join(" ");
+  }
+  if (t === "weekly") {
+    const wd = rec.weekdays || [];
+    if (!wd.length) return "Weekly";
+    return wd.map((d) => _DAY_SHORT[d]).join(" ");
+  }
+  if (t === "every_n_days") return `Every ${rec.interval || 2} days`;
+  if (t === "every_n_weeks") return `Every ${rec.interval || 2} weeks`;
+  if (t === "monthly_on_date") return "Monthly";
+  if (t === "one_time") return "One time";
+  return t;
+}
+function _renderRow(c) {
+  const desc = c.description ? `<div class="pl-desc">${_esc(c.description)}</div>` : "";
+  const penalty = c.penalty_enabled && c.penalty_points > 0 ? ` <span class="pl-penalty">\u2212${c.penalty_points}</span>` : "";
+  const pts = c.points > 0 ? `<span class="pl-pts">+${c.points}</span>${penalty}` : c.penalty_enabled && c.penalty_points > 0 ? `<span class="pl-penalty">\u2212${c.penalty_points}</span>` : "";
+  return `
+      <tr>
+        <td class="pl-name"><div>${_esc(c.name)}</div>${desc}</td>
+        <td class="pl-when">${_esc(_recurrenceLabel(c.recurrence))}</td>
+        <td class="pl-points">${pts}</td>
+      </tr>`;
+}
+function _renderSection(title, chores, subtitle) {
+  if (!chores.length) return "";
+  const sub = subtitle ? `<div class="pl-section-sub">${_esc(subtitle)}</div>` : "";
+  return `
+      <section class="pl-section">
+        <header class="pl-section-head">
+          <h2>${_esc(title)}</h2>
+          ${sub}
+        </header>
+        <table class="pl-table">
+          <thead>
+            <tr><th>Chore</th><th>When</th><th class="pl-points">Points</th></tr>
+          </thead>
+          <tbody>
+            ${chores.map(_renderRow).join("")}
+          </tbody>
+        </table>
+      </section>`;
+}
+function buildPrintableChoreList(naAttr) {
+  const famName = (naAttr == null ? void 0 : naAttr.family_name) || "Family";
+  const people = (naAttr == null ? void 0 : naAttr.people) || [];
+  const chores = (naAttr == null ? void 0 : naAttr.active_chores) || [];
+  const dateStr = (/* @__PURE__ */ new Date()).toLocaleDateString(void 0, {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  });
+  const assignedByPerson = /* @__PURE__ */ new Map();
+  const unassigned = [];
+  const claimable = [];
+  const reminders = [];
+  for (const c of chores) {
+    if (c.chore_type === "reminder") {
+      reminders.push(c);
+      continue;
+    }
+    if (c.chore_type === "claimable") {
+      claimable.push(c);
+      continue;
+    }
+    const ids = c.assigned_to || [];
+    if (!ids.length) {
+      unassigned.push(c);
+      continue;
+    }
+    for (const pid of ids) {
+      if (!assignedByPerson.has(pid)) assignedByPerson.set(pid, []);
+      assignedByPerson.get(pid).push(c);
+    }
+  }
+  const peopleSections = people.filter((p) => assignedByPerson.has(p.person_id)).map((p) => {
+    const list = assignedByPerson.get(p.person_id);
+    return _renderSection(p.name, list);
+  }).join("");
+  const rotationChores = chores.filter(
+    (c) => c.chore_type === "assigned" && (c.rotation_pool || []).length > 1
+  );
+  const rotationNote = rotationChores.length ? `${rotationChores.length} chore${rotationChores.length === 1 ? "" : "s"} rotate between people. The assignee shown is whose turn it is now.` : "";
+  const claimableSection = _renderSection(
+    "Up for grabs",
+    claimable,
+    "Anyone can claim \u2014 first done gets the points."
+  );
+  const reminderSection = _renderSection(
+    "Reminders",
+    reminders,
+    "No points \u2014 just a daily nudge."
+  );
+  const unassignedSection = _renderSection(
+    "Unassigned",
+    unassigned,
+    "Not assigned to anyone yet."
+  );
+  const totalChores = chores.length;
+  const totalPoints = chores.reduce((sum, c) => sum + (c.points > 0 ? c.points : 0), 0);
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>${_esc(famName)} \u2014 Chore List</title>
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --ink-sec: #555;
+    --rule: #d0d0d0;
+    --panel: #f3f3f3;
+    --accent: #2563eb;
+    --penalty: #c0392b;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                 "Helvetica Neue", Arial, sans-serif;
+    font-size: 12pt; line-height: 1.35;
+    color: var(--ink); background: #fff;
+  }
+  body { padding: 32px 36px; max-width: 8.5in; margin: 0 auto; }
+  header.pl-doc-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin: 0 0 16px; padding-bottom: 10px;
+    border-bottom: 2px solid var(--ink);
+  }
+  header.pl-doc-head h1 { margin: 0; font-size: 22pt; letter-spacing: -0.01em; }
+  header.pl-doc-head .pl-doc-date {
+    font-size: 10pt; color: var(--ink-sec); font-variant-numeric: tabular-nums;
+  }
+  .pl-doc-summary {
+    font-size: 10pt; color: var(--ink-sec);
+    margin: 0 0 18px;
+  }
+  .pl-doc-note {
+    margin: 0 0 14px; padding: 6px 10px;
+    background: var(--panel); border-left: 3px solid var(--accent);
+    font-size: 9.5pt; color: var(--ink-sec);
+  }
+  .pl-section {
+    margin: 0 0 18px;
+    page-break-inside: avoid; break-inside: avoid;
+  }
+  .pl-section-head { margin: 0 0 6px; }
+  .pl-section-head h2 {
+    margin: 0; font-size: 13pt; font-weight: 700;
+    letter-spacing: 0.02em; text-transform: uppercase;
+    padding: 4px 8px; background: var(--panel);
+    border-left: 4px solid var(--ink); display: inline-block;
+  }
+  .pl-section-sub {
+    margin: 4px 0 0; font-size: 9pt; color: var(--ink-sec); font-style: italic;
+  }
+  table.pl-table {
+    width: 100%; border-collapse: collapse;
+    margin-top: 6px; font-size: 11pt;
+  }
+  table.pl-table th, table.pl-table td {
+    text-align: left; padding: 5px 8px;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  table.pl-table th {
+    font-size: 9pt; text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--ink-sec); font-weight: 600;
+    border-bottom: 1.5px solid var(--ink);
+  }
+  table.pl-table td.pl-name { width: 55%; font-weight: 600; }
+  table.pl-table td.pl-name .pl-desc {
+    font-weight: 400; font-size: 9.5pt; color: var(--ink-sec); margin-top: 2px;
+  }
+  table.pl-table td.pl-when { width: 22%; font-variant-numeric: tabular-nums; }
+  table.pl-table .pl-points { width: 23%; text-align: right; font-variant-numeric: tabular-nums; }
+  .pl-pts { font-weight: 700; }
+  .pl-penalty { color: var(--penalty); font-weight: 700; }
+  .pl-toolbar {
+    position: fixed; top: 12px; right: 12px;
+    display: flex; gap: 6px;
+  }
+  .pl-toolbar button {
+    font: inherit; font-size: 10pt;
+    padding: 6px 12px; cursor: pointer;
+    border: 1px solid var(--ink); background: #fff; border-radius: 4px;
+  }
+  .pl-toolbar button:hover { background: var(--panel); }
+  footer.pl-doc-foot {
+    margin-top: 24px; padding-top: 8px;
+    border-top: 1px solid var(--rule);
+    font-size: 8.5pt; color: var(--ink-sec); text-align: center;
+  }
+  @media print {
+    .pl-toolbar { display: none; }
+    body { padding: 0; }
+    @page { margin: 0.5in; }
+  }
+</style>
+</head>
+<body>
+  <div class="pl-toolbar">
+    <button onclick="window.print()">Print</button>
+    <button onclick="window.close()">Close</button>
+  </div>
+
+  <header class="pl-doc-head">
+    <h1>${_esc(famName)} \u2014 Chores</h1>
+    <div class="pl-doc-date">${_esc(dateStr)}</div>
+  </header>
+
+  <p class="pl-doc-summary">
+    ${totalChores} active chore${totalChores === 1 ? "" : "s"} \xB7
+    Up to ${totalPoints} points/cycle available
+  </p>
+
+  ${rotationNote ? `<p class="pl-doc-note">${_esc(rotationNote)}</p>` : ""}
+
+  ${peopleSections}
+  ${unassignedSection}
+  ${claimableSection}
+  ${reminderSection}
+
+  <footer class="pl-doc-foot">
+    Generated by Family Hub \xB7 ${_esc((/* @__PURE__ */ new Date()).toLocaleString())}
+  </footer>
+</body>
+</html>`;
+}
+function openPrintableChoreList(card) {
+  var _a, _b, _c;
+  const naAttr = ((_c = (_b = (_a = card._hass) == null ? void 0 : _a.states) == null ? void 0 : _b["sensor.family_hub_needs_attention"]) == null ? void 0 : _c.attributes) || {};
+  const html = buildPrintableChoreList(naAttr);
+  const w = window.open("", "_blank");
+  if (!w) {
+    const blob = new Blob([html], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    window.location.href = url;
+    return;
+  }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  w.document.title = `${(naAttr == null ? void 0 : naAttr.family_name) || "Family"} \u2014 Chore List`;
+}
+var _esc, _DAY_SHORT;
+var init_print_chore_list = __esm({
+  "src/card/print-chore-list.js"() {
+    _esc = (s) => String(s ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
+    _DAY_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  }
+});
+
 // src/card/dispatch.js
 function dispatch(act, el, card) {
-  var _a, _b, _c, _d, _e, _f, _g, _h;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s2, _t, _u, _v, _w, _x;
   const sr = card.shadowRoot;
   const v = (id) => {
     var _a2;
@@ -9562,6 +10892,110 @@ function dispatch(act, el, card) {
       card._doRender(true);
       break;
     }
+    // ---- Admin rewards section -------------------------------------------
+    case "select-store-row":
+      card._adminSelectedItemId = el.dataset.iid || null;
+      card._adminSelectedChoreId = null;
+      card._doRender(true);
+      break;
+    case "close-store-panel":
+      card._adminSelectedItemId = null;
+      card._doRender(true);
+      break;
+    case "sort-admin-store-items": {
+      const col = el.dataset.col || null;
+      if (!col) {
+        card._adminSortItems = { col: null, dir: "asc" };
+      } else {
+        const cur = card._adminSortItems || { col: null, dir: "asc" };
+        if (cur.col === col) {
+          card._adminSortItems = cur.dir === "asc" ? { col, dir: "desc" } : { col: null, dir: "asc" };
+        } else {
+          card._adminSortItems = { col, dir: "asc" };
+        }
+      }
+      card._doRender(true);
+      break;
+    }
+    case "store-item-filter":
+      card._storeItemFilter = el.dataset.fval || null;
+      card._doRender(true);
+      break;
+    case "toggle-admin-reward-cat": {
+      const cat = el.dataset.cat;
+      if (!cat) break;
+      if (!card._adminCollapsedRewardCats) card._adminCollapsedRewardCats = /* @__PURE__ */ new Set();
+      if (card._adminCollapsedRewardCats.has(cat)) card._adminCollapsedRewardCats.delete(cat);
+      else card._adminCollapsedRewardCats.add(cat);
+      card._doRender(true);
+      break;
+    }
+    case "ok-edit-store-item-inline": {
+      const iid = v("m-eiid");
+      const name = v("m-sname").trim();
+      const dollar = parseFloat(v("m-sdollar"));
+      if (!iid || !name || !dollar || dollar <= 0) break;
+      const isGroup = ((_a = sr.querySelector("#m-sgroup")) == null ? void 0 : _a.checked) || false;
+      let scope = v("m-sscope");
+      const data = {
+        item_id: iid,
+        name,
+        dollar_value: dollar,
+        scope,
+        description: v("m-sdesc").trim(),
+        category_label: v("m-scat") || "",
+        max_per_period: parseInt(v("m-smaxperiod") || "0"),
+        period: v("m-speriod") || "week",
+        active: ((_b = sr.querySelector("#m-sactive")) == null ? void 0 : _b.checked) !== false,
+        icon: _normalizeIcon(v("m-cicon"))
+      };
+      if (isGroup) {
+        const contribs = [...sr.querySelectorAll(".m-scontrib")].filter((inp) => parseInt(inp.value) > 0).map((inp) => ({ person_id: inp.dataset.pid, share_pct: parseInt(inp.value) }));
+        if (contribs.length === 0) {
+          alert("Group reward needs at least one contributor with a share > 0%.");
+          break;
+        }
+        const total = contribs.reduce((s, c) => s + c.share_pct, 0);
+        if (total !== 100) {
+          alert(`Contributor shares must sum to exactly 100% (currently ${total}%). Use the "Equal split" button or adjust manually.`);
+          break;
+        }
+        data.is_group_reward = true;
+        data.contributors = contribs;
+        data.scope = "personal";
+        data.person_ids = contribs.map((c) => c.person_id);
+      } else {
+        const origItems = card._attrs("sensor.family_hub_needs_attention").store_items || [];
+        const origItem = origItems.find((i) => i.item_id === iid);
+        if (origItem == null ? void 0 : origItem.is_group_reward) {
+          data.is_group_reward = false;
+          data.contributors = [];
+        }
+        data.person_ids = scope === "personal" ? _selectedPersonIds("m-sp-person", sr) : [];
+      }
+      console.log("[family-hub] update_store_item (inline) payload:", JSON.parse(JSON.stringify(data)));
+      card._svc("update_store_item", data);
+      card._adminSelectedItemId = null;
+      card._doRender(true);
+      break;
+    }
+    case "save-rank-ppd-ladder": {
+      const inputs = sr.querySelectorAll(".fh-ad-rank-ladder-input");
+      const ladder = [];
+      let valid = true;
+      inputs.forEach((inp) => {
+        const val = parseFloat(inp.value);
+        if (isNaN(val) || val <= 0) {
+          valid = false;
+          return;
+        }
+        ladder.push(val);
+      });
+      if (!valid || !ladder.length) break;
+      card._svc("update_settings", { rank_ppd_ladder: ladder });
+      break;
+    }
+    // ---- Tasks category collapse ----------------------------------------
     // Collapse / expand a category group header
     case "toggle-admin-cat": {
       const cat = el.dataset.cat;
@@ -9672,6 +11106,88 @@ function dispatch(act, el, card) {
     case "redeem":
       card._svc("request_redemption", { person_id: el.dataset.pid, item_id: el.dataset.iid });
       break;
+    // ---- Group reward: chip-in (v0.6.3 item 13) -----------------------
+    case "open-chip-in": {
+      const iid = el.dataset.iid;
+      const pid = el.dataset.pid;
+      const remaining = parseInt(el.dataset.remaining || "0");
+      const balance = parseInt(el.dataset.balance || "0");
+      const person = card._people().find((p) => p.person_id === pid);
+      const pAttrKey = person ? `sensor.family_hub_${person.name.toLowerCase().replace(/ /g, "_")}` : null;
+      const pAttrs = pAttrKey ? ((_e = (_d = (_c = card._hass) == null ? void 0 : _c.states) == null ? void 0 : _d[pAttrKey]) == null ? void 0 : _e.attributes) || {} : {};
+      const storeItem = (pAttrs.store_items || []).find((i) => i.item_id === iid) || { item_id: iid, name: "reward" };
+      card._modal = { type: "chip-in", data: { item: storeItem, pid, balance, remaining } };
+      card._doRender(true);
+      break;
+    }
+    case "ok-chip-in": {
+      const pts = parseInt(v("m-chipin-pts") || "0");
+      const iid = v("m-chipin-iid");
+      const pid = v("m-chipin-pid");
+      if (!pts || pts <= 0 || !iid || !pid) {
+        alert("Please enter a valid number of points.");
+        break;
+      }
+      card._svc("chip_in_group_reward", { item_id: iid, person_id: pid, points: pts });
+      card._modal = null;
+      card._doRender(true);
+      break;
+    }
+    // ---- Group reward: kid accept/decline proposal (v0.6.3 item 13) ---
+    case "accept-group-proposal":
+      card._svc("respond_group_proposal", {
+        proposal_id: el.dataset.propid,
+        person_id: el.dataset.pid,
+        accept: true
+      });
+      break;
+    case "decline-group-proposal":
+      if (!confirm("Decline this group reward proposal?")) break;
+      card._svc("respond_group_proposal", {
+        proposal_id: el.dataset.propid,
+        person_id: el.dataset.pid,
+        accept: false
+      });
+      break;
+    // ---- Group reward: admin approve/decline proposal ------------------
+    case "approve-group-proposal":
+      card._svc("approve_group_proposal", {
+        proposal_id: el.dataset.propid,
+        approved_by: el.dataset.by || "admin"
+      });
+      break;
+    case "decline-group-proposal-parent":
+      if (!confirm("Decline this group reward proposal?")) break;
+      card._svc("decline_group_proposal", {
+        proposal_id: el.dataset.propid,
+        declined_by: el.dataset.by || "admin"
+      });
+      break;
+    // ---- Group reward: admin redeem fully-funded reward ----------------
+    case "redeem-group-reward":
+      if (!confirm(`Mark "${el.dataset.iname}" as redeemed?
+
+This will mark the reward inactive.`)) break;
+      card._svc("redeem_group_reward", {
+        item_id: el.dataset.iid,
+        redeemed_by: "admin"
+      });
+      break;
+    // ---- Store goal toggle (v0.6.3) ------------------------------------
+    // Tapping a star sets that item as the kid's goal; tapping the active
+    // star clears the goal. The set/clear decision is local — the dispatch
+    // handler reads the current goal from the per-person sensor.
+    case "toggle-goal": {
+      const pid = el.dataset.pid;
+      const iid = el.dataset.iid;
+      if (!pid || !iid) break;
+      const person = card._people().find((p) => p.person_id === pid);
+      if (!person) break;
+      const attrs = ((_h = (_g = (_f = card._hass) == null ? void 0 : _f.states) == null ? void 0 : _g[`sensor.family_hub_${person.name.toLowerCase().replace(/ /g, "_")}`]) == null ? void 0 : _h.attributes) || {};
+      const newGoal = attrs.goal_item_id === iid ? "" : iid;
+      card._svc("update_person", { person_id: pid, goal_item_id: newGoal });
+      break;
+    }
     // ---- Delete chore --------------------------------------------------
     case "delete-chore":
       if (!confirm(`Delete "${el.dataset.cname}"?
@@ -9680,12 +11196,21 @@ This cannot be undone.`)) break;
       card._adminSelectedChoreId = null;
       card._svc("delete_chore", { chore_id: el.dataset.cid });
       break;
-    // ---- Delete store item ---------------------------------------------
+    // ---- Delete store item (soft — deactivate) -------------------------
     case "delete-store-item":
-      if (!confirm(`Delete reward "${el.dataset.iname}"?
+      if (!confirm(`Deactivate reward "${el.dataset.iname}"?
 
-This cannot be undone.`)) break;
+It will be hidden from kids but stays in the list as [inactive]. Use "Delete permanently" in the edit panel to remove it completely.`)) break;
       card._svc("delete_store_item", { item_id: el.dataset.iid });
+      break;
+    // ---- Hard-delete store item (permanent) ----------------------------
+    case "hard-delete-store-item":
+      if (!confirm(`Permanently delete "${el.dataset.iname}"?
+
+This cannot be undone. Any pending redemption requests for this reward will be cancelled.`)) break;
+      card._adminSelectedItemId = null;
+      card._svc("hard_delete_store_item", { item_id: el.dataset.iid });
+      card._doRender(true);
       break;
     // ---- Category label management ------------------------------------
     case "remove-cat-label": {
@@ -9696,7 +11221,7 @@ This cannot be undone.`)) break;
     }
     case "add-cat-label": {
       const input = sr.getElementById("cat-label-input");
-      const newLabel = (_a = input == null ? void 0 : input.value) == null ? void 0 : _a.trim();
+      const newLabel = (_i = input == null ? void 0 : input.value) == null ? void 0 : _i.trim();
       if (!newLabel) break;
       const current = card._attrs("sensor.family_hub_needs_attention").category_labels || [];
       if (!current.includes(newLabel)) {
@@ -9715,8 +11240,8 @@ This cannot be undone.`)) break;
         if (!id) return;
         roomsCfg[id] = { status: input.checked ? "live" : "hidden" };
       });
-      const weather = ((_c = (_b = sr.getElementById("m-hub-weather")) == null ? void 0 : _b.value) == null ? void 0 : _c.trim()) || "";
-      const calRaw = ((_d = sr.getElementById("m-hub-calendars")) == null ? void 0 : _d.value) || "";
+      const weather = ((_k = (_j = sr.getElementById("m-hub-weather")) == null ? void 0 : _j.value) == null ? void 0 : _k.trim()) || "";
+      const calRaw = ((_l = sr.getElementById("m-hub-calendars")) == null ? void 0 : _l.value) || "";
       const calendars = calRaw.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
       card._svc("update_settings", {
         rooms_config: roomsCfg,
@@ -9730,7 +11255,7 @@ This cannot be undone.`)) break;
     // The checkbox is "Penalties active" (checked = running, unchecked = paused),
     // so we invert: penalties_paused = !checked.
     case "toggle-global-penalty": {
-      const checked = el.checked ?? ((_e = el.querySelector("input")) == null ? void 0 : _e.checked) ?? true;
+      const checked = el.checked ?? ((_m = el.querySelector("input")) == null ? void 0 : _m.checked) ?? true;
       card._svc("update_settings", { penalties_paused: !checked });
       break;
     }
@@ -9738,14 +11263,20 @@ This cannot be undone.`)) break;
     // The checkbox is also "Penalties active" (checked = on, unchecked = paused).
     // We read the person_id from data-pid and invert the checkbox value.
     case "toggle-person-penalty": {
-      const pid = el.dataset.pid || ((_f = el.closest("[data-pid]")) == null ? void 0 : _f.dataset.pid);
-      const checked = el.checked ?? ((_g = el.querySelector("input")) == null ? void 0 : _g.checked) ?? true;
+      const pid = el.dataset.pid || ((_n = el.closest("[data-pid]")) == null ? void 0 : _n.dataset.pid);
+      const checked = el.checked ?? ((_o = el.querySelector("input")) == null ? void 0 : _o.checked) ?? true;
       if (pid) card._svc("update_person", { person_id: pid, penalties_paused: !checked });
       break;
     }
     // ---- Backup --------------------------------------------------------
     case "export-backup":
       card._svc("export_backup", {});
+      break;
+    // ---- Print chore list (v0.6.3) -------------------------------------
+    // Opens a self-contained HTML doc in a new tab. The handler runs in
+    // the click event so pop-up blockers should let the window.open through.
+    case "print-chore-list":
+      openPrintableChoreList(card);
       break;
     case "rebuild-data":
       if (!confirm(
@@ -9781,6 +11312,7 @@ This cannot be undone.`)) break;
       break;
     }
     case "open-add-store-item":
+      card._adminSelectedItemId = null;
       card._modal = { type: "add-store-item", data: {} };
       card._doRender(true);
       break;
@@ -9788,6 +11320,7 @@ This cannot be undone.`)) break;
       const items = card._attrs("sensor.family_hub_needs_attention").store_items || [];
       const item = items.find((i) => i.item_id === el.dataset.iid);
       if (!item) break;
+      card._adminSelectedItemId = null;
       card._modal = { type: "edit-store-item", data: { item } };
       card._doRender(true);
       break;
@@ -9923,7 +11456,7 @@ This cannot be undone.`)) break;
       const assigned = _selectedPersonIds("m-assign-person", sr);
       const weekdays = Array.from(sr.querySelectorAll(".m-wd-day:checked")).map((cb) => parseInt(cb.value));
       const dayFilter = Array.from(sr.querySelectorAll(".m-df-day:checked")).map((cb) => parseInt(cb.value));
-      const iconVal = v("m-cicon").trim().toLowerCase();
+      const iconVal = _normalizeIcon(v("m-cicon"));
       const data = {
         name,
         chore_type: ctype,
@@ -9985,6 +11518,7 @@ This cannot be undone.`)) break;
         data.rotation_pool = [];
         data.rotation_cadence = "";
       }
+      console.log(`[family-hub] ${isEdit ? "update_chore" : "add_chore"} payload:`, JSON.parse(JSON.stringify(data)));
       card._svc(isEdit ? "update_chore" : "add_chore", data);
       card._closeModal();
       break;
@@ -9998,7 +11532,7 @@ This cannot be undone.`)) break;
       const assigned = _selectedPersonIds("m-assign-person", sr);
       const weekdays = Array.from(sr.querySelectorAll(".m-wd-day:checked")).map((cb) => parseInt(cb.value));
       const dayFilter = Array.from(sr.querySelectorAll(".m-df-day:checked")).map((cb) => parseInt(cb.value));
-      const iconVal = v("m-cicon").trim().toLowerCase();
+      const iconVal = _normalizeIcon(v("m-cicon"));
       const data = {
         chore_id: v("m-cid"),
         name,
@@ -10052,6 +11586,7 @@ This cannot be undone.`)) break;
         data.rotation_pool = [];
         data.rotation_cadence = "";
       }
+      console.log("[family-hub] update_chore (inline) payload:", JSON.parse(JSON.stringify(data)));
       card._svc("update_chore", data);
       card._adminSelectedChoreId = null;
       card._choreFormTab = "details";
@@ -10061,7 +11596,7 @@ This cannot be undone.`)) break;
     case "set-streak": {
       const cid = el.dataset.cid;
       const pid = el.dataset.pid;
-      const count = Math.max(0, parseInt(((_h = sr.getElementById(`m-streak-${cid}`)) == null ? void 0 : _h.value) || "0"));
+      const count = Math.max(0, parseInt(((_p = sr.getElementById(`m-streak-${cid}`)) == null ? void 0 : _p.value) || "0"));
       card._svc("set_streak", { person_id: pid, chore_id: cid, count });
       break;
     }
@@ -10096,11 +11631,36 @@ This cannot be undone.`)) break;
       const name = v("m-sname").trim();
       const dollar = parseFloat(v("m-sdollar"));
       if (!name || !dollar || dollar <= 0) break;
-      const scope = v("m-sscope");
-      const data = { name, dollar_value: dollar, scope };
-      const desc = v("m-sdesc").trim();
-      if (desc) data.description = desc;
-      if (scope === "personal") data.person_ids = _selectedPersonIds("m-sp-person", sr);
+      const isGroup = ((_q = sr.querySelector("#m-sgroup")) == null ? void 0 : _q.checked) || false;
+      let scope = v("m-sscope");
+      const data = {
+        name,
+        dollar_value: dollar,
+        scope,
+        description: v("m-sdesc").trim(),
+        category_label: v("m-scat") || "",
+        max_per_period: parseInt(v("m-smaxperiod") || "0"),
+        period: v("m-speriod") || "week",
+        icon: _normalizeIcon(v("m-cicon"))
+      };
+      if (isGroup) {
+        const contribs = [...sr.querySelectorAll(".m-scontrib")].filter((inp) => parseInt(inp.value) > 0).map((inp) => ({ person_id: inp.dataset.pid, share_pct: parseInt(inp.value) }));
+        if (contribs.length === 0) {
+          alert("Group reward needs at least one contributor with a share > 0%.");
+          break;
+        }
+        const total = contribs.reduce((s, c) => s + c.share_pct, 0);
+        if (total !== 100) {
+          alert(`Contributor shares must sum to exactly 100% (currently ${total}%). Use the "Equal split" button or adjust manually.`);
+          break;
+        }
+        data.is_group_reward = true;
+        data.contributors = contribs;
+        data.scope = "personal";
+        data.person_ids = contribs.map((c) => c.person_id);
+      } else {
+        if (scope === "personal") data.person_ids = _selectedPersonIds("m-sp-person", sr);
+      }
       card._svc("add_store_item", data);
       card._closeModal();
       break;
@@ -10110,11 +11670,42 @@ This cannot be undone.`)) break;
       const name = v("m-sname").trim();
       const dollar = parseFloat(v("m-sdollar"));
       if (!iid || !name || !dollar || dollar <= 0) break;
-      const scope = v("m-sscope");
-      const data = { item_id: iid, name, dollar_value: dollar, scope };
-      const desc = v("m-sdesc").trim();
-      if (desc !== void 0) data.description = desc;
-      data.person_ids = scope === "personal" ? _selectedPersonIds("m-sp-person", sr) : [];
+      const isGroup = ((_r = sr.querySelector("#m-sgroup")) == null ? void 0 : _r.checked) || false;
+      let scope = v("m-sscope");
+      const data = {
+        item_id: iid,
+        name,
+        dollar_value: dollar,
+        scope,
+        description: v("m-sdesc").trim(),
+        category_label: v("m-scat") || "",
+        max_per_period: parseInt(v("m-smaxperiod") || "0"),
+        period: v("m-speriod") || "week",
+        active: ((_s2 = sr.querySelector("#m-sactive")) == null ? void 0 : _s2.checked) !== false,
+        icon: _normalizeIcon(v("m-cicon"))
+      };
+      if (isGroup) {
+        const contribs = [...sr.querySelectorAll(".m-scontrib")].filter((inp) => parseInt(inp.value) > 0).map((inp) => ({ person_id: inp.dataset.pid, share_pct: parseInt(inp.value) }));
+        if (contribs.length === 0) {
+          alert("Group reward needs at least one contributor with a share > 0%.");
+          break;
+        }
+        const total = contribs.reduce((s, c) => s + c.share_pct, 0);
+        if (total !== 100) {
+          alert(`Contributor shares must sum to exactly 100% (currently ${total}%). Use the "Equal split" button or adjust manually.`);
+          break;
+        }
+        data.is_group_reward = true;
+        data.contributors = contribs;
+        data.scope = "personal";
+        data.person_ids = contribs.map((c) => c.person_id);
+      } else {
+        if ((_v = (_u = (_t = card._modal) == null ? void 0 : _t.data) == null ? void 0 : _u.item) == null ? void 0 : _v.is_group_reward) {
+          data.is_group_reward = false;
+          data.contributors = [];
+        }
+        data.person_ids = scope === "personal" ? _selectedPersonIds("m-sp-person", sr) : [];
+      }
       card._svc("update_store_item", data);
       card._closeModal();
       break;
@@ -10202,16 +11793,67 @@ This cannot be undone.`)) break;
       card._closeModal();
       break;
     }
-    // ---- Icon picker (always-visible grid, no dropdown) -----------------
-    // Selection only — no preview/grid-toggle DOM. The hidden m-cicon input
-    // carries the value to the save handlers.
+    // ---- Chore template picker (v0.6.3 item 8) --------------------------
+    // Reads the selected template key from #m-ctpl and pre-populates the
+    // add-chore form fields. Parent can edit anything before saving.
+    case "pick-template": {
+      const key = (_w = sr.getElementById("m-ctpl")) == null ? void 0 : _w.value;
+      if (!key) break;
+      const tpl = CHORE_TEMPLATES.find((t) => t.key === key);
+      if (!tpl) break;
+      const setVal = (id, val) => {
+        const el2 = sr.getElementById(id);
+        if (el2 !== null) el2.value = val;
+      };
+      setVal("m-cname", tpl.name);
+      setVal("m-cdesc", tpl.description || "");
+      const catEl = sr.getElementById("m-clabel");
+      if (catEl && tpl.category) {
+        const opt = [...catEl.options].find((o) => o.value === tpl.category);
+        if (opt) catEl.value = tpl.category;
+      }
+      if (tpl.points) setVal("m-cpts", tpl.points);
+      (_x = sr.getElementById("m-cname")) == null ? void 0 : _x.focus();
+      break;
+    }
+    // ---- Icon picker — grid in the Icon tab; updates hidden input + preview
     case "pick-icon": {
       const key = el.dataset.icon;
       const hidden = sr.getElementById("m-cicon");
       if (hidden) hidden.value = key;
+      const prev = sr.getElementById("m-cicon-preview");
+      if (prev) prev.innerHTML = "";
       sr.querySelectorAll(".fh-icon-cell").forEach(
         (cell) => cell.classList.toggle("selected", cell.dataset.icon === key)
       );
+      const sel = sr.getElementById("m-icon-selected");
+      if (sel) {
+        const svgSpan = el.querySelector("span:first-child");
+        const lbl = el.title || key;
+        sel.innerHTML = `<span class="fh-icon-sel-icon" style="display:inline-flex;width:20px;height:20px;color:var(--fh-accent)">` + (svgSpan ? svgSpan.innerHTML : "") + `</span> <span class="fh-icon-sel-lbl">${lbl}</span>`;
+      }
+      break;
+    }
+    // ---- Custom image upload for reward icon
+    // Triggers the persistent <input id="m-icon-upload"> inside the modal.
+    // Actual file processing happens in handleIconFileSelection (called from
+    // FamilyHubCard's change listener when that input's value changes).
+    case "upload-icon": {
+      const fileInput = sr.getElementById("m-icon-upload");
+      if (!fileInput) {
+        console.warn("[family-hub] upload-icon: hidden file input not found");
+        break;
+      }
+      fileInput.value = "";
+      fileInput.click();
+      break;
+    }
+    case "clear-icon": {
+      const hidden = sr.getElementById("m-cicon");
+      if (hidden) hidden.value = "";
+      const preview = sr.getElementById("m-cicon-preview");
+      if (preview) preview.innerHTML = "";
+      sr.querySelectorAll(".fh-icon-cell.selected").forEach((c) => c.classList.remove("selected"));
       break;
     }
   }
@@ -10221,10 +11863,66 @@ function _selectedPersonIds(cbClass, sr) {
     sr.querySelectorAll(`.${cbClass}:checked`)
   ).map((cb) => cb.value);
 }
+function _normalizeIcon(raw) {
+  const s = (raw || "").trim();
+  if (!s) return "";
+  if (s.startsWith("data:")) return s;
+  return s.toLowerCase();
+}
+function handleIconFileSelection(fileInput, sr) {
+  var _a;
+  const file = (_a = fileInput == null ? void 0 : fileInput.files) == null ? void 0 : _a[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) {
+    alert("Image too large. Please pick a file under 5 MB.");
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 128;
+      let w = img.width, h = img.height;
+      if (w > h) {
+        if (w > MAX) {
+          h = Math.round(h * MAX / w);
+          w = MAX;
+        }
+      } else {
+        if (h > MAX) {
+          w = Math.round(w * MAX / h);
+          h = MAX;
+        }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL("image/png");
+      if (dataUrl.length > 350 * 1024) {
+        alert("Resized image is still too large. Pick a simpler image.");
+        return;
+      }
+      const hidden = sr.getElementById("m-cicon");
+      if (hidden) hidden.value = dataUrl;
+      const preview = sr.getElementById("m-cicon-preview");
+      if (preview) {
+        preview.innerHTML = `<div style="display:flex;align-items:center;gap:10px;padding:8px;border:1px solid var(--fh-border);border-radius:6px;background:var(--fh-surface)"><img src="${dataUrl}" style="width:48px;height:48px;object-fit:contain;border-radius:4px" alt=""><span style="font-size:.85rem;color:var(--fh-text-sec)">Custom uploaded image</span><button type="button" class="fh-btn fh-btn-ghost fh-btn-sm" data-act="clear-icon" style="margin-left:auto">Clear</button></div>`;
+      }
+      sr.querySelectorAll(".fh-icon-cell.selected").forEach((c) => c.classList.remove("selected"));
+    };
+    img.onerror = () => alert("Could not read that image.");
+    img.src = reader.result;
+  };
+  reader.onerror = () => alert("Could not read that file.");
+  reader.readAsDataURL(file);
+}
 var init_dispatch = __esm({
   "src/card/dispatch.js"() {
     init_constants();
     init_modals();
+    init_print_chore_list();
   }
 });
 
@@ -10272,13 +11970,34 @@ var init_FamilyHubCard = __esm({
         this._celebration = null;
         this._dragId = null;
         this._dragOverId = null;
+        this._dragType = null;
         this._sortedChores = [];
+        this._sortedStoreItems = [];
         this._adminSelectedChoreId = null;
         this._adminSort = { col: null, dir: "asc" };
         this._adminCollapsedCats = /* @__PURE__ */ new Set();
         this._choreFormTab = "details";
+        this._adminSelectedItemId = null;
+        this._adminSortItems = { col: null, dir: "asc" };
+        this._adminCollapsedRewardCats = /* @__PURE__ */ new Set();
+        this._storeItemFilter = null;
         this._abortCtrl = null;
         this._retryTimer = null;
+      }
+      /**
+       * v0.6.3 P2: reorder a category label by drag-and-drop. Categories are
+       * stored as a single ordered string list in `settings.category_labels`,
+       * so reorder = compute new order client-side, push the full list via
+       * update_settings.
+       */
+      _reorderCategory(dragLabel, overLabel, side) {
+        const current = this._attrs("sensor.family_hub_needs_attention").category_labels || [];
+        if (!current.includes(dragLabel) || !current.includes(overLabel)) return;
+        const without = current.filter((l) => l !== dragLabel);
+        const overIdx = without.indexOf(overLabel);
+        const insertAt = side === "above" ? overIdx : overIdx + 1;
+        const next = [...without.slice(0, insertAt), dragLabel, ...without.slice(insertAt)];
+        this._svc("update_settings", { category_labels: next });
       }
       // ---- Web Component lifecycle -------------------------------------------
       /**
@@ -10332,66 +12051,103 @@ var init_FamilyHubCard = __esm({
           if (t.classList.contains("m-assign-person") || t.classList.contains("m-sp-person") || t.classList.contains("m-rot-person")) {
             (_b = t.closest(".fh-person-cb-chip")) == null ? void 0 : _b.classList.toggle("checked", t.checked);
           }
+          if (t.id === "m-icon-upload" && t.files && t.files.length > 0) {
+            handleIconFileSelection(t, root);
+          }
           this._syncModalUI();
         }, { signal });
         root.addEventListener("dragstart", (e) => {
           const row = e.target.closest("[data-drag-id]");
           if (!row) return;
           this._dragId = row.dataset.dragId;
+          this._dragType = row.dataset.dragType || "chore";
+          this._dragSide = null;
           e.dataTransfer.effectAllowed = "move";
           setTimeout(() => row.classList.add("fh-dragging"), 0);
         }, { signal });
         root.addEventListener("dragover", (e) => {
           const row = e.target.closest("[data-drag-id]");
           if (!row || row.dataset.dragId === this._dragId) return;
+          const rowType = row.dataset.dragType || "chore";
+          if (rowType !== this._dragType) return;
           e.preventDefault();
-          root.querySelectorAll(".fh-drag-over").forEach((el) => el.classList.remove("fh-drag-over"));
-          row.classList.add("fh-drag-over");
+          const rect = row.getBoundingClientRect();
+          const horizontal = rowType === "category";
+          const side = horizontal ? e.clientX < rect.left + rect.width / 2 ? "above" : "below" : e.clientY < rect.top + rect.height / 2 ? "above" : "below";
+          root.querySelectorAll(".fh-drop-above, .fh-drop-below").forEach((el) => el.classList.remove("fh-drop-above", "fh-drop-below"));
+          row.classList.add(side === "above" ? "fh-drop-above" : "fh-drop-below");
           this._dragOverId = row.dataset.dragId;
+          this._dragSide = side;
         }, { signal });
         root.addEventListener("dragleave", (e) => {
           const row = e.target.closest("[data-drag-id]");
-          if (row) row.classList.remove("fh-drag-over");
+          if (row) row.classList.remove("fh-drop-above", "fh-drop-below");
         }, { signal });
         root.addEventListener("drop", (e) => {
-          var _a, _b, _c;
+          var _a, _b, _c, _d;
           e.preventDefault();
-          root.querySelectorAll(".fh-drag-over, .fh-dragging").forEach((el) => el.classList.remove("fh-drag-over", "fh-dragging"));
+          root.querySelectorAll(".fh-drop-above, .fh-drop-below, .fh-dragging").forEach((el) => el.classList.remove("fh-drop-above", "fh-drop-below", "fh-dragging"));
           const dragId = this._dragId;
           const overId = this._dragOverId;
+          const side = this._dragSide || "above";
+          const type = this._dragType || "chore";
           this._dragId = this._dragOverId = null;
+          this._dragSide = null;
+          this._dragType = null;
           if (!dragId || !overId || dragId === overId) return;
-          const sorted = this._sortedChores;
-          const without = sorted.filter((c) => c.chore_id !== dragId);
-          const insertAt = without.findIndex((c) => c.chore_id === overId);
-          if (insertAt < 0) return;
-          const isLast = insertAt === without.length - 1;
+          if (type === "category") {
+            this._reorderCategory(dragId, overId, side);
+            return;
+          }
+          const ctx = type === "store-item" ? {
+            list: this._sortedStoreItems,
+            idKey: "item_id",
+            svc: "update_store_item",
+            idField: "item_id"
+          } : {
+            list: this._sortedChores,
+            idKey: "chore_id",
+            svc: "update_chore",
+            idField: "chore_id"
+          };
+          const without = ctx.list.filter((c) => c[ctx.idKey] !== dragId);
+          const overIdx = without.findIndex((c) => c[ctx.idKey] === overId);
+          if (overIdx < 0) return;
           let before, after;
-          if (isLast) {
-            before = without[insertAt].sort_order;
-            after = before + 20;
+          if (side === "above") {
+            before = ((_a = without[overIdx - 1]) == null ? void 0 : _a.sort_order) ?? without[overIdx].sort_order - 20;
+            after = without[overIdx].sort_order;
           } else {
-            before = ((_a = without[insertAt - 1]) == null ? void 0 : _a.sort_order) ?? without[insertAt].sort_order - 20;
-            after = without[insertAt].sort_order;
+            before = without[overIdx].sort_order;
+            after = ((_b = without[overIdx + 1]) == null ? void 0 : _b.sort_order) ?? before + 20;
           }
           let newOrder = (before + after) / 2;
           const GAP_THRESHOLD = 0.01;
           if (Math.abs(after - newOrder) < GAP_THRESHOLD || Math.abs(newOrder - before) < GAP_THRESHOLD) {
             const reindexed = without.map((c, i) => ({ ...c, sort_order: (i + 1) * 10 }));
-            const rBefore = ((_b = reindexed[insertAt - 1]) == null ? void 0 : _b.sort_order) ?? 0;
-            const rAfter = ((_c = reindexed[insertAt]) == null ? void 0 : _c.sort_order) ?? rBefore + 20;
+            const rOverIdx = reindexed.findIndex((c) => c[ctx.idKey] === overId);
+            let rBefore, rAfter;
+            if (side === "above") {
+              rBefore = ((_c = reindexed[rOverIdx - 1]) == null ? void 0 : _c.sort_order) ?? 0;
+              rAfter = reindexed[rOverIdx].sort_order;
+            } else {
+              rBefore = reindexed[rOverIdx].sort_order;
+              rAfter = ((_d = reindexed[rOverIdx + 1]) == null ? void 0 : _d.sort_order) ?? rBefore + 20;
+            }
             newOrder = (rBefore + rAfter) / 2;
             reindexed.forEach((c) => {
-              if (c.chore_id !== dragId) {
-                this._svc("update_chore", { chore_id: c.chore_id, sort_order: c.sort_order });
+              if (c[ctx.idKey] !== dragId) {
+                this._svc(ctx.svc, { [ctx.idField]: c[ctx.idKey], sort_order: c.sort_order });
               }
             });
           }
-          this._svc("update_chore", { chore_id: dragId, sort_order: newOrder });
+          this._svc(ctx.svc, { [ctx.idField]: dragId, sort_order: newOrder });
         }, { signal });
         root.addEventListener("dragend", () => {
-          root.querySelectorAll(".fh-drag-over, .fh-dragging").forEach((el) => el.classList.remove("fh-drag-over", "fh-dragging"));
+          root.querySelectorAll(".fh-drop-above, .fh-drop-below, .fh-dragging").forEach((el) => el.classList.remove("fh-drop-above", "fh-drop-below", "fh-dragging"));
           this._dragId = this._dragOverId = null;
+          this._dragSide = null;
+          this._dragType = null;
         }, { signal });
       }
       disconnectedCallback() {
@@ -10461,6 +12217,7 @@ var init_FamilyHubCard = __esm({
         if (!this._hass) return;
         if (this._modal) return;
         if (this._adminSelectedChoreId) return;
+        if (this._adminSelectedItemId) return;
         const states = this._hass.states;
         let changed = false;
         for (const id of FH_SENSORS) {
@@ -10497,7 +12254,7 @@ var init_FamilyHubCard = __esm({
           if (!this._hass) {
             card.innerHTML = `<div class="fh-empty">Loading\u2026</div>`;
           } else {
-            const _validAdminSecs = ["today", "family", "tasks", "history", "settings"];
+            const _validAdminSecs = ["today", "family", "tasks", "rewards", "history", "settings"];
             if (!_validAdminSecs.includes(this._adminSec)) this._adminSec = "today";
             switch (this._cfg.mode) {
               case "command_center":
@@ -10588,7 +12345,34 @@ var init_FamilyHubCard = __esm({
       // ---- Service calls -----------------------------------------------------
       _svc(service, data) {
         if (!this._hass) return;
-        this._hass.callService(DOMAIN, service, data);
+        try {
+          const p = this._hass.callService(DOMAIN, service, data);
+          if (p && typeof p.catch === "function") {
+            p.catch((err) => {
+              var _a, _b;
+              console.error(`[family-hub] service ${service} failed:`, err, "payload:", data);
+              let msg = ((_a = err == null ? void 0 : err.body) == null ? void 0 : _a.message) || ((_b = err == null ? void 0 : err.error) == null ? void 0 : _b.message) || (err == null ? void 0 : err.message) || (err == null ? void 0 : err.error) || "";
+              if (!msg || typeof msg !== "string") {
+                try {
+                  msg = JSON.stringify(err);
+                } catch {
+                  msg = String(err);
+                }
+              }
+              if (msg.length > 600) msg = msg.slice(0, 600) + "\u2026";
+              alert(`Family Hub service "${service}" failed:
+
+${msg}
+
+(See browser console for full details.)`);
+            });
+          }
+        } catch (err) {
+          console.error(`[family-hub] callService threw:`, err);
+          alert(`Family Hub: service call "${service}" crashed before sending.
+
+${(err == null ? void 0 : err.message) || err}`);
+        }
       }
       // ---- Modal management --------------------------------------------------
       /**
@@ -10621,9 +12405,9 @@ var init_FamilyHubCard = __esm({
           case "edit-chore":
             return mChoreForm(data.chore, true, people, catLabels, this._choreFormTab);
           case "add-store-item":
-            return mAddStoreItem(people);
+            return mAddStoreItem(people, catLabels);
           case "edit-store-item":
-            return mEditStoreItem(data.item, people);
+            return mEditStoreItem(data.item, people, catLabels);
           case "add-person":
             return mAddPerson();
           case "edit-person":
@@ -10641,6 +12425,8 @@ var init_FamilyHubCard = __esm({
             const streaks = (p == null ? void 0 : p.streaks) || {};
             return mEditStreaks(data.pid, data.pname, chores, streaks);
           }
+          case "chip-in":
+            return mChipIn(data.item, data.pid, data.balance, data.remaining);
           default:
             return "";
         }
@@ -10728,6 +12514,12 @@ var init_FamilyHubCard = __esm({
         const personSecEl = sr.getElementById("m-sperson-section");
         if (scopeEl && personSecEl) {
           personSecEl.style.display = scopeEl.value === "personal" ? "" : "none";
+        }
+        const groupEl = sr.getElementById("m-sgroup");
+        const groupSecEl = sr.getElementById("m-sgroup-section");
+        if (groupEl && groupSecEl) {
+          groupSecEl.style.display = groupEl.checked ? "" : "none";
+          if (groupEl.checked && personSecEl) personSecEl.style.display = "none";
         }
         const rotSec = sr.getElementById("m-rotation-section");
         const rotCfg = sr.getElementById("m-rotation-config");

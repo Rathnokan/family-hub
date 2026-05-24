@@ -14,7 +14,11 @@ import { DEFAULT_COLOR, HISTORY_META, WEEKDAY_LABELS }   from "../constants.js";
 import { getEffectiveRank, getWeeklyPts, htmlRankBar, htmlSuccessStreak,
          getActiveStreaks,
          computeStreakProgress,
-         htmlChoreRow }                                   from "./_shared.js";
+         htmlChoreRow,
+         htmlGoalBanner, htmlRailGoal, htmlGoalToggleBtn,
+         storeItemIcon, htmlStoreItemLimit,
+         htmlStreakFreezeChip, htmlDailyProgress,
+         htmlGroupContributorBars, htmlChipInBtn, htmlGroupProposalBanner } from "./_shared.js";
 
 // ---- Palette ----------------------------------------------------------------
 
@@ -179,7 +183,8 @@ function _railPanels({ attr, naAttr, person, balance, openCount, weekly, rank,
                        rankIdx, dropThr, gainThr, plotDate }) {
     return `
         ${_railPanelKPIs(balance, openCount, weekly, attr.show_dollar_value ? attr.dollar_value : null)}
-        ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, person)}
+        ${htmlRailGoal(attr)}
+        ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, person, attr)}
         ${_railPanelStreaks(attr, naAttr, person)}
         ${_railPanelSheet(person, rank, plotDate)}`;
 }
@@ -216,15 +221,16 @@ function _railPanelKPIs(balance, openCount, weekly, dollarValue) {
     return _railPanel("TODAY · KPIS", body, { dense: true });
 }
 
-function _railPanelRank(rankIdx, weekly, dropThr, gainThr, person) {
+function _railPanelRank(rankIdx, weekly, dropThr, gainThr, person, attr) {
     const bar    = htmlRankBar(rankIdx, weekly, dropThr, gainThr, ENGINEER_RANKS, ENG.amber);
     const streak = htmlSuccessStreak(person, ENG.amber);
+    const freeze = htmlStreakFreezeChip(attr);
     if (!bar) {
         // Parent — rank bar is empty string; show a static "MAX RANK" note.
         return _railPanel("RANK · TRACK",
-            `<div class="fh-eng-rmax">${escHTML(getEffectiveRank(rankIdx, ENGINEER_RANKS).name)} &middot; MAX</div>${streak}`);
+            `<div class="fh-eng-rmax">${escHTML(getEffectiveRank(rankIdx, ENGINEER_RANKS).name)} &middot; MAX</div>${streak}${freeze}`);
     }
-    return _railPanel("RANK · TRACK", bar + streak);
+    return _railPanel("RANK · TRACK", bar + streak + freeze);
 }
 
 function _railPanelStreaks(attr, naAttr, person) {
@@ -319,6 +325,7 @@ function _workOrders(attr, person, balance, card) {
         ${pending.map(t => htmlChoreRow(t, engineerRowConfig, person, card, { index: ++pendingIdx })).join("")}` : "";
 
     return `
+        ${htmlDailyProgress(attr)}
         <div class="fh-row-list">
             ${all.slice(0, 6).map((t, i) => htmlChoreRow(t, engineerRowConfig, person, card, { index: i + 1 })).join("")}
             ${pendingSection}
@@ -339,23 +346,37 @@ function _rewards(attr, person, balance, card) {
     const pendingByName      = new Set(personPending.filter(r => !r.item_id).map(r => r.item_name));
 
     return `
+        ${htmlGroupProposalBanner(attr.group_proposals, person.person_id)}
+        ${htmlGoalBanner(attr)}
         <div class="fh-eng-reward-list">
             ${items.map(item => {
+                const isGroup   = !!item.is_group_reward;
                 const can       = balance >= item.points_cost;
                 const requested = pendingByItemId.has(item.item_id) || pendingByName.has(item.name);
+                const blocked   = !!item.next_available;
                 return `
                 <div class="fh-eng-reward-row">
+                    ${storeItemIcon(item)}
                     <div class="fh-eng-reward-body">
                         <div class="fh-eng-wo-name" style="font-size:1rem">${escHTML(item.name)}</div>
                         ${item.description
                             ? `<div class="fh-eng-status">${escHTML(item.description)}</div>` : ""}
+                        ${htmlStoreItemLimit(item)}
+                        ${htmlGroupContributorBars(item, person.person_id)}
                     </div>
-                    <div class="fh-eng-pts-stamp" style="min-width:64px">
-                        <div class="fh-eng-pts-num" style="font-size:1.2rem">${fPts(item.points_cost)}</div>
-                        <div class="fh-eng-pts-lbl">POINTS</div>
-                    </div>
-                    ${requested
+                    ${isGroup
+                        ? ""
+                        : `<div class="fh-eng-pts-stamp" style="min-width:64px">
+                               <div class="fh-eng-pts-num" style="font-size:1.2rem">${fPts(item.points_cost)}</div>
+                               <div class="fh-eng-pts-lbl">POINTS</div>
+                           </div>`}
+                    ${htmlGoalToggleBtn(item, attr, person.person_id)}
+                    ${isGroup
+                        ? htmlChipInBtn(item, person.person_id, balance)
+                        : requested
                         ? `<div class="fh-eng-status" style="color:${ENG.amber}">&#10003; REQUESTED</div>`
+                        : blocked
+                        ? `<div class="fh-eng-status" style="color:${ENG.amber};font-size:.75rem">NOT AVAILABLE</div>`
                         : `<button class="fh-eng-stamp-btn ${can ? "" : "disabled"}"
                                    data-act="redeem" data-iid="${item.item_id}" data-pid="${person.person_id}"
                                    style="font-size:9px;${!can ? "opacity:.4;cursor:not-allowed" : ""}">

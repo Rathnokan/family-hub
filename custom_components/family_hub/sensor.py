@@ -206,11 +206,47 @@ class FamilyHubPersonSensor(FamilyHubBaseSensor):
         completed_this_week  = [t for t in completed_total if t.get("completed_at", "")[:10] >= week_ago]
         pending_redeem_count = len([r for r in store.redemptions if r["person_id"] == self._person_id and r["status"] == REDEMPTION_PENDING])
 
-        balance  = person.get("points_balance", 0)
-        ppdollar = store.points_per_dollar
+        # v0.6.3 item 9: count of assigned tasks (non-reminder) fully approved or
+        # self-reported today — used by the card to render the daily progress bar
+        # without relying on tasks that have already left the active queue.
+        _chore_type_by_id = {c["id"]: c.get("chore_type", "") for c in store.chores}
+        _done_statuses    = {"pending_approval", "approved", "self_reported"}
+        tasks_done_today  = sum(
+            1 for t in all_tasks
+            if t.get("assigned_to") == self._person_id
+            and t.get("due_date") == today
+            and t.get("status") in _done_statuses
+            and _chore_type_by_id.get(t.get("chore_id", ""), "") != "reminder"
+        )
+
+        balance    = person.get("points_balance", 0)
+        rank_index = person.get("rank_index", 0)
+        ppdollar   = store.get_rank_ppd(rank_index)
 
         task_data   = store.get_tasks_for_card(self._person_id)
-        store_items = store.get_store_items_for_card(self._person_id)
+        store_items = store.get_store_items_for_card(self._person_id, rank_index)
+
+        # v0.6.3: store goal — surface a normalized snapshot so the card can
+        # render the progress bar without re-walking store_items. The pct is
+        # clamped to [0, 100]; a 0-cost goal (degenerate) reads as 100%.
+        goal_id   = person.get("goal_item_id", "") or ""
+        goal_item = store.get_store_item(goal_id) if goal_id else None
+        if goal_item:
+            cost = round(goal_item.get("dollar_value", 0) * store.get_rank_ppd(rank_index)) or 0
+            if cost <= 0:
+                goal_pct = 100
+            else:
+                goal_pct = int(min(100, max(0, (balance / cost) * 100)))
+            goal_summary = {
+                "item_id":     goal_item.get("id", ""),
+                "name":        goal_item.get("name", ""),
+                "icon":        goal_item.get("icon", ""),
+                "points_cost": cost,
+                "progress_pct": goal_pct,
+                "remaining":   max(0, cost - balance),
+            }
+        else:
+            goal_summary = None
 
         return {
             # Identity
@@ -225,6 +261,7 @@ class FamilyHubPersonSensor(FamilyHubBaseSensor):
             # Point summary
             "lifetime_points": person.get("points_lifetime", 0),
             "dollar_value":    round(balance / ppdollar, 2) if ppdollar else 0,
+            "rank_cents_per_pt": store.get_rank_cents_per_pt(rank_index),
             # show_dollar_value: always true for parents, respects toggle for kids
             "show_dollar_value": (
                 True if person.get("type") == "parent"
@@ -248,6 +285,20 @@ class FamilyHubPersonSensor(FamilyHubBaseSensor):
 
             # Store items visible to this person
             "store_items": store_items,
+
+            # v0.6.3: store goal (None when the kid hasn't picked one)
+            "goal_item_id": goal_id,
+            "goal":         goal_summary,
+
+            # v0.6.3 item 7: freeze tokens available to protect the success streak
+            "streak_freezes_available": person.get("streak_freezes_available", 0),
+
+            # v0.6.3 item 9: tasks fully done today (approved/self_reported/pending_approval)
+            # for the daily progress bar — excludes reminders, excludes maintenance
+            "tasks_done_today": tasks_done_today,
+
+            # v0.6.3 item 13: group reward proposals pending THIS kid's response
+            "group_proposals": store.get_group_proposals_for_person(self._person_id),
         }
 
 
@@ -393,6 +444,7 @@ class FamilyHubNeedsAttentionSensor(FamilyHubBaseSensor):
             len(store.get_pending_approvals())
             + len(store.get_pending_redemptions())
             + len(_get_maintenance_tasks(store, overdue_only=True))
+            + len(store.get_group_reward_proposals_for_card())
         )
 
     @property
@@ -403,19 +455,32 @@ class FamilyHubNeedsAttentionSensor(FamilyHubBaseSensor):
         pending_redeem = store.get_pending_redemptions()
         overdue_maint  = _get_maintenance_tasks(store, overdue_only=True)
 
-        # All store items for admin store management tab
+        # All store items for admin store management tab — sorted by
+        # sort_order (v0.6.3 drag-reorder), name as the deterministic
+        # tie-breaker for legacy items whose sort_order is still 0.
         all_store_items = [
             {
-                "item_id":     i["id"],
-                "name":        i["name"],
-                "description": i.get("description", ""),
-                "dollar_value":i.get("dollar_value", 0),
-                "points_cost": i.get("points_cost", 0),
-                "scope":       i.get("scope", "common"),
-                "person_ids":  i.get("person_ids", []),
-                "active":      i.get("active", True),
+                "item_id":        i["id"],
+                "name":           i["name"],
+                "description":    i.get("description", ""),
+                "dollar_value":   i.get("dollar_value", 0),
+                "points_cost":    i.get("points_cost", 0),
+                "scope":          i.get("scope", "common"),
+                "person_ids":     i.get("person_ids", []),
+                "active":         i.get("active", True),
+                "sort_order":     i.get("sort_order", 0),
+                "icon":           i.get("icon", "") or "",
+                "category_label": i.get("category_label", "") or "",
+                "max_per_period": i.get("max_per_period", 0),
+                "period":         i.get("period", "week"),
+                # v0.6.3 item 13: group reward fields for admin store management
+                "is_group_reward": i.get("is_group_reward", False),
+                "contributors":    i.get("contributors", []),
             }
-            for i in store.store_items if i.get("active", True)
+            for i in sorted(
+                store.store_items,
+                key=lambda x: (x.get("sort_order", 0), x.get("name", "")),
+            )
         ]
 
         return {
@@ -425,8 +490,10 @@ class FamilyHubNeedsAttentionSensor(FamilyHubBaseSensor):
             "overdue_maintenance":    len(overdue_maint),
 
             # Full queues — actionable rows for the admin card
-            "approval_queue":   store.get_approval_queue_for_card(),
-            "redemption_queue": store.get_redemption_queue_for_card(),
+            "approval_queue":        store.get_approval_queue_for_card(),
+            "redemption_queue":      store.get_redemption_queue_for_card(),
+            # v0.6.3 item 13: group reward proposals awaiting parent sign-off
+            "group_proposal_queue":  store.get_group_reward_proposals_for_card(),
 
             # All active people with balances for admin overview
             "people": [
@@ -463,6 +530,8 @@ class FamilyHubNeedsAttentionSensor(FamilyHubBaseSensor):
                     "completion_threshold_pct": p.get("completion_threshold_pct", 80),
                     "completion_milestone":     p.get("completion_milestone", 7),
                     "completion_bonus_points":  p.get("completion_bonus_points", 50),
+                    # v0.6.3: store goal item ("" = none)
+                    "goal_item_id":             p.get("goal_item_id", "") or "",
                 }
                 for p in store.people if p.get("active", True)
             ],
@@ -488,10 +557,10 @@ class FamilyHubNeedsAttentionSensor(FamilyHubBaseSensor):
             "rooms_config":             store.settings.get("rooms_config", {}),
             "weather_entity":           store.settings.get("weather_entity", ""),
             "today_calendar_entities":  store.settings.get("today_calendar_entities", []),
-            # v0.6.0 S5: rank evaluation settings
             "rank_eval_weekday":        store.settings.get("rank_eval_weekday", 0),
             "rank_drop_threshold":      store.settings.get("rank_drop_threshold", 50),
             "rank_gain_threshold":      store.settings.get("rank_gain_threshold", 75),
+            "rank_ppd_ladder":          store.rank_ppd_ladder,
 
             # v0.4.0: enriched history log for admin log/approvals UI
             # Includes person name/color, chore_name, reversible action hint.

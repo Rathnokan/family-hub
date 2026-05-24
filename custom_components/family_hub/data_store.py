@@ -117,9 +117,16 @@ from .const import (
     RECURRENCE_MONTHLY_ON_DATE,
     RECURRENCE_ONE_TIME,
     RECURRENCE_WEEKLY,
+    PROPOSAL_APPROVED,
+    PROPOSAL_DECLINED,
+    PROPOSAL_PENDING_KIDS,
+    PROPOSAL_PENDING_PARENT,
     REDEMPTION_APPROVED,
     REDEMPTION_DECLINED,
     REDEMPTION_PENDING,
+    HISTORY_GROUP_CHIP_IN,
+    HISTORY_GROUP_REDEEMED,
+    HISTORY_GROUP_PROPOSED,
     SCOPE_COMMON,
     SCOPE_PERSONAL,
     STATUS_APPROVED,
@@ -169,6 +176,7 @@ def _empty_store(
         "store_items": [],
         "redemptions": [],
         "history": [],
+        "group_reward_proposals": [],
     }
 
 
@@ -263,6 +271,21 @@ def _migrate_store_item(item: dict) -> dict:
     if "person_ids" not in item:
         pid = item.get("person_id")
         item["person_ids"] = [pid] if pid else []
+    # v0.6.3: sort_order for admin drag-reorder. Default 0; back-fill in
+    # creation order during full migration (see _migrate, end of method).
+    item.setdefault("sort_order", 0)
+    # v0.6.3: optional FH_ICON key for the store item ("" = no icon)
+    item.setdefault("icon", "")
+    # v0.6.3+: category grouping (matches chore category_label shape)
+    item.setdefault("category_label", "")
+    # v0.6.3+ item 5: max redemptions per period (0 = unlimited)
+    item.setdefault("max_per_period", 0)
+    item.setdefault("period", "week")
+    # v0.6.3+ active flag — False = archived/hidden in store
+    item.setdefault("active", True)
+    # v0.6.3 item 13: group / shared reward
+    item.setdefault("is_group_reward", False)
+    item.setdefault("contributors", [])   # [{person_id, share_pct, contributed_pts}]
     return item
 
 
@@ -396,6 +419,13 @@ class FamilyHubDataStore:
             person.setdefault("completion_milestone",       7)    # bonus every N days (0 = off)
             person.setdefault("completion_bonus_points",    50)
             person.setdefault("last_completion_eval_date",  None) # ISO date string
+            # v0.6.3: store goal — kid picks a store item to save toward. Card
+            # surfaces a progress bar (balance / item.points_cost) on the rail
+            # and store tab. Empty string = no goal.
+            person.setdefault("goal_item_id",                "")
+            # v0.6.3 item 7: streak freeze tokens — earned at completion-streak
+            # milestones, auto-spent to protect the streak on a bad day.
+            person.setdefault("streak_freezes_available",    0)
 
         # v0.6.0 S5: rank evaluation settings
         s.setdefault("rank_eval_weekday",   0)   # 0 = Monday
@@ -425,6 +455,15 @@ class FamilyHubDataStore:
             if chore["sort_order"] == 0 and idx > 0:
                 chore["sort_order"] = idx
 
+        # v0.6.3: back-fill store-item sort_order in creation order so the
+        # drag-reorder math has unique starting positions to bisect.
+        for idx, item in enumerate(self._data.get("store_items", [])):
+            if item.get("sort_order", 0) == 0 and idx > 0:
+                item["sort_order"] = (idx + 1) * 10
+
+        # v0.6.3 item 13: ensure group_reward_proposals list exists
+        self._data.setdefault("group_reward_proposals", [])
+
     async def async_save(self) -> None:
         """Persist data to disk atomically. Lock acquired here."""
         def _write() -> None:
@@ -452,6 +491,61 @@ class FamilyHubDataStore:
     @property
     def points_per_dollar(self) -> int:
         return self.settings.get("points_per_dollar", DEFAULT_POINTS_PER_DOLLAR)
+
+    @property
+    def rank_ppd_ladder(self) -> list[float]:
+        """Cents-per-point per rank index (rank 0 … N). Default 5-rung ladder."""
+        return self.settings.get("rank_ppd_ladder", [3.0, 3.5, 4.0, 4.5, 5.0])
+
+    def get_rank_cents_per_pt(self, rank_index: int) -> float:
+        """Return ¢/point for rank_index, clamped to ladder bounds."""
+        ladder = self.rank_ppd_ladder
+        if not ladder:
+            return 100.0 / self.points_per_dollar
+        idx = max(0, min(int(rank_index), len(ladder) - 1))
+        return ladder[idx]
+
+    def get_rank_ppd(self, rank_index: int) -> float:
+        """Return effective points-per-dollar for rank_index."""
+        cpt = self.get_rank_cents_per_pt(rank_index)
+        return 100.0 / cpt if cpt > 0 else float(self.points_per_dollar)
+
+    def _count_period_redemptions(
+        self, person_id: str, item_id: str, period: str, today: date
+    ) -> int:
+        """Count pending+approved redemptions for person+item in the current period."""
+        if period == "day":
+            start = today.isoformat()
+        elif period == "week":
+            start = (today - timedelta(days=today.weekday())).isoformat()
+        else:  # month
+            start = date(today.year, today.month, 1).isoformat()
+        return sum(
+            1 for r in self.redemptions
+            if r.get("person_id") == person_id
+            and r.get("store_item_id") == item_id
+            and r.get("status") in {REDEMPTION_PENDING, REDEMPTION_APPROVED}
+            and r.get("requested_at", "")[:10] >= start
+        )
+
+    def get_next_available_date(
+        self, person_id: str, item_id: str, max_per_period: int, period: str
+    ) -> str | None:
+        """Return ISO date when the rate limit resets, or None if not yet at limit."""
+        if max_per_period <= 0:
+            return None
+        today = date.today()
+        if self._count_period_redemptions(person_id, item_id, period, today) < max_per_period:
+            return None
+        if period == "day":
+            return (today + timedelta(days=1)).isoformat()
+        if period == "week":
+            days_ahead = (7 - today.weekday()) % 7 or 7
+            return (today + timedelta(days=days_ahead)).isoformat()
+        # month
+        if today.month == 12:
+            return date(today.year + 1, 1, 1).isoformat()
+        return date(today.year, today.month + 1, 1).isoformat()
 
     @property
     def show_dollar_value_to_kids(self) -> bool:
@@ -728,6 +822,7 @@ class FamilyHubDataStore:
         rank_eval_weekday: int | None = None,
         rank_drop_threshold: int | None = None,
         rank_gain_threshold: int | None = None,
+        rank_ppd_ladder: list[float] | None = None,
     ) -> None:
         s = self._data["settings"]
         if family_name is not None:
@@ -754,6 +849,8 @@ class FamilyHubDataStore:
             s["rank_drop_threshold"] = rank_drop_threshold
         if rank_gain_threshold is not None:
             s["rank_gain_threshold"] = rank_gain_threshold
+        if rank_ppd_ladder is not None:
+            s["rank_ppd_ladder"] = [float(v) for v in rank_ppd_ladder]
         await self.async_save()
 
     # ------------------------------------------------------------------
@@ -800,6 +897,10 @@ class FamilyHubDataStore:
             "completion_milestone":       7,
             "completion_bonus_points":    50,
             "last_completion_eval_date":  None,
+            # v0.6.3: store goal item (empty = none)
+            "goal_item_id":               "",
+            # v0.6.3 item 7: streak freeze tokens
+            "streak_freezes_available":   0,
         }
         self._data["people"].append(person)
         self._append_history(
@@ -830,6 +931,10 @@ class FamilyHubDataStore:
             # v0.6.1: success-rate person streak (admin-configurable knobs)
             "completion_streak",
             "completion_threshold_pct", "completion_milestone", "completion_bonus_points",
+            # v0.6.3: store goal item
+            "goal_item_id",
+            # v0.6.3 item 7: streak freeze tokens (admin can also top up)
+            "streak_freezes_available",
         }
         for key, val in kwargs.items():
             if key in allowed:
@@ -1740,14 +1845,36 @@ class FamilyHubDataStore:
                         person.get("name", person["id"]),
                         bonus, person["completion_streak"], hit_pct,
                     )
+                    # v0.6.3 item 7: award 1 freeze token at every milestone so
+                    # sustained effort earns protection against future bad days.
+                    person["streak_freezes_available"] = person.get("streak_freezes_available", 0) + 1
+                    _LOGGER.info(
+                        "Family Hub: streak freeze token awarded — %s now has %d",
+                        person.get("name", person["id"]),
+                        person["streak_freezes_available"],
+                    )
             else:
                 if person.get("completion_streak", 0) > 0:
-                    _LOGGER.info(
-                        "Family Hub: success-streak broken — %s (was %d days, hit=%.0f%%)",
-                        person.get("name", person["id"]),
-                        person.get("completion_streak", 0), hit_pct,
-                    )
-                person["completion_streak"] = 0
+                    # v0.6.3 item 7: auto-spend one freeze token to protect the streak.
+                    freezes = person.get("streak_freezes_available", 0)
+                    if freezes > 0:
+                        person["streak_freezes_available"] = freezes - 1
+                        _LOGGER.info(
+                            "Family Hub: streak freeze spent — %s streak protected "
+                            "(was %.0f%% hit, needed %.0f%%), %d token(s) remaining",
+                            person.get("name", person["id"]),
+                            hit_pct, threshold,
+                            person["streak_freezes_available"],
+                        )
+                    else:
+                        _LOGGER.info(
+                            "Family Hub: success-streak broken — %s (was %d days, hit=%.0f%%)",
+                            person.get("name", person["id"]),
+                            person.get("completion_streak", 0), hit_pct,
+                        )
+                        person["completion_streak"] = 0
+                else:
+                    person["completion_streak"] = 0
 
             person["last_completion_eval_date"] = yesterday_str
 
@@ -2239,8 +2366,14 @@ class FamilyHubDataStore:
         return next((i for i in self.store_items if i["id"] == item_id), None)
 
     def get_store_items_for_person(self, person_id: str) -> list[dict]:
-        """Return common items + items where person_id is in person_ids list."""
-        return [
+        """Return common items + items where person_id is in person_ids list.
+
+        v0.6.3: sorted by sort_order (admin drag-reorder) with name as the
+        deterministic tie-breaker for legacy items at sort_order=0.
+        v0.6.3 item 13: group rewards are also returned if the person is listed
+        as a contributor, regardless of scope.
+        """
+        items = [
             i for i in self.store_items
             if i.get("active", True) and (
                 i.get("scope") == SCOPE_COMMON
@@ -2248,8 +2381,13 @@ class FamilyHubDataStore:
                     i.get("scope") == SCOPE_PERSONAL
                     and person_id in (i.get("person_ids") or [])
                 )
+                or (
+                    i.get("is_group_reward")
+                    and any(c.get("person_id") == person_id for c in i.get("contributors", []))
+                )
             )
         ]
+        return sorted(items, key=lambda x: (x.get("sort_order", 0), x.get("name", "")))
 
     def _dollar_to_points(self, dollar_value: float) -> int:
         return round(dollar_value * self.points_per_dollar)
@@ -2261,17 +2399,49 @@ class FamilyHubDataStore:
         scope: str = SCOPE_COMMON,
         person_ids: list[str] | None = None,
         description: str = "",
+        icon: str = "",
+        category_label: str = "",
+        max_per_period: int = 0,
+        period: str = "week",
+        is_group_reward: bool = False,
+        contributors: list[dict] | None = None,
     ) -> dict:
+        # v0.6.3: place new items at the end of the sort_order ladder so the
+        # drag-reorder bisect math doesn't collide with existing positions.
+        max_sort = max(
+            (i.get("sort_order", 0) for i in self._data["store_items"]),
+            default=0,
+        )
+        # When creating a group reward, compute target_pts for each contributor
+        # based on their share_pct and the item's points_cost.
+        points_cost = self._dollar_to_points(dollar_value)
+        resolved_contributors: list[dict] = []
+        if is_group_reward and contributors:
+            for c in contributors:
+                resolved_contributors.append({
+                    "person_id":       c.get("person_id", ""),
+                    "share_pct":       int(c.get("share_pct", 0)),
+                    "contributed_pts": int(c.get("contributed_pts", 0)),
+                    "target_pts":      round(points_cost * int(c.get("share_pct", 0)) / 100),
+                })
         item = {
             "id": _new_id(),
             "name": name,
             "description": description,
             "dollar_value": dollar_value,
-            "points_cost": self._dollar_to_points(dollar_value),
+            "points_cost": points_cost,
             "scope": scope,
             "person_ids": person_ids if scope == SCOPE_PERSONAL else [],
             "active": True,
             "created_at": _now_iso(),
+            "sort_order": max_sort + 10,
+            "icon": icon or "",
+            "category_label": category_label or "",
+            "max_per_period": max(0, int(max_per_period)),
+            "period": period if period in ("day", "week", "month") else "week",
+            # v0.6.3 item 13: group / shared reward
+            "is_group_reward": is_group_reward,
+            "contributors":    resolved_contributors,
         }
         self._data["store_items"].append(item)
         await self.async_save()
@@ -2281,7 +2451,9 @@ class FamilyHubDataStore:
         item = self.get_store_item(item_id)
         if not item:
             return None
-        allowed = {"name", "description", "dollar_value", "scope", "person_ids", "active"}
+        allowed = {"name", "description", "dollar_value", "scope", "person_ids", "active",
+                   "sort_order", "icon", "category_label", "max_per_period", "period",
+                   "is_group_reward", "contributors"}
         for key, val in kwargs.items():
             if key in allowed:
                 item[key] = val
@@ -2291,12 +2463,427 @@ class FamilyHubDataStore:
         return item
 
     async def async_delete_store_item(self, item_id: str) -> bool:
+        """Soft-delete: set active=False. Item remains in store_items list."""
         item = self.get_store_item(item_id)
         if not item:
             return False
         item["active"] = False
         await self.async_save()
         return True
+
+    async def async_hard_delete_store_item(self, item_id: str) -> bool:
+        """Hard-delete: physically remove item and cancel any pending redemptions for it.
+
+        v0.6.3 item 13: also refunds contributed_pts to each contributor when a
+        group reward is deleted, and marks any open proposals for this item as declined.
+        """
+        item = self.get_store_item(item_id)
+        if not item:
+            return False
+        # Cancel pending redemptions referencing this item
+        for r in self._data.get("redemptions", []):
+            if (r.get("store_item_id") == item_id
+                    and r.get("status") == REDEMPTION_PENDING):
+                r["status"]      = REDEMPTION_DECLINED
+                r["resolved_at"] = _now_iso()
+                r["resolved_by"] = "system"
+                r["note"]        = "Reward deleted by admin"
+        # v0.6.3 item 13: refund chipped-in points to each contributor
+        if item.get("is_group_reward"):
+            for contrib in item.get("contributors", []):
+                pid  = contrib.get("person_id")
+                pts  = contrib.get("contributed_pts", 0)
+                if pid and pts > 0:
+                    person = self.get_person(pid)
+                    if person:
+                        person["points_balance"] = person.get("points_balance", 0) + pts
+                        self._append_history(
+                            event_type=HISTORY_GROUP_CHIP_IN,
+                            person_id=pid,
+                            reference_id=item_id,
+                            points_delta=pts,
+                            balance_after=person["points_balance"],
+                            note=f'Refund: group reward "{item["name"]}" deleted',
+                        )
+        # v0.6.3 item 13: cancel any open proposals for this item
+        now = _now_iso()
+        for prop in self._data.get("group_reward_proposals", []):
+            if (prop.get("item_id") == item_id
+                    and prop.get("status") not in (PROPOSAL_APPROVED, PROPOSAL_DECLINED)):
+                prop["status"]      = PROPOSAL_DECLINED
+                prop["resolved_at"] = now
+                prop["resolved_by"] = "system"
+                prop["note"]        = "Reward deleted by admin"
+        # Remove from list
+        self._data["store_items"] = [
+            i for i in self._data["store_items"] if i["id"] != item_id
+        ]
+        await self.async_save()
+        return True
+
+    # ------------------------------------------------------------------
+    # Group reward proposals (v0.6.3 item 13)
+    # ------------------------------------------------------------------
+
+    @property
+    def group_reward_proposals(self) -> list[dict]:
+        return self._data.get("group_reward_proposals", [])
+
+    def get_group_proposal(self, proposal_id: str) -> dict | None:
+        return next((p for p in self.group_reward_proposals if p["id"] == proposal_id), None)
+
+    async def async_propose_group_reward(
+        self,
+        item_id: str,
+        proposer_id: str,
+        proposer_share_pct: int,
+        invitees: list[dict],  # [{"person_id": ..., "share_pct": ...}]
+    ) -> dict | None:
+        """
+        Kid proposes turning a store item into a shared group reward.
+
+        Creates a proposal record with status=pending_kid_acceptance. Each invitee
+        must respond (accept/decline) before it advances to parent approval. If any
+        invitee declines the proposal is immediately closed as declined.
+
+        Validates that proposer_share_pct + all invitee share_pct sums to ~100.
+        """
+        item = self.get_store_item(item_id)
+        if not item or not item.get("active", True):
+            _LOGGER.warning("Family Hub: propose_group_reward — item %s not found or inactive", item_id)
+            return None
+        proposer = self.get_person(proposer_id)
+        if not proposer:
+            return None
+
+        # Validate share percentages
+        total_pct = proposer_share_pct + sum(int(i.get("share_pct", 0)) for i in invitees)
+        if abs(total_pct - 100) > 2:
+            _LOGGER.warning(
+                "Family Hub: propose_group_reward — shares don't sum to 100 (got %d)", total_pct
+            )
+            return None
+
+        proposal: dict = {
+            "id": _new_id(),
+            "item_id": item_id,
+            "item_name": item["name"],
+            "proposed_by": proposer_id,
+            "proposed_at": _now_iso(),
+            "status": PROPOSAL_PENDING_KIDS,
+            "proposer_share_pct": proposer_share_pct,
+            "invitees": [
+                {
+                    "person_id": inv["person_id"],
+                    "share_pct": int(inv.get("share_pct", 0)),
+                    "accepted": None,   # None=pending, True=accepted, False=declined
+                }
+                for inv in invitees
+            ],
+            "resolved_at": None,
+            "resolved_by": None,
+            "note": "",
+        }
+        self._data.setdefault("group_reward_proposals", []).append(proposal)
+        self._append_history(
+            event_type=HISTORY_GROUP_PROPOSED,
+            person_id=proposer_id,
+            reference_id=proposal["id"],
+            note=f'{proposer["name"]} proposed sharing "{item["name"]}"',
+        )
+        await self.async_save()
+        return proposal
+
+    async def async_respond_group_proposal(
+        self,
+        proposal_id: str,
+        person_id: str,
+        accept: bool,
+    ) -> dict | None:
+        """
+        Kid accepts or declines a group reward proposal.
+
+        A single decline immediately closes the proposal as PROPOSAL_DECLINED.
+        When all invitees have accepted the status advances to PROPOSAL_PENDING_PARENT.
+        """
+        proposal = self.get_group_proposal(proposal_id)
+        if not proposal or proposal.get("status") != PROPOSAL_PENDING_KIDS:
+            return None
+
+        invitee = next(
+            (i for i in proposal["invitees"] if i["person_id"] == person_id), None
+        )
+        if not invitee:
+            _LOGGER.warning("Family Hub: respond_group_proposal — %s not an invitee", person_id)
+            return None
+
+        invitee["accepted"] = accept
+
+        if not accept:
+            proposal["status"]      = PROPOSAL_DECLINED
+            proposal["resolved_at"] = _now_iso()
+            proposal["resolved_by"] = person_id
+            proposal["note"]        = "Declined by invitee"
+        else:
+            if all(i.get("accepted") is True for i in proposal["invitees"]):
+                proposal["status"] = PROPOSAL_PENDING_PARENT
+
+        await self.async_save()
+        return proposal
+
+    async def async_approve_group_proposal(
+        self,
+        proposal_id: str,
+        approved_by: str,
+    ) -> dict | None:
+        """
+        Parent approves a group reward proposal.
+
+        Activates the store item as a group reward: sets is_group_reward=True,
+        populates the contributors list with target_pts for each contributor, and
+        restricts visibility to SCOPE_PERSONAL so only contributors see it.
+        """
+        proposal = self.get_group_proposal(proposal_id)
+        if not proposal or proposal.get("status") != PROPOSAL_PENDING_PARENT:
+            return None
+
+        item = self.get_store_item(proposal["item_id"])
+        if not item:
+            return None
+
+        proposal["status"]      = PROPOSAL_APPROVED
+        proposal["resolved_at"] = _now_iso()
+        proposal["resolved_by"] = approved_by
+
+        # Compute target_pts at the default (rank-0) rate so all kids share
+        # the same nominal cost regardless of individual rank.
+        base_ppd    = self.get_rank_ppd(0)
+        points_cost = round(item.get("dollar_value", 0) * base_ppd)
+
+        all_contributors = (
+            [{"person_id": proposal["proposed_by"], "share_pct": proposal["proposer_share_pct"]}]
+            + [{"person_id": i["person_id"], "share_pct": i["share_pct"]} for i in proposal["invitees"]]
+        )
+
+        item["is_group_reward"] = True
+        item["contributors"] = [
+            {
+                "person_id":       c["person_id"],
+                "share_pct":       c["share_pct"],
+                "contributed_pts": 0,
+                "target_pts":      round(points_cost * c["share_pct"] / 100),
+            }
+            for c in all_contributors
+        ]
+
+        # Restrict scope so only contributors see it in their store.
+        item["scope"]      = SCOPE_PERSONAL
+        item["person_ids"] = [c["person_id"] for c in all_contributors]
+
+        await self.async_save()
+        return proposal
+
+    async def async_decline_group_proposal(
+        self,
+        proposal_id: str,
+        declined_by: str,
+        reason: str = "",
+    ) -> dict | None:
+        """Parent declines a group reward proposal."""
+        proposal = self.get_group_proposal(proposal_id)
+        if not proposal or proposal.get("status") != PROPOSAL_PENDING_PARENT:
+            return None
+
+        proposal["status"]      = PROPOSAL_DECLINED
+        proposal["resolved_at"] = _now_iso()
+        proposal["resolved_by"] = declined_by
+        proposal["note"]        = reason or "Declined by parent"
+
+        await self.async_save()
+        return proposal
+
+    async def async_chip_in_group_reward(
+        self,
+        item_id: str,
+        person_id: str,
+        points: int,
+    ) -> dict | None:
+        """
+        Kid chips in points toward a group reward.
+
+        Points are deducted from the kid's balance immediately. The
+        contributed_pts for this contributor on the store item is incremented.
+        Capped so total contributed_pts never exceeds the contributor's target_pts.
+        """
+        item   = self.get_store_item(item_id)
+        person = self.get_person(person_id)
+        if not item or not person or not item.get("is_group_reward"):
+            return None
+
+        contrib = next(
+            (c for c in item.get("contributors", []) if c.get("person_id") == person_id),
+            None,
+        )
+        if not contrib:
+            _LOGGER.warning(
+                "Family Hub: chip_in_group_reward — %s is not a contributor on %s",
+                person_id, item_id,
+            )
+            return None
+
+        if points <= 0:
+            return None
+
+        if person.get("points_balance", 0) < points:
+            _LOGGER.warning(
+                "Family Hub: chip_in_group_reward — insufficient balance for %s (%d needed, %d available)",
+                person_id, points, person.get("points_balance", 0),
+            )
+            return None
+
+        # Cap at remaining share
+        already   = contrib.get("contributed_pts", 0)
+        target    = contrib.get("target_pts", 0)
+        remaining = max(0, target - already)
+        points    = min(points, remaining)
+        if points <= 0:
+            _LOGGER.info(
+                "Family Hub: chip_in_group_reward — %s already at target for %s",
+                person_id, item_id,
+            )
+            return None
+
+        person["points_balance"] = person.get("points_balance", 0) - points
+        contrib["contributed_pts"] = already + points
+
+        self._append_history(
+            event_type=HISTORY_GROUP_CHIP_IN,
+            person_id=person_id,
+            reference_id=item_id,
+            points_delta=-points,
+            balance_after=person["points_balance"],
+            note=f'Chipped in {points}pts toward "{item["name"]}"',
+        )
+        await self.async_save()
+        return item
+
+    async def async_redeem_group_reward(
+        self,
+        item_id: str,
+        redeemed_by: str,
+    ) -> dict | None:
+        """
+        Parent marks a fully-funded group reward as redeemed.
+
+        Creates an APPROVED redemption record for each contributor (no extra point
+        deduction — points were already deducted at chip-in time). Marks the item
+        inactive so it disappears from the store. Resets contributed_pts so the
+        item can be re-activated later if desired.
+        """
+        item = self.get_store_item(item_id)
+        if not item or not item.get("is_group_reward"):
+            return None
+
+        # Guard: all contributors must be at their target
+        for contrib in item.get("contributors", []):
+            if contrib.get("contributed_pts", 0) < contrib.get("target_pts", 0):
+                _LOGGER.warning(
+                    "Family Hub: redeem_group_reward — item %s not fully funded yet", item_id
+                )
+                return None
+
+        now = _now_iso()
+        for contrib in item.get("contributors", []):
+            pid    = contrib.get("person_id")
+            person = self.get_person(pid) if pid else None
+            self._data["redemptions"].append({
+                "id":            _new_id(),
+                "store_item_id": item_id,
+                "person_id":     pid,
+                "points_cost":   contrib.get("contributed_pts", 0),
+                "item_name":     item["name"],
+                "status":        REDEMPTION_APPROVED,
+                "requested_at":  now,
+                "resolved_at":   now,
+                "resolved_by":   redeemed_by,
+                "note":          "Group reward redeemed",
+            })
+            self._append_history(
+                event_type=HISTORY_GROUP_REDEEMED,
+                person_id=pid,
+                reference_id=item_id,
+                points_delta=0,
+                balance_after=person.get("points_balance", 0) if person else 0,
+                note=f'Group reward "{item["name"]}" redeemed',
+            )
+
+        # Mark item inactive; reset chip-in totals for potential re-use.
+        item["active"] = False
+        for contrib in item.get("contributors", []):
+            contrib["contributed_pts"] = 0
+
+        await self.async_save()
+        return item
+
+    def get_group_reward_proposals_for_card(self) -> list[dict]:
+        """
+        All proposals in PROPOSAL_PENDING_PARENT state, enriched for the admin queue.
+        """
+        queue = []
+        for prop in self.group_reward_proposals:
+            if prop.get("status") != PROPOSAL_PENDING_PARENT:
+                continue
+            proposer = self.get_person(prop.get("proposed_by", ""))
+            # Enrich invitees with names/colors
+            enriched_invitees = []
+            for inv in prop.get("invitees", []):
+                p = self.get_person(inv.get("person_id", ""))
+                enriched_invitees.append({
+                    **inv,
+                    "person_name":  p["name"]                    if p else "Unknown",
+                    "person_color": p.get("avatar_color", "#7F77DD") if p else "#7F77DD",
+                })
+            queue.append({
+                "proposal_id":       prop["id"],
+                "item_id":           prop.get("item_id"),
+                "item_name":         prop.get("item_name"),
+                "proposed_by":       prop.get("proposed_by"),
+                "proposer_name":     proposer["name"] if proposer else "Unknown",
+                "proposer_color":    proposer.get("avatar_color", "#7F77DD") if proposer else "#7F77DD",
+                "proposer_share_pct": prop.get("proposer_share_pct", 0),
+                "proposed_at":       prop.get("proposed_at"),
+                "invitees":          enriched_invitees,
+            })
+        return sorted(queue, key=lambda x: x.get("proposed_at") or "")
+
+    def get_group_proposals_for_person(self, person_id: str) -> list[dict]:
+        """
+        Proposals that are pending THIS kid's response (status=pending_kid_acceptance
+        and this person is an invitee who hasn't yet responded).
+        """
+        result = []
+        for prop in self.group_reward_proposals:
+            if prop.get("status") != PROPOSAL_PENDING_KIDS:
+                continue
+            invitee = next(
+                (i for i in prop.get("invitees", []) if i.get("person_id") == person_id),
+                None,
+            )
+            if not invitee or invitee.get("accepted") is not None:
+                continue   # not invited, or already responded
+
+            proposer = self.get_person(prop.get("proposed_by", ""))
+            result.append({
+                "proposal_id":    prop["id"],
+                "item_id":        prop.get("item_id"),
+                "item_name":      prop.get("item_name"),
+                "proposed_by":    prop.get("proposed_by"),
+                "proposer_name":  proposer["name"] if proposer else "Unknown",
+                "proposer_color": proposer.get("avatar_color", "#7F77DD") if proposer else "#7F77DD",
+                "my_share_pct":   invitee.get("share_pct", 0),
+                "proposed_at":    prop.get("proposed_at"),
+            })
+        return result
 
     # ------------------------------------------------------------------
     # Redemptions
@@ -2317,7 +2904,19 @@ class FamilyHubDataStore:
         item   = self.get_store_item(item_id)
         if not person or not item:
             return None
-        points_cost = item["points_cost"]
+        # Rate-limit check (item 5)
+        max_pp = item.get("max_per_period", 0)
+        if max_pp > 0:
+            period = item.get("period", "week")
+            if self._count_period_redemptions(person_id, item_id, period, date.today()) >= max_pp:
+                _LOGGER.warning(
+                    "Family Hub: redemption rate limit reached for %s / %s",
+                    person_id, item_id,
+                )
+                return None
+        # Use rank-adjusted cost (item 6)
+        rank_index  = person.get("rank_index", 0)
+        points_cost = round(item.get("dollar_value", 0) * self.get_rank_ppd(rank_index))
         if person["points_balance"] < points_cost:
             _LOGGER.warning("Family Hub: insufficient points for redemption")
             return None
@@ -2926,6 +3525,10 @@ class FamilyHubDataStore:
                 "expires_after_days":    chore.get("expires_after_days"),
                 "is_one_time":           chore["recurrence"].get("type") == RECURRENCE_ONE_TIME,
                 "streak":                self._get_streak(person_id, t["chore_id"]),
+                # v0.6.3 P2: carry the chore's sort_order so personal-page lists
+                # respect the admin drag-reorder. Within a category, rows are
+                # sorted by (sort_order, name) — same key as the admin table.
+                "sort_order":            chore.get("sort_order", 0),
             }
 
             if t["due_date"] == today_str:
@@ -2969,24 +3572,63 @@ class FamilyHubDataStore:
             })
 
         return {
-            "due_today":        sorted(due_today, key=lambda x: x["name"]),
-            "overdue":          sorted(overdue, key=lambda x: -x.get("days_overdue", 0)),
+            # v0.6.3 P2: sort by sort_order (admin drag-reorder) with name as
+            # the tiebreaker for legacy rows still at sort_order=0.
+            "due_today":        sorted(due_today, key=lambda x: (x.get("sort_order", 0), x["name"])),
+            "overdue":          sorted(overdue,   key=lambda x: -x.get("days_overdue", 0)),
             "pending_approval": pending_approval,
         }
 
-    def get_store_items_for_card(self, person_id: str) -> list[dict]:
-        return [
-            {
-                "item_id":     i["id"],
-                "name":        i["name"],
-                "description": i.get("description", ""),
-                "dollar_value":i.get("dollar_value", 0),
-                "points_cost": i.get("points_cost", 0),
-                "scope":       i.get("scope"),
-                "person_ids":  i.get("person_ids", []),
+    def get_store_items_for_card(self, person_id: str, rank_index: int = 0) -> list[dict]:
+        """Return store items visible to person_id with rank-adjusted points_cost.
+
+        v0.6.3 item 13: group reward items include contributor progress rows enriched
+        with each contributor's name/color so the card can render progress bars.
+        """
+        eff_ppd = self.get_rank_ppd(rank_index)
+        result = []
+        for i in self.get_store_items_for_person(person_id):
+            row: dict = {
+                "item_id":        i["id"],
+                "name":           i["name"],
+                "description":    i.get("description", ""),
+                "dollar_value":   i.get("dollar_value", 0),
+                "points_cost":    round(i.get("dollar_value", 0) * eff_ppd),
+                "scope":          i.get("scope"),
+                "person_ids":     i.get("person_ids", []),
+                "sort_order":     i.get("sort_order", 0),
+                "icon":           i.get("icon", "") or "",
+                "category_label": i.get("category_label", "") or "",
+                "max_per_period": i.get("max_per_period", 0),
+                "period":         i.get("period", "week"),
+                "next_available": self.get_next_available_date(
+                    person_id, i["id"],
+                    i.get("max_per_period", 0),
+                    i.get("period", "week"),
+                ),
+                # v0.6.3 item 13: group reward fields
+                "is_group_reward":  i.get("is_group_reward", False),
+                "contributors":     [],
             }
-            for i in self.get_store_items_for_person(person_id)
-        ]
+            if i.get("is_group_reward"):
+                # Enrich contributor list with name/color for the card renderer.
+                enriched = []
+                total_pts = round(i.get("dollar_value", 0) * eff_ppd)
+                for c in i.get("contributors", []):
+                    pid    = c.get("person_id", "")
+                    person = self.get_person(pid)
+                    enriched.append({
+                        "person_id":       pid,
+                        "person_name":     person["name"]          if person else "Unknown",
+                        "person_color":    person.get("avatar_color", "#7F77DD") if person else "#7F77DD",
+                        "share_pct":       c.get("share_pct", 0),
+                        "target_pts":      round(total_pts * c.get("share_pct", 0) / 100),
+                        "contributed_pts": c.get("contributed_pts", 0),
+                        "is_me":           pid == person_id,
+                    })
+                row["contributors"] = enriched
+            result.append(row)
+        return result
 
     def get_approval_queue_for_card(self) -> list[dict]:
         queue = []
@@ -3074,8 +3716,11 @@ class FamilyHubDataStore:
                 "claim_count":           claim_cnt,
                 "slots_remaining":       max(0, max_c - claim_cnt) if subtype == CLAIMABLE_SUBTYPE_MULTI else 1,
                 "multi_claim_points_mode": pts_mode,
+                # v0.6.3 P2: admin drag-reorder
+                "sort_order":            chore.get("sort_order", 0),
             })
-        return items
+        # v0.6.3 P2: claimable picker honors the admin chore order
+        return sorted(items, key=lambda x: (x.get("sort_order", 0), x["name"]))
 
     def get_all_tasks_for_command_center(self) -> list[dict]:
         """
@@ -3164,12 +3809,15 @@ class FamilyHubDataStore:
                 "daily_penalty_firing":    dp_firing,
                 "streak":                  self._get_streak(assigned, task["chore_id"]) if assigned else 0,
                 "streak_milestone":        chore.get("streak_milestone", 0),
+                # v0.6.3 P2: command-center order respects admin drag-reorder
+                "sort_order":              chore.get("sort_order", 0),
             })
 
-        # Show today + overdue only on command center
+        # Show today + overdue only on command center. Sort by (most-overdue
+        # first, then admin sort_order, then name as the final tiebreaker).
         return sorted(
             [i for i in items if i["days_delta"] <= 0],
-            key=lambda x: x["days_delta"],
+            key=lambda x: (x["days_delta"], x.get("sort_order", 0), x["name"]),
         )
 
     def get_active_chores_for_card(self) -> list[dict]:

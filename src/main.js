@@ -20,7 +20,8 @@
  * appended to the body fetch so both files refresh together on each release.
  */
 
-import { VERSION } from "./card/constants.js";
+import { VERSION }  from "./card/constants.js";
+import { BUILD_ID } from "./build-id.js";
 
 // ---------------------------------------------------------------------------
 // Body URL — hardcoded to the integration's registered static path.
@@ -40,7 +41,11 @@ import { VERSION } from "./card/constants.js";
 // in constants.js (which we do on every release) and browsers fetch fresh.
 // ---------------------------------------------------------------------------
 
-const BODY_URL = `/family_hub/family-hub-card-body.js?v=${VERSION}`;
+// VERSION = release token (bumped per actual release).
+// BUILD_ID = build-time timestamp (changes every `npm run build`). Both together
+// guarantee that dev iterations bust the browser cache without us having to
+// touch VERSION in constants.js between every test deploy.
+const BODY_URL = `/family_hub/family-hub-card-body.js?v=${VERSION}&b=${BUILD_ID}`;
 
 // ---------------------------------------------------------------------------
 // Lazy body loader — single shared promise across all card instances on page

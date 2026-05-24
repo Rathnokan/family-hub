@@ -11,7 +11,15 @@
   var VERSION;
   var init_constants = __esm({
     "src/card/constants.js"() {
-      VERSION = "0.6.2";
+      VERSION = "0.6.3";
+    }
+  });
+
+  // src/build-id.js
+  var BUILD_ID;
+  var init_build_id = __esm({
+    "src/build-id.js"() {
+      BUILD_ID = "1779656478909";
     }
   });
 
@@ -19,7 +27,8 @@
   var require_main = __commonJS({
     "src/main.js"() {
       init_constants();
-      var BODY_URL = `/family_hub/family-hub-card-body.js?v=${VERSION}`;
+      init_build_id();
+      var BODY_URL = `/family_hub/family-hub-card-body.js?v=${VERSION}&b=${BUILD_ID}`;
       var _bodyPromise = null;
       function _loadBody() {
         if (_bodyPromise) return _bodyPromise;

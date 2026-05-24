@@ -15,7 +15,7 @@ import { htmlAdmin }                                  from "./modes-admin.js";
 import { htmlHome, htmlNavBack }                      from "./modes-home.js";
 import { getRoomById }                                from "./rooms/index.js";
 import { getTheme }                                   from "./themes/index.js";
-import { dispatch }                                   from "./dispatch.js";
+import { dispatch, handleIconFileSelection }          from "./dispatch.js";
 import {
     mPointAdjust,
     mAddTask,
@@ -29,6 +29,7 @@ import {
     mAddReminder,
     mConfirmRemovePerson,
     mEditStreaks,
+    mChipIn,
 } from "./modals.js";
 
 export class FamilyHubCard extends HTMLElement {
@@ -68,21 +69,45 @@ export class FamilyHubCard extends HTMLElement {
         this._celebration  = null;       // { name, streak } — milestone overlay
 
         // Drag-to-reorder state
-        this._dragId        = null;
-        this._dragOverId    = null;
-        this._sortedChores  = [];  // populated by modes-admin.js during render
+        this._dragId           = null;
+        this._dragOverId       = null;
+        this._dragType         = null;  // v0.6.3: "chore" | "store-item"
+        this._sortedChores     = [];    // populated by modes-admin.js during render
+        this._sortedStoreItems = [];    // populated by modes-admin.js during render (v0.6.3)
 
         // Admin chore table state (S9 P3 item 5)
         this._adminSelectedChoreId = null;   // chore_id shown in inline side panel (null = closed)
-        this._adminSort            = { col: null, dir: "asc" }; // { col: "name"|"pts"|"cat"|"asgn", dir: "asc"|"desc" }
-        this._adminCollapsedCats   = new Set();  // category labels whose rows are collapsed
-        this._choreFormTab         = "details";  // active tab in chore form (modal AND inline panel share this)
+        this._adminSort            = { col: null, dir: "asc" };
+        this._adminCollapsedCats   = new Set();
+        this._choreFormTab         = "details";
+
+        // Admin rewards section state
+        this._adminSelectedItemId      = null;   // item_id shown in inline side panel (null = closed)
+        this._adminSortItems           = { col: null, dir: "asc" };
+        this._adminCollapsedRewardCats = new Set();
+        this._storeItemFilter          = null;   // "active" | "inactive" | null
 
         // AbortController for event listener cleanup
         this._abortCtrl = null;
 
         // Retry timer: polls for sensor data on slow cold-boot (Echo Show 15)
         this._retryTimer = null;
+    }
+
+    /**
+     * v0.6.3 P2: reorder a category label by drag-and-drop. Categories are
+     * stored as a single ordered string list in `settings.category_labels`,
+     * so reorder = compute new order client-side, push the full list via
+     * update_settings.
+     */
+    _reorderCategory(dragLabel, overLabel, side) {
+        const current = this._attrs("sensor.family_hub_needs_attention").category_labels || [];
+        if (!current.includes(dragLabel) || !current.includes(overLabel)) return;
+        const without  = current.filter(l => l !== dragLabel);
+        const overIdx  = without.indexOf(overLabel);
+        const insertAt = side === "above" ? overIdx : overIdx + 1;
+        const next = [...without.slice(0, insertAt), dragLabel, ...without.slice(insertAt)];
+        this._svc("update_settings", { category_labels: next });
     }
 
     // ---- Web Component lifecycle -------------------------------------------
@@ -150,15 +175,30 @@ export class FamilyHubCard extends HTMLElement {
             if (t.classList.contains("m-assign-person") || t.classList.contains("m-sp-person") || t.classList.contains("m-rot-person")) {
                 t.closest(".fh-person-cb-chip")?.classList.toggle("checked", t.checked);
             }
+            // Reward icon upload: file picker fired its change event
+            if (t.id === "m-icon-upload" && t.files && t.files.length > 0) {
+                handleIconFileSelection(t, root);
+            }
             // Sync conditional modal fields after any change
             this._syncModalUI();
         }, { signal });
 
         // ---- Drag-to-reorder handlers -------------------------------------
+        // v0.6.3: rows carry data-drag-type so the same handlers serve all
+        // reorderable lists (chores, store items, category chips). Cross-type
+        // drops are refused by the dragover guard.
+        //
+        // Insertion model (v0.6.3 P2): cursor Y position vs target's vertical
+        // midpoint decides whether the dragged row lands ABOVE or BELOW the
+        // target. The insertion line is rendered via .fh-drop-above /
+        // .fh-drop-below classes on the target so the user can see exactly
+        // where the row will land before releasing.
         root.addEventListener("dragstart", e => {
             const row = e.target.closest("[data-drag-id]");
             if (!row) return;
-            this._dragId = row.dataset.dragId;
+            this._dragId   = row.dataset.dragId;
+            this._dragType = row.dataset.dragType || "chore";
+            this._dragSide = null;
             e.dataTransfer.effectAllowed = "move";
             setTimeout(() => row.classList.add("fh-dragging"), 0);
         }, { signal });
@@ -166,65 +206,113 @@ export class FamilyHubCard extends HTMLElement {
         root.addEventListener("dragover", e => {
             const row = e.target.closest("[data-drag-id]");
             if (!row || row.dataset.dragId === this._dragId) return;
+            const rowType = row.dataset.dragType || "chore";
+            if (rowType !== this._dragType) return;
             e.preventDefault();
-            root.querySelectorAll(".fh-drag-over")
-                .forEach(el => el.classList.remove("fh-drag-over"));
-            row.classList.add("fh-drag-over");
+
+            // Decide above vs below from cursor position vs row midpoint.
+            // Horizontal lists (category chips) use X; vertical lists
+            // (chores, store items) use Y.
+            const rect = row.getBoundingClientRect();
+            const horizontal = rowType === "category";
+            const side = horizontal
+                ? (e.clientX < rect.left + rect.width / 2 ? "above" : "below")
+                : (e.clientY < rect.top + rect.height / 2 ? "above" : "below");
+
+            // Clear all prior indicators then mark this row.
+            root.querySelectorAll(".fh-drop-above, .fh-drop-below")
+                .forEach(el => el.classList.remove("fh-drop-above", "fh-drop-below"));
+            row.classList.add(side === "above" ? "fh-drop-above" : "fh-drop-below");
+
             this._dragOverId = row.dataset.dragId;
+            this._dragSide   = side;
         }, { signal });
 
         root.addEventListener("dragleave", e => {
             const row = e.target.closest("[data-drag-id]");
-            if (row) row.classList.remove("fh-drag-over");
+            if (row) row.classList.remove("fh-drop-above", "fh-drop-below");
         }, { signal });
 
         root.addEventListener("drop", e => {
             e.preventDefault();
-            root.querySelectorAll(".fh-drag-over, .fh-dragging")
-                .forEach(el => el.classList.remove("fh-drag-over", "fh-dragging"));
+            root.querySelectorAll(".fh-drop-above, .fh-drop-below, .fh-dragging")
+                .forEach(el => el.classList.remove("fh-drop-above", "fh-drop-below", "fh-dragging"));
             const dragId = this._dragId;
             const overId = this._dragOverId;
+            const side   = this._dragSide || "above";
+            const type   = this._dragType || "chore";
             this._dragId = this._dragOverId = null;
+            this._dragSide = null;
+            this._dragType = null;
             if (!dragId || !overId || dragId === overId) return;
 
-            const sorted  = this._sortedChores;
-            const without = sorted.filter(c => c.chore_id !== dragId);
-            const insertAt= without.findIndex(c => c.chore_id === overId);
-            if (insertAt < 0) return;
+            // Pick the right list, ID accessor, and update service for this row type.
+            // category chips don't carry sort_order numerics — they're handled
+            // separately below via a single update_settings call with the full
+            // reordered list.
+            if (type === "category") {
+                this._reorderCategory(dragId, overId, side);
+                return;
+            }
 
-            const isLast = (insertAt === without.length - 1);
+            const ctx = type === "store-item"
+                ? { list: this._sortedStoreItems, idKey: "item_id",
+                    svc: "update_store_item", idField: "item_id" }
+                : { list: this._sortedChores,    idKey: "chore_id",
+                    svc: "update_chore",      idField: "chore_id" };
+
+            // Compute the target index in the "without dragged" list and the
+            // neighbors to bisect between.
+            const without = ctx.list.filter(c => c[ctx.idKey] !== dragId);
+            const overIdx = without.findIndex(c => c[ctx.idKey] === overId);
+            if (overIdx < 0) return;
+
+            // Translate "drop above/below target" into a neighbor pair for bisect.
+            // "above target" → insert just before overIdx
+            // "below target" → insert just after overIdx
             let before, after;
-            if (isLast) {
-                before = without[insertAt].sort_order;
-                after  = before + 20;
+            if (side === "above") {
+                before = without[overIdx - 1]?.sort_order ?? (without[overIdx].sort_order - 20);
+                after  = without[overIdx].sort_order;
             } else {
-                before = without[insertAt - 1]?.sort_order ?? (without[insertAt].sort_order - 20);
-                after  = without[insertAt].sort_order;
+                before = without[overIdx].sort_order;
+                after  = without[overIdx + 1]?.sort_order ?? (before + 20);
             }
 
             let newOrder = (before + after) / 2;
 
-            // Reindex if gap has compressed below useful threshold
+            // Reindex if gap has compressed below useful threshold. We rebuild
+            // the whole list with clean (i+1)*10 spacing, then bisect into the
+            // chosen gap on the freshly-spaced ladder.
             const GAP_THRESHOLD = 0.01;
             if (Math.abs(after - newOrder) < GAP_THRESHOLD || Math.abs(newOrder - before) < GAP_THRESHOLD) {
                 const reindexed = without.map((c, i) => ({ ...c, sort_order: (i + 1) * 10 }));
-                const rBefore   = reindexed[insertAt - 1]?.sort_order ?? 0;
-                const rAfter    = reindexed[insertAt]?.sort_order ?? (rBefore + 20);
-                newOrder        = (rBefore + rAfter) / 2;
+                const rOverIdx  = reindexed.findIndex(c => c[ctx.idKey] === overId);
+                let rBefore, rAfter;
+                if (side === "above") {
+                    rBefore = reindexed[rOverIdx - 1]?.sort_order ?? 0;
+                    rAfter  = reindexed[rOverIdx].sort_order;
+                } else {
+                    rBefore = reindexed[rOverIdx].sort_order;
+                    rAfter  = reindexed[rOverIdx + 1]?.sort_order ?? (rBefore + 20);
+                }
+                newOrder = (rBefore + rAfter) / 2;
                 reindexed.forEach(c => {
-                    if (c.chore_id !== dragId) {
-                        this._svc("update_chore", { chore_id: c.chore_id, sort_order: c.sort_order });
+                    if (c[ctx.idKey] !== dragId) {
+                        this._svc(ctx.svc, { [ctx.idField]: c[ctx.idKey], sort_order: c.sort_order });
                     }
                 });
             }
 
-            this._svc("update_chore", { chore_id: dragId, sort_order: newOrder });
+            this._svc(ctx.svc, { [ctx.idField]: dragId, sort_order: newOrder });
         }, { signal });
 
         root.addEventListener("dragend", () => {
-            root.querySelectorAll(".fh-drag-over, .fh-dragging")
-                .forEach(el => el.classList.remove("fh-drag-over", "fh-dragging"));
+            root.querySelectorAll(".fh-drop-above, .fh-drop-below, .fh-dragging")
+                .forEach(el => el.classList.remove("fh-drop-above", "fh-drop-below", "fh-dragging"));
             this._dragId = this._dragOverId = null;
+            this._dragSide = null;
+            this._dragType = null;
         }, { signal });
     }
 
@@ -293,9 +381,10 @@ export class FamilyHubCard extends HTMLElement {
     _maybeRender() {
         if (!this._hass) return;
         if (this._modal) return;
-        // Freeze sensor-driven re-renders while inline chore editor panel is open —
+        // Freeze sensor-driven re-renders while an inline editor panel is open —
         // otherwise typed-but-unsaved field values get overwritten on every 30s poll.
         if (this._adminSelectedChoreId) return;
+        if (this._adminSelectedItemId) return;
 
         const states = this._hass.states;
         let changed  = false;
@@ -336,7 +425,7 @@ export class FamilyHubCard extends HTMLElement {
                 card.innerHTML = `<div class="fh-empty">Loading…</div>`;
             } else {
                 // Redirect stale section IDs from older builds
-                const _validAdminSecs = ["today","family","tasks","history","settings"];
+                const _validAdminSecs = ["today","family","tasks","rewards","history","settings"];
                 if (!_validAdminSecs.includes(this._adminSec)) this._adminSec = "today";
 
                 switch (this._cfg.mode) {
@@ -431,7 +520,34 @@ export class FamilyHubCard extends HTMLElement {
 
     _svc(service, data) {
         if (!this._hass) return;
-        this._hass.callService(DOMAIN, service, data);
+        // Surface backend rejections (e.g. voluptuous schema validation errors
+        // when HA hasn't been restarted after a schema change) so silent failures
+        // become visible instead of just doing nothing. HA wraps service errors
+        // in a few different shapes — we dig through each to find a usable message.
+        try {
+            const p = this._hass.callService(DOMAIN, service, data);
+            if (p && typeof p.catch === "function") {
+                p.catch(err => {
+                    console.error(`[family-hub] service ${service} failed:`, err, "payload:", data);
+                    // Walk known error-message locations in order of preference
+                    let msg =
+                        err?.body?.message ||
+                        err?.error?.message ||
+                        err?.message ||
+                        err?.error ||
+                        "";
+                    if (!msg || typeof msg !== "string") {
+                        try { msg = JSON.stringify(err); } catch { msg = String(err); }
+                    }
+                    // Truncate (don't suppress) — Echo Show / mobile alerts wrap fine
+                    if (msg.length > 600) msg = msg.slice(0, 600) + "…";
+                    alert(`Family Hub service "${service}" failed:\n\n${msg}\n\n(See browser console for full details.)`);
+                });
+            }
+        } catch (err) {
+            console.error(`[family-hub] callService threw:`, err);
+            alert(`Family Hub: service call "${service}" crashed before sending.\n\n${err?.message || err}`);
+        }
     }
 
     // ---- Modal management --------------------------------------------------
@@ -463,8 +579,8 @@ export class FamilyHubCard extends HTMLElement {
             case "add-task":            return mAddTask(people);
             case "add-chore":           return mChoreForm(null, false, people, catLabels, this._choreFormTab);
             case "edit-chore":          return mChoreForm(data.chore, true, people, catLabels, this._choreFormTab);
-            case "add-store-item":      return mAddStoreItem(people);
-            case "edit-store-item":     return mEditStoreItem(data.item, people);
+            case "add-store-item":      return mAddStoreItem(people, catLabels);
+            case "edit-store-item":     return mEditStoreItem(data.item, people, catLabels);
             case "add-person":          return mAddPerson();
             case "edit-person":         return mEditPerson(data);
             case "edit-settings":       return mEditSettings(data);
@@ -476,6 +592,8 @@ export class FamilyHubCard extends HTMLElement {
                 const streaks = p?.streaks || {};
                 return mEditStreaks(data.pid, data.pname, chores, streaks);
             }
+            case "chip-in":
+                return mChipIn(data.item, data.pid, data.balance, data.remaining);
             default:                    return "";
         }
     }
@@ -562,6 +680,14 @@ export class FamilyHubCard extends HTMLElement {
         const personSecEl = sr.getElementById("m-sperson-section");
         if (scopeEl && personSecEl) {
             personSecEl.style.display = scopeEl.value === "personal" ? "" : "none";
+        }
+
+        // Group reward toggle — overrides person section when group is on
+        const groupEl    = sr.getElementById("m-sgroup");
+        const groupSecEl = sr.getElementById("m-sgroup-section");
+        if (groupEl && groupSecEl) {
+            groupSecEl.style.display = groupEl.checked ? "" : "none";
+            if (groupEl.checked && personSecEl) personSecEl.style.display = "none";
         }
 
         // Chore rotation: only meaningful for assigned chores; pool/cadence

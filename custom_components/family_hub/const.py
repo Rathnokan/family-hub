@@ -134,6 +134,14 @@ REDEMPTION_DECLINED = "declined"
 REDEMPTION_STATUSES = [REDEMPTION_PENDING, REDEMPTION_APPROVED, REDEMPTION_DECLINED]
 
 # ---------------------------------------------------------------------------
+# Group reward proposal statuses (v0.6.3 item 13)
+# ---------------------------------------------------------------------------
+PROPOSAL_PENDING_KIDS   = "pending_kid_acceptance"   # Waiting for invitees to accept/decline
+PROPOSAL_PENDING_PARENT = "pending_parent_approval"  # All kids accepted; parent must approve
+PROPOSAL_APPROVED       = "approved"                 # Live — item is now a group reward
+PROPOSAL_DECLINED       = "declined"                 # Rejected by a kid or parent
+
+# ---------------------------------------------------------------------------
 # History event types
 # ---------------------------------------------------------------------------
 HISTORY_TASK_COMPLETED        = "task_completed"
@@ -151,6 +159,9 @@ HISTORY_TASK_ADDED            = "task_added"
 HISTORY_PERSON_ADDED          = "person_added"
 HISTORY_ALLOWANCE             = "allowance"
 HISTORY_COMPLETION_STREAK_MILESTONE = "completion_streak_milestone"  # v0.6.1 success-rate streak bonus
+HISTORY_GROUP_CHIP_IN               = "group_chip_in"   # v0.6.3 item 13 — points chipped in
+HISTORY_GROUP_REDEEMED              = "group_redeemed"  # v0.6.3 item 13 — group reward redeemed
+HISTORY_GROUP_PROPOSED              = "group_proposed"  # v0.6.3 item 13 — kid proposed sharing
 
 # Rolling retention window — history entries older than this are trimmed on each
 # daily tick to keep the data file from growing unbounded.

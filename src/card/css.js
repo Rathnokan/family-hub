@@ -126,6 +126,22 @@ export const CSS = `
     background:color-mix(in srgb, var(--fh-accent) 8%, var(--fh-surface));
   }
   .fh-task-row.fh-dragging { opacity:.45; }
+
+  /* v0.6.3 P2: drop-position insertion line — shows on dragover, indicates
+     exactly where the dragged row will land. Works on any [data-drag-id]
+     row (chores, store items, category chips). Themes inherit the accent
+     color via currentColor on the pseudo. */
+  [data-drag-id] { position:relative; }
+  [data-drag-id].fh-dragging { opacity:.45; }
+  [data-drag-id].fh-drop-above::before,
+  [data-drag-id].fh-drop-below::after {
+    content:""; position:absolute; left:4px; right:4px; height:3px;
+    background:var(--fh-accent, #5B8DB9); border-radius:2px;
+    box-shadow:0 0 0 1px color-mix(in srgb, var(--fh-accent, #5B8DB9) 35%, transparent);
+    pointer-events:none; z-index:2;
+  }
+  [data-drag-id].fh-drop-above::before { top:-2px; }
+  [data-drag-id].fh-drop-below::after  { bottom:-2px; }
   .fh-task-row.flash {
     animation: fh-complete var(--flash-dur, 1.4s) ease forwards;
   }
@@ -251,6 +267,8 @@ export const CSS = `
   .fh-store-name  { font-size:.88rem; font-weight:700; }
   .fh-store-desc  { font-size:.75rem; color:var(--fh-text-sec); flex:1; }
   .fh-store-price { font-size:1rem; font-weight:800; }
+  .fh-store-limit { font-size:.72rem; color:var(--fh-text-sec); opacity:.85; }
+  .fh-store-limit--blocked { color:var(--fh-overdue); opacity:1; font-weight:600; }
 
   /* Admin store inventory list */
   .fh-store-inv-row {
@@ -527,6 +545,12 @@ export const CSS = `
     padding:4px 10px; border-radius:20px;
     background:var(--fh-surface); border:1.5px solid var(--fh-border);
     font-size:.82rem;
+    cursor:grab; user-select:none;
+  }
+  .fh-cat-chip:active { cursor:grabbing; }
+  .fh-cat-chip-handle {
+    color:var(--fh-text-sec); font-size:.72rem; line-height:1;
+    flex-shrink:0;
   }
   .fh-cat-chip-del {
     width:16px; height:16px; border-radius:50%; border:none;
@@ -535,6 +559,18 @@ export const CSS = `
     display:flex; align-items:center; justify-content:center;
   }
   .fh-cat-chip-del:hover { color:var(--fh-overdue); }
+  /* Category chips use the horizontal-list variant of the drop indicator:
+     vertical line on left/right edge instead of top/bottom strip. */
+  .fh-cat-chip.fh-drop-above::before,
+  .fh-cat-chip.fh-drop-below::after {
+    content:""; position:absolute; top:2px; bottom:2px; width:3px;
+    background:var(--fh-accent, #5B8DB9); border-radius:2px;
+    left:auto; right:auto; height:auto;
+    box-shadow:0 0 0 1px color-mix(in srgb, var(--fh-accent, #5B8DB9) 35%, transparent);
+    pointer-events:none; z-index:2;
+  }
+  .fh-cat-chip.fh-drop-above::before { left:-3px; top:2px; }
+  .fh-cat-chip.fh-drop-below::after  { right:-3px; top:2px; }
 
   /* Modal */
   .fh-modal-bg {
@@ -626,8 +662,25 @@ export const CSS = `
   .fh-icon-cell.selected { border-color:var(--fh-accent); background:var(--fh-bg); }
   .fh-icon-cell-label {
     font-size:.75rem; color:var(--fh-text-sec); text-align:center;
-    line-height:1.2; max-width:56px; overflow:hidden;
+    line-height:1.2; max-width:64px; overflow:hidden;
     text-overflow:ellipsis; white-space:nowrap;
+  }
+
+  /* Icon tab: selected-icon preview bar */
+  .fh-icon-selected-wrap {
+    display:flex; align-items:center; gap:8px; min-height:28px;
+    padding:4px 2px; border-bottom:1px solid var(--fh-border); margin-bottom:4px;
+  }
+  .fh-icon-sel-lbl { font-size:.82rem; font-weight:600; color:var(--fh-text); }
+  .fh-icon-sel-none { font-size:.82rem; color:var(--fh-text-sec); }
+
+  /* Icon tab: scrollable grid container */
+  .fh-icon-tab-grid {
+    display:flex; flex-direction:column; gap:6px; overflow-y:auto; flex:1;
+  }
+  .fh-icon-tab-grid .fh-icon-picker-cat-grid {
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(68px, 1fr)); gap:4px;
+    margin-bottom:4px;
   }
 
   /* Field help text (S9 P3 — inline guidance under inputs) */
@@ -1877,6 +1930,61 @@ export const CSS = `
     border:2px solid #1A2B5E;
     box-shadow:0 3px 0 #1A2B5E;
   }
+
+  /* ---- Streak freeze chip (v0.6.3 item 7) -------------------------------- */
+  .fh-freeze-chip {
+    display:inline-flex; align-items:center; gap:5px;
+    margin-top:6px; padding:4px 8px;
+    border-radius:4px;
+    background:rgba(100,200,255,.12);
+    border:1px solid rgba(100,200,255,.28);
+    font-size:var(--fh-text-xs); font-weight:600;
+    color:rgba(150,220,255,.9);
+    cursor:default;
+  }
+  .fh-freeze-chip-icon { font-size:.9em; line-height:1; }
+  .fh-dn-page .fh-freeze-chip,
+  .fh-bk-page .fh-freeze-chip,
+  .fh-hp-page .fh-freeze-chip {
+    background:rgba(100,160,200,.14);
+    border-color:rgba(80,130,180,.35);
+    color:#2a4a6a;
+  }
+  .fh-dbz-rpanel .fh-freeze-chip {
+    background:#EEF6FF;
+    border:2px solid #1A2B5E;
+    color:#1A2B5E;
+  }
+
+  /* ---- Daily progress bar (v0.6.3 item 9) -------------------------------- */
+  .fh-daily-progress {
+    display:flex; align-items:center; gap:8px;
+    margin-bottom:8px; padding:5px 0 4px;
+  }
+  .fh-daily-progress-bar {
+    flex:1; height:5px; border-radius:3px;
+    background:rgba(255,255,255,.15); overflow:hidden;
+  }
+  .fh-daily-progress-fill {
+    height:100%; border-radius:3px;
+    background:var(--fh-success, #5DB87A);
+    transition:width .4s ease;
+  }
+  .fh-daily-progress-label {
+    font-size:var(--fh-text-xs); font-weight:700;
+    color:var(--fh-text-sec); white-space:nowrap; letter-spacing:.02em;
+  }
+  .fh-daily-progress--complete .fh-daily-progress-label { color:var(--fh-success, #5DB87A); }
+  .fh-dn-page .fh-daily-progress-bar,
+  .fh-bk-page .fh-daily-progress-bar,
+  .fh-hp-page .fh-daily-progress-bar { background:rgba(0,0,0,.12); }
+  .fh-dn-page .fh-daily-progress-label,
+  .fh-bk-page .fh-daily-progress-label,
+  .fh-hp-page .fh-daily-progress-label { color:rgba(60,40,20,.6); }
+  .fh-dn-page .fh-daily-progress--complete .fh-daily-progress-label,
+  .fh-bk-page .fh-daily-progress--complete .fh-daily-progress-label,
+  .fh-hp-page .fh-daily-progress--complete .fh-daily-progress-label { color:#3a7a3a; }
+
   /* Themed overrides â€” light/paper themes need darker rank bar chrome */
   .fh-dn-page, .fh-bk-page, .fh-hp-page {
     --fh-rb-track:  rgba(43,31,14,.18);
@@ -3003,7 +3111,7 @@ export const CSS = `
     border-top: 1px solid #2A3852;
   }
 
-  /* ---- Settings grid (S9 P3 — 3 panels: config + hub layout stacked left, store right) ---- */
+  /* ---- Settings grid — 2 panels: config (left) + hub layout (right) ---- */
   .fh-ad-settings-grid {
     display: grid; gap: 14px;
     grid-template-columns: 1fr;
@@ -3011,14 +3119,11 @@ export const CSS = `
   @media (min-width: 900px) {
     .fh-ad-settings-grid {
       grid-template-columns: 1.15fr 1fr;
-      grid-template-areas:
-        "config  store"
-        "hub     store";
+      grid-template-areas: "config hub";
       align-items: start;
     }
-    .fh-ad-settings-left  { grid-area: config; }
-    .fh-ad-settings-hub   { grid-area: hub; }
-    .fh-ad-settings-right { grid-area: store; }
+    .fh-ad-settings-left { grid-area: config; }
+    .fh-ad-settings-hub  { grid-area: hub; }
   }
 
   /* ---- Hub layout room toggle rows (S9 P3) ---- */
@@ -3115,6 +3220,49 @@ export const CSS = `
     text-transform: uppercase;
   }
 
+  /* ---- Rewards section — same grid/panel structure as Tasks ---- */
+  .fh-ad-rewards-wrap {
+    display: flex; flex-direction: column; gap: 14px; min-width: 0;
+  }
+  @media (min-width: 1280px) {
+    .fh-ad-rewards-wrap {
+      display: grid; grid-template-columns: 1fr 480px;
+      gap: 16px; align-items: start;
+    }
+  }
+  .fh-ad-rewards-panel { display: none; }
+  @media (min-width: 1280px) {
+    .fh-ad-rewards-panel {
+      display: flex; flex-direction: column;
+      background: #1A2538;
+      border: 1px solid #2A3852;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+  }
+  /* Inactive store rows — desaturated, italic name */
+  .fh-store-row--inactive { opacity: .55; }
+  /* Extend tasks-panel dark-theme overrides to rewards-panel */
+  .fh-ad-rewards-panel .fh-label { color: #6F7E9C; }
+  .fh-ad-rewards-panel .fh-input { background: #202D45; border-color: #3A4B6B; color: #ECEFF6; }
+  .fh-ad-rewards-panel .fh-input::placeholder { color: #6F7E9C; }
+  .fh-ad-rewards-panel .fh-select { background: #202D45; border-color: #3A4B6B; color: #ECEFF6; }
+  .fh-ad-rewards-panel .fh-field-help { color: #6F7E9C; }
+  .fh-ad-rewards-panel .fh-checkbox-row { color: #A6B3CC; }
+  .fh-ad-rewards-panel .fh-person-cb-chip { border-color: #3A4B6B; color: #A6B3CC; }
+  /* Rank ladder inputs in settings */
+  .fh-ad-rank-ladder-input { text-align: right; }
+
+  /* ---- Template picker (v0.6.3 item 8) ---- */
+  .fh-tpl-picker-row {
+    display:flex; gap:6px; align-items:center;
+  }
+  .fh-tpl-apply-btn {
+    white-space:nowrap; flex-shrink:0;
+    font-size:var(--fh-text-xs); padding:0 10px;
+  }
+  .fh-tpl-picker-field { margin-bottom:2px; }
+
   /* ---- Chore form tab strip (modal + inline panel) ---- */
   .fh-chore-tabs {
     display: flex; gap: 2px;
@@ -3149,47 +3297,43 @@ export const CSS = `
     margin-top: 2px;
   }
 
-  /* ---- Inline icon grid (always-visible, embedded in Details tab) ---- */
-  .fh-chore-icon-grid {
-    background: #202D45;
-    border: 1px solid #3A4B6B;
-    border-radius: 8px;
-    padding: 10px;
-    display: flex; flex-direction: column; gap: 6px;
-    max-height: 320px;
-    overflow-y: auto;
+  /* ---- Icon tab grid (engineer theme overrides) ---- */
+  .fh-icon-tab-grid {
+    max-height: 380px;
   }
-  .fh-chore-icon-grid .fh-icon-picker-cat-hdr {
+  .fh-icon-tab-grid .fh-icon-picker-cat-hdr {
     font-family: 'JetBrains Mono', monospace;
     font-size: var(--fh-text-xs); font-weight: 700;
     color: #6F7E9C; letter-spacing: .08em; text-transform: uppercase;
-    padding: 6px 2px 2px;
+    padding: 6px 2px 2px; border-bottom-color: #2A3852;
   }
-  .fh-chore-icon-grid .fh-icon-picker-cat-hdr:first-child { padding-top: 0; }
-  .fh-chore-icon-grid .fh-icon-picker-cat-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
-    gap: 4px;
+  .fh-icon-tab-grid .fh-icon-picker-cat-hdr:first-child { padding-top: 0; }
+  .fh-icon-tab-grid .fh-icon-picker-cat-grid {
+    grid-template-columns: repeat(auto-fill, minmax(68px, 1fr));
   }
-  .fh-chore-icon-grid .fh-icon-cell {
+  .fh-icon-tab-grid .fh-icon-cell {
     background: transparent; border: 1px solid transparent;
-    border-radius: 6px; cursor: pointer;
-    color: #ECEFF6;
+    border-radius: 6px; cursor: pointer; color: #ECEFF6;
     display: flex; flex-direction: column; align-items: center; gap: 4px;
-    padding: 8px 4px;
-    transition: background .1s, border-color .1s;
+    padding: 8px 4px; transition: background .1s, border-color .1s;
   }
-  .fh-chore-icon-grid .fh-icon-cell:hover {
+  .fh-icon-tab-grid .fh-icon-cell:hover {
     background: rgba(91,141,239,.08); border-color: rgba(91,141,239,.2);
   }
-  .fh-chore-icon-grid .fh-icon-cell.selected {
+  .fh-icon-tab-grid .fh-icon-cell.selected {
     background: rgba(91,141,239,.15); border-color: #5B8DEF;
   }
-  .fh-chore-icon-grid .fh-icon-cell-label {
+  .fh-icon-tab-grid .fh-icon-cell-label {
     font-size: var(--fh-text-xs); color: #A6B3CC;
     text-align: center; line-height: 1.2;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
   }
+  /* Icon tab: selected preview and search */
+  .fh-icon-selected-wrap {
+    border-bottom-color: #2A3852;
+  }
+  .fh-icon-sel-lbl { color: #ECEFF6; }
+  .fh-icon-sel-none { color: #6F7E9C; }
 
   /* ---- Sort bar ---- */
   .fh-ad-sort-bar {
@@ -3546,6 +3690,169 @@ export const CSS = `
     padding:6px 10px; cursor:pointer; border-radius:2px;
   }
   .fh-row-add-reminder:hover { opacity:1; }
+
+  /* ---------- Store goal (v0.6.3) ---------- */
+  /* All three pieces inherit currentColor so themes get their accent for free.
+     Themes that need explicit overrides (paper-textured backgrounds, etc.) can
+     follow up with .fh-<theme>-page .fh-goal-* rules. */
+  .fh-goal-banner {
+    display:flex; flex-direction:column; gap:6px;
+    padding:10px 12px; margin-bottom:12px;
+    border:1px solid color-mix(in srgb, currentColor 24%, transparent);
+    border-radius:8px;
+    background:color-mix(in srgb, currentColor 6%, transparent);
+  }
+  .fh-goal-banner-head {
+    display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 10px;
+    font-size:var(--fh-text-sm);
+  }
+  .fh-goal-banner-lbl {
+    font-family:var(--fh-font-mono); font-size:var(--fh-text-xs);
+    letter-spacing:.08em; text-transform:uppercase; opacity:.65;
+  }
+  .fh-goal-banner-name { font-weight:700; }
+  .fh-goal-banner-amt {
+    margin-left:auto; font-family:var(--fh-font-mono);
+    font-size:var(--fh-text-xs); opacity:.85;
+  }
+  /* Shared bar — reused by rail variant. Track inherits, fill = solid current. */
+  .fh-goal-bar {
+    height:8px; border-radius:4px; overflow:hidden;
+    background:color-mix(in srgb, currentColor 14%, transparent);
+  }
+  .fh-goal-bar-fill {
+    height:100%; background:currentColor;
+    transition:width .25s ease-out;
+  }
+  /* Rail variant — vertical stack, more compact. */
+  .fh-goal-rail {
+    display:flex; flex-direction:column; gap:4px;
+    padding:8px 10px; margin-bottom:8px;
+    border:1px solid color-mix(in srgb, currentColor 22%, transparent);
+    border-radius:6px;
+  }
+  .fh-goal-rail-lbl {
+    font-family:var(--fh-font-mono); font-size:.7rem;
+    letter-spacing:.1em; opacity:.65;
+  }
+  .fh-goal-rail-name { font-weight:700; font-size:var(--fh-text-sm); line-height:1.2; }
+  .fh-goal-rail-rem  { font-size:var(--fh-text-xs); opacity:.75; }
+  /* Toggle button — inline-positioned near a store item by its theme. */
+  .fh-goal-tog {
+    background:transparent; color:inherit;
+    border:none; padding:2px 6px; cursor:pointer;
+    font-size:1.2em; line-height:1;
+    opacity:.55; transition:opacity .15s, transform .15s;
+  }
+  .fh-goal-tog:hover { opacity:1; transform:scale(1.15); }
+  .fh-goal-tog.is-goal { opacity:1; }
+
+  /* -------------------------------------------------------------------------
+     Group reward UI (v0.6.3 item 13)
+     ------------------------------------------------------------------------- */
+
+  /* Proposal banner: one or more cards at the top of the store tab */
+  .fh-group-proposals {
+    display:flex; flex-direction:column; gap:8px; margin-bottom:12px;
+  }
+  .fh-group-proposal-card {
+    background:var(--fh-surface); border:1px solid var(--fh-accent);
+    border-radius:8px; padding:10px 12px;
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .fh-group-proposal-from { font-size:.85rem; color:var(--fh-text); line-height:1.35; }
+  .fh-group-proposal-share { font-size:.78rem; color:var(--fh-text-sec); }
+  .fh-group-proposal-btns { display:flex; gap:8px; margin-top:2px; }
+  .fh-group-proposal-accept {
+    flex:1; padding:6px 0; border:none; border-radius:6px; cursor:pointer;
+    background:var(--fh-success,#4caf7d); color:#fff;
+    font-size:.8rem; font-weight:700;
+  }
+  .fh-group-proposal-decline {
+    flex:1; padding:6px 0; border:none; border-radius:6px; cursor:pointer;
+    background:var(--fh-surface2,rgba(0,0,0,.07)); color:var(--fh-text-sec);
+    font-size:.8rem; font-weight:600;
+  }
+  .fh-group-proposal-accept:hover { filter:brightness(1.08); }
+  .fh-group-proposal-decline:hover { filter:brightness(.9); }
+
+  /* Group reward info block — compact single-line layout */
+  .fh-group-reward-info { margin-top:4px; }
+  .fh-group-reward-line {
+    display:flex; align-items:center; gap:10px;
+    flex-wrap:wrap;
+    font-size:.78rem;
+  }
+  .fh-group-reward-tag {
+    font-size:.72rem; font-weight:700; color:var(--fh-accent);
+    letter-spacing:.03em; text-transform:uppercase; white-space:nowrap;
+  }
+  .fh-group-reward-pills {
+    display:inline-flex; flex-wrap:wrap; gap:4px; align-items:center;
+  }
+  .fh-gcp {
+    display:inline-flex; align-items:center; gap:4px;
+    padding:2px 6px 2px 2px;
+    border-radius:999px;
+    /* Use the theme surface token so pts text always reads on an opaque background.
+       The old rgba(.08) tint was nearly transparent and blended with the card surface. */
+    background:var(--fh-surface, rgba(127,119,221,.16));
+    border:1px solid var(--fh-border);
+    font-size:.7rem;
+  }
+  .fh-gcp--me   { border-color:var(--fh-accent); background:rgba(127,119,221,.26); }
+  .fh-gcp--done { border-color:var(--fh-success,#30d158); background:rgba(48,209,88,.18); }
+  .fh-gcp--done .fh-gcp-pts { color:var(--fh-success,#30d158); font-weight:700; }
+  .fh-gcp-av {
+    width:18px; height:18px; border-radius:50%;
+    color:#fff; font-size:.65rem; font-weight:700;
+    display:inline-flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+    /* Dark halo ensures the initial letter is readable on any avatar_color —
+       light yellow, pale green, etc. — without needing to know the luminance. */
+    text-shadow:0 0 3px rgba(0,0,0,.75), 0 1px 2px rgba(0,0,0,.5);
+  }
+  .fh-gcp-pts { color:var(--fh-text); font-weight:600; white-space:nowrap; }
+
+  /* Chip In button */
+  .fh-group-chip-btn {
+    padding:6px 14px; border:none; border-radius:6px; cursor:pointer;
+    background:var(--fh-accent); color:#fff;
+    font-size:.82rem; font-weight:700; display:inline-block;
+    margin-top:4px;
+  }
+  .fh-group-chip-btn:hover { filter:brightness(1.1); }
+  .fh-group-chip-btn--disabled { opacity:.4; cursor:not-allowed; }
+  .fh-group-chip-done {
+    display:inline-block; margin-top:4px;
+    font-size:.78rem; color:var(--fh-success,#30d158); font-weight:700;
+  }
+
+  /* Admin: fully-funded group reward in redemption queue */
+  .fh-ad-group-funded {
+    display:flex; flex-direction:column; gap:4px; padding:10px 12px;
+    border:1px solid var(--fh-success,#4caf7d); border-radius:8px;
+    margin-bottom:8px; background:rgba(76,175,125,.06);
+  }
+  .fh-ad-group-funded-hdr { font-weight:700; font-size:.9rem; color:var(--fh-text); }
+  .fh-ad-group-funded-meta { font-size:.78rem; color:var(--fh-text-sec); }
+
+  /* Store item icon (v0.6.3) — themes call storeItemIcon() to drop this in
+     ahead of each item's body. Color inherits, so it picks up the theme accent. */
+  .fh-store-item-icon {
+    display:inline-flex; align-items:center; justify-content:center;
+    flex-shrink:0; width:28px; height:28px;
+    color:inherit;
+  }
+  .fh-store-inv-icon {
+    display:inline-flex; align-items:center; justify-content:center;
+    flex-shrink:0; width:24px; height:24px; color:var(--fh-text-sec);
+  }
+  /* Classic store item head row — icon + name + goal star */
+  .fh-store-item-head {
+    display:flex; align-items:center; gap:8px;
+  }
+  .fh-store-item-head .fh-store-name { flex:1; min-width:0; }
 
   /* ---------- Kid-large (card-grid layout) ---------- */
   /* Triggered by .kid-large on the page wrapper; same DOM, different layout. */

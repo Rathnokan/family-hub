@@ -4,10 +4,10 @@
  * Each function returns an HTML string for injection into the modal overlay.
  */
 
-import { DEFAULT_COLOR } from "./constants.js";
+import { DEFAULT_COLOR, CHORE_TEMPLATES } from "./constants.js";
 import { I } from "./constants.js";
 import { escHTML, escAttr, ini, opts, weekdayChips } from "./utils.js";
-import { FH_ICONS, FH_ICON_META, choreIcon } from "./icons.js";
+import { FH_ICONS, FH_ICON_META, FH_REWARD_ICON_META, choreIcon } from "./icons.js";
 
 // ---------------------------------------------------------------------------
 // Shared modal wrapper
@@ -172,6 +172,105 @@ export function mAddTask(people) {
 // Chore form (shared by Add/Edit modal AND inline admin side panel)
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Shared icon picker (chore + store-item)
+// ---------------------------------------------------------------------------
+
+/**
+ * Render the icon grid (categories + cells). The `pick-icon` dispatch handler
+ * updates the hidden #m-cicon input — both the chore modal and the store-item
+ * modal use that same hidden field so only one icon picker can be active at
+ * a time, which matches the actual UX (only one modal is ever open).
+ *
+ * @param {string} selectedKey  - Currently selected icon key (empty = none)
+ * @returns {string}            - HTML for the grouped grid
+ */
+export function iconPickerGrid(selectedKey) {
+    const iconsByCat = new Map();
+    for (const m of FH_ICON_META) {
+        const cat = m.category || "Other";
+        if (!iconsByCat.has(cat)) iconsByCat.set(cat, []);
+        iconsByCat.get(cat).push(m);
+    }
+    return [...iconsByCat.entries()].map(([cat, items]) => `
+        <div class="fh-icon-picker-cat-hdr">${escHTML(cat)}</div>
+        <div class="fh-icon-picker-cat-grid">
+          ${items.map(({ key, label }) => `
+            <button class="fh-icon-cell${selectedKey === key ? " selected" : ""}"
+                    data-act="pick-icon" data-icon="${key}" type="button"
+                    title="${label}">
+              <span style="display:inline-flex;width:28px;height:28px;color:var(--fh-text)">${FH_ICONS[key]}</span>
+              <span class="fh-icon-cell-label">${label}</span>
+            </button>`).join("")}
+        </div>`).join("");
+}
+
+/**
+ * Full icon-picker section: hidden #m-cicon input + the grouped grid. Use this
+ * when adding an icon picker to a modal other than the chore form.
+ */
+export function iconPickerSection(selectedKey, label = "Icon") {
+    return `
+      <div class="fh-field">
+        <label class="fh-label">${escHTML(label)}</label>
+        <input type="hidden" id="m-cicon" value="${escAttr(selectedKey || "")}">
+        <div class="fh-icon-picker-grid">${iconPickerGrid(selectedKey || "")}</div>
+      </div>`;
+}
+
+/**
+ * Reward-specific icon picker (smaller curated list + image upload).
+ * Hidden field is the same `#m-cicon` used elsewhere so the existing
+ * pick-icon handler and form-read code keep working.
+ */
+export function rewardIconPickerGrid(selectedKey) {
+    const iconsByCat = new Map();
+    for (const m of FH_REWARD_ICON_META) {
+        const cat = m.category || "Other";
+        if (!iconsByCat.has(cat)) iconsByCat.set(cat, []);
+        iconsByCat.get(cat).push(m);
+    }
+    return [...iconsByCat.entries()].map(([cat, items]) => `
+        <div class="fh-icon-picker-cat-hdr">${escHTML(cat)}</div>
+        <div class="fh-icon-picker-cat-grid">
+          ${items.map(({ key, label }) => `
+            <button class="fh-icon-cell${selectedKey === key ? " selected" : ""}"
+                    data-act="pick-icon" data-icon="${key}" type="button"
+                    title="${label}">
+              <span style="display:inline-flex;width:28px;height:28px;color:var(--fh-text)">${FH_ICONS[key]}</span>
+              <span class="fh-icon-cell-label">${label}</span>
+            </button>`).join("")}
+        </div>`).join("");
+}
+
+export function rewardIconPickerSection(selectedKey) {
+    const isCustom = typeof selectedKey === "string" && selectedKey.startsWith("data:image/");
+    const previewHTML = isCustom
+        ? `<div id="m-cicon-preview" style="display:flex;align-items:center;gap:10px;margin-bottom:8px;padding:8px;border:1px solid var(--fh-border);border-radius:6px;background:var(--fh-surface)">
+             <img src="${escAttr(selectedKey)}" style="width:48px;height:48px;object-fit:contain;border-radius:4px" alt="">
+             <span style="font-size:.85rem;color:var(--fh-text-sec)">Custom uploaded image</span>
+             <button type="button" class="fh-btn fh-btn-ghost fh-btn-sm" data-act="clear-icon" style="margin-left:auto">Clear</button>
+           </div>`
+        : `<div id="m-cicon-preview"></div>`;
+    return `
+      <div class="fh-field">
+        <label class="fh-label">Icon (optional)</label>
+        <input type="hidden" id="m-cicon" value="${escAttr(selectedKey || "")}">
+        <!-- Persistent file input — kept in the DOM so the change event fires reliably
+             after the OS picker closes (avoids the GC race when the input is created
+             on-the-fly and removed before the user picks a file). -->
+        <input type="file" id="m-icon-upload" accept="image/png,image/jpeg,image/webp,image/gif" style="display:none">
+        ${previewHTML}
+        <div class="fh-icon-picker-grid">${rewardIconPickerGrid(isCustom ? "" : (selectedKey || ""))}</div>
+        <div style="display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap">
+          <button type="button" class="fh-btn fh-btn-ghost" data-act="upload-icon">
+            📷 Upload image…
+          </button>
+          <span style="font-size:.78rem;color:var(--fh-text-sec)">PNG/JPG, max ~256 KB</span>
+        </div>
+      </div>`;
+}
+
 /**
  * Returns the inner form-fields HTML for add/edit chore — tabbed layout.
  * Used by mChoreForm (modal) and the inline admin side panel.
@@ -186,7 +285,7 @@ export function mAddTask(people) {
  * @param {boolean}     isEdit     - Whether this is an edit operation
  * @param {object[]}    people     - All people from sensor
  * @param {string[]}    catLabels  - Available category label strings
- * @param {string}      activeTab  - "details" | "schedule" | "rewards" | "reminders"
+ * @param {string}      activeTab  - "details" | "icon" | "schedule" | "rewards" | "reminders"
  */
 export function choreFormFields(chore, isEdit, people, catLabels, activeTab = "details") {
     const c        = chore || {};
@@ -194,28 +293,17 @@ export function choreFormFields(chore, isEdit, people, catLabels, activeTab = "d
     const recType  = rec.type || "daily";
     const assigned = c.assigned_to || [];
 
-    // ---- Icon grid (always visible, grouped by category) --------------------
-    const iconsByCat = new Map();
-    for (const m of FH_ICON_META) {
-        const cat = m.category || "Other";
-        if (!iconsByCat.has(cat)) iconsByCat.set(cat, []);
-        iconsByCat.get(cat).push(m);
-    }
-    const iconGridHtml = [...iconsByCat.entries()].map(([cat, items]) => `
-        <div class="fh-icon-picker-cat-hdr">${escHTML(cat)}</div>
-        <div class="fh-icon-picker-cat-grid">
-          ${items.map(({ key, label }) => `
-            <button class="fh-icon-cell${c.icon === key ? " selected" : ""}"
-                    data-act="pick-icon" data-icon="${key}" type="button"
-                    title="${label}">
-              <span style="display:inline-flex;width:28px;height:28px;color:var(--fh-text)">${FH_ICONS[key]}</span>
-              <span class="fh-icon-cell-label">${label}</span>
-            </button>`).join("")}
-        </div>`).join("");
+    // ---- Icon grid (rendered once, lives in the Icon tab pane) --------------
+    const iconGridHtml = iconPickerGrid(c.icon);
+
+    // ---- Icon tab: currently-selected preview label -------------------------
+    const selMeta  = FH_ICON_META.find(m => m.key === c.icon);
+    const selLabel = selMeta ? selMeta.label : (c.icon || "");
 
     // ---- Tab strip ----------------------------------------------------------
     const tabs = [
         { key: "details",   label: "Details"          },
+        { key: "icon",      label: "Icon"             },
         { key: "schedule",  label: "Schedule"         },
         { key: "rewards",   label: "Points & Rewards" },
         { key: "reminders", label: "Reminders"        },
@@ -236,8 +324,32 @@ export function choreFormFields(chore, isEdit, people, catLabels, activeTab = "d
         ${content}
       </div>`;
 
+    // ---- Template picker: builds an optgroup select + Apply button ----------
+    const tplGroups = new Map();
+    for (const t of CHORE_TEMPLATES) {
+        const g = t.category || "Other";
+        if (!tplGroups.has(g)) tplGroups.set(g, []);
+        tplGroups.get(g).push(t);
+    }
+    const tplOptions = [...tplGroups.entries()].map(([group, items]) => `
+        <optgroup label="${escAttr(group)}">
+          ${items.map(t => `<option value="${escAttr(t.key)}">${escHTML(t.name)}</option>`).join("")}
+        </optgroup>`).join("");
+
     // ---- Details pane: name / desc / icon / type+category / assignees ------
     const detailsPane = pane("details", `
+        ${!isEdit ? `
+        <div class="fh-field fh-tpl-picker-field">
+          <label class="fh-label">From template (optional)</label>
+          <div class="fh-tpl-picker-row">
+            <select class="fh-select" id="m-ctpl" style="flex:1">
+              <option value="">— Start from scratch —</option>
+              ${tplOptions}
+            </select>
+            <button type="button" class="fh-btn fh-btn-ghost fh-tpl-apply-btn"
+                    data-act="pick-template">Apply</button>
+          </div>
+        </div>` : ""}
         <div class="fh-field">
           <label class="fh-label">Chore name *</label>
           <input class="fh-input" id="m-cname" type="text"
@@ -247,13 +359,6 @@ export function choreFormFields(chore, isEdit, people, catLabels, activeTab = "d
           <label class="fh-label">Description (optional)</label>
           <input class="fh-input" id="m-cdesc" type="text"
                  value="${escAttr(c.description || "")}" placeholder="More detail…">
-        </div>
-        <div class="fh-field">
-          <label class="fh-label">Icon</label>
-          <input type="hidden" id="m-cicon" value="${escAttr(c.icon || "")}">
-          <div class="fh-chore-icon-grid">
-            ${iconGridHtml}
-          </div>
         </div>
         <div class="fh-row">
           <div class="fh-field">
@@ -283,6 +388,37 @@ export function choreFormFields(chore, isEdit, people, catLabels, activeTab = "d
             <label for="m-everyone" style="font-size:.85rem;font-weight:600;cursor:pointer">Everyone</label>
           </div>
           ${multiPersonCheckboxes(people, assigned, "m-assign-person")}
+        </div>
+    `);
+
+    // ---- Icon pane: search + grouped picker grid ----------------------------
+    const iconSearchHandler =
+        `((el)=>{` +
+            `const q=el.value.toLowerCase().trim(),` +
+            `p=el.closest('.fh-chore-tab-pane');` +
+            `p.querySelectorAll('.fh-icon-picker-cat-hdr').forEach(h=>{` +
+                `const g=h.nextElementSibling;let n=0;` +
+                `g.querySelectorAll('.fh-icon-cell').forEach(b=>{` +
+                    `const m=!q||(b.title+' '+b.dataset.icon).toLowerCase().includes(q);` +
+                    `b.style.display=m?'':'none';if(m)n++;` +
+                `});` +
+                `h.style.display=n?'':'none';g.style.display=n?'':'none';` +
+            `});` +
+        `})(this)`;
+
+    const iconPane = pane("icon", `
+        <input type="hidden" id="m-cicon" value="${escAttr(c.icon || "")}">
+        <div class="fh-icon-selected-wrap" id="m-icon-selected">
+          ${c.icon && FH_ICONS[c.icon]
+            ? `<span class="fh-icon-sel-icon" style="display:inline-flex;width:20px;height:20px;color:var(--fh-accent)">${FH_ICONS[c.icon]}</span>
+               <span class="fh-icon-sel-lbl">${escHTML(selLabel)}</span>`
+            : `<span class="fh-icon-sel-none">No icon selected — pick one below</span>`}
+        </div>
+        <input class="fh-input fh-icon-search" id="m-icon-search" type="search"
+               placeholder="Search icons…" autocomplete="off"
+               oninput="${iconSearchHandler}">
+        <div class="fh-icon-tab-grid">
+          ${iconGridHtml}
         </div>
     `);
 
@@ -444,6 +580,7 @@ export function choreFormFields(chore, isEdit, people, catLabels, activeTab = "d
         ${tabStrip}
         <div class="fh-chore-tab-panes">
           ${detailsPane}
+          ${iconPane}
           ${schedulePane}
           ${rewardsPane}
           ${remindersPane}
@@ -467,69 +604,189 @@ export function mChoreForm(chore, isEdit, people, catLabels, activeTab = "detail
 }
 
 // ---------------------------------------------------------------------------
-// Store item (add / edit)
+// Store item (add / edit / inline-panel shared fields)
 // ---------------------------------------------------------------------------
 
-export function mAddStoreItem(people) {
+/**
+ * Shared store-item form fields for both modals and the inline editor panel.
+ * Uses the same m-* IDs as the modals (never simultaneously in the DOM).
+ */
+export function storeItemFormFields(item, isEdit, people, catLabels) {
+    const name          = item?.name           || "";
+    const desc          = item?.description    || "";
+    const dollar        = item?.dollar_value   ?? "";
+    const scope         = item?.scope          || "common";
+    const personIds     = item?.person_ids     || [];
+    const icon          = item?.icon           || "";
+    const catLabel      = item?.category_label || "";
+    const maxPeriod     = item?.max_per_period ?? 0;
+    const period        = item?.period         || "week";
+    const active        = item?.active         !== false;
+    const isGroupReward = !!item?.is_group_reward;
+
+    const catOptions = catLabels.map(l =>
+        `<option value="${escAttr(l)}" ${catLabel === l ? "selected" : ""}>${escHTML(l)}</option>`
+    ).join("");
+
+    // Kids only (parents can't contribute to group rewards)
+    const kids = people.filter(p => p.type !== "parent");
+
+    // Map existing contributor % by person_id
+    const existingPct = {};
+    for (const c of (item?.contributors || [])) {
+        existingPct[c.person_id] = c.share_pct || 0;
+    }
+
+    // Inline handlers (no extra event listeners needed)
+    const scopeToggle =
+        `((sel)=>{` +
+            `const r=sel.getRootNode();` +
+            `const grp=r.getElementById('m-sgroup');` +
+            `if(grp&&grp.checked)return;` +
+            `const pSec=r.getElementById('m-sperson-section');` +
+            `if(pSec)pSec.style.display=sel.value==='personal'?'':'none';` +
+        `})(this)`;
+
+    const groupToggle =
+        `((cb)=>{` +
+            `const r=cb.getRootNode();` +
+            `const sec=r.getElementById('m-sgroup-section');` +
+            `const pSec=r.getElementById('m-sperson-section');` +
+            `if(sec)sec.style.display=cb.checked?'':'none';` +
+            `if(pSec)pSec.style.display=cb.checked?'none':'';` +
+        `})(this)`;
+
+    const equalSplit =
+        `((btn)=>{` +
+            `const inputs=[...btn.closest('#m-sgroup-section').querySelectorAll('.m-scontrib')];` +
+            `if(!inputs.length)return;` +
+            `const each=Math.floor(100/inputs.length),rem=100-each*inputs.length;` +
+            `inputs.forEach((inp,i)=>{inp.value=each+(i===0?rem:0);});` +
+            `const tot=btn.closest('#m-sgroup-section').querySelector('#m-sgroup-total');` +
+            `if(tot){tot.textContent='Total: 100%';tot.style.color='var(--fh-success)';}` +
+        `})(this)`;
+
+    const updateTotal =
+        `((inp)=>{` +
+            `const sec=inp.closest('#m-sgroup-section');if(!sec)return;` +
+            `const tot=[...sec.querySelectorAll('.m-scontrib')].reduce((s,i)=>s+(parseInt(i.value)||0),0);` +
+            `const el=sec.querySelector('#m-sgroup-total');` +
+            `if(el){el.textContent='Total: '+tot+'%';` +
+            `el.style.color=tot===100?'var(--fh-success)':tot>100?'var(--fh-overdue)':'var(--fh-text-sec)';}` +
+        `})(this)`;
+
+    const contribRows = kids.map(k => {
+        const pct = existingPct[k.person_id] ?? "";
+        return `
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <span style="flex:1;font-size:.85rem">${escHTML(k.name)}</span>
+            <input type="number" class="fh-input m-scontrib"
+                   data-pid="${escAttr(k.person_id)}"
+                   style="width:72px;text-align:right"
+                   min="0" max="100" step="1" value="${pct}"
+                   oninput="${updateTotal}">
+            <span style="font-size:.85rem">%</span>
+          </div>`;
+    }).join("");
+
+    const initialTotal = kids.reduce((s, k) => s + (existingPct[k.person_id] || 0), 0);
+    const totalColor   = initialTotal === 100 ? "var(--fh-success)"
+                       : initialTotal  > 100 ? "var(--fh-overdue)"
+                       : "var(--fh-text-sec)";
+
+    return `
+      ${isEdit ? `<input type="hidden" id="m-eiid" value="${item.item_id}">` : ""}
+      <div class="fh-field">
+        <label class="fh-label">Item name *</label>
+        <input class="fh-input" id="m-sname" type="text" value="${escAttr(name)}"${!isEdit ? " autofocus" : ""}>
+      </div>
+      <div class="fh-field">
+        <label class="fh-label">Description (optional)</label>
+        <input class="fh-input" id="m-sdesc" type="text" value="${escAttr(desc)}">
+      </div>
+      <div class="fh-row">
+        <div class="fh-field">
+          <label class="fh-label">Dollar value *</label>
+          <input class="fh-input" id="m-sdollar" type="number" min="0.01"
+                 step="0.01" value="${dollar}" placeholder="e.g. 5.00">
+        </div>
+        <div class="fh-field">
+          <label class="fh-label">Scope</label>
+          <select class="fh-select" id="m-sscope" oninput="${scopeToggle}">
+            <option value="common"   ${scope === "common"   ? "selected" : ""}>All kids</option>
+            <option value="personal" ${scope === "personal" ? "selected" : ""}>Specific people</option>
+          </select>
+        </div>
+      </div>
+      <div id="m-sperson-section" class="fh-field" style="${scope === "personal" && !isGroupReward ? "" : "display:none"}">
+        <label class="fh-label">Who can see this reward?</label>
+        ${multiPersonCheckboxes(people, personIds, "m-sp-person")}
+      </div>
+
+      <!-- Group reward toggle -->
+      <div class="fh-field" style="border-top:1px solid var(--fh-border);padding-top:10px;margin-top:4px">
+        <label class="fh-label" style="display:flex;align-items:center;gap:10px;cursor:pointer">
+          <label class="fh-toggle">
+            <input type="checkbox" id="m-sgroup" ${isGroupReward ? "checked" : ""} oninput="${groupToggle}">
+            <span class="fh-toggle-slider"></span>
+          </label>
+          🤝 Group reward — kids chip in together
+        </label>
+      </div>
+      <div id="m-sgroup-section" class="fh-field" style="${isGroupReward ? "" : "display:none"}">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <label class="fh-label" style="margin:0">Contributors &amp; share %</label>
+          <button type="button" class="fh-btn fh-btn-ghost fh-btn-sm"
+                  onclick="${equalSplit}">Equal split</button>
+        </div>
+        ${kids.length
+            ? contribRows + `<div id="m-sgroup-total" style="font-size:.8rem;color:${totalColor}">Total: ${initialTotal}%</div>`
+            : `<span style="font-size:.82rem;color:var(--fh-text-sec)">No kids found — add people first.</span>`}
+      </div>
+
+      <div class="fh-row">
+        <div class="fh-field">
+          <label class="fh-label">Category</label>
+          <select class="fh-select" id="m-scat">
+            <option value="" ${!catLabel ? "selected" : ""}>(none)</option>
+            ${catOptions}
+          </select>
+        </div>
+        <div class="fh-field">
+          <label class="fh-label">Active</label>
+          <label class="fh-toggle" style="margin-top:10px">
+            <input type="checkbox" id="m-sactive" ${active ? "checked" : ""}>
+            <span class="fh-toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+      <div class="fh-row">
+        <div class="fh-field">
+          <label class="fh-label">Max per period (0 = unlimited)</label>
+          <input class="fh-input" id="m-smaxperiod" type="number"
+                 min="0" step="1" value="${maxPeriod}">
+        </div>
+        <div class="fh-field">
+          <label class="fh-label">Period</label>
+          <select class="fh-select" id="m-speriod">
+            <option value="day"   ${period === "day"   ? "selected" : ""}>Day</option>
+            <option value="week"  ${period === "week"  ? "selected" : ""}>Week</option>
+            <option value="month" ${period === "month" ? "selected" : ""}>Month</option>
+          </select>
+        </div>
+      </div>
+      ${rewardIconPickerSection(icon)}`;
+}
+
+export function mAddStoreItem(people, catLabels = []) {
     return mWrap("Add reward item",
-        `<div class="fh-field">
-         <label class="fh-label">Item name *</label>
-         <input class="fh-input" id="m-sname" type="text" autofocus>
-       </div>
-       <div class="fh-field">
-         <label class="fh-label">Description (optional)</label>
-         <input class="fh-input" id="m-sdesc" type="text">
-       </div>
-       <div class="fh-row">
-         <div class="fh-field">
-           <label class="fh-label">Dollar value *</label>
-           <input class="fh-input" id="m-sdollar" type="number" min="0.01"
-                  step="0.01" placeholder="e.g. 5.00">
-         </div>
-         <div class="fh-field">
-           <label class="fh-label">Scope</label>
-           <select class="fh-select" id="m-sscope">
-             <option value="common">All kids</option>
-             <option value="personal">Specific people</option>
-           </select>
-         </div>
-       </div>
-       <div id="m-sperson-section" class="fh-field" style="display:none">
-         <label class="fh-label">Who can see this reward?</label>
-         ${multiPersonCheckboxes(people, [], "m-sp-person")}
-       </div>`,
+        storeItemFormFields(null, false, people, catLabels),
         "Add reward", "ok-add-store-item");
 }
 
-export function mEditStoreItem(item, people) {
-    return mWrap(`Edit — ${item.name}`,
-        `<input type="hidden" id="m-eiid" value="${item.item_id}">
-       <div class="fh-field">
-         <label class="fh-label">Item name *</label>
-         <input class="fh-input" id="m-sname" type="text" value="${escAttr(item.name)}" autofocus>
-       </div>
-       <div class="fh-field">
-         <label class="fh-label">Description (optional)</label>
-         <input class="fh-input" id="m-sdesc" type="text" value="${escAttr(item.description || "")}">
-       </div>
-       <div class="fh-row">
-         <div class="fh-field">
-           <label class="fh-label">Dollar value *</label>
-           <input class="fh-input" id="m-sdollar" type="number" min="0.01"
-                  step="0.01" value="${item.dollar_value}">
-         </div>
-         <div class="fh-field">
-           <label class="fh-label">Scope</label>
-           <select class="fh-select" id="m-sscope">
-             <option value="common"   ${item.scope === "common"   ? "selected" : ""}>All kids</option>
-             <option value="personal" ${item.scope === "personal" ? "selected" : ""}>Specific people</option>
-           </select>
-         </div>
-       </div>
-       <div id="m-sperson-section" class="fh-field" style="${item.scope === "personal" ? "" : "display:none"}">
-         <label class="fh-label">Who can see this reward?</label>
-         ${multiPersonCheckboxes(people, item.person_ids || [], "m-sp-person")}
-       </div>`,
+export function mEditStoreItem(item, people, catLabels = []) {
+    return mWrap(`Edit — ${escHTML(item.name)}`,
+        storeItemFormFields(item, true, people, catLabels),
         "Save changes", "ok-edit-store-item");
 }
 
@@ -993,6 +1250,37 @@ export function rotationPoolEditor(people, orderedIds) {
       <div class="fh-rot-ordered">${orderedHtml}</div>
       <div class="fh-rot-available-lbl">Add to pool:</div>
       <div class="fh-rot-available">${availableHtml}</div>`;
+}
+
+// ---------------------------------------------------------------------------
+// Group reward: Chip In modal (v0.6.3 item 13)
+// ---------------------------------------------------------------------------
+
+/**
+ * Modal for a kid to chip in points toward a group reward.
+ * Pre-fills the amount with min(remaining, balance) so the kid can just tap OK.
+ *
+ * @param {object} item      Store item row (with contributors[]).
+ * @param {string} personId  The viewing kid's person_id.
+ * @param {number} balance   Current spendable balance.
+ * @param {number} remaining Points still needed from this contributor.
+ */
+export function mChipIn(item, personId, balance, remaining) {
+    const maxPts  = Math.min(balance, remaining);
+    const body    = `
+        <div class="fh-field">
+            <label>Chip in toward <strong>${escHTML(item?.name || "reward")}</strong></label>
+            <div style="font-size:.8rem;color:var(--fh-text-sec);margin-bottom:8px">
+                Your share remaining: ${remaining} pts · Your balance: ${balance} pts
+            </div>
+            <input id="m-chipin-pts" class="fh-input" type="number"
+                   min="1" max="${maxPts}" value="${maxPts}"
+                   style="width:120px">
+            <span style="font-size:.85rem;color:var(--fh-text-sec)">pts</span>
+        </div>
+        <input type="hidden" id="m-chipin-iid" value="${escAttr(item?.item_id || "")}">
+        <input type="hidden" id="m-chipin-pid" value="${escAttr(personId)}">`;
+    return mWrap("Chip In — Group Reward", body, "Chip In", "ok-chip-in");
 }
 
 export function multiPersonCheckboxes(people, selectedIds, cbClass) {

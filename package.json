@@ -4,9 +4,10 @@
   "description": "A private, self-hosted family task management integration for Home Assistant.",
   "main": "index.js",
   "scripts": {
+    "gen-build-id": "node gen-build-id.mjs",
     "build:stub": "esbuild src/main.js --bundle --format=iife --target=chrome80 --outfile=custom_components/family_hub/www/family-hub-card.js",
     "build:body": "esbuild src/body.js --bundle --format=esm --target=chrome80 --outfile=custom_components/family_hub/www/family-hub-card-body.js",
-    "build": "npm run build:stub && npm run build:body",
+    "build": "npm run gen-build-id && npm run build:stub && npm run build:body",
     "watch:stub": "npm run build:stub -- --watch",
     "watch:body": "npm run build:body -- --watch"
   },

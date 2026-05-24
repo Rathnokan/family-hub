@@ -4,7 +4,7 @@
  */
 
 export const DOMAIN        = "family_hub";
-export const VERSION       = "0.6.2";
+export const VERSION       = "0.6.3";
 export const DEFAULT_COLOR = "#7F77DD";
 export const FLASH_MS      = 1400;
 
@@ -55,4 +55,46 @@ export const I = {
     remove:   `<svg viewBox="0 0 24 24"><path d="M15 16h4v2h-4zm0-8h7v2h-7zm0 4h6v2h-6zM2 6v14c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V6H2zm8 13H4v-1h6v1zm0-3H4v-1h6v1zm0-3H4v-1h6v1zm1-7H3V8h8V6zm-2-3H5V2h4v1z"/></svg>`,
     history:  `<svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>`,
     excuse:   `<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>`,
+    print:    `<svg viewBox="0 0 24 24"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7a1 1 0 1 1 0-2 1 1 0 0 1 0 2zm-1-9H6v4h12V3z"/></svg>`,
+    rewards:  `<svg viewBox="0 0 24 24"><path d="M20 6h-2.18c.07-.44.18-.88.18-1.36C18 2.53 15.89.36 13.36.36c-1.38 0-2.56.6-3.36 1.55C9.2.96 8.02.36 6.64.36 4.11.36 2 2.53 2 4.64c0 .48.11.92.18 1.36H0v4h1v10h22V10h1V6h-4zm-8 12H6V10h6v8zm0-10H4V8h8v2zm4 10h-2v-8h2v8zm2-10h-6V8h6v2zm-5.36-4c-.45 0-1.09-.49-1.09-1.36 0-.87.64-1.36 1.09-1.36.46 0 1.1.49 1.1 1.36C13.74 3.51 13.1 4 12.64 4zM6.64 4c-.45 0-1.09-.49-1.09-1.36 0-.87.64-1.36 1.09-1.36.46 0 1.1.49 1.1 1.36C7.74 3.51 7.1 4 6.64 4z"/></svg>`,
+    toggle:   `<svg viewBox="0 0 24 24"><path d="M17 7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h10c2.76 0 5-2.24 5-5s-2.24-5-5-5zm0 8c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"/></svg>`,
 };
+
+// ---------------------------------------------------------------------------
+// Quick-add chore template library (v0.6.3 item 8)
+// ---------------------------------------------------------------------------
+// Each template: { key, name, description, category, points }
+// category should match one of the family's category_labels (or be "").
+// icon is intentionally omitted — parents can pick their own after applying.
+
+export const CHORE_TEMPLATES = [
+    // Morning Routine
+    { key: "brush-teeth-am",   name: "Brush teeth",           description: "Morning — brush for 2 minutes",      category: "Morning",  points: 5  },
+    { key: "make-bed",         name: "Make bed",               description: "Pull up covers and fluff pillow",    category: "Morning",  points: 10 },
+    { key: "get-dressed",      name: "Get dressed",            description: "Clothes on, shoes tied, ready to go",category: "Morning",  points: 5  },
+    { key: "take-vitamins",    name: "Take vitamins",          description: "",                                   category: "Morning",  points: 5  },
+    { key: "eat-breakfast",    name: "Eat breakfast",          description: "",                                   category: "Morning",  points: 5  },
+
+    // Evening Routine
+    { key: "brush-teeth-pm",   name: "Brush teeth (evening)",  description: "Before bed — brush for 2 minutes",  category: "Evening",  points: 5  },
+    { key: "pajamas-on",       name: "Pajamas on",             description: "",                                   category: "Evening",  points: 5  },
+    { key: "pick-up-room",     name: "Pick up room",           description: "Put toys away and tidy floor",       category: "Evening",  points: 10 },
+    { key: "pack-backpack",    name: "Pack backpack",          description: "Ready for tomorrow",                 category: "Evening",  points: 10 },
+
+    // Kitchen
+    { key: "clear-table",      name: "Clear table",            description: "After dinner — dishes to the sink",  category: "Kitchen",  points: 10 },
+    { key: "load-dishwasher",  name: "Load dishwasher",        description: "",                                   category: "Kitchen",  points: 15 },
+    { key: "unload-dishwasher",name: "Unload dishwasher",      description: "",                                   category: "Kitchen",  points: 15 },
+    { key: "wipe-counters",    name: "Wipe counters",          description: "",                                   category: "Kitchen",  points: 10 },
+
+    // Household
+    { key: "take-out-trash",   name: "Take out trash",         description: "",                                   category: "Chores",   points: 15 },
+    { key: "vacuum",           name: "Vacuum living room",     description: "",                                   category: "Chores",   points: 20 },
+    { key: "sweep-floor",      name: "Sweep/mop floor",        description: "",                                   category: "Chores",   points: 15 },
+    { key: "feed-pets",        name: "Feed pets",              description: "",                                   category: "Chores",   points: 10 },
+    { key: "water-plants",     name: "Water plants",           description: "",                                   category: "Chores",   points: 10 },
+
+    // School
+    { key: "homework",         name: "Homework",               description: "Complete all assigned homework",     category: "School",   points: 20 },
+    { key: "reading",          name: "Reading time",           description: "Read for 20 minutes",               category: "School",   points: 15 },
+];

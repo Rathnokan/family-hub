@@ -1,7 +1,7 @@
 {
   "domain": "family_hub",
   "name": "Family Hub",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "documentation": "https://github.com/Rathnokan/family-hub",
   "issue_tracker": "https://github.com/Rathnokan/family-hub/issues",
   "codeowners": ["@Rathnokan"],

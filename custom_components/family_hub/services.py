@@ -250,6 +250,8 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             vol.Optional("completion_threshold_pct"): vol.All(vol.Coerce(int), vol.Range(min=1, max=100)),
             vol.Optional("completion_milestone"):     vol.All(vol.Coerce(int), vol.Range(min=0, max=365)),
             vol.Optional("completion_bonus_points"):  vol.All(vol.Coerce(int), vol.Range(min=0, max=10000)),
+            # v0.6.3: store goal — item ID the kid is saving toward ("" clears)
+            vol.Optional("goal_item_id"):             cv.string,
         }),
     )
 
@@ -433,6 +435,12 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             scope=call.data.get("scope", SCOPE_COMMON),
             person_ids=person_ids,
             description=call.data.get("description", ""),
+            icon=call.data.get("icon", ""),
+            category_label=call.data.get("category_label", ""),
+            max_per_period=call.data.get("max_per_period", 0),
+            period=call.data.get("period", "week"),
+            is_group_reward=call.data.get("is_group_reward", False),
+            contributors=call.data.get("contributors", []),
         )
         await coordinator.async_refresh()
 
@@ -444,6 +452,20 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             vol.Optional("description", default=""):      cv.string,
             vol.Optional("scope", default=SCOPE_COMMON):  vol.In(STORE_SCOPES),
             vol.Optional("person_ids", default=[]):        vol.Any(cv.string, [cv.string]),
+            vol.Optional("icon", default=""):              cv.string,
+            vol.Optional("category_label", default=""):   cv.string,
+            vol.Optional("max_per_period", default=0):    vol.All(vol.Coerce(int), vol.Range(min=0)),
+            vol.Optional("period", default="week"):        vol.In(["day", "week", "month"]),
+            # v0.6.3 item 13: group reward
+            vol.Optional("is_group_reward", default=False): cv.boolean,
+            vol.Optional("contributors", default=[]):        vol.All(
+                cv.ensure_list,
+                [vol.Schema({
+                    vol.Required("person_id"):             cv.string,
+                    vol.Required("share_pct"):             vol.All(vol.Coerce(int), vol.Range(min=1, max=100)),
+                    vol.Optional("contributed_pts", default=0): vol.All(vol.Coerce(int), vol.Range(min=0)),
+                })],
+            ),
         }),
     )
 
@@ -466,6 +488,145 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             vol.Optional("scope"):           vol.In(STORE_SCOPES),
             vol.Optional("person_ids"):      vol.Any(cv.string, [cv.string]),
             vol.Optional("active"):          cv.boolean,
+            vol.Optional("sort_order"):      vol.Coerce(float),
+            vol.Optional("icon"):            cv.string,
+            vol.Optional("category_label"):  cv.string,
+            vol.Optional("max_per_period"):  vol.All(vol.Coerce(int), vol.Range(min=0)),
+            vol.Optional("period"):          vol.In(["day", "week", "month"]),
+            # v0.6.3 item 13: group reward
+            vol.Optional("is_group_reward"): cv.boolean,
+            vol.Optional("contributors"):    vol.All(
+                cv.ensure_list,
+                [vol.Schema({
+                    vol.Required("person_id"):             cv.string,
+                    vol.Required("share_pct"):             vol.All(vol.Coerce(int), vol.Range(min=1, max=100)),
+                    vol.Optional("contributed_pts", default=0): vol.All(vol.Coerce(int), vol.Range(min=0)),
+                    vol.Optional("target_pts", default=0): vol.All(vol.Coerce(int), vol.Range(min=0)),
+                })],
+            ),
+        }),
+    )
+
+    # ------------------------------------------------------------------
+    # Group reward proposals (v0.6.3 item 13)
+    # ------------------------------------------------------------------
+
+    async def handle_propose_group_reward(call: ServiceCall) -> None:
+        """Kid proposes turning a store item into a shared group reward."""
+        result = await store.async_propose_group_reward(
+            item_id=call.data["item_id"],
+            proposer_id=call.data["proposer_id"],
+            proposer_share_pct=call.data["proposer_share_pct"],
+            invitees=call.data["invitees"],
+        )
+        if result:
+            await coordinator.async_refresh()
+
+    hass.services.async_register(
+        DOMAIN, "propose_group_reward", handle_propose_group_reward,
+        schema=vol.Schema({
+            vol.Required("item_id"):            cv.string,
+            vol.Required("proposer_id"):        cv.string,
+            vol.Required("proposer_share_pct"): vol.All(vol.Coerce(int), vol.Range(min=1, max=99)),
+            vol.Required("invitees"):           vol.All(
+                cv.ensure_list,
+                vol.Length(min=1),
+                [vol.Schema({
+                    vol.Required("person_id"):  cv.string,
+                    vol.Required("share_pct"):  vol.All(vol.Coerce(int), vol.Range(min=1, max=99)),
+                })],
+            ),
+        }),
+    )
+
+    async def handle_respond_group_proposal(call: ServiceCall) -> None:
+        """Kid accepts or declines a group reward proposal."""
+        result = await store.async_respond_group_proposal(
+            proposal_id=call.data["proposal_id"],
+            person_id=call.data["person_id"],
+            accept=call.data["accept"],
+        )
+        if result:
+            await coordinator.async_refresh()
+
+    hass.services.async_register(
+        DOMAIN, "respond_group_proposal", handle_respond_group_proposal,
+        schema=vol.Schema({
+            vol.Required("proposal_id"): cv.string,
+            vol.Required("person_id"):   cv.string,
+            vol.Required("accept"):      cv.boolean,
+        }),
+    )
+
+    async def handle_approve_group_proposal(call: ServiceCall) -> None:
+        """Parent approves a group reward proposal — activates group reward on the item."""
+        result = await store.async_approve_group_proposal(
+            proposal_id=call.data["proposal_id"],
+            approved_by=call.data["approved_by"],
+        )
+        if result:
+            await coordinator.async_refresh()
+
+    hass.services.async_register(
+        DOMAIN, "approve_group_proposal", handle_approve_group_proposal,
+        schema=vol.Schema({
+            vol.Required("proposal_id"): cv.string,
+            vol.Required("approved_by"): cv.string,
+        }),
+    )
+
+    async def handle_decline_group_proposal(call: ServiceCall) -> None:
+        """Parent declines a group reward proposal."""
+        result = await store.async_decline_group_proposal(
+            proposal_id=call.data["proposal_id"],
+            declined_by=call.data["declined_by"],
+            reason=call.data.get("reason", ""),
+        )
+        if result:
+            await coordinator.async_refresh()
+
+    hass.services.async_register(
+        DOMAIN, "decline_group_proposal", handle_decline_group_proposal,
+        schema=vol.Schema({
+            vol.Required("proposal_id"):         cv.string,
+            vol.Required("declined_by"):         cv.string,
+            vol.Optional("reason", default=""):  cv.string,
+        }),
+    )
+
+    async def handle_chip_in_group_reward(call: ServiceCall) -> None:
+        """Kid chips in points toward a group reward."""
+        result = await store.async_chip_in_group_reward(
+            item_id=call.data["item_id"],
+            person_id=call.data["person_id"],
+            points=call.data["points"],
+        )
+        if result:
+            await coordinator.async_refresh()
+
+    hass.services.async_register(
+        DOMAIN, "chip_in_group_reward", handle_chip_in_group_reward,
+        schema=vol.Schema({
+            vol.Required("item_id"):   cv.string,
+            vol.Required("person_id"): cv.string,
+            vol.Required("points"):    vol.All(vol.Coerce(int), vol.Range(min=1)),
+        }),
+    )
+
+    async def handle_redeem_group_reward(call: ServiceCall) -> None:
+        """Parent marks a fully-funded group reward as redeemed."""
+        result = await store.async_redeem_group_reward(
+            item_id=call.data["item_id"],
+            redeemed_by=call.data["redeemed_by"],
+        )
+        if result:
+            await coordinator.async_refresh()
+
+    hass.services.async_register(
+        DOMAIN, "redeem_group_reward", handle_redeem_group_reward,
+        schema=vol.Schema({
+            vol.Required("item_id"):     cv.string,
+            vol.Required("redeemed_by"): cv.string,
         }),
     )
 
@@ -475,6 +636,16 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
 
     hass.services.async_register(
         DOMAIN, "delete_store_item", handle_delete_store_item,
+        schema=vol.Schema({vol.Required("item_id"): cv.string}),
+    )
+
+    async def handle_hard_delete_store_item(call: ServiceCall) -> None:
+        """Permanently remove a store item and cancel its pending redemptions."""
+        await store.async_hard_delete_store_item(call.data["item_id"])
+        await coordinator.async_refresh()
+
+    hass.services.async_register(
+        DOMAIN, "hard_delete_store_item", handle_hard_delete_store_item,
         schema=vol.Schema({vol.Required("item_id"): cv.string}),
     )
 
@@ -578,6 +749,7 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
     async def handle_update_settings(call: ServiceCall) -> None:
         labels = call.data.get("category_labels")
         cal_entities = call.data.get("today_calendar_entities")
+        ladder_raw = call.data.get("rank_ppd_ladder")
         await store.async_update_settings(
             family_name=call.data.get("family_name"),
             points_per_dollar=call.data.get("points_per_dollar"),
@@ -588,10 +760,10 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             rooms_config=call.data.get("rooms_config"),
             weather_entity=call.data.get("weather_entity"),
             today_calendar_entities=list(cal_entities) if cal_entities is not None else None,
-            # v0.6.0 S5: rank evaluation settings
             rank_eval_weekday=call.data.get("rank_eval_weekday"),
             rank_drop_threshold=call.data.get("rank_drop_threshold"),
             rank_gain_threshold=call.data.get("rank_gain_threshold"),
+            rank_ppd_ladder=list(ladder_raw) if ladder_raw is not None else None,
         )
         await coordinator.async_refresh()
 
@@ -607,10 +779,10 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             vol.Optional("rooms_config"):               dict,
             vol.Optional("weather_entity"):             cv.string,
             vol.Optional("today_calendar_entities"):    [cv.string],
-            # v0.6.0 S5: rank evaluation
             vol.Optional("rank_eval_weekday"):          vol.All(vol.Coerce(int), vol.Range(min=0, max=6)),
             vol.Optional("rank_drop_threshold"):        vol.All(vol.Coerce(int), vol.Range(min=0)),
             vol.Optional("rank_gain_threshold"):        vol.All(vol.Coerce(int), vol.Range(min=0)),
+            vol.Optional("rank_ppd_ladder"):            [vol.Coerce(float)],
         }),
     )
 

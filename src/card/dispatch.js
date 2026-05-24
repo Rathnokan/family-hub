@@ -4,8 +4,9 @@
  * Reads form values, calls services, opens/closes modals, updates UI state.
  */
 
-import { FLASH_MS } from "./constants.js";
+import { FLASH_MS, CHORE_TEMPLATES } from "./constants.js";
 import { rotationPoolEditor } from "./modals.js";
+import { openPrintableChoreList } from "./print-chore-list.js";
 
 /**
  * Dispatch a data-act action.
@@ -113,6 +114,123 @@ export function dispatch(act, el, card) {
             card._doRender(true);
             break;
         }
+
+        // ---- Admin rewards section -------------------------------------------
+
+        case "select-store-row":
+            card._adminSelectedItemId = el.dataset.iid || null;
+            card._adminSelectedChoreId = null;
+            card._doRender(true);
+            break;
+
+        case "close-store-panel":
+            card._adminSelectedItemId = null;
+            card._doRender(true);
+            break;
+
+        case "sort-admin-store-items": {
+            const col = el.dataset.col || null;
+            if (!col) {
+                card._adminSortItems = { col: null, dir: "asc" };
+            } else {
+                const cur = card._adminSortItems || { col: null, dir: "asc" };
+                if (cur.col === col) {
+                    card._adminSortItems = cur.dir === "asc"
+                        ? { col, dir: "desc" }
+                        : { col: null, dir: "asc" };
+                } else {
+                    card._adminSortItems = { col, dir: "asc" };
+                }
+            }
+            card._doRender(true);
+            break;
+        }
+
+        case "store-item-filter":
+            card._storeItemFilter = el.dataset.fval || null;
+            card._doRender(true);
+            break;
+
+        case "toggle-admin-reward-cat": {
+            const cat = el.dataset.cat;
+            if (!cat) break;
+            if (!card._adminCollapsedRewardCats) card._adminCollapsedRewardCats = new Set();
+            if (card._adminCollapsedRewardCats.has(cat)) card._adminCollapsedRewardCats.delete(cat);
+            else card._adminCollapsedRewardCats.add(cat);
+            card._doRender(true);
+            break;
+        }
+
+        case "ok-edit-store-item-inline": {
+            const iid    = v("m-eiid");
+            const name   = v("m-sname").trim();
+            const dollar = parseFloat(v("m-sdollar"));
+            if (!iid || !name || !dollar || dollar <= 0) break;
+            const isGroup = sr.querySelector("#m-sgroup")?.checked || false;
+            let scope = v("m-sscope");
+            const data  = {
+                item_id:        iid,
+                name,
+                dollar_value:   dollar,
+                scope,
+                description:    v("m-sdesc").trim(),
+                category_label: v("m-scat") || "",
+                max_per_period: parseInt(v("m-smaxperiod") || "0"),
+                period:         v("m-speriod") || "week",
+                active:         sr.querySelector("#m-sactive")?.checked !== false,
+                icon:           _normalizeIcon(v("m-cicon")),
+            };
+            if (isGroup) {
+                const contribs = [...sr.querySelectorAll(".m-scontrib")]
+                    .filter(inp => parseInt(inp.value) > 0)
+                    .map(inp => ({ person_id: inp.dataset.pid, share_pct: parseInt(inp.value) }));
+                if (contribs.length === 0) {
+                    alert("Group reward needs at least one contributor with a share > 0%.");
+                    break;
+                }
+                const total = contribs.reduce((s, c) => s + c.share_pct, 0);
+                if (total !== 100) {
+                    alert(`Contributor shares must sum to exactly 100% (currently ${total}%). Use the "Equal split" button or adjust manually.`);
+                    break;
+                }
+                data.is_group_reward = true;
+                data.contributors    = contribs;
+                data.scope           = "personal";
+                data.person_ids      = contribs.map(c => c.person_id);
+            } else {
+                // Only explicitly clear group fields if this item was previously a group
+                // reward (look up the original from the sensor since the panel doesn't
+                // capture it like the modal does via card._modal.data.item)
+                const origItems = card._attrs("sensor.family_hub_needs_attention").store_items || [];
+                const origItem  = origItems.find(i => i.item_id === iid);
+                if (origItem?.is_group_reward) {
+                    data.is_group_reward = false;
+                    data.contributors    = [];
+                }
+                data.person_ids = scope === "personal" ? _selectedPersonIds("m-sp-person", sr) : [];
+            }
+            console.log("[family-hub] update_store_item (inline) payload:", JSON.parse(JSON.stringify(data)));
+            card._svc("update_store_item", data);
+            card._adminSelectedItemId = null;
+            card._doRender(true);
+            break;
+        }
+
+        case "save-rank-ppd-ladder": {
+            const inputs = sr.querySelectorAll(".fh-ad-rank-ladder-input");
+            const ladder = [];
+            let valid = true;
+            inputs.forEach(inp => {
+                const val = parseFloat(inp.value);
+                if (isNaN(val) || val <= 0) { valid = false; return; }
+                ladder.push(val);
+            });
+            if (!valid || !ladder.length) break;
+            card._svc("update_settings", { rank_ppd_ladder: ladder });
+            break;
+        }
+
+        // ---- Tasks category collapse ----------------------------------------
 
         // Collapse / expand a category group header
         case "toggle-admin-cat": {
@@ -233,6 +351,97 @@ export function dispatch(act, el, card) {
             card._svc("request_redemption", { person_id: el.dataset.pid, item_id: el.dataset.iid });
             break;
 
+        // ---- Group reward: chip-in (v0.6.3 item 13) -----------------------
+        case "open-chip-in": {
+            const iid       = el.dataset.iid;
+            const pid       = el.dataset.pid;
+            const remaining = parseInt(el.dataset.remaining || "0");
+            const balance   = parseInt(el.dataset.balance   || "0");
+            // Find the store item from the person's sensor
+            const person    = card._people().find(p => p.person_id === pid);
+            const pAttrKey  = person
+                ? `sensor.family_hub_${person.name.toLowerCase().replace(/ /g, "_")}`
+                : null;
+            const pAttrs    = pAttrKey ? (card._hass?.states?.[pAttrKey]?.attributes || {}) : {};
+            const storeItem = (pAttrs.store_items || []).find(i => i.item_id === iid) || { item_id: iid, name: "reward" };
+            card._modal = { type: "chip-in", data: { item: storeItem, pid, balance, remaining } };
+            card._doRender(true);
+            break;
+        }
+
+        case "ok-chip-in": {
+            const pts = parseInt(v("m-chipin-pts") || "0");
+            const iid = v("m-chipin-iid");
+            const pid = v("m-chipin-pid");
+            if (!pts || pts <= 0 || !iid || !pid) {
+                alert("Please enter a valid number of points.");
+                break;
+            }
+            card._svc("chip_in_group_reward", { item_id: iid, person_id: pid, points: pts });
+            card._modal = null;
+            card._doRender(true);
+            break;
+        }
+
+        // ---- Group reward: kid accept/decline proposal (v0.6.3 item 13) ---
+        case "accept-group-proposal":
+            card._svc("respond_group_proposal", {
+                proposal_id: el.dataset.propid,
+                person_id:   el.dataset.pid,
+                accept:      true,
+            });
+            break;
+
+        case "decline-group-proposal":
+            if (!confirm("Decline this group reward proposal?")) break;
+            card._svc("respond_group_proposal", {
+                proposal_id: el.dataset.propid,
+                person_id:   el.dataset.pid,
+                accept:      false,
+            });
+            break;
+
+        // ---- Group reward: admin approve/decline proposal ------------------
+        case "approve-group-proposal":
+            card._svc("approve_group_proposal", {
+                proposal_id: el.dataset.propid,
+                approved_by: el.dataset.by || "admin",
+            });
+            break;
+
+        case "decline-group-proposal-parent":
+            if (!confirm("Decline this group reward proposal?")) break;
+            card._svc("decline_group_proposal", {
+                proposal_id: el.dataset.propid,
+                declined_by: el.dataset.by || "admin",
+            });
+            break;
+
+        // ---- Group reward: admin redeem fully-funded reward ----------------
+        case "redeem-group-reward":
+            if (!confirm(`Mark "${el.dataset.iname}" as redeemed?\n\nThis will mark the reward inactive.`)) break;
+            card._svc("redeem_group_reward", {
+                item_id:     el.dataset.iid,
+                redeemed_by: "admin",
+            });
+            break;
+
+        // ---- Store goal toggle (v0.6.3) ------------------------------------
+        // Tapping a star sets that item as the kid's goal; tapping the active
+        // star clears the goal. The set/clear decision is local — the dispatch
+        // handler reads the current goal from the per-person sensor.
+        case "toggle-goal": {
+            const pid = el.dataset.pid;
+            const iid = el.dataset.iid;
+            if (!pid || !iid) break;
+            const person = card._people().find(p => p.person_id === pid);
+            if (!person) break;
+            const attrs = card._hass?.states?.[`sensor.family_hub_${person.name.toLowerCase().replace(/ /g, "_")}`]?.attributes || {};
+            const newGoal = (attrs.goal_item_id === iid) ? "" : iid;
+            card._svc("update_person", { person_id: pid, goal_item_id: newGoal });
+            break;
+        }
+
         // ---- Delete chore --------------------------------------------------
         case "delete-chore":
             if (!confirm(`Delete "${el.dataset.cname}"?\n\nThis cannot be undone.`)) break;
@@ -240,10 +449,18 @@ export function dispatch(act, el, card) {
             card._svc("delete_chore", { chore_id: el.dataset.cid });
             break;
 
-        // ---- Delete store item ---------------------------------------------
+        // ---- Delete store item (soft — deactivate) -------------------------
         case "delete-store-item":
-            if (!confirm(`Delete reward "${el.dataset.iname}"?\n\nThis cannot be undone.`)) break;
+            if (!confirm(`Deactivate reward "${el.dataset.iname}"?\n\nIt will be hidden from kids but stays in the list as [inactive]. Use "Delete permanently" in the edit panel to remove it completely.`)) break;
             card._svc("delete_store_item", { item_id: el.dataset.iid });
+            break;
+
+        // ---- Hard-delete store item (permanent) ----------------------------
+        case "hard-delete-store-item":
+            if (!confirm(`Permanently delete "${el.dataset.iname}"?\n\nThis cannot be undone. Any pending redemption requests for this reward will be cancelled.`)) break;
+            card._adminSelectedItemId = null;
+            card._svc("hard_delete_store_item", { item_id: el.dataset.iid });
+            card._doRender(true);
             break;
 
         // ---- Category label management ------------------------------------
@@ -315,6 +532,13 @@ export function dispatch(act, el, card) {
             card._svc("export_backup", {});
             break;
 
+        // ---- Print chore list (v0.6.3) -------------------------------------
+        // Opens a self-contained HTML doc in a new tab. The handler runs in
+        // the click event so pop-up blockers should let the window.open through.
+        case "print-chore-list":
+            openPrintableChoreList(card);
+            break;
+
         case "rebuild-data":
             if (!confirm(
                 "Rebuild data?\n\n" +
@@ -355,6 +579,9 @@ export function dispatch(act, el, card) {
             break;
         }
         case "open-add-store-item":
+            // Close any open inline edit panel — modal and panel share m-* IDs,
+            // which makes the add modal pre-populate with the editing item's data.
+            card._adminSelectedItemId = null;
             card._modal = { type: "add-store-item", data: {} };
             card._doRender(true);
             break;
@@ -362,6 +589,7 @@ export function dispatch(act, el, card) {
             const items = card._attrs("sensor.family_hub_needs_attention").store_items || [];
             const item  = items.find(i => i.item_id === el.dataset.iid);
             if (!item) break;
+            card._adminSelectedItemId = null;  // close inline panel — modal and panel share m-* IDs
             card._modal = { type: "edit-store-item", data: { item } };
             card._doRender(true);
             break;
@@ -504,7 +732,7 @@ export function dispatch(act, el, card) {
             const weekdays  = Array.from(sr.querySelectorAll(".m-wd-day:checked")).map(cb => parseInt(cb.value));
             const dayFilter = Array.from(sr.querySelectorAll(".m-df-day:checked")).map(cb => parseInt(cb.value));
 
-            const iconVal = v("m-cicon").trim().toLowerCase();
+            const iconVal = _normalizeIcon(v("m-cicon"));
             const data = {
                 name,
                 chore_type:        ctype,
@@ -587,6 +815,8 @@ export function dispatch(act, el, card) {
                 data.rotation_cadence = "";
             }
 
+            // Diagnostic: log payload so we can see what the dispatch is sending
+            console.log(`[family-hub] ${isEdit ? "update_chore" : "add_chore"} payload:`, JSON.parse(JSON.stringify(data)));
             card._svc(isEdit ? "update_chore" : "add_chore", data);
             card._closeModal();
             break;
@@ -601,7 +831,7 @@ export function dispatch(act, el, card) {
             const assigned  = _selectedPersonIds("m-assign-person", sr);
             const weekdays  = Array.from(sr.querySelectorAll(".m-wd-day:checked")).map(cb => parseInt(cb.value));
             const dayFilter = Array.from(sr.querySelectorAll(".m-df-day:checked")).map(cb => parseInt(cb.value));
-            const iconVal   = v("m-cicon").trim().toLowerCase();
+            const iconVal   = _normalizeIcon(v("m-cicon"));
 
             const data = {
                 chore_id:          v("m-cid"),
@@ -666,6 +896,7 @@ export function dispatch(act, el, card) {
                 data.rotation_cadence = "";
             }
 
+            console.log("[family-hub] update_chore (inline) payload:", JSON.parse(JSON.stringify(data)));
             card._svc("update_chore", data);
             card._adminSelectedChoreId = null;  // close panel after save
             card._choreFormTab = "details";
@@ -713,11 +944,40 @@ export function dispatch(act, el, card) {
             const name   = v("m-sname").trim();
             const dollar = parseFloat(v("m-sdollar"));
             if (!name || !dollar || dollar <= 0) break;
-            const scope = v("m-sscope");
-            const data  = { name, dollar_value: dollar, scope };
-            const desc  = v("m-sdesc").trim();
-            if (desc) data.description = desc;
-            if (scope === "personal") data.person_ids = _selectedPersonIds("m-sp-person", sr);
+            const isGroup = sr.querySelector("#m-sgroup")?.checked || false;
+            let scope = v("m-sscope");
+            const data  = {
+                name,
+                dollar_value:   dollar,
+                scope,
+                description:    v("m-sdesc").trim(),
+                category_label: v("m-scat") || "",
+                max_per_period: parseInt(v("m-smaxperiod") || "0"),
+                period:         v("m-speriod") || "week",
+                icon:           _normalizeIcon(v("m-cicon")),
+            };
+            if (isGroup) {
+                const contribs = [...sr.querySelectorAll(".m-scontrib")]
+                    .filter(inp => parseInt(inp.value) > 0)
+                    .map(inp => ({ person_id: inp.dataset.pid, share_pct: parseInt(inp.value) }));
+                if (contribs.length === 0) {
+                    alert("Group reward needs at least one contributor with a share > 0%.");
+                    break;
+                }
+                const total = contribs.reduce((s, c) => s + c.share_pct, 0);
+                if (total !== 100) {
+                    alert(`Contributor shares must sum to exactly 100% (currently ${total}%). Use the "Equal split" button or adjust manually.`);
+                    break;
+                }
+                data.is_group_reward = true;
+                data.contributors    = contribs;
+                data.scope           = "personal";
+                data.person_ids      = contribs.map(c => c.person_id);
+            } else {
+                // Don't send group reward fields for regular items — old schema
+                // compatibility (safe to omit; backend defaults to false/[])
+                if (scope === "personal") data.person_ids = _selectedPersonIds("m-sp-person", sr);
+            }
             card._svc("add_store_item", data);
             card._closeModal();
             break;
@@ -728,11 +988,46 @@ export function dispatch(act, el, card) {
             const name   = v("m-sname").trim();
             const dollar = parseFloat(v("m-sdollar"));
             if (!iid || !name || !dollar || dollar <= 0) break;
-            const scope = v("m-sscope");
-            const data  = { item_id: iid, name, dollar_value: dollar, scope };
-            const desc  = v("m-sdesc").trim();
-            if (desc !== undefined) data.description = desc;
-            data.person_ids = scope === "personal" ? _selectedPersonIds("m-sp-person", sr) : [];
+            const isGroup = sr.querySelector("#m-sgroup")?.checked || false;
+            let scope = v("m-sscope");
+            const data  = {
+                item_id:        iid,
+                name,
+                dollar_value:   dollar,
+                scope,
+                description:    v("m-sdesc").trim(),
+                category_label: v("m-scat") || "",
+                max_per_period: parseInt(v("m-smaxperiod") || "0"),
+                period:         v("m-speriod") || "week",
+                active:         sr.querySelector("#m-sactive")?.checked !== false,
+                icon:           _normalizeIcon(v("m-cicon")),
+            };
+            if (isGroup) {
+                const contribs = [...sr.querySelectorAll(".m-scontrib")]
+                    .filter(inp => parseInt(inp.value) > 0)
+                    .map(inp => ({ person_id: inp.dataset.pid, share_pct: parseInt(inp.value) }));
+                if (contribs.length === 0) {
+                    alert("Group reward needs at least one contributor with a share > 0%.");
+                    break;
+                }
+                const total = contribs.reduce((s, c) => s + c.share_pct, 0);
+                if (total !== 100) {
+                    alert(`Contributor shares must sum to exactly 100% (currently ${total}%). Use the "Equal split" button or adjust manually.`);
+                    break;
+                }
+                data.is_group_reward = true;
+                data.contributors    = contribs;
+                data.scope           = "personal";
+                data.person_ids      = contribs.map(c => c.person_id);
+            } else {
+                // Only explicitly clear group fields if this item was previously a group reward
+                // (avoids sending unknown fields to old schema before HA restart)
+                if (card._modal?.data?.item?.is_group_reward) {
+                    data.is_group_reward = false;
+                    data.contributors    = [];
+                }
+                data.person_ids = scope === "personal" ? _selectedPersonIds("m-sp-person", sr) : [];
+            }
             card._svc("update_store_item", data);
             card._closeModal();
             break;
@@ -829,16 +1124,84 @@ export function dispatch(act, el, card) {
             break;
         }
 
-        // ---- Icon picker (always-visible grid, no dropdown) -----------------
-        // Selection only — no preview/grid-toggle DOM. The hidden m-cicon input
-        // carries the value to the save handlers.
+        // ---- Chore template picker (v0.6.3 item 8) --------------------------
+        // Reads the selected template key from #m-ctpl and pre-populates the
+        // add-chore form fields. Parent can edit anything before saving.
+        case "pick-template": {
+            const key = sr.getElementById("m-ctpl")?.value;
+            if (!key) break;
+            const tpl = CHORE_TEMPLATES.find(t => t.key === key);
+            if (!tpl) break;
+
+            const setVal = (id, val) => {
+                const el2 = sr.getElementById(id);
+                if (el2 !== null) el2.value = val;
+            };
+
+            setVal("m-cname", tpl.name);
+            setVal("m-cdesc", tpl.description || "");
+
+            // Set category if the template category appears in the select options
+            const catEl = sr.getElementById("m-clabel");
+            if (catEl && tpl.category) {
+                const opt = [...catEl.options].find(o => o.value === tpl.category);
+                if (opt) catEl.value = tpl.category;
+            }
+
+            // Set points (on the rewards tab — pre-populate even if not visible)
+            if (tpl.points) setVal("m-cpts", tpl.points);
+
+            // Focus the name field so parent can tweak it immediately
+            sr.getElementById("m-cname")?.focus();
+            break;
+        }
+
+        // ---- Icon picker — grid in the Icon tab; updates hidden input + preview
         case "pick-icon": {
             const key    = el.dataset.icon;
             const hidden = sr.getElementById("m-cicon");
             if (hidden) hidden.value = key;
+            // Clear any custom uploaded preview when switching back to a built-in icon
+            const prev = sr.getElementById("m-cicon-preview");
+            if (prev) prev.innerHTML = "";
             sr.querySelectorAll(".fh-icon-cell").forEach(
                 cell => cell.classList.toggle("selected", cell.dataset.icon === key)
             );
+            // Update the selected-icon preview at top of Icon tab
+            const sel = sr.getElementById("m-icon-selected");
+            if (sel) {
+                const svgSpan = el.querySelector("span:first-child");
+                const lbl     = el.title || key;
+                sel.innerHTML =
+                    `<span class="fh-icon-sel-icon" style="display:inline-flex;width:20px;height:20px;color:var(--fh-accent)">` +
+                    (svgSpan ? svgSpan.innerHTML : "") +
+                    `</span> <span class="fh-icon-sel-lbl">${lbl}</span>`;
+            }
+            break;
+        }
+
+        // ---- Custom image upload for reward icon
+        // Triggers the persistent <input id="m-icon-upload"> inside the modal.
+        // Actual file processing happens in handleIconFileSelection (called from
+        // FamilyHubCard's change listener when that input's value changes).
+        case "upload-icon": {
+            const fileInput = sr.getElementById("m-icon-upload");
+            if (!fileInput) {
+                console.warn("[family-hub] upload-icon: hidden file input not found");
+                break;
+            }
+            // Reset value so picking the same file twice still fires change
+            fileInput.value = "";
+            fileInput.click();
+            break;
+        }
+
+        case "clear-icon": {
+            const hidden  = sr.getElementById("m-cicon");
+            if (hidden) hidden.value = "";
+            const preview = sr.getElementById("m-cicon-preview");
+            if (preview) preview.innerHTML = "";
+            sr.querySelectorAll(".fh-icon-cell.selected").forEach(c => c.classList.remove("selected"));
             break;
         }
     }
@@ -852,4 +1215,73 @@ function _selectedPersonIds(cbClass, sr) {
     return Array.from(
         sr.querySelectorAll(`.${cbClass}:checked`)
     ).map(cb => cb.value);
+}
+
+/**
+ * Normalize an icon value for storage. Built-in icon keys ("candy", "snack")
+ * are stored lowercase by convention. But uploaded image data URLs
+ * ("data:image/png;base64,iVBORw0...") MUST NOT be lowercased — base64 is
+ * case-sensitive, and lowercasing produces an invalid encoding that renders
+ * as a broken image. This helper preserves data URLs as-is.
+ */
+function _normalizeIcon(raw) {
+    const s = (raw || "").trim();
+    if (!s) return "";
+    if (s.startsWith("data:")) return s;     // preserve data URLs verbatim
+    return s.toLowerCase();
+}
+
+/**
+ * Handle the change event on the persistent <input id="m-icon-upload"> inside
+ * a reward modal. Reads the file, downsizes it to <=128x128, encodes as PNG
+ * data URL, stuffs it into #m-cicon, and renders a preview chip above the
+ * icon grid. Called from FamilyHubCard's shadow-root change listener.
+ */
+export function handleIconFileSelection(fileInput, sr) {
+    const file = fileInput?.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+        alert("Image too large. Please pick a file under 5 MB.");
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+            const MAX = 128;
+            let w = img.width, h = img.height;
+            if (w > h) {
+                if (w > MAX) { h = Math.round((h * MAX) / w); w = MAX; }
+            } else {
+                if (h > MAX) { w = Math.round((w * MAX) / h); h = MAX; }
+            }
+            const canvas = document.createElement("canvas");
+            canvas.width  = w;
+            canvas.height = h;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, w, h);
+            const dataUrl = canvas.toDataURL("image/png");
+            if (dataUrl.length > 350 * 1024) {
+                alert("Resized image is still too large. Pick a simpler image.");
+                return;
+            }
+            const hidden = sr.getElementById("m-cicon");
+            if (hidden) hidden.value = dataUrl;
+            const preview = sr.getElementById("m-cicon-preview");
+            if (preview) {
+                preview.innerHTML =
+                    `<div style="display:flex;align-items:center;gap:10px;padding:8px;border:1px solid var(--fh-border);border-radius:6px;background:var(--fh-surface)">` +
+                    `<img src="${dataUrl}" style="width:48px;height:48px;object-fit:contain;border-radius:4px" alt="">` +
+                    `<span style="font-size:.85rem;color:var(--fh-text-sec)">Custom uploaded image</span>` +
+                    `<button type="button" class="fh-btn fh-btn-ghost fh-btn-sm" data-act="clear-icon" style="margin-left:auto">Clear</button>` +
+                    `</div>`;
+            }
+            // Deselect any selected built-in icon
+            sr.querySelectorAll(".fh-icon-cell.selected").forEach(c => c.classList.remove("selected"));
+        };
+        img.onerror = () => alert("Could not read that image.");
+        img.src = reader.result;
+    };
+    reader.onerror = () => alert("Could not read that file.");
+    reader.readAsDataURL(file);
 }

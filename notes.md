@@ -23,14 +23,116 @@
 
 ---
 
-## Current Status — 2026-05-23
+## Current Status — 2026-05-24
 
 | Item | State |
 |---|---|
-| **Live on HA (Samba)** | v0.6.2 — stub 6.8 KB + body 474.1 KB |
+| **Live on HA (Samba)** | v0.6.3 wip — stub 6.9 KB + body 560.0 KB. Items 1-4 + P2 + items 5/6/12 + active toggle + Rewards section + hard-delete + limit display + Item 13 (group rewards) + contrast fix deployed. **Not yet committed.** |
 | **GitHub / HACS** | v0.6.2 tagged + released. HACS-detectable. |
-| **manifest.json / hacs.json / constants.js VERSION** | 0.6.2 ✓ |
-| **Phase** | v0.6.3 — chores & store polish + engagement. Items 1-4 picked as the opening batch. |
+| **manifest.json / hacs.json / constants.js VERSION** | 0.6.2 ✓ (version bump deferred until v0.6.3 batch is ready to tag) |
+| **Phase** | v0.6.3 — items 1-6 + 12 + 13 + Rewards admin section deployed. Items 7-11 not started. |
+
+**v0.6.3 items 1-4 — built + deployed via Samba, awaiting final smoke-test before commit:**
+
+1. **Printable chore list** — `Print` button on the Tasks admin topbar opens a self-contained HTML doc in a new tab. Groups chores by assignee, separate sections for claimable / reminders. Print stylesheet + page-break-inside avoid. Files: `src/card/print-chore-list.js` (new), `modes-admin.js`, `dispatch.js`, `constants.js` (added `I.print`).
+2. **Store goal tracking** — Per-person `goal_item_id` field. Star toggle on every store item (☆ → ★). "Saving for X · 234/500" banner above the store list, plus a rail panel via `htmlRailGoal()` on all themed personal pages. Backend: `data_store.py` migration + person create/update + `goal_item_id` allowed key; `services.py` schema; `sensor.py` `goal` snapshot on per-person sensor + `goal_item_id` on naAttr.people.
+3. **Store reorder (drag)** — `sort_order` field on store items, back-filled in creation order at migration time. Admin store list rows are draggable. Drop handler in `FamilyHubCard.js` generalized via `data-drag-type` so it serves chores, store items, and category chips.
+4. **Store icons** — Optional `icon` field on store items reusing the existing FH_ICON_META picker. Icon picker is now a shared helper (`iconPickerSection()` in modals.js); both add and edit store-item modals include it. Icons render in the admin inventory list and in every theme's store tab.
+
+**v0.6.3 P2 polish (drag-reorder UX) — deployed:**
+
+- **Drop precision:** dragover now shows a blue insertion line on the top OR bottom edge of the target row depending on cursor position. Drop above → insert before, drop below → insert after. Works on chores, store items, and category chips. Horizontal lists (chips) use cursor X; vertical lists use Y.
+- **Personal-page chore order:** `get_tasks_for_card` was sorting `due_today` by name and ignoring `sort_order` — that's why admin drag-reorder looked broken from a kid's dashboard. Fixed: rows now carry `sort_order` and sort by `(sort_order, name)`. Same fix applied to `get_all_tasks_for_command_center` (home strip) and `get_claimable_tasks_for_card` (claimable picker).
+- **Category drag-reorder in Settings:** category chips are draggable; reordering persists via `update_settings(category_labels=...)`. Personal pages already used `groupByCategory(tasks, catOrder)` so they pick the new order up immediately.
+- **Admin Tasks list category order:** seeded the group Map from `catLabels` first so the Settings-page category drag-order is reflected in the admin Tasks page too. Orphan categories (label present on a chore but missing from `category_labels`) get appended after the admin-defined buckets.
+
+> Pop-up blocker note for #1: the print tab is opened from a click event, so most blockers let it through. Falls back to a blob URL in the same tab if `window.open()` returns null.
+
+**v0.6.3 items 5, 6, 12 + Rewards admin section — deployed, awaiting smoke-test:**
+
+5. **Store max redemption rate** — `max_per_period` (int) + `period` (`day`/`week`/`month`) fields on store items. Backend blocks requests that exceed the limit; `next_available` date surfaced in per-person sensor. UI: `Max N/period` badge on Rewards admin rows. Files: `data_store.py`, `services.py`, `sensor.py`, `modals.js`, `modes-admin.js`, `dispatch.js`.
+6. **Point→$ scales with rank** — `rank_ppd_ladder` setting (list of ¢/pt per rank index, default `[3.0, 3.5, 4.0, 4.5, 5.0]`). Stored in `settings.rank_ppd_ladder`. Per-person sensor `dollar_value` and store `points_cost` now use rank-adjusted PPD. Redemption deducts rank-adjusted cost. Admin Settings panel has per-rung inputs + Save ladder button. Files: `data_store.py`, `services.py`, `sensor.py`, `modes-admin.js`, `dispatch.js`.
+12. **Reward categories** — `category_label` field on store items. Rewards admin section groups items by category (seeded from shared `category_labels` order). Add/edit modals and inline panel include category dropdown. Files: same as items 5/6.
+
+**Rewards admin section (new):**
+- Dedicated left-rail nav item ("Rewards", ◈ icon) between Tasks and History.
+- Master-detail layout: item list (left, grouped by category, sortable, filterable Active/Inactive) + inline editor panel at ≥1280px (right, same size/layout as Tasks panel).
+- Active/inactive toggle on every item — replaces the old "delete = soft deactivate" UX. Items marked inactive are shown dimmed with `[inactive]` label.
+- Store inventory panel removed from Settings; rank PPD ladder editor added there instead.
+- Bug fixed: `"rewards"` was missing from `_validAdminSecs` whitelist in `FamilyHubCard.js` → section was silently reset to Today on every render. Fixed.
+
+**v0.6.3 session 3 — deployed:**
+
+- **True hard-delete for rewards** — `async_hard_delete_store_item` in `data_store.py` physically removes the record from `store_items` and cancels any pending redemptions. New `hard_delete_store_item` service in `services.py`. Inline editor panel footer now has: Save changes · Deactivate (soft) · Delete ✕ (permanent). Row trash button is still soft-delete (deactivate). `dispatch.js` `hard-delete-store-item` case.
+- **Redemption limit display on kid store tabs** — `htmlStoreItemLimit(item)` added to `_shared.js`; renders "1 per week" or "1 per week · Available Mon May 27" when `max_per_period > 0`. All 6 themes updated: import `htmlStoreItemLimit`, add `blocked = !!item.next_available`, render "Not available" state when blocked. `.fh-store-limit` and `.fh-store-limit--blocked` added to `css.js`.
+
+**v0.6.3 Item 13 — Group / shared rewards — deployed:**
+
+- **Backend:** `is_group_reward: bool`, `contributors: [{person_id, share_pct, contributed_pts, target_pts, person_name, person_color}]` on store items. `chip_in` service deducts points and increments `contributed_pts`. `update_store_item` accepts group reward fields.
+- **Admin form (modal + inline panel):** "Group reward" toggle, contributor % sliders, validation that shares sum to 100%, "Equal split" quick-set. Both `ok-edit-store-item` and `ok-edit-store-item-inline` dispatch cases handle group fields identically.
+- **Kid store tabs (all 6 themes):** `htmlGroupContributorBars()` renders compact horizontal contributor pills — avatar initial + `contributed/target` pts — instead of the old tall vertical layout. `htmlChipInBtn()` shows a "Chip In" button for the current person's share.
+- **Cache busting:** `BUILD_ID` timestamp baked per `npm run build` via `gen-build-id.mjs` → `src/build-id.js`. Appended to body URL as `?v=VERSION&b=BUILD_ID` so every build busts the browser cache.
+- **Icon upload for rewards:** `handleIconFileSelection()` exported from `dispatch.js`; FileReader → canvas downsize → data URL → preview. Persistent `<input id="m-icon-upload">` in modal, handled via shadow root `change` event. `_normalizeIcon()` preserves `data:` URLs verbatim.
+- **Contrast fix (contributor pills):** `.fh-gcp` background bumped from near-transparent `rgba(.08)` to `var(--fh-surface)` so pts text reads on an opaque surface. Avatar initial gets `text-shadow` dark halo so it's readable on any person `avatar_color` (including light yellows/greens). "Done" state color updated to `#30d158` to match `--fh-success` token.
+
+---
+
+## 🤝 SESSION HANDOFF — for the next session (Sonnet 4.6 recommended)
+
+> **Read this section before starting work.** Then read the rest of this file top to bottom (Session Start Checklist) and pick up where v0.6.3 left off.
+
+### Where things stand
+
+- **v0.6.2 is shipped** to GitHub + HACS. Don't re-litigate it.
+- **v0.6.3 items 1-6, 12, 13 + P2 drag-reorder polish** are all deployed to live HA via Samba. Code is **uncommitted**. Wait for user's explicit "go" before bumping versions and committing.
+- **v0.6.3 items 7-11 are not started.** See the candidate list below for what's left.
+- **Item 13 (group rewards) is feature-complete** — creation, editing (modal + inline panel), kid store display (compact contributor pills), chip-in flow, and contrast fixes are all deployed.
+- **Kid-initiated "Propose sharing" flow** (the second entry path in item 13) is deferred — the backend `group_reward_proposals` list and frontend `htmlGroupProposalBanner()` helper are wired in but the proposal-creation UI for kids is not yet built.
+
+### First moves for the next session
+
+1. Run the **Session Start Checklist** at the top of this file.
+2. Run `git status` to see the uncommitted v0.6.3 work. Don't commit without user's explicit go.
+3. Ask the user: "Items 1-6, 12, 13 + drag-reorder polish are deployed. Did the group rewards live test pass? Any bugs to fix, or ready to commit this batch?"
+4. Then ask which remaining v0.6.3 item to tackle next (items 7-11).
+
+### Model recommendation
+
+**Sonnet 4.6 (High) is fine for everything left on v0.6.3.** All remaining items are well-scoped CRUD additions / UI wiring on top of patterns this codebase already has:
+
+- Items 5, 7, 8, 9, 10, 12: small backend field additions + theme-side rendering. Sonnet territory.
+- Item 6 (point→$ by rank): wider surface area (touches several read sites) but mechanical. Sonnet handles fine.
+- Item 11 (Tabler icons): mostly audit + mapping work. Sonnet.
+- Item 13 (group rewards): has the most architectural ambiguity (proposal lifecycle, refund-on-leave edge cases) — write the data model up front, talk through the lifecycle with the user before coding. Still Sonnet-suitable, just structure the conversation.
+
+**Reach for Opus only if** you hit something that requires reasoning about subtle invariants across many existing files at once (e.g. a tricky data-migration design problem). Cross that bridge if you come to it.
+
+### Sonnet system-prompt addendum (paste into the next session)
+
+```
+You are working on the Family Hub project (see notes.md at the project root).
+Read notes.md top to bottom before touching any code — it has the Session
+Start Checklist, the v0.6.3 work queue, and architecture decisions you must
+not relitigate. Do not bump versions, do not commit, and do not push without
+the user's explicit "go" — the workflow is: write code → deploy via Samba
+→ user tests live → commit + tag + push only when a batch is stable.
+
+When the user gives you an item, prefer surgical edits to small files over
+sweeping refactors. The codebase has six themes (engineer, hp, dinos, baker,
+dbz, classic) and adding a feature usually means touching each one. Use
+shared helpers in src/card/themes/_shared.js when the same render logic
+appears in more than two themes.
+
+Default deploy command after a build is `npm run build` then copy these
+files to \\10.0.0.41\config\custom_components\family_hub\ via PowerShell
+Copy-Item:
+  - custom_components/family_hub/www/family-hub-card.js
+  - custom_components/family_hub/www/family-hub-card-body.js
+  - any custom_components/family_hub/*.py you edited
+Don't sync family_hub_data.json — it's user data, off-limits.
+
+Be terse in responses. The user wants to ship features, not read prose.
+```
 
 ---
 
@@ -170,6 +272,67 @@ all rejected — attribution-required or proprietary.
 5. Picker search box filters by display label (already half-built).
 Roughly one session. No Python changes.
 
+### 12. Reward categories
+Store items get a `category_label` field, same shape as chores already use.
+Admin reuses the existing chip-add UI + the same draggable `category_labels`
+ordering (already drives chore grouping in v0.6.3 P2). Personal-page store
+tabs render reward category section headers in admin order. Within a
+category, items still sort by `sort_order` (the v0.6.3 P2 drag-reorder).
+
+Touchpoints: backend `_migrate_store_item` setdefault `category_label=""`,
+`async_add_store_item` / `async_update_store_item` accept it, sensor
+payloads carry it, admin store modal gains a category dropdown (same widget
+shape as the chore form), each theme's store renderer groups by category
+(reuse `groupByCategory(items, catOrder)` shape from `_shared.js`). One
+shared widget — the existing `category_labels` is the single source of truth
+for both chores and rewards.
+
+### 13. Group / shared rewards ("chip in together")
+Two kids (or more) jointly save toward a single reward. Two entry paths:
+
+- **Parent-initiated:** parent toggles a "Group reward" flag in the admin
+  store-item form, then picks contributors and a split (default = equal
+  per-kid split, but each kid's contribution % is editable). Stored as a
+  new shape: `contributors: [{ person_id, share_pct }]` on the store item.
+- **Kid-initiated:** kid hits "Want to share this" on their store tab,
+  picks the other kids + proposes a split, hits Send. This generates a
+  `group_reward_proposal` record (similar shape to a redemption) that
+  enters the approval queue. Each named kid sees the proposal in their
+  store + can accept/decline; parent sees it in Today queue and must
+  approve before the deal goes live. Once approved, the item's
+  `contributors` are populated and the proposal record is consumed.
+
+Data model:
+- `store_items[].is_group_reward: bool`
+- `store_items[].contributors: [{ person_id, share_pct, contributed_pts }]`
+  — `contributed_pts` lets us track partial payment as kids "chip in" over
+  time (no debit until redeemed, but the rail shows progress per kid).
+- New `group_reward_proposals` list (parallel to `redemptions`): proposer,
+  invitees, proposed splits, kid-acceptance state, parent approval state.
+- New services: `propose_group_reward`, `accept_group_proposal`,
+  `decline_group_proposal`, `approve_group_proposal`, `redeem_group_reward`.
+
+UI:
+- Store-item modal (admin): "Group reward" checkbox + contributor multi-pick
+  + per-kid % sliders.
+- Store tab (kid): on a group reward, show all contributors' avatars + each
+  kid's pts-toward-goal sub-bar. "Chip in" button instead of "Request".
+  Pressing it allocates a kid-specified number of points toward their share.
+- Store tab (kid): "Share this" button on any non-group item → opens a
+  proposal modal (which kids, how to split).
+- Today queue (parent): proposals show alongside chore approvals.
+
+Edge cases:
+- A kid leaves the family / goes inactive → their contributed_pts return to
+  their lifetime balance, their share is redistributed across remaining
+  contributors (or item is converted back to non-group).
+- Item is deleted while in-flight → refund contributed_pts to each kid.
+- Splits must sum to 100% — clamp on save, with a "Equal split" quick-set
+  button.
+
+This is the meatiest item on the v0.6.3 backlog after #11. Worth a
+dedicated session.
+
 ### Held out of v0.6.3 (will revisit)
 - Photo evidence for approvals — HA media-source dependency.
 - History pagination — current 30-day window still fine.
@@ -260,3 +423,4 @@ Each task row: `task_id`, `chore_id`, `name`, `description`, `icon`, `points`, `
 | v0.6.0 | "The Front Door" — Command Center home, six personal themes, kid-large card grid, Mission Control, maintenance drill-down, desktop admin master-detail with tabbed chore editor, card-stub split |
 | v0.6.1 | Person-level success-rate streak, claimable picker card grid, bigger completion buttons |
 | v0.6.2 | Chores polish + phone-friendly pages: editor crash fix, money conversion in rail KPIs, dual `+/−` points medal, `<500px` responsive pass, `initial_view` card config, chore rotation pool |
+| v0.6.3 wip | Store polish + group rewards: printable chore list, store goal tracking, drag-reorder, reward icons, rate limits, rank-scaled PPD, reward categories, group/shared rewards (chip-in), streak freeze tokens |

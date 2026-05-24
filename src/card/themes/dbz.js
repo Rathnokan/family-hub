@@ -19,7 +19,11 @@ import { escHTML, escAttr, fPts, fUSD, ini, relTime,
 import { HISTORY_META }                                   from "../constants.js";
 import { getEffectiveRank, getWeeklyPts, htmlRankBar, htmlSuccessStreak,
          groupByCategory, getActiveStreaks,
-         computeStreakProgress, htmlChoreRow }            from "./_shared.js";
+         computeStreakProgress, htmlChoreRow,
+         htmlGoalBanner, htmlRailGoal, htmlGoalToggleBtn,
+         storeItemIcon, htmlStoreItemLimit,
+         htmlStreakFreezeChip, htmlDailyProgress,
+         htmlGroupContributorBars, htmlChipInBtn, htmlGroupProposalBanner } from "./_shared.js";
 
 // ---- Palette ----------------------------------------------------------------
 
@@ -173,7 +177,8 @@ function _railPanels({ attr, naAttr, person, balance, weekly, openCount,
                        rankIdx, dropThr, gainThr, nextItem, fillPct }) {
     return `
         ${_railPanelKPIs(balance, weekly, openCount, attr.show_dollar_value ? attr.dollar_value : null)}
-        ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, person)}
+        ${htmlRailGoal(attr)}
+        ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, person, attr)}
         ${_railPanelStreaks(attr, naAttr, person)}
         ${_railPanelNextUp(nextItem, fillPct)}`;
 }
@@ -205,14 +210,15 @@ function _railPanelKPIs(balance, weekly, openCount, dollarValue) {
     return _railPanel("POWER LEVEL", body);
 }
 
-function _railPanelRank(rankIdx, weekly, dropThr, gainThr, person) {
+function _railPanelRank(rankIdx, weekly, dropThr, gainThr, person, attr) {
     const bar    = htmlRankBar(rankIdx, weekly, dropThr, gainThr, DBZ_RANKS, DBZ.orange);
     const streak = htmlSuccessStreak(person, DBZ.orange);
+    const freeze = htmlStreakFreezeChip(attr);
     if (!bar) {
         return _railPanel("NEXT FORM",
-            `<div class="fh-dbz-rmax">${escHTML(getEffectiveRank(rankIdx, DBZ_RANKS).name)} · MAX</div>${streak}`);
+            `<div class="fh-dbz-rmax">${escHTML(getEffectiveRank(rankIdx, DBZ_RANKS).name)} · MAX</div>${streak}${freeze}`);
     }
-    return _railPanel("NEXT FORM", bar + streak);
+    return _railPanel("NEXT FORM", bar + streak + freeze);
 }
 
 function _railPanelStreaks(attr, naAttr, person) {
@@ -298,6 +304,7 @@ function _missions(attr, person, naAttr, card) {
         ${pending.map(t => htmlChoreRow(t, dbzRowConfig, person, card)).join("")}` : "";
 
     return `
+        ${htmlDailyProgress(attr)}
         <div class="fh-row-list">
             ${groupHtml}
             ${pendingSection}
@@ -318,18 +325,30 @@ function _powerUps(attr, person, balance, card) {
     const pendingByName   = new Set(personPending.filter(r => !r.item_id).map(r => r.item_name));
 
     return `
+        ${htmlGroupProposalBanner(attr.group_proposals, person.person_id)}
+        ${htmlGoalBanner(attr)}
         <div class="fh-dbz-powerup-list">
             ${items.map(item => {
+                const isGroup   = !!item.is_group_reward;
                 const can       = balance >= item.points_cost;
                 const requested = pendingByItemId.has(item.item_id) || pendingByName.has(item.name);
+                const blocked   = !!item.next_available;
                 return `
-                <div class="fh-dbz-powerup-row ${!can ? "locked" : ""}">
+                <div class="fh-dbz-powerup-row ${!isGroup && !can ? "locked" : ""}">
+                    ${storeItemIcon(item)}
                     <div class="fh-dbz-powerup-body">
                         <div class="fh-dbz-powerup-name">${escHTML(item.name)}</div>
-                        <div class="fh-dbz-powerup-cost">${fPts(item.points_cost)}⚡</div>
+                        ${isGroup ? "" : `<div class="fh-dbz-powerup-cost">${fPts(item.points_cost)}⚡</div>`}
+                        ${htmlStoreItemLimit(item)}
+                        ${htmlGroupContributorBars(item, person.person_id)}
                     </div>
-                    ${requested
+                    ${htmlGoalToggleBtn(item, attr, person.person_id)}
+                    ${isGroup
+                        ? htmlChipInBtn(item, person.person_id, balance)
+                        : requested
                         ? `<span style="color:${DBZ.orange};font-weight:800;font-size:.9rem">SENT ✓</span>`
+                        : blocked
+                        ? `<span style="color:var(--fh-overdue);font-weight:700;font-size:.8rem">NOT YET</span>`
                         : `<button class="fh-dbz-go-btn ${can ? "" : "locked"}"
                                    data-act="redeem" data-iid="${escAttr(item.item_id)}" data-pid="${escAttr(person.person_id)}"
                                    ${!can ? 'disabled style="opacity:.35;cursor:not-allowed"' : ""}>

@@ -12,7 +12,8 @@ import { DEFAULT_COLOR, HISTORY_META } from "./constants.js";
 import { I } from "./constants.js";
 import { escHTML, escAttr, ini, fPts, fUSD, cap, relTime, groupHistorySkipped } from "./utils.js";
 import { ROOMS } from "./rooms/index.js";
-import { choreFormFields } from "./modals.js";
+import { choreFormFields, storeItemFormFields } from "./modals.js";
+import { choreIcon } from "./icons.js";
 
 // ---------------------------------------------------------------------------
 // Shell
@@ -21,18 +22,20 @@ import { choreFormFields } from "./modals.js";
 export function htmlAdmin(card) {
     const attr        = card._attrs("sensor.family_hub_needs_attention");
     const people      = attr.people           || [];
-    const approvals   = attr.approval_queue   || [];
-    const redemptions = attr.redemption_queue || [];
-    const chores      = attr.active_chores    || [];
-    const catLabels   = attr.category_labels  || [];
-    const famName     = attr.family_name      || "Family Hub";
-    const storeItems  = attr.store_items      || [];
-    const actionCount = approvals.length + redemptions.length;
+    const approvals       = attr.approval_queue       || [];
+    const redemptions     = attr.redemption_queue     || [];
+    const groupProposals  = attr.group_proposal_queue || [];
+    const chores          = attr.active_chores        || [];
+    const catLabels       = attr.category_labels      || [];
+    const famName         = attr.family_name          || "Family Hub";
+    const storeItems      = attr.store_items          || [];
+    const actionCount     = approvals.length + redemptions.length + groupProposals.length;
 
     const sections = [
         { id: "today",    label: "Today",    icon: "◐", badge: actionCount },
         { id: "family",   label: "Family",   icon: "◍", badge: 0 },
         { id: "tasks",    label: "Tasks",    icon: "◉", badge: 0 },
+        { id: "rewards",  label: "Rewards",  icon: "◈", badge: 0 },
         { id: "history",  label: "History",  icon: "◑", badge: 0 },
         { id: "settings", label: "Settings", icon: "◎", badge: 0 },
     ];
@@ -41,11 +44,12 @@ export function htmlAdmin(card) {
 
     let body = "";
     switch (sec) {
-        case "today":    body = _htmlAdToday(approvals, redemptions, attr);         break;
-        case "family":   body = _htmlAdFamily(people, attr);                        break;
-        case "tasks":    body = _htmlAdTasks(chores, people, catLabels, card);      break;
-        case "history":  body = _htmlAdHistory(attr, card);                         break;
-        case "settings": body = _htmlAdSettings(attr, storeItems, people);          break;
+        case "today":    body = _htmlAdToday(approvals, redemptions, groupProposals, attr); break;
+        case "family":   body = _htmlAdFamily(people, attr);                          break;
+        case "tasks":    body = _htmlAdTasks(chores, people, catLabels, card);        break;
+        case "rewards":  body = _htmlAdRewards(storeItems, people, catLabels, card);  break;
+        case "history":  body = _htmlAdHistory(attr, card);                           break;
+        case "settings": body = _htmlAdSettings(attr, people, card);                  break;
         default:         body = _htmlAdToday(approvals, redemptions, attr);
     }
 
@@ -56,10 +60,12 @@ export function htmlAdmin(card) {
         family:   { crumb: "PEOPLE",        title: "Family",
                     actions: `<button class="fh-ad-btn fh-ad-btn--primary" data-act="open-add-person">${I.person} Add person</button>` },
         tasks:    { crumb: "CHORES",        title: "Tasks",
-                    actions: `<button class="fh-ad-btn fh-ad-btn--primary" data-act="open-add-chore">${I.plus} Add chore</button>` },
-        history:  { crumb: "ACTIVITY",      title: "History",  actions: "" },
-        settings: { crumb: "CONFIGURATION", title: "Settings",
+                    actions: `<button class="fh-ad-btn fh-ad-btn--ghost" data-act="print-chore-list" title="Open a printable chore list in a new tab">${I.print} Print</button>
+                              <button class="fh-ad-btn fh-ad-btn--primary" data-act="open-add-chore">${I.plus} Add chore</button>` },
+        rewards:  { crumb: "REWARDS",       title: "Rewards",
                     actions: `<button class="fh-ad-btn fh-ad-btn--primary" data-act="open-add-store-item">${I.plus} Add reward</button>` },
+        history:  { crumb: "ACTIVITY",      title: "History",  actions: "" },
+        settings: { crumb: "CONFIGURATION", title: "Settings", actions: "" },
     };
     const tb = TB[sec] || TB.today;
 
@@ -113,17 +119,25 @@ export function htmlAdmin(card) {
 // Today — unified action queue + stat strip + recent activity
 // ---------------------------------------------------------------------------
 
-function _htmlAdToday(approvals, redemptions, attr) {
+function _htmlAdToday(approvals, redemptions, groupProposals, attr) {
     const people     = attr.people          || [];
     const chores     = attr.active_chores   || [];
     const historyLog = attr.history_log     || [];
 
+    // Detect fully-funded group rewards (all contributors at target)
+    const allStoreItems   = attr.store_items || [];
+    const fundedGroupItems = allStoreItems.filter(i => {
+        if (!i.is_group_reward || !i.active) return false;
+        const contribs = i.contributors || [];
+        return contribs.length > 0 && contribs.every(c => (c.contributed_pts || 0) >= (c.target_pts || 0));
+    });
+
     // Stat strip
     const stats = [
-        { label: "APPROVAL QUEUE",   value: approvals.length,   accent: approvals.length   > 0 ? "#F5C24A" : "#58D38A" },
-        { label: "REDEEM QUEUE",     value: redemptions.length, accent: redemptions.length > 0 ? "#E36DA4" : "#58D38A" },
-        { label: "ACTIVE CHORES",    value: chores.length,      accent: "#5B8DEF" },
-        { label: "FAMILY",           value: people.length,      accent: "#A6B3CC" },
+        { label: "APPROVAL QUEUE",   value: approvals.length,                                accent: approvals.length   > 0 ? "#F5C24A" : "#58D38A" },
+        { label: "REDEEM QUEUE",     value: redemptions.length,                              accent: redemptions.length > 0 ? "#E36DA4" : "#58D38A" },
+        { label: "GROUP PROPOSALS",  value: groupProposals.length + fundedGroupItems.length, accent: (groupProposals.length + fundedGroupItems.length) > 0 ? "#58D38A" : "#A6B3CC" },
+        { label: "ACTIVE CHORES",    value: chores.length,                                   accent: "#5B8DEF" },
     ];
     const statCards = stats.map(s => `
       <div class="fh-ad-stat">
@@ -133,11 +147,55 @@ function _htmlAdToday(approvals, redemptions, attr) {
 
     // Unified queue rows
     const queue = [
-        ...approvals.map(a  => ({ ...a,  kind: "approval"   })),
-        ...redemptions.map(r => ({ ...r, kind: "redemption" })),
+        ...approvals.map(a  => ({ ...a,  kind: "approval"       })),
+        ...redemptions.map(r => ({ ...r, kind: "redemption"     })),
+        ...groupProposals.map(p => ({ ...p, kind: "group-proposal" })),
+        ...fundedGroupItems.map(i => ({ ...i, kind: "group-funded" })),
     ];
     const queueRows = queue.length > 0
         ? queue.map(q => {
+            if (q.kind === "group-proposal") {
+                const color       = q.proposer_color || DEFAULT_COLOR;
+                const inviteNames = (q.invitees || []).map(i => i.person_name || "?").join(", ");
+                return `
+                  <div class="fh-ad-queue-row">
+                    <div class="fh-avatar" style="background:${color};width:32px;height:32px;font-size:.75rem;flex-shrink:0">${ini(q.proposer_name)}</div>
+                    <div class="fh-ad-queue-info">
+                      <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+                        <span class="fh-ad-pill" style="background:#4CAF7D">GROUP</span>
+                      </div>
+                      <div class="fh-ad-queue-name">${escHTML(q.item_name || "")}</div>
+                      <div class="fh-ad-queue-meta">${escHTML(q.proposer_name)} + ${escHTML(inviteNames)}</div>
+                    </div>
+                    <button class="fh-btn fh-btn-success fh-btn-sm"
+                            data-act="approve-group-proposal"
+                            data-propid="${escAttr(q.proposal_id)}"
+                            data-by="admin">${I.check}</button>
+                    <button class="fh-btn fh-btn-danger fh-btn-sm"
+                            data-act="decline-group-proposal-parent"
+                            data-propid="${escAttr(q.proposal_id)}"
+                            data-by="admin">${I.close}</button>
+                  </div>`;
+            }
+            if (q.kind === "group-funded") {
+                const totalPts = (q.contributors || []).reduce((s, c) => s + (c.contributed_pts || 0), 0);
+                const names    = (q.contributors || []).map(c => c.person_name || "?").join(", ");
+                return `
+                  <div class="fh-ad-queue-row">
+                    <div style="width:32px;height:32px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.2rem">🤝</div>
+                    <div class="fh-ad-queue-info">
+                      <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+                        <span class="fh-ad-pill" style="background:#4CAF7D">FUNDED</span>
+                      </div>
+                      <div class="fh-ad-queue-name">${escHTML(q.name || "")}</div>
+                      <div class="fh-ad-queue-meta">${escHTML(names)} · ${fPts(totalPts)} pts pooled</div>
+                    </div>
+                    <button class="fh-btn fh-btn-success fh-btn-sm"
+                            data-act="redeem-group-reward"
+                            data-iid="${escAttr(q.item_id)}"
+                            data-iname="${escAttr(q.name || "")}">Redeem</button>
+                  </div>`;
+            }
             const color    = q.person_color || DEFAULT_COLOR;
             const isAppr   = q.kind === "approval";
             const name     = isAppr ? (q.chore_name  || "") : (q.item_name || "");
@@ -399,12 +457,25 @@ function _htmlAdTasks(chores, people, catLabels, card) {
         ${sort.col ? `<button class="fh-ad-sort-btn" data-act="sort-admin-chores" data-col="">✕ Clear</button>` : ""}
       </div>`;
 
-    // Group into collapsible category groups
+    // Group into collapsible category groups.
+    //
+    // v0.6.3 P2 fix: seed the map in the admin-defined `catLabels` order so
+    // the section order here matches the order the parent set on the Settings
+    // page (the Settings drag-reorder updates `category_labels`). Categories
+    // present on chores but missing from `catLabels` (legacy / orphaned) are
+    // appended at the end so they're still reachable. Empty admin-defined
+    // categories are dropped so we don't render headers for unused buckets.
     const groups = new Map();
+    for (const lbl of catLabels) {
+        groups.set(lbl, []);
+    }
     for (const c of sorted) {
         const key = c.category_label || "Uncategorized";
         if (!groups.has(key)) groups.set(key, []);
         groups.get(key).push(c);
+    }
+    for (const [k, v] of [...groups.entries()]) {
+        if (!v.length) groups.delete(k);
     }
 
     const selectedId    = card._adminSelectedChoreId || null;
@@ -552,6 +623,196 @@ function _htmlChoreEditorPanel(chore, people, catLabels, card) {
 }
 
 // ---------------------------------------------------------------------------
+// Rewards — master-detail: item list (left) + inline editor panel (right)
+// ---------------------------------------------------------------------------
+
+function _htmlAdRewards(storeItems, people, catLabels, card) {
+    card._sortedStoreItems = storeItems;
+
+    const filterChips = `
+      <div class="fh-chips">
+        <div class="fh-chip ${!card._storeItemFilter ? "active" : ""}"
+             data-act="store-item-filter" data-fval="">All</div>
+        <div class="fh-chip ${card._storeItemFilter === "active" ? "active" : ""}"
+             data-act="store-item-filter" data-fval="active">Active</div>
+        <div class="fh-chip ${card._storeItemFilter === "inactive" ? "active" : ""}"
+             data-act="store-item-filter" data-fval="inactive">Inactive</div>
+      </div>`;
+
+    // Filter
+    let visible = storeItems;
+    if (card._storeItemFilter === "active")   visible = storeItems.filter(i => i.active !== false);
+    if (card._storeItemFilter === "inactive") visible = storeItems.filter(i => i.active === false);
+
+    // Sort
+    const sort = card._adminSortItems || { col: null, dir: "asc" };
+    let sorted = [...visible];
+    if (sort.col) {
+        sorted.sort((a, b) => {
+            let va, vb;
+            switch (sort.col) {
+                case "name":  va = a.name.toLowerCase();          vb = b.name.toLowerCase();          break;
+                case "pts":   va = a.points_cost;                 vb = b.points_cost;                 break;
+                case "cat":   va = a.category_label || "";        vb = b.category_label || "";         break;
+                case "scope": va = a.scope || "";                 vb = b.scope || "";                 break;
+                default: va = vb = "";
+            }
+            if (va < vb) return sort.dir === "asc" ? -1 :  1;
+            if (va > vb) return sort.dir === "asc" ?  1 : -1;
+            return 0;
+        });
+    }
+
+    const sortCols = [
+        { col: "name",  label: "Name"     },
+        { col: "pts",   label: "Pts"      },
+        { col: "cat",   label: "Category" },
+        { col: "scope", label: "Scope"    },
+    ];
+    const sortBar = `
+      <div class="fh-ad-sort-bar">
+        <span class="fh-ad-sort-lbl">Sort:</span>
+        ${sortCols.map(({ col, label }) => {
+            const isActive = sort.col === col;
+            const arrow    = isActive ? (sort.dir === "asc" ? " ↑" : " ↓") : "";
+            return `<button class="fh-ad-sort-btn${isActive ? " active" : ""}"
+                            data-act="sort-admin-store-items" data-col="${col}">${label}${arrow}</button>`;
+        }).join("")}
+        ${sort.col ? `<button class="fh-ad-sort-btn" data-act="sort-admin-store-items" data-col="">✕ Clear</button>` : ""}
+      </div>`;
+
+    // Group by category (same logic as chores — seed from catLabels order)
+    const groups = new Map();
+    for (const lbl of catLabels) groups.set(lbl, []);
+    for (const item of sorted) {
+        const key = item.category_label || "Uncategorized";
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(item);
+    }
+    for (const [k, v] of [...groups.entries()]) {
+        if (!v.length) groups.delete(k);
+    }
+
+    const selectedId        = card._adminSelectedItemId || null;
+    const collapsedCats     = card._adminCollapsedRewardCats || new Set();
+
+    let content = "";
+    if (!sorted.length) {
+        content = `<div class="fh-empty fh-ad-empty">${card._storeItemFilter ? "No rewards match this filter." : "No rewards yet. Add one above."}</div>`;
+    } else {
+        content = [...groups.entries()].map(([label, list]) => {
+            const collapsed = collapsedCats.has(label);
+            const rows = collapsed ? "" : list.map(i => _htmlStoreItemTableRow(i, people, card, selectedId)).join("");
+            return `
+              <div class="fh-ad-cat-group">
+                <div class="fh-ad-cat-hdr" data-act="toggle-admin-reward-cat" data-cat="${escAttr(label)}">
+                  <span class="fh-ad-cat-chevron${collapsed ? " collapsed" : ""}">▼</span>
+                  <span class="fh-ad-cat-name">${escHTML(label)}</span>
+                  <span class="fh-ad-cat-count">${list.length}</span>
+                </div>
+                ${collapsed ? "" : `<div class="fh-task-list">${rows}</div>`}
+              </div>`;
+        }).join("");
+    }
+
+    const selectedItem = selectedId ? storeItems.find(i => i.item_id === selectedId) : null;
+    const panelHtml    = _htmlStoreItemEditorPanel(selectedItem, people, catLabels, card);
+
+    return `
+      <div class="fh-ad-rewards-wrap">
+
+        <div class="fh-ad-panel fh-ad-rewards-list-panel">
+          <div class="fh-ad-panel-hdr">
+            <span class="fh-ad-panel-title">Reward catalog</span>
+            <span class="fh-ad-panel-sub">${storeItems.filter(i => i.active !== false).length} active</span>
+          </div>
+          <div class="fh-ad-panel-body">
+            ${filterChips}
+            ${sortBar}
+            ${content}
+          </div>
+        </div>
+
+        ${panelHtml}
+
+      </div>`;
+}
+
+function _htmlStoreItemTableRow(item, people, card, selectedId) {
+    const personNames = (item.person_ids || [])
+        .map(id => people.find(p => p.person_id === id)?.name)
+        .filter(Boolean)
+        .join(", ");
+    const isSelected = item.item_id === selectedId;
+    const isInactive = item.active === false;
+    const rateMeta   = item.max_per_period > 0
+        ? `<span class="fh-badge fh-badge-expiry" style="margin-left:4px">Max ${item.max_per_period}/${item.period}</span>`
+        : "";
+
+    return `
+      <div class="fh-task-row${isSelected ? " fh-task-row--selected" : ""}${isInactive ? " fh-store-row--inactive" : ""}"
+           draggable="true" data-drag-id="${item.item_id}"
+           data-drag-type="store-item"
+           data-act="select-store-row" data-iid="${item.item_id}">
+        <span class="fh-drag-handle" title="Drag to reorder">⠿</span>
+        ${item.icon ? `<span style="width:24px;height:24px;flex-shrink:0">${choreIcon(item.icon, null, "24px")}</span>` : ""}
+        <div class="fh-task-body">
+          <span class="fh-task-name">${escHTML(item.name)}${isInactive ? ` <span style="font-size:.72rem;color:#6F7E9C;font-weight:400">[inactive]</span>` : ""}</span>
+          <span class="fh-task-sub">
+            ${fUSD(item.dollar_value)} ·
+            ${item.scope === "personal"
+                ? `Personal${personNames ? ` (${escHTML(personNames)})` : ""}`
+                : "All kids"}
+          </span>
+        </div>
+        ${rateMeta}
+        <span class="fh-badge fh-badge-pts">${fPts(item.points_cost)}pts</span>
+        <button class="fh-btn fh-btn-ghost fh-btn-sm fh-ad-tasks-edit-btn"
+                data-act="open-edit-store-item" data-iid="${item.item_id}"
+                title="Edit reward">${I.edit}</button>
+        <button class="fh-btn fh-btn-danger fh-btn-sm"
+                data-act="delete-store-item"
+                data-iid="${item.item_id}" data-iname="${escAttr(item.name)}"
+                title="Delete reward">${I.trash}</button>
+      </div>`;
+}
+
+function _htmlStoreItemEditorPanel(item, people, catLabels, card) {
+    const inner = item
+        ? `
+          <div class="fh-ad-tasks-panel-hdr">
+            <div style="flex:1;min-width:0">
+              <div class="fh-ad-tasks-panel-title">Edit reward</div>
+              <div class="fh-ad-tasks-panel-sub" title="${escAttr(item.name)}">${escHTML(item.name)}</div>
+            </div>
+            <button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="close-store-panel"
+                    style="flex-shrink:0" title="Close panel">✕</button>
+          </div>
+          <div class="fh-ad-tasks-panel-body">
+            ${storeItemFormFields(item, true, people, catLabels)}
+          </div>
+          <div class="fh-ad-tasks-panel-footer">
+            <button class="fh-btn fh-btn-primary" style="flex:1"
+                    data-act="ok-edit-store-item-inline">Save changes</button>
+            <button class="fh-btn fh-btn-ghost fh-btn-sm"
+                    data-act="delete-store-item"
+                    data-iid="${item.item_id}" data-iname="${escAttr(item.name)}"
+                    title="Hide from kids (can restore by toggling Active)">Deactivate</button>
+            <button class="fh-btn fh-btn-danger fh-btn-sm"
+                    data-act="hard-delete-store-item"
+                    data-iid="${item.item_id}" data-iname="${escAttr(item.name)}"
+                    title="Permanently delete — cannot be undone">Delete ✕</button>
+          </div>`
+        : `
+          <div class="fh-ad-tasks-panel-empty">
+            <div class="fh-ad-tasks-panel-empty-icon">↖</div>
+            <div class="fh-ad-tasks-panel-empty-text">Select a reward to edit</div>
+          </div>`;
+
+    return `<div class="fh-ad-rewards-panel">${inner}</div>`;
+}
+
+// ---------------------------------------------------------------------------
 // History — person filter + full 30-day log
 // ---------------------------------------------------------------------------
 
@@ -599,7 +860,7 @@ function _htmlAdHistory(attr, card) {
 // Settings — hub config + store inventory (2-column on wide)
 // ---------------------------------------------------------------------------
 
-function _htmlAdSettings(attr, storeItems, people) {
+function _htmlAdSettings(attr, people, card) {
     const famName          = attr.family_name               || "Family Hub";
     const ppdollar         = attr.points_per_dollar         || 10;
     const showDollar       = attr.show_dollar_value_to_kids || false;
@@ -608,43 +869,34 @@ function _htmlAdSettings(attr, storeItems, people) {
     const rankEvalWeekday  = attr.rank_eval_weekday         !== undefined ? attr.rank_eval_weekday : 0;
     const rankDropThr      = attr.rank_drop_threshold       !== undefined ? attr.rank_drop_threshold : 50;
     const rankGainThr      = attr.rank_gain_threshold       !== undefined ? attr.rank_gain_threshold : 75;
+    const rankPpdLadder    = attr.rank_ppd_ladder           || [3.0, 3.5, 4.0, 4.5, 5.0];
     const roomsCfg         = attr.rooms_config              || {};
     const weatherEntity    = attr.weather_entity            || "";
     const calendarEntities = attr.today_calendar_entities   || [];
     const WEEKDAY_NAMES    = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
 
     const labelChips = catLabels.map(l => `
-      <div class="fh-cat-chip">
+      <div class="fh-cat-chip"
+           draggable="true"
+           data-drag-id="${escAttr(l)}"
+           data-drag-type="category"
+           title="Drag to reorder">
+        <span class="fh-cat-chip-handle">⠿</span>
         <span>${escHTML(l)}</span>
         <button class="fh-cat-chip-del" data-act="remove-cat-label"
                 data-label="${escAttr(l)}" title="Remove">×</button>
       </div>`).join("");
 
-    const storeRows = storeItems.map(item => {
-        const personNames = (item.person_ids || [])
-            .map(id => people.find(p => p.person_id === id)?.name)
-            .filter(Boolean)
-            .join(", ");
-        return `
-          <div class="fh-store-inv-row">
-            <div class="fh-store-inv-info">
-              <div class="fh-store-inv-name">${escHTML(item.name)}</div>
-              <div class="fh-store-inv-meta">
-                ${fUSD(item.dollar_value)} · ${fPts(item.points_cost)}pts ·
-                ${item.scope === "personal"
-                    ? `Personal${personNames ? ` (${escHTML(personNames)})` : ""}`
-                    : "All kids"}
-              </div>
-            </div>
-            <button class="fh-btn fh-btn-ghost fh-btn-sm"
-                    data-act="open-edit-store-item" data-iid="${item.item_id}"
-                    title="Edit reward">${I.edit}</button>
-            <button class="fh-btn fh-btn-danger fh-btn-sm"
-                    data-act="delete-store-item"
-                    data-iid="${item.item_id}" data-iname="${escAttr(item.name)}"
-                    title="Delete reward">${I.trash}</button>
-          </div>`;
-    }).join("") || `<div class="fh-empty fh-ad-empty">No store items yet.</div>`;
+    // Rank PPD ladder — one input per rung, stored as ¢/pt
+    const ladderInputs = rankPpdLadder.map((cpt, idx) => `
+      <div class="fh-row" style="gap:6px;align-items:center;margin-bottom:4px">
+        <span style="font-size:.8rem;color:var(--fh-text-sec);width:50px;flex-shrink:0">Rank ${idx}</span>
+        <input class="fh-input fh-ad-rank-ladder-input" type="number"
+               min="0.1" max="100" step="0.1"
+               data-rank-idx="${idx}"
+               value="${cpt}" style="flex:1">
+        <span style="font-size:.8rem;color:var(--fh-text-sec)">¢/pt</span>
+      </div>`).join("");
 
     // ---- Hub Layout panel content (S9 P3) -------------------------------
     const roomToggles = ROOMS.map(room => {
@@ -685,7 +937,7 @@ function _htmlAdSettings(attr, storeItems, people) {
             <div class="fh-point-row">
               <div style="flex:1;min-width:0">
                 <div style="font-size:.9rem;font-weight:600">${escHTML(famName)}</div>
-                <div style="font-size:.75rem;color:var(--fh-text-sec)">${ppdollar} points per dollar</div>
+                <div style="font-size:.75rem;color:var(--fh-text-sec)">${ppdollar} points per dollar (base rate)</div>
               </div>
               <button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="open-edit-settings"
                       data-fname="${escAttr(famName)}" data-ppd="${ppdollar}"
@@ -705,8 +957,21 @@ function _htmlAdSettings(attr, storeItems, people) {
               </div>
             </div>
             <div class="fh-divider"></div>
+            <div class="fh-field">
+              <label class="fh-label">Reward value per rank (¢/point)</label>
+              <div class="fh-field-help" style="margin-bottom:8px">
+                Higher rank → more cents per point → fewer points needed to redeem rewards.
+              </div>
+              ${ladderInputs}
+              <button class="fh-btn fh-btn-primary fh-btn-sm" data-act="save-rank-ppd-ladder"
+                      style="margin-top:8px">Save ladder</button>
+            </div>
+            <div class="fh-divider"></div>
             <div>
               <div class="fh-label" style="margin-bottom:6px">Category labels</div>
+              <div class="fh-field-help" style="margin-bottom:6px;font-size:.78rem;color:var(--fh-text-sec)">
+                Shared by Tasks and Rewards sections.
+              </div>
               <div class="fh-cat-labels" style="margin-bottom:8px">
                 ${labelChips || `<span style="font-size:.82rem;color:var(--fh-text-sec)">No labels yet.</span>`}
               </div>
@@ -760,18 +1025,6 @@ function _htmlAdSettings(attr, storeItems, people) {
                 One <code>calendar.*</code> entity per line. Powers the today strip when the Calendar room ships in v0.8.0.
               </div>
             </div>
-          </div>
-        </div>
-
-        <div class="fh-ad-panel fh-ad-settings-right">
-          <div class="fh-ad-panel-hdr">
-            <span class="fh-ad-panel-title">Store inventory</span>
-            <button class="fh-btn fh-btn-primary fh-btn-sm" data-act="open-add-store-item">
-              ${I.plus} Add reward
-            </button>
-          </div>
-          <div class="fh-ad-panel-body">
-            <div class="fh-task-list">${storeRows}</div>
           </div>
         </div>
 

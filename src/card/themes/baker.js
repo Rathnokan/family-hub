@@ -15,7 +15,11 @@ import { escHTML, escAttr, fPts, fUSD, ini, relTime,
 import { HISTORY_META }                                   from "../constants.js";
 import { getEffectiveRank, getWeeklyPts, htmlRankBar, htmlSuccessStreak,
          groupByCategory, getActiveStreaks,
-         computeStreakProgress, htmlChoreRow }            from "./_shared.js";
+         computeStreakProgress, htmlChoreRow,
+         htmlGoalBanner, htmlRailGoal, htmlGoalToggleBtn,
+         storeItemIcon, htmlStoreItemLimit,
+         htmlStreakFreezeChip, htmlDailyProgress,
+         htmlGroupContributorBars, htmlChipInBtn, htmlGroupProposalBanner } from "./_shared.js";
 
 // ---- Palette ----------------------------------------------------------------
 
@@ -152,7 +156,8 @@ function _railPanels({ attr, naAttr, person, balance, weekly, openCount,
                        rankIdx, dropThr, gainThr, rank }) {
     return `
         ${_railPanelKPIs(balance, weekly, openCount, attr.show_dollar_value ? attr.dollar_value : null)}
-        ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, person)}
+        ${htmlRailGoal(attr)}
+        ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, person, attr)}
         ${_railPanelStreaks(attr, naAttr, person)}
         ${_railPanelRecent(person, naAttr)}`;
 }
@@ -184,14 +189,15 @@ function _railPanelKPIs(balance, weekly, openCount, dollarValue) {
     return _railPanel("the pantry today", body);
 }
 
-function _railPanelRank(rankIdx, weekly, dropThr, gainThr, person) {
+function _railPanelRank(rankIdx, weekly, dropThr, gainThr, person, attr) {
     const bar    = htmlRankBar(rankIdx, weekly, dropThr, gainThr, BAKER_RANKS, BK.terra);
     const streak = htmlSuccessStreak(person, BK.terra);
+    const freeze = htmlStreakFreezeChip(attr);
     if (!bar) {
         return _railPanel("promotion track",
-            `<div class="fh-bk-rmax">${escHTML(getEffectiveRank(rankIdx, BAKER_RANKS).name)} · top of the line</div>${streak}`);
+            `<div class="fh-bk-rmax">${escHTML(getEffectiveRank(rankIdx, BAKER_RANKS).name)} · top of the line</div>${streak}${freeze}`);
     }
-    return _railPanel("promotion track", bar + streak);
+    return _railPanel("promotion track", bar + streak + freeze);
 }
 
 function _railPanelStreaks(attr, naAttr, person) {
@@ -287,6 +293,7 @@ function _orders(attr, person, naAttr, card) {
         ${pending.map(t => htmlChoreRow(t, bakerRowConfig, person, card)).join("")}` : "";
 
     return `
+        ${htmlDailyProgress(attr)}
         <div class="fh-row-list">
             ${groupHtml}
             ${pendingSection}
@@ -305,19 +312,31 @@ function _menu(attr, person, balance, card) {
     const pendingByName   = new Set(personPending.filter(r => !r.item_id).map(r => r.item_name));
 
     return `
+        ${htmlGroupProposalBanner(attr.group_proposals, person.person_id)}
+        ${htmlGoalBanner(attr)}
         <div class="fh-bk-menu">
             ${items.map(item => {
+                const isGroup   = !!item.is_group_reward;
                 const can       = balance >= item.points_cost;
                 const requested = pendingByItemId.has(item.item_id) || pendingByName.has(item.name);
+                const blocked   = !!item.next_available;
                 return `
                 <div class="fh-bk-menu-item">
+                    ${storeItemIcon(item)}
                     <div class="fh-bk-menu-body">
                         <div class="fh-bk-menu-name">${escHTML(item.name)}</div>
                         ${item.description ? `<div class="fh-bk-menu-desc">${escHTML(item.description)}</div>` : ""}
+                        ${htmlStoreItemLimit(item)}
+                        ${htmlGroupContributorBars(item, person.person_id)}
                     </div>
-                    <div class="fh-bk-menu-price" style="color:${BK.terra}">${fPts(item.points_cost)}pts</div>
-                    ${requested
+                    ${isGroup ? "" : `<div class="fh-bk-menu-price" style="color:${BK.terra}">${fPts(item.points_cost)}pts</div>`}
+                    ${htmlGoalToggleBtn(item, attr, person.person_id)}
+                    ${isGroup
+                        ? htmlChipInBtn(item, person.person_id, balance)
+                        : requested
                         ? `<span class="fh-bk-badge" style="color:${BK.terra}">Requested ✓</span>`
+                        : blocked
+                        ? `<span class="fh-bk-badge" style="color:var(--fh-overdue)">Not available</span>`
                         : `<button class="fh-bk-go-btn ${can ? "" : "disabled"}"
                                    data-act="redeem" data-iid="${escAttr(item.item_id)}" data-pid="${escAttr(person.person_id)}"
                                    ${!can ? 'disabled style="opacity:.4;cursor:not-allowed"' : ""}>

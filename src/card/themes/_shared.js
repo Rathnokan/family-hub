@@ -14,6 +14,14 @@
 import { choreIcon } from "../icons.js";
 import { escHTML, escAttr } from "../utils.js";
 
+// v0.6.3: small wrapper that renders the store-item icon only when one is set.
+// Themes call this rather than choreIcon directly so unset items don't get a
+// fallback dot mixed into the store list.
+export function storeItemIcon(item, size = "28px") {
+    if (!item?.icon) return "";
+    return `<span class="fh-store-item-icon">${choreIcon(item.icon, null, size)}</span>`;
+}
+
 // ---------------------------------------------------------------------------
 // Rank ladder helpers (rank_index based)
 // ---------------------------------------------------------------------------
@@ -235,6 +243,65 @@ export function computeStreakProgress(streak, milestone, maxSegs = 10) {
         filledN,
         countLbl: `${streak} · next ${nextIn}`,
     };
+}
+
+// ---------------------------------------------------------------------------
+// Streak freeze token chip (v0.6.3 item 7)
+// ---------------------------------------------------------------------------
+
+/**
+ * Render a compact "🧊 N freeze(s)" chip in the rail, just below the
+ * success-streak line. Returns "" when the person has no tokens so themes
+ * can call it unconditionally.
+ *
+ * @param {object} attr  Personal sensor attributes (family_hub_[name]).
+ */
+export function htmlStreakFreezeChip(attr) {
+    const n = attr?.streak_freezes_available || 0;
+    if (n <= 0) return "";
+    const label = n === 1 ? "1 streak freeze" : `${n} streak freezes`;
+    return `
+        <div class="fh-freeze-chip" title="Streak freeze tokens — auto-spent to protect your streak on a rough day">
+            <span class="fh-freeze-chip-icon">🧊</span>
+            <span class="fh-freeze-chip-label">${label}</span>
+        </div>`;
+}
+
+// ---------------------------------------------------------------------------
+// Daily progress bar (v0.6.3 item 9)
+// ---------------------------------------------------------------------------
+
+/**
+ * Render a thin "X / Y done today" progress bar at the top of the tasks tab.
+ * Returns "" on rest days (no assigned chores due) so themes can call it
+ * unconditionally without adding blank space.
+ *
+ * Data sources (all from the personal sensor `attr`):
+ *   - attr.tasks_done_today          (int) — approved/self_reported/pending_approval today
+ *   - attr.tasks_due_today_list      (arr) — still-pending assigned tasks
+ *
+ * @param {object} attr  Personal sensor attributes.
+ */
+export function htmlDailyProgress(attr) {
+    const done      = attr?.tasks_done_today || 0;
+    const remaining = (attr?.tasks_due_today_list || [])
+        .filter(t => t.chore_type !== "reminder").length;
+    const total     = done + remaining;
+    if (total === 0) return "";
+
+    const pct    = Math.round((done / total) * 100);
+    const allDone = done >= total;
+    const label  = allDone
+        ? `✓ All ${total} done today!`
+        : `${done} / ${total} done today`;
+
+    return `
+        <div class="fh-daily-progress ${allDone ? "fh-daily-progress--complete" : ""}">
+            <div class="fh-daily-progress-bar">
+                <div class="fh-daily-progress-fill" style="width:${pct}%"></div>
+            </div>
+            <span class="fh-daily-progress-label">${label}</span>
+        </div>`;
 }
 
 // ---------------------------------------------------------------------------
@@ -484,5 +551,217 @@ export function htmlAddReminderCTA(person) {
                 + Add reminder
             </button>
         </div>`;
+}
+
+// ---------------------------------------------------------------------------
+// Store goal (v0.6.3)
+// ---------------------------------------------------------------------------
+//
+// The kid picks a store item to save toward. The card surfaces a progress bar
+// in two places:
+//   - htmlGoalBanner   → above the store-tab item list
+//   - htmlRailGoal     → as a small panel on the personal page's right rail
+// Each theme's color is inherited via currentColor + a CSS-var-backed accent,
+// so these helpers are intentionally generic. Theme overrides live in css.js
+// under `.fh-goal-*` and any `.fh-<key>-page .fh-goal-*` follow-ups.
+
+/**
+ * "Saving for [item] · 234/500 (47%)" header above the store list.
+ * Returns "" when no goal is set so callers can unconditionally inject it.
+ */
+export function htmlGoalBanner(attr) {
+    const goal = attr?.goal;
+    if (!goal) return "";
+    const pct  = Math.max(0, Math.min(100, goal.progress_pct | 0));
+    const cost = goal.points_cost | 0;
+    const have = Math.max(0, cost - (goal.remaining | 0));
+    return `
+        <div class="fh-goal-banner">
+            <div class="fh-goal-banner-head">
+                <span class="fh-goal-banner-lbl">Saving for</span>
+                <span class="fh-goal-banner-name">${escHTML(goal.name)}</span>
+                <span class="fh-goal-banner-amt">${have}/${cost} pts</span>
+            </div>
+            <div class="fh-goal-bar"><div class="fh-goal-bar-fill" style="width:${pct}%"></div></div>
+        </div>`;
+}
+
+/**
+ * Compact rail panel: label + tiny progress bar + remaining-points hint.
+ * Returns "" when no goal is set so themes can unconditionally include it.
+ */
+export function htmlRailGoal(attr) {
+    const goal = attr?.goal;
+    if (!goal) return "";
+    const pct  = Math.max(0, Math.min(100, goal.progress_pct | 0));
+    const remaining = goal.remaining | 0;
+    const remLine   = remaining > 0
+        ? `${remaining} pts to go`
+        : `Goal reached!`;
+    return `
+        <div class="fh-goal-rail">
+            <div class="fh-goal-rail-lbl">SAVING FOR</div>
+            <div class="fh-goal-rail-name">${escHTML(goal.name)}</div>
+            <div class="fh-goal-bar"><div class="fh-goal-bar-fill" style="width:${pct}%"></div></div>
+            <div class="fh-goal-rail-rem">${escHTML(remLine)}</div>
+        </div>`;
+}
+
+/**
+ * Render a rate-limit info line for a store item.
+ *
+ * When max_per_period > 0:
+ *   - If not yet at limit  → "1 per week"
+ *   - If at limit          → "1 per week · Available Mon May 27"
+ * Returns "" when no limit is configured.
+ */
+export function htmlStoreItemLimit(item) {
+    const max = item?.max_per_period || 0;
+    if (!max) return "";
+    const period      = item?.period || "week";
+    const periodLabel = period === "day" ? "day" : period === "week" ? "week" : "month";
+    const limitText   = `${max} per ${periodLabel}`;
+
+    const nextAvail = item?.next_available;
+    if (!nextAvail) {
+        return `<span class="fh-store-limit">${escHTML(limitText)}</span>`;
+    }
+    // Format ISO date as "Mon May 27"
+    const d   = new Date(nextAvail + "T00:00:00");
+    const dow = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][d.getDay()];
+    const mon = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()];
+    const dateStr = `${dow} ${mon} ${d.getDate()}`;
+    return `<span class="fh-store-limit fh-store-limit--blocked">${escHTML(limitText)} · Available ${escHTML(dateStr)}</span>`;
+}
+
+/**
+ * Star-style toggle button rendered next to a store-item row. Indicates
+ * whether the item IS the current goal, and lets the kid set/clear it
+ * with a single tap. Themes can position this however they like.
+ */
+export function htmlGoalToggleBtn(item, attr, personId) {
+    const isGoal = attr?.goal_item_id && attr.goal_item_id === item.item_id;
+    return `
+        <button class="fh-goal-tog ${isGoal ? "is-goal" : ""}"
+                data-act="toggle-goal"
+                data-pid="${escAttr(personId)}"
+                data-iid="${escAttr(item.item_id)}"
+                title="${isGoal ? "Clear goal" : "Save toward this"}">
+            ${isGoal ? "★" : "☆"}
+        </button>`;
+}
+
+// ---------------------------------------------------------------------------
+// Group reward helpers (v0.6.3 item 13)
+// ---------------------------------------------------------------------------
+
+/**
+ * Render per-contributor progress bars for a group reward item.
+ *
+ * Shows each contributor's name, a progress bar (contributed / target), and
+ * a total "N/M pts (P%)" summary line. The current person's row is highlighted.
+ * Returns "" for non-group items so callers can call it unconditionally.
+ *
+ * @param {object} item       Store item row from the sensor (with contributors[]).
+ * @param {string} personId   The viewing kid's person_id.
+ */
+export function htmlGroupContributorBars(item, personId) {
+    if (!item?.is_group_reward) return "";
+    const contribs = item.contributors || [];
+    if (!contribs.length) return "";
+
+    const totalContrib = contribs.reduce((s, c) => s + (c.contributed_pts || 0), 0);
+    const totalTarget  = contribs.reduce((s, c) => s + (c.target_pts     || 0), 0);
+    const overallPct   = totalTarget > 0 ? Math.round((totalContrib / totalTarget) * 100) : 0;
+
+    // Compact horizontal contributor pills — initial avatar + pts count.
+    // Replaces the tall vertical list that made group items 3-4× bigger
+    // than regular rewards. Hover/title shows full name + status.
+    const pills = contribs.map(c => {
+        const isMe    = c.person_id === personId;
+        const done    = c.contributed_pts >= (c.target_pts || 1);
+        const color   = c.person_color || "#7F77DD";
+        const initial = (c.person_name || "?").charAt(0).toUpperCase();
+        return `
+            <span class="fh-gcp ${isMe ? "fh-gcp--me" : ""} ${done ? "fh-gcp--done" : ""}"
+                  title="${escAttr(c.person_name || "?")} — ${c.contributed_pts}/${c.target_pts} pts${isMe ? " (you)" : ""}">
+                <span class="fh-gcp-av" style="background:${color}">${escHTML(initial)}</span>
+                <span class="fh-gcp-pts">${c.contributed_pts}/${c.target_pts}</span>
+            </span>`;
+    }).join("");
+
+    return `
+        <div class="fh-group-reward-info">
+            <div class="fh-group-reward-line">
+                <span class="fh-group-reward-tag">🤝 GROUP · ${totalContrib}/${totalTarget} pts · ${overallPct}%</span>
+                <span class="fh-group-reward-pills">${pills}</span>
+            </div>
+        </div>`;
+}
+
+/**
+ * Render a "Chip In" button for the current person on a group reward.
+ * Returns "" if person has already met their target, or not a contributor.
+ *
+ * @param {object} item      Store item row (with contributors[]).
+ * @param {string} personId  The viewing kid's person_id.
+ * @param {number} balance   Current balance of the viewing kid.
+ */
+export function htmlChipInBtn(item, personId, balance) {
+    if (!item?.is_group_reward) return "";
+    const contrib = (item.contributors || []).find(c => c.person_id === personId);
+    if (!contrib) return "";
+
+    const remaining = Math.max(0, (contrib.target_pts || 0) - (contrib.contributed_pts || 0));
+    if (remaining <= 0) {
+        return `<span class="fh-group-chip-done">✓ Your share complete</span>`;
+    }
+    const canAfford = balance >= 1;  // any amount allowed (modal lets them pick)
+    return `
+        <button class="fh-group-chip-btn ${canAfford ? "" : "fh-group-chip-btn--disabled"}"
+                data-act="open-chip-in"
+                data-iid="${escAttr(item.item_id)}"
+                data-pid="${escAttr(personId)}"
+                data-remaining="${remaining}"
+                data-balance="${balance}"
+                ${canAfford ? "" : "disabled"}>
+            🤝 Chip In (${remaining} left)
+        </button>`;
+}
+
+/**
+ * Render pending group-reward proposals that need THIS kid's accept/decline.
+ * Returns "" when there are no pending proposals so callers can call
+ * it unconditionally at the top of the store tab.
+ *
+ * @param {object[]} proposals  From attr.group_proposals (personal sensor).
+ * @param {string}   personId   The viewing kid's person_id.
+ */
+export function htmlGroupProposalBanner(proposals, personId) {
+    if (!proposals || !proposals.length) return "";
+    const rows = proposals.map(p => `
+        <div class="fh-group-proposal-card">
+            <div class="fh-group-proposal-from">
+                🤝 <strong>${escHTML(p.proposer_name)}</strong> wants to save for
+                <strong>${escHTML(p.item_name)}</strong> with you
+            </div>
+            <div class="fh-group-proposal-share">Your share: ${p.my_share_pct}%</div>
+            <div class="fh-group-proposal-btns">
+                <button class="fh-group-proposal-accept"
+                        data-act="accept-group-proposal"
+                        data-propid="${escAttr(p.proposal_id)}"
+                        data-pid="${escAttr(personId)}">
+                    Accept
+                </button>
+                <button class="fh-group-proposal-decline"
+                        data-act="decline-group-proposal"
+                        data-propid="${escAttr(p.proposal_id)}"
+                        data-pid="${escAttr(personId)}">
+                    Decline
+                </button>
+            </div>
+        </div>`).join("");
+
+    return `<div class="fh-group-proposals">${rows}</div>`;
 }
 
