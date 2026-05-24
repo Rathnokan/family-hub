@@ -27,10 +27,10 @@
 
 | Item | State |
 |---|---|
-| **Live on HA (Samba)** | v0.6.3 wip — stub 6.9 KB + body 560.0 KB. Items 1-4 + P2 + items 5/6/12 + active toggle + Rewards section + hard-delete + limit display + Item 13 (group rewards) + contrast fix deployed. **Not yet committed.** |
-| **GitHub / HACS** | v0.6.2 tagged + released. HACS-detectable. |
-| **manifest.json / hacs.json / constants.js VERSION** | 0.6.2 ✓ (version bump deferred until v0.6.3 batch is ready to tag) |
-| **Phase** | v0.6.3 — items 1-6 + 12 + 13 + Rewards admin section deployed. Items 7-11 not started. |
+| **Live on HA (Samba)** | v0.6.3 — stub 6.9 KB + body 560.0 KB. All v0.6.3 items deployed. |
+| **GitHub / HACS** | v0.6.3 tagged + released (commit d2d5c69). HACS-detectable. |
+| **manifest.json / hacs.json / constants.js VERSION** | 0.6.3 ✓ |
+| **Phase** | v0.6.3 complete. Items 7-11 deferred to v0.6.4. |
 
 **v0.6.3 items 1-4 — built + deployed via Samba, awaiting final smoke-test before commit:**
 
@@ -92,9 +92,9 @@
 ### First moves for the next session
 
 1. Run the **Session Start Checklist** at the top of this file.
-2. Run `git status` to see the uncommitted v0.6.3 work. Don't commit without user's explicit go.
-3. Ask the user: "Items 1-6, 12, 13 + drag-reorder polish are deployed. Did the group rewards live test pass? Any bugs to fix, or ready to commit this batch?"
-4. Then ask which remaining v0.6.3 item to tackle next (items 7-11).
+2. Run `git status` — should be clean (v0.6.3 is committed and tagged).
+3. Ask the user which v0.6.4 item to tackle. Likely candidates: items 7-11 from the v0.6.3 list (streak freeze, chore template library, time-windowed chores, better icons), or the kid-initiated "Propose sharing" flow (group reward proposals UI, deferred from v0.6.3 item 13).
+4. Create a new `v0.6.4 active scope` section when work begins.
 
 ### Model recommendation
 
