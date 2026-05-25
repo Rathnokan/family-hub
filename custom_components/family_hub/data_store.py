@@ -64,6 +64,7 @@ import json
 import logging
 import math
 import os
+import shutil
 import uuid
 from datetime import date, datetime, timedelta
 from typing import Any
@@ -85,6 +86,7 @@ from .const import (
     MULTI_CLAIM_POINTS_FULL,
     MULTI_CLAIM_POINTS_SPLIT,
     CONF_PENALTIES_PAUSED_GLOBAL,
+    CONF_PENALTIES_PAUSED_PERSON_KEY,
     CONF_SHOW_DOLLAR_VALUE_TO_KIDS,
     DEFAULT_PENALTIES_PAUSED_GLOBAL,
     DEFAULT_PENALTIES_PAUSED_PERSON,
@@ -378,6 +380,15 @@ class FamilyHubDataStore:
                 return data
             except (json.JSONDecodeError, OSError) as err:
                 _LOGGER.error("Family Hub: failed to load data store: %s", err)
+                backup_path = self._path + ".corrupt"
+                try:
+                    shutil.copy2(self._path, backup_path)
+                    _LOGGER.error(
+                        "Family Hub: corrupt data file backed up to %s — starting fresh store",
+                        backup_path,
+                    )
+                except OSError as backup_err:
+                    _LOGGER.error("Family Hub: could not back up corrupt file: %s", backup_err)
                 return _empty_store()
 
         self._data = await self._hass.async_add_executor_job(_load)
@@ -568,7 +579,7 @@ class FamilyHubDataStore:
         if self.penalties_paused_global:
             return True
         person = self.get_person(person_id)
-        if person and person.get(CONF_PENALTIES_PAUSED_GLOBAL, DEFAULT_PENALTIES_PAUSED_PERSON):
+        if person and person.get(CONF_PENALTIES_PAUSED_PERSON_KEY, DEFAULT_PENALTIES_PAUSED_PERSON):
             return True
         return False
 
@@ -587,7 +598,7 @@ class FamilyHubDataStore:
         never stalls on a kid who isn't around. Order is preserved so the
         cycle visits members in the parent-configured sequence.
         """
-        active = {p["person_id"] for p in self.get_active_people()}
+        active = {p["id"] for p in self.get_active_people()}
         return [pid for pid in pool if pid in active]
 
     def _advance_rotation(self, chore: dict, today: date) -> bool:

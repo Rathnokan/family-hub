@@ -162,53 +162,11 @@ export function dispatch(act, el, card) {
         }
 
         case "ok-edit-store-item-inline": {
-            const iid    = v("m-eiid");
-            const name   = v("m-sname").trim();
-            const dollar = parseFloat(v("m-sdollar"));
-            if (!iid || !name || !dollar || dollar <= 0) break;
-            const isGroup = sr.querySelector("#m-sgroup")?.checked || false;
-            let scope = v("m-sscope");
-            const data  = {
-                item_id:        iid,
-                name,
-                dollar_value:   dollar,
-                scope,
-                description:    v("m-sdesc").trim(),
-                category_label: v("m-scat") || "",
-                max_per_period: parseInt(v("m-smaxperiod") || "0"),
-                period:         v("m-speriod") || "week",
-                active:         sr.querySelector("#m-sactive")?.checked !== false,
-                icon:           _normalizeIcon(v("m-cicon")),
-            };
-            if (isGroup) {
-                const contribs = [...sr.querySelectorAll(".m-scontrib")]
-                    .filter(inp => parseInt(inp.value) > 0)
-                    .map(inp => ({ person_id: inp.dataset.pid, share_pct: parseInt(inp.value) }));
-                if (contribs.length === 0) {
-                    alert("Group reward needs at least one contributor with a share > 0%.");
-                    break;
-                }
-                const total = contribs.reduce((s, c) => s + c.share_pct, 0);
-                if (total !== 100) {
-                    alert(`Contributor shares must sum to exactly 100% (currently ${total}%). Use the "Equal split" button or adjust manually.`);
-                    break;
-                }
-                data.is_group_reward = true;
-                data.contributors    = contribs;
-                data.scope           = "personal";
-                data.person_ids      = contribs.map(c => c.person_id);
-            } else {
-                // Only explicitly clear group fields if this item was previously a group
-                // reward (look up the original from the sensor since the panel doesn't
-                // capture it like the modal does via card._modal.data.item)
-                const origItems = card._attrs("sensor.family_hub_needs_attention").store_items || [];
-                const origItem  = origItems.find(i => i.item_id === iid);
-                if (origItem?.is_group_reward) {
-                    data.is_group_reward = false;
-                    data.contributors    = [];
-                }
-                data.person_ids = scope === "personal" ? _selectedPersonIds("m-sp-person", sr) : [];
-            }
+            const iid = v("m-eiid");
+            const origItems = card._attrs("sensor.family_hub_needs_attention").store_items || [];
+            const origItem  = origItems.find(i => i.item_id === iid);
+            const data = _buildStoreItemPayload(v, sr, true, origItem?.is_group_reward ?? false);
+            if (!data) break;
             console.log("[family-hub] update_store_item (inline) payload:", JSON.parse(JSON.stringify(data)));
             card._svc("update_store_item", data);
             card._adminSelectedItemId = null;
@@ -723,99 +681,9 @@ export function dispatch(act, el, card) {
 
         case "ok-add-chore":
         case "ok-edit-chore": {
-            const name = v("m-cname").trim();
-            if (!name) break;
-            const isEdit    = (act === "ok-edit-chore");
-            const recType   = v("m-crec");
-            const ctype     = v("m-ctype");
-            const assigned  = _selectedPersonIds("m-assign-person", sr);
-            const weekdays  = Array.from(sr.querySelectorAll(".m-wd-day:checked")).map(cb => parseInt(cb.value));
-            const dayFilter = Array.from(sr.querySelectorAll(".m-df-day:checked")).map(cb => parseInt(cb.value));
-
-            const iconVal = _normalizeIcon(v("m-cicon"));
-            const data = {
-                name,
-                chore_type:        ctype,
-                category_label:    v("m-clabel"),
-                assigned_to:       assigned,
-                points:            int("m-cpts"),
-                approval_required: b("m-cappr"),
-                penalty_enabled:   b("m-cpenalty"),
-                penalty_points:    int("m-cpenalty-pts"),
-                icon:              iconVal,
-            };
-
-            // Daily penalty threshold — only when penalty enabled and value > 0
-            if (b("m-cpenalty")) {
-                const thresh = parseInt(v("m-daily-threshold") || "0");
-                if (thresh > 0) data.daily_penalty_after_days = thresh;
-            }
-
-            // Claimable subtype fields — only for claimable chores
-            if (ctype === "claimable") {
-                data.claimable_subtype = v("m-csubtype") || "fcfs";
-                if (data.claimable_subtype === "multi_claim") {
-                    data.max_claimants         = Math.max(2, int("m-max-claimants") || 2);
-                    data.multi_claim_points_mode = v("m-points-mode") || "full";
-                }
-            }
-
-            // Only include description if non-empty
-            const desc = v("m-cdesc").trim();
-            if (desc) data.description = desc;
-
-            // expires_after_days: ONLY include when expiry section is visible
-            // AND user entered a positive integer. Never send 0, null, or undefined.
-            const expirySection = sr.getElementById("m-chore-expiry-section");
-            const expiryVisible = expirySection && expirySection.style.display !== "none";
-            if (expiryVisible) {
-                const expiryVal = parseInt(v("m-cexpiry") || "0");
-                if (expiryVal > 0) data.expires_after_days = expiryVal;
-            }
-
-            if (isEdit) {
-                data.chore_id   = v("m-cid");
-                data.weekdays   = weekdays;
-                data.day_filter = dayFilter;
-                data.recurrence = {
-                    type:       recType,
-                    weekdays,
-                    day_filter: dayFilter,
-                    ...(recType === "monthly_on_date"
-                            ? { day_of_month: Math.max(1, Math.min(31, int("m-dom"))) }
-                            : {}),
-                };
-            } else {
-                data.recurrence_type = recType;
-                if (weekdays.length)  data.weekdays   = weekdays;
-                if (dayFilter.length) data.day_filter = dayFilter;
-                if (recType === "monthly_on_date")
-                    data.day_of_month = Math.max(1, Math.min(31, int("m-dom")));
-            }
-
-            // Streak milestone — always include (0 = disabled)
-            data.streak_milestone    = Math.max(0, int("m-streak-milestone") || 0);
-            data.streak_bonus_points = Math.max(0, int("m-streak-bonus") || 0);
-
-            // Reminder time — HHMM int, -1 = off
-            const rtRaw = parseInt(v("m-reminder-time") ?? "-1");
-            data.reminder_time = isNaN(rtRaw) ? -1 : rtRaw;
-
-            // Rotation — only honored for assigned chores. Always send the
-            // fields (empty pool = disabled) so toggling off cleanly clears
-            // the prior configuration.
-            if (ctype === "assigned") {
-                const rotOn   = b("m-crot-enabled");
-                const poolStr = v("m-crot-pool-order") || "";
-                const pool    = rotOn && poolStr ? poolStr.split(",").filter(Boolean) : [];
-                data.rotation_pool    = pool;
-                data.rotation_cadence = (rotOn && pool.length) ? (v("m-crot-cadence") || "per_instance") : "";
-            } else {
-                data.rotation_pool    = [];
-                data.rotation_cadence = "";
-            }
-
-            // Diagnostic: log payload so we can see what the dispatch is sending
+            const isEdit = (act === "ok-edit-chore");
+            const data = _buildChorePayload(v, b, int, sr, isEdit);
+            if (!data) break;
             console.log(`[family-hub] ${isEdit ? "update_chore" : "add_chore"} payload:`, JSON.parse(JSON.stringify(data)));
             card._svc(isEdit ? "update_chore" : "add_chore", data);
             card._closeModal();
@@ -824,81 +692,11 @@ export function dispatch(act, el, card) {
 
         // Inline panel save — same logic as ok-edit-chore but closes panel instead of modal
         case "ok-edit-chore-inline": {
-            const name = v("m-cname").trim();
-            if (!name) break;
-            const recType   = v("m-crec");
-            const ctype     = v("m-ctype");
-            const assigned  = _selectedPersonIds("m-assign-person", sr);
-            const weekdays  = Array.from(sr.querySelectorAll(".m-wd-day:checked")).map(cb => parseInt(cb.value));
-            const dayFilter = Array.from(sr.querySelectorAll(".m-df-day:checked")).map(cb => parseInt(cb.value));
-            const iconVal   = _normalizeIcon(v("m-cicon"));
-
-            const data = {
-                chore_id:          v("m-cid"),
-                name,
-                chore_type:        ctype,
-                category_label:    v("m-clabel"),
-                assigned_to:       assigned,
-                points:            int("m-cpts"),
-                approval_required: b("m-cappr"),
-                penalty_enabled:   b("m-cpenalty"),
-                penalty_points:    int("m-cpenalty-pts"),
-                icon:              iconVal,
-                weekdays,
-                day_filter:        dayFilter,
-                recurrence: {
-                    type:       recType,
-                    weekdays,
-                    day_filter: dayFilter,
-                    ...(recType === "monthly_on_date"
-                            ? { day_of_month: Math.max(1, Math.min(31, int("m-dom"))) }
-                            : {}),
-                },
-            };
-
-            if (b("m-cpenalty")) {
-                const thresh = parseInt(v("m-daily-threshold") || "0");
-                if (thresh > 0) data.daily_penalty_after_days = thresh;
-            }
-
-            if (ctype === "claimable") {
-                data.claimable_subtype = v("m-csubtype") || "fcfs";
-                if (data.claimable_subtype === "multi_claim") {
-                    data.max_claimants          = Math.max(2, int("m-max-claimants") || 2);
-                    data.multi_claim_points_mode = v("m-points-mode") || "full";
-                }
-            }
-
-            const desc = v("m-cdesc").trim();
-            if (desc) data.description = desc;
-
-            const expirySection = sr.getElementById("m-chore-expiry-section");
-            const expiryVisible = expirySection && expirySection.style.display !== "none";
-            if (expiryVisible) {
-                const expiryVal = parseInt(v("m-cexpiry") || "0");
-                if (expiryVal > 0) data.expires_after_days = expiryVal;
-            }
-
-            data.streak_milestone    = Math.max(0, int("m-streak-milestone") || 0);
-            data.streak_bonus_points = Math.max(0, int("m-streak-bonus") || 0);
-
-            const rtRaw = parseInt(v("m-reminder-time") ?? "-1");
-            data.reminder_time = isNaN(rtRaw) ? -1 : rtRaw;
-
-            if (ctype === "assigned") {
-                const rotOn   = b("m-crot-enabled");
-                const poolStr = v("m-crot-pool-order") || "";
-                const pool    = rotOn && poolStr ? poolStr.split(",").filter(Boolean) : [];
-                data.rotation_pool    = pool;
-                data.rotation_cadence = (rotOn && pool.length) ? (v("m-crot-cadence") || "per_instance") : "";
-            } else {
-                data.rotation_pool    = [];
-                data.rotation_cadence = "";
-            }
-
+            const data = _buildChorePayload(v, b, int, sr, true);
+            if (!data) break;
             console.log("[family-hub] update_chore (inline) payload:", JSON.parse(JSON.stringify(data)));
             card._svc("update_chore", data);
-            card._adminSelectedChoreId = null;  // close panel after save
+            card._adminSelectedChoreId = null;
             card._choreFormTab = "details";
             card._doRender(true);
             break;
@@ -941,93 +739,17 @@ export function dispatch(act, el, card) {
         }
 
         case "ok-add-store-item": {
-            const name   = v("m-sname").trim();
-            const dollar = parseFloat(v("m-sdollar"));
-            if (!name || !dollar || dollar <= 0) break;
-            const isGroup = sr.querySelector("#m-sgroup")?.checked || false;
-            let scope = v("m-sscope");
-            const data  = {
-                name,
-                dollar_value:   dollar,
-                scope,
-                description:    v("m-sdesc").trim(),
-                category_label: v("m-scat") || "",
-                max_per_period: parseInt(v("m-smaxperiod") || "0"),
-                period:         v("m-speriod") || "week",
-                icon:           _normalizeIcon(v("m-cicon")),
-            };
-            if (isGroup) {
-                const contribs = [...sr.querySelectorAll(".m-scontrib")]
-                    .filter(inp => parseInt(inp.value) > 0)
-                    .map(inp => ({ person_id: inp.dataset.pid, share_pct: parseInt(inp.value) }));
-                if (contribs.length === 0) {
-                    alert("Group reward needs at least one contributor with a share > 0%.");
-                    break;
-                }
-                const total = contribs.reduce((s, c) => s + c.share_pct, 0);
-                if (total !== 100) {
-                    alert(`Contributor shares must sum to exactly 100% (currently ${total}%). Use the "Equal split" button or adjust manually.`);
-                    break;
-                }
-                data.is_group_reward = true;
-                data.contributors    = contribs;
-                data.scope           = "personal";
-                data.person_ids      = contribs.map(c => c.person_id);
-            } else {
-                // Don't send group reward fields for regular items — old schema
-                // compatibility (safe to omit; backend defaults to false/[])
-                if (scope === "personal") data.person_ids = _selectedPersonIds("m-sp-person", sr);
-            }
+            const data = _buildStoreItemPayload(v, sr, false, null);
+            if (!data) break;
             card._svc("add_store_item", data);
             card._closeModal();
             break;
         }
 
         case "ok-edit-store-item": {
-            const iid    = v("m-eiid");
-            const name   = v("m-sname").trim();
-            const dollar = parseFloat(v("m-sdollar"));
-            if (!iid || !name || !dollar || dollar <= 0) break;
-            const isGroup = sr.querySelector("#m-sgroup")?.checked || false;
-            let scope = v("m-sscope");
-            const data  = {
-                item_id:        iid,
-                name,
-                dollar_value:   dollar,
-                scope,
-                description:    v("m-sdesc").trim(),
-                category_label: v("m-scat") || "",
-                max_per_period: parseInt(v("m-smaxperiod") || "0"),
-                period:         v("m-speriod") || "week",
-                active:         sr.querySelector("#m-sactive")?.checked !== false,
-                icon:           _normalizeIcon(v("m-cicon")),
-            };
-            if (isGroup) {
-                const contribs = [...sr.querySelectorAll(".m-scontrib")]
-                    .filter(inp => parseInt(inp.value) > 0)
-                    .map(inp => ({ person_id: inp.dataset.pid, share_pct: parseInt(inp.value) }));
-                if (contribs.length === 0) {
-                    alert("Group reward needs at least one contributor with a share > 0%.");
-                    break;
-                }
-                const total = contribs.reduce((s, c) => s + c.share_pct, 0);
-                if (total !== 100) {
-                    alert(`Contributor shares must sum to exactly 100% (currently ${total}%). Use the "Equal split" button or adjust manually.`);
-                    break;
-                }
-                data.is_group_reward = true;
-                data.contributors    = contribs;
-                data.scope           = "personal";
-                data.person_ids      = contribs.map(c => c.person_id);
-            } else {
-                // Only explicitly clear group fields if this item was previously a group reward
-                // (avoids sending unknown fields to old schema before HA restart)
-                if (card._modal?.data?.item?.is_group_reward) {
-                    data.is_group_reward = false;
-                    data.contributors    = [];
-                }
-                data.person_ids = scope === "personal" ? _selectedPersonIds("m-sp-person", sr) : [];
-            }
+            const wasGroup = card._modal?.data?.item?.is_group_reward ?? false;
+            const data = _buildStoreItemPayload(v, sr, true, wasGroup);
+            if (!data) break;
             card._svc("update_store_item", data);
             card._closeModal();
             break;
@@ -1229,6 +951,141 @@ function _normalizeIcon(raw) {
     if (!s) return "";
     if (s.startsWith("data:")) return s;     // preserve data URLs verbatim
     return s.toLowerCase();
+}
+
+// Builds the payload for add_chore / update_chore. Returns null if name is empty.
+// isEdit=true produces a full edit payload (chore_id, weekdays, recurrence object);
+// isEdit=false produces the add payload (recurrence_type, conditional weekdays/day_filter).
+function _buildChorePayload(v, b, int, sr, isEdit) {
+    const name = v("m-cname").trim();
+    if (!name) return null;
+    const recType   = v("m-crec");
+    const ctype     = v("m-ctype");
+    const assigned  = _selectedPersonIds("m-assign-person", sr);
+    const weekdays  = Array.from(sr.querySelectorAll(".m-wd-day:checked")).map(cb => parseInt(cb.value));
+    const dayFilter = Array.from(sr.querySelectorAll(".m-df-day:checked")).map(cb => parseInt(cb.value));
+    const iconVal   = _normalizeIcon(v("m-cicon"));
+    const data = {
+        name,
+        chore_type:        ctype,
+        category_label:    v("m-clabel"),
+        assigned_to:       assigned,
+        points:            int("m-cpts"),
+        approval_required: b("m-cappr"),
+        penalty_enabled:   b("m-cpenalty"),
+        penalty_points:    int("m-cpenalty-pts"),
+        icon:              iconVal,
+    };
+    if (b("m-cpenalty")) {
+        const thresh = parseInt(v("m-daily-threshold") || "0");
+        if (thresh > 0) data.daily_penalty_after_days = thresh;
+    }
+    if (ctype === "claimable") {
+        data.claimable_subtype = v("m-csubtype") || "fcfs";
+        if (data.claimable_subtype === "multi_claim") {
+            data.max_claimants          = Math.max(2, int("m-max-claimants") || 2);
+            data.multi_claim_points_mode = v("m-points-mode") || "full";
+        }
+    }
+    const desc = v("m-cdesc").trim();
+    if (desc) data.description = desc;
+    const expirySection = sr.getElementById("m-chore-expiry-section");
+    const expiryVisible = expirySection && expirySection.style.display !== "none";
+    if (expiryVisible) {
+        const expiryVal = parseInt(v("m-cexpiry") || "0");
+        if (expiryVal > 0) data.expires_after_days = expiryVal;
+    }
+    data.streak_milestone    = Math.max(0, int("m-streak-milestone") || 0);
+    data.streak_bonus_points = Math.max(0, int("m-streak-bonus") || 0);
+    const rtRaw = parseInt(v("m-reminder-time") ?? "-1");
+    data.reminder_time = isNaN(rtRaw) ? -1 : rtRaw;
+    if (ctype === "assigned") {
+        const rotOn   = b("m-crot-enabled");
+        const poolStr = v("m-crot-pool-order") || "";
+        const pool    = rotOn && poolStr ? poolStr.split(",").filter(Boolean) : [];
+        data.rotation_pool    = pool;
+        data.rotation_cadence = (rotOn && pool.length) ? (v("m-crot-cadence") || "per_instance") : "";
+    } else {
+        data.rotation_pool    = [];
+        data.rotation_cadence = "";
+    }
+    if (isEdit) {
+        data.chore_id   = v("m-cid");
+        data.weekdays   = weekdays;
+        data.day_filter = dayFilter;
+        data.recurrence = {
+            type:       recType,
+            weekdays,
+            day_filter: dayFilter,
+            ...(recType === "monthly_on_date"
+                    ? { day_of_month: Math.max(1, Math.min(31, int("m-dom"))) }
+                    : {}),
+        };
+    } else {
+        data.recurrence_type = recType;
+        if (weekdays.length)  data.weekdays   = weekdays;
+        if (dayFilter.length) data.day_filter = dayFilter;
+        if (recType === "monthly_on_date")
+            data.day_of_month = Math.max(1, Math.min(31, int("m-dom")));
+    }
+    return data;
+}
+
+// Builds the payload for add_store_item / update_store_item.
+// Returns null on validation failure (alerts for group errors before returning).
+// isEdit=true adds item_id + active. wasGroupReward: for edit only — when truthy and the
+// item is no longer a group reward, clears is_group_reward/contributors.
+// For add (isEdit=false), pass wasGroupReward=null.
+function _buildStoreItemPayload(v, sr, isEdit, wasGroupReward) {
+    const iid    = isEdit ? v("m-eiid") : null;
+    const name   = v("m-sname").trim();
+    const dollar = parseFloat(v("m-sdollar"));
+    if ((isEdit && !iid) || !name || !dollar || dollar <= 0) return null;
+    const isGroup = sr.querySelector("#m-sgroup")?.checked || false;
+    const scope   = v("m-sscope");
+    const data = {
+        name,
+        dollar_value:   dollar,
+        scope,
+        description:    v("m-sdesc").trim(),
+        category_label: v("m-scat") || "",
+        max_per_period: parseInt(v("m-smaxperiod") || "0"),
+        period:         v("m-speriod") || "week",
+        icon:           _normalizeIcon(v("m-cicon")),
+    };
+    if (isEdit) {
+        data.item_id = iid;
+        data.active  = sr.querySelector("#m-sactive")?.checked !== false;
+    }
+    if (isGroup) {
+        const contribs = [...sr.querySelectorAll(".m-scontrib")]
+            .filter(inp => parseInt(inp.value) > 0)
+            .map(inp => ({ person_id: inp.dataset.pid, share_pct: parseInt(inp.value) }));
+        if (contribs.length === 0) {
+            alert("Group reward needs at least one contributor with a share > 0%.");
+            return null;
+        }
+        const total = contribs.reduce((s, c) => s + c.share_pct, 0);
+        if (total !== 100) {
+            alert(`Contributor shares must sum to exactly 100% (currently ${total}%). Use the "Equal split" button or adjust manually.`);
+            return null;
+        }
+        data.is_group_reward = true;
+        data.contributors    = contribs;
+        data.scope           = "personal";
+        data.person_ids      = contribs.map(c => c.person_id);
+    } else {
+        if (isEdit && wasGroupReward) {
+            data.is_group_reward = false;
+            data.contributors    = [];
+        }
+        if (scope === "personal") {
+            data.person_ids = _selectedPersonIds("m-sp-person", sr);
+        } else if (isEdit) {
+            data.person_ids = [];
+        }
+    }
+    return data;
 }
 
 /**

@@ -284,12 +284,18 @@ export function openPrintableChoreList(card) {
     const html   = buildPrintableChoreList(naAttr);
     const w = window.open("", "_blank");
     if (!w) {
-        // Pop-up blocker. Fall back to a data: URL the user can choose to open.
-        // (Most browsers still allow this within a user-gesture handler, but
-        // belt + suspenders.)
         const blob = new Blob([html], { type: "text/html" });
         const url  = URL.createObjectURL(blob);
-        window.location.href = url;
+        const w2   = window.open(url, "_blank");
+        if (!w2) {
+            // Both attempts blocked — show a clickable link inline rather than
+            // navigating away from the dashboard.
+            const msg = document.createElement("div");
+            msg.style.cssText = "position:fixed;top:12px;left:50%;transform:translateX(-50%);background:#1c1c1e;color:#fff;padding:12px 18px;border-radius:8px;z-index:9999;font:14px/1.5 sans-serif";
+            msg.innerHTML = `Pop-ups are blocked. <a href="${url}" target="_blank" style="color:#64d2ff">Open chore list</a>`;
+            document.body.appendChild(msg);
+            setTimeout(() => msg.remove(), 15000);
+        }
         return;
     }
     w.document.open();

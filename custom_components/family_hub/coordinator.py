@@ -43,6 +43,7 @@ class FamilyHubCoordinator(DataUpdateCoordinator):
             update_interval=timedelta(seconds=UPDATE_INTERVAL),
         )
         self.store = store
+        self._tick_running = False
 
     async def _async_update_data(self) -> dict:
         """

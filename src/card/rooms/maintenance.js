@@ -9,9 +9,9 @@ import { DEFAULT_COLOR }           from "../constants.js";
 
 export function renderMaintenance(card) {
     const attr     = card._attrs("sensor.family_hub_maintenance_due");
-    const overdue  = attr.overdue       || [];
-    const thisWeek = attr.due_this_week || [];
-    const nextWeek = attr.due_next_week || [];
+    const overdue  = attr.overdue       || 0;
+    const thisWeek = attr.due_this_week || 0;
+    const nextWeek = attr.due_next_week || 0;
     const items    = attr.items         || [];
 
     const header = `
@@ -33,26 +33,30 @@ export function renderMaintenance(card) {
 
     const statStrip = `
         <div class="fh-maint-stat-strip">
-            <div class="fh-maint-stat ${overdue.length ? "fh-maint-stat--bad" : ""}">
-                <span class="fh-maint-stat-num">${overdue.length}</span>
+            <div class="fh-maint-stat ${overdue ? "fh-maint-stat--bad" : ""}">
+                <span class="fh-maint-stat-num">${overdue}</span>
                 <span class="fh-maint-stat-lbl">overdue</span>
             </div>
             <div class="fh-maint-stat-div"></div>
             <div class="fh-maint-stat">
-                <span class="fh-maint-stat-num">${thisWeek.length}</span>
+                <span class="fh-maint-stat-num">${thisWeek}</span>
                 <span class="fh-maint-stat-lbl">this week</span>
             </div>
             <div class="fh-maint-stat-div"></div>
             <div class="fh-maint-stat">
-                <span class="fh-maint-stat-num">${nextWeek.length}</span>
+                <span class="fh-maint-stat-num">${nextWeek}</span>
                 <span class="fh-maint-stat-lbl">next week</span>
             </div>
         </div>`;
 
+    const overdueItems  = items.filter(i => i.days_delta < 0);
+    const thisWeekItems = items.filter(i => i.days_delta >= 0 && i.days_delta <= 7);
+    const nextWeekItems = items.filter(i => i.days_delta > 7);
+
     const sections = [
-        { label: "OVERDUE",       items: overdue,  cls: "overdue"   },
-        { label: "DUE THIS WEEK", items: thisWeek, cls: "this-week" },
-        { label: "DUE NEXT WEEK", items: nextWeek, cls: "next-week" },
+        { label: "OVERDUE",       items: overdueItems,  cls: "overdue"   },
+        { label: "DUE THIS WEEK", items: thisWeekItems, cls: "this-week" },
+        { label: "DUE NEXT WEEK", items: nextWeekItems, cls: "next-week" },
     ].filter(s => s.items.length);
 
     const sectionsHtml = sections.map(({ label, items: group, cls }) => `

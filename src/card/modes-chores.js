@@ -89,7 +89,6 @@ export function htmlChores(card) {
     const opsDay       = _opsDay();
 
     return `
-        ${card._celebration ? _htmlCelebration(card._celebration) : ""}
         <div class="fh-mc">
             ${_htmlHeader(famName, missionCount, alertCount, opsDay, globalPaused)}
             <div class="fh-mc-body">
@@ -539,7 +538,7 @@ function _htmlStatusFooter(people, naAttr) {
 
 // ---- Milestone celebration overlay (unchanged) ------------------------------
 
-function _htmlCelebration(cel) {
+export function htmlCelebration(cel) {
     return `
         <div class="fh-celebration-overlay" data-act="dismiss-celebration">
             <div class="fh-celebration-badge">

@@ -1,7 +1,7 @@
 """Constants for Family Hub integration."""
 
 DOMAIN = "family_hub"
-VERSION = "0.4.2"
+VERSION = "0.6.4"
 
 # Config entry keys
 CONF_FAMILY_NAME = "family_name"
@@ -241,7 +241,7 @@ DEFAULT_PENALTIES_PAUSED_GLOBAL = False
 # Per-person switch — when True on a person record, that person's penalties are
 # suppressed even if the global switch is off. Stored as person.penalties_paused.
 # Stays paused until a parent manually re-enables it.
-CONF_PENALTIES_PAUSED_PERSON  = "penalties_paused"
+CONF_PENALTIES_PAUSED_PERSON_KEY  = "penalties_paused"
 DEFAULT_PENALTIES_PAUSED_PERSON = False
 
 # Frontend / Lovelace card

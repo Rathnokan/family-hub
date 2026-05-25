@@ -11,7 +11,7 @@
   var VERSION;
   var init_constants = __esm({
     "src/card/constants.js"() {
-      VERSION = "0.6.3";
+      VERSION = "0.6.4";
     }
   });
 
@@ -19,7 +19,7 @@
   var BUILD_ID;
   var init_build_id = __esm({
     "src/build-id.js"() {
-      BUILD_ID = "1779656478909";
+      BUILD_ID = "1779724437643";
     }
   });
 

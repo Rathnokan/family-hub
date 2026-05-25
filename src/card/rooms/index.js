@@ -46,8 +46,8 @@ export const ROOMS = [
         render: (card) => renderMaintenance(card),
         getStats(card) {
             const attr    = card._attrs("sensor.family_hub_maintenance_due");
-            const overdue = (attr.overdue || []).length;
-            const soon    = (attr.due_this_week || []).length;
+            const overdue = attr.overdue       || 0;
+            const soon    = attr.due_this_week || 0;
             const stats   = [];
             if (overdue > 0) stats.push({ label: "overdue", value: overdue, accent: "var(--fh-overdue)" });
             stats.push({ label: "due this week", value: soon });

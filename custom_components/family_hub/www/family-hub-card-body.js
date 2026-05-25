@@ -4374,7 +4374,7 @@ var DOMAIN, VERSION, DEFAULT_COLOR, FLASH_MS, FH_SENSORS, WEEKDAY_LABELS, HISTOR
 var init_constants = __esm({
   "src/card/constants.js"() {
     DOMAIN = "family_hub";
-    VERSION = "0.6.3";
+    VERSION = "0.6.4";
     DEFAULT_COLOR = "#7F77DD";
     FLASH_MS = 1400;
     FH_SENSORS = [
@@ -7549,7 +7549,6 @@ function htmlChores(card) {
   const alertCount = approvalQ.length;
   const opsDay = _opsDay();
   return `
-        ${card._celebration ? _htmlCelebration(card._celebration) : ""}
         <div class="fh-mc">
             ${_htmlHeader(famName, missionCount, alertCount, opsDay, globalPaused)}
             <div class="fh-mc-body">
@@ -7929,7 +7928,7 @@ function _htmlStatusFooter(people, naAttr) {
         </div>
     `;
 }
-function _htmlCelebration(cel) {
+function htmlCelebration(cel) {
   return `
         <div class="fh-celebration-overlay" data-act="dismiss-celebration">
             <div class="fh-celebration-badge">
@@ -7952,9 +7951,9 @@ var init_modes_chores = __esm({
 // src/card/rooms/maintenance.js
 function renderMaintenance(card) {
   const attr = card._attrs("sensor.family_hub_maintenance_due");
-  const overdue = attr.overdue || [];
-  const thisWeek = attr.due_this_week || [];
-  const nextWeek = attr.due_next_week || [];
+  const overdue = attr.overdue || 0;
+  const thisWeek = attr.due_this_week || 0;
+  const nextWeek = attr.due_next_week || 0;
   const items = attr.items || [];
   const header = `
         <div class="fh-maint-head">
@@ -7973,25 +7972,28 @@ function renderMaintenance(card) {
   }
   const statStrip = `
         <div class="fh-maint-stat-strip">
-            <div class="fh-maint-stat ${overdue.length ? "fh-maint-stat--bad" : ""}">
-                <span class="fh-maint-stat-num">${overdue.length}</span>
+            <div class="fh-maint-stat ${overdue ? "fh-maint-stat--bad" : ""}">
+                <span class="fh-maint-stat-num">${overdue}</span>
                 <span class="fh-maint-stat-lbl">overdue</span>
             </div>
             <div class="fh-maint-stat-div"></div>
             <div class="fh-maint-stat">
-                <span class="fh-maint-stat-num">${thisWeek.length}</span>
+                <span class="fh-maint-stat-num">${thisWeek}</span>
                 <span class="fh-maint-stat-lbl">this week</span>
             </div>
             <div class="fh-maint-stat-div"></div>
             <div class="fh-maint-stat">
-                <span class="fh-maint-stat-num">${nextWeek.length}</span>
+                <span class="fh-maint-stat-num">${nextWeek}</span>
                 <span class="fh-maint-stat-lbl">next week</span>
             </div>
         </div>`;
+  const overdueItems = items.filter((i) => i.days_delta < 0);
+  const thisWeekItems = items.filter((i) => i.days_delta >= 0 && i.days_delta <= 7);
+  const nextWeekItems = items.filter((i) => i.days_delta > 7);
   const sections = [
-    { label: "OVERDUE", items: overdue, cls: "overdue" },
-    { label: "DUE THIS WEEK", items: thisWeek, cls: "this-week" },
-    { label: "DUE NEXT WEEK", items: nextWeek, cls: "next-week" }
+    { label: "OVERDUE", items: overdueItems, cls: "overdue" },
+    { label: "DUE THIS WEEK", items: thisWeekItems, cls: "this-week" },
+    { label: "DUE NEXT WEEK", items: nextWeekItems, cls: "next-week" }
   ].filter((s) => s.items.length);
   const sectionsHtml = sections.map(
     ({ label, items: group, cls }) => `
@@ -8171,8 +8173,8 @@ var init_rooms = __esm({
         render: (card) => renderMaintenance(card),
         getStats(card) {
           const attr = card._attrs("sensor.family_hub_maintenance_due");
-          const overdue = (attr.overdue || []).length;
-          const soon = (attr.due_this_week || []).length;
+          const overdue = attr.overdue || 0;
+          const soon = attr.due_this_week || 0;
           const stats = [];
           if (overdue > 0) stats.push({ label: "overdue", value: overdue, accent: "var(--fh-overdue)" });
           stats.push({ label: "due this week", value: soon });
@@ -9571,8 +9573,8 @@ function _htmlAdFamily(people, attr) {
                         data-pcode="${escAttr(p.code || "")}"
                         data-ptheme="${escAttr(p.theme_key || "classic")}"
                         data-prankidx="${p.rank_index !== void 0 ? p.rank_index : 0}"
-                        data-pdropThr="${p.rank_drop_threshold !== null && p.rank_drop_threshold !== void 0 ? p.rank_drop_threshold : ""}"
-                        data-pgainThr="${p.rank_gain_threshold !== null && p.rank_gain_threshold !== void 0 ? p.rank_gain_threshold : ""}"
+                        data-pdrop-thr="${p.rank_drop_threshold !== null && p.rank_drop_threshold !== void 0 ? p.rank_drop_threshold : ""}"
+                        data-pgain-thr="${p.rank_gain_threshold !== null && p.rank_gain_threshold !== void 0 ? p.rank_gain_threshold : ""}"
                         data-pchildmode="${p.child_mode === true}"
                         data-pcompletionthreshold="${p.completion_threshold_pct ?? 80}"
                         data-pcompletionmilestone="${p.completion_milestone ?? 7}"
@@ -10784,7 +10786,14 @@ function openPrintableChoreList(card) {
   if (!w) {
     const blob = new Blob([html], { type: "text/html" });
     const url = URL.createObjectURL(blob);
-    window.location.href = url;
+    const w2 = window.open(url, "_blank");
+    if (!w2) {
+      const msg = document.createElement("div");
+      msg.style.cssText = "position:fixed;top:12px;left:50%;transform:translateX(-50%);background:#1c1c1e;color:#fff;padding:12px 18px;border-radius:8px;z-index:9999;font:14px/1.5 sans-serif";
+      msg.innerHTML = `Pop-ups are blocked. <a href="${url}" target="_blank" style="color:#64d2ff">Open chore list</a>`;
+      document.body.appendChild(msg);
+      setTimeout(() => msg.remove(), 15e3);
+    }
     return;
   }
   w.document.open();
@@ -10802,7 +10811,7 @@ var init_print_chore_list = __esm({
 
 // src/card/dispatch.js
 function dispatch(act, el, card) {
-  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s2, _t, _u, _v, _w, _x;
+  var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s2;
   const sr = card.shadowRoot;
   const v = (id) => {
     var _a2;
@@ -10932,47 +10941,10 @@ function dispatch(act, el, card) {
     }
     case "ok-edit-store-item-inline": {
       const iid = v("m-eiid");
-      const name = v("m-sname").trim();
-      const dollar = parseFloat(v("m-sdollar"));
-      if (!iid || !name || !dollar || dollar <= 0) break;
-      const isGroup = ((_a = sr.querySelector("#m-sgroup")) == null ? void 0 : _a.checked) || false;
-      let scope = v("m-sscope");
-      const data = {
-        item_id: iid,
-        name,
-        dollar_value: dollar,
-        scope,
-        description: v("m-sdesc").trim(),
-        category_label: v("m-scat") || "",
-        max_per_period: parseInt(v("m-smaxperiod") || "0"),
-        period: v("m-speriod") || "week",
-        active: ((_b = sr.querySelector("#m-sactive")) == null ? void 0 : _b.checked) !== false,
-        icon: _normalizeIcon(v("m-cicon"))
-      };
-      if (isGroup) {
-        const contribs = [...sr.querySelectorAll(".m-scontrib")].filter((inp) => parseInt(inp.value) > 0).map((inp) => ({ person_id: inp.dataset.pid, share_pct: parseInt(inp.value) }));
-        if (contribs.length === 0) {
-          alert("Group reward needs at least one contributor with a share > 0%.");
-          break;
-        }
-        const total = contribs.reduce((s, c) => s + c.share_pct, 0);
-        if (total !== 100) {
-          alert(`Contributor shares must sum to exactly 100% (currently ${total}%). Use the "Equal split" button or adjust manually.`);
-          break;
-        }
-        data.is_group_reward = true;
-        data.contributors = contribs;
-        data.scope = "personal";
-        data.person_ids = contribs.map((c) => c.person_id);
-      } else {
-        const origItems = card._attrs("sensor.family_hub_needs_attention").store_items || [];
-        const origItem = origItems.find((i) => i.item_id === iid);
-        if (origItem == null ? void 0 : origItem.is_group_reward) {
-          data.is_group_reward = false;
-          data.contributors = [];
-        }
-        data.person_ids = scope === "personal" ? _selectedPersonIds("m-sp-person", sr) : [];
-      }
+      const origItems = card._attrs("sensor.family_hub_needs_attention").store_items || [];
+      const origItem = origItems.find((i) => i.item_id === iid);
+      const data = _buildStoreItemPayload(v, sr, true, (origItem == null ? void 0 : origItem.is_group_reward) ?? false);
+      if (!data) break;
       console.log("[family-hub] update_store_item (inline) payload:", JSON.parse(JSON.stringify(data)));
       card._svc("update_store_item", data);
       card._adminSelectedItemId = null;
@@ -11114,7 +11086,7 @@ function dispatch(act, el, card) {
       const balance = parseInt(el.dataset.balance || "0");
       const person = card._people().find((p) => p.person_id === pid);
       const pAttrKey = person ? `sensor.family_hub_${person.name.toLowerCase().replace(/ /g, "_")}` : null;
-      const pAttrs = pAttrKey ? ((_e = (_d = (_c = card._hass) == null ? void 0 : _c.states) == null ? void 0 : _d[pAttrKey]) == null ? void 0 : _e.attributes) || {} : {};
+      const pAttrs = pAttrKey ? ((_c = (_b = (_a = card._hass) == null ? void 0 : _a.states) == null ? void 0 : _b[pAttrKey]) == null ? void 0 : _c.attributes) || {} : {};
       const storeItem = (pAttrs.store_items || []).find((i) => i.item_id === iid) || { item_id: iid, name: "reward" };
       card._modal = { type: "chip-in", data: { item: storeItem, pid, balance, remaining } };
       card._doRender(true);
@@ -11183,7 +11155,7 @@ This will mark the reward inactive.`)) break;
       if (!pid || !iid) break;
       const person = card._people().find((p) => p.person_id === pid);
       if (!person) break;
-      const attrs = ((_h = (_g = (_f = card._hass) == null ? void 0 : _f.states) == null ? void 0 : _g[`sensor.family_hub_${person.name.toLowerCase().replace(/ /g, "_")}`]) == null ? void 0 : _h.attributes) || {};
+      const attrs = ((_f = (_e = (_d = card._hass) == null ? void 0 : _d.states) == null ? void 0 : _e[`sensor.family_hub_${person.name.toLowerCase().replace(/ /g, "_")}`]) == null ? void 0 : _f.attributes) || {};
       const newGoal = attrs.goal_item_id === iid ? "" : iid;
       card._svc("update_person", { person_id: pid, goal_item_id: newGoal });
       break;
@@ -11221,7 +11193,7 @@ This cannot be undone. Any pending redemption requests for this reward will be c
     }
     case "add-cat-label": {
       const input = sr.getElementById("cat-label-input");
-      const newLabel = (_i = input == null ? void 0 : input.value) == null ? void 0 : _i.trim();
+      const newLabel = (_g = input == null ? void 0 : input.value) == null ? void 0 : _g.trim();
       if (!newLabel) break;
       const current = card._attrs("sensor.family_hub_needs_attention").category_labels || [];
       if (!current.includes(newLabel)) {
@@ -11240,8 +11212,8 @@ This cannot be undone. Any pending redemption requests for this reward will be c
         if (!id) return;
         roomsCfg[id] = { status: input.checked ? "live" : "hidden" };
       });
-      const weather = ((_k = (_j = sr.getElementById("m-hub-weather")) == null ? void 0 : _j.value) == null ? void 0 : _k.trim()) || "";
-      const calRaw = ((_l = sr.getElementById("m-hub-calendars")) == null ? void 0 : _l.value) || "";
+      const weather = ((_i = (_h = sr.getElementById("m-hub-weather")) == null ? void 0 : _h.value) == null ? void 0 : _i.trim()) || "";
+      const calRaw = ((_j = sr.getElementById("m-hub-calendars")) == null ? void 0 : _j.value) || "";
       const calendars = calRaw.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean);
       card._svc("update_settings", {
         rooms_config: roomsCfg,
@@ -11255,7 +11227,7 @@ This cannot be undone. Any pending redemption requests for this reward will be c
     // The checkbox is "Penalties active" (checked = running, unchecked = paused),
     // so we invert: penalties_paused = !checked.
     case "toggle-global-penalty": {
-      const checked = el.checked ?? ((_m = el.querySelector("input")) == null ? void 0 : _m.checked) ?? true;
+      const checked = el.checked ?? ((_k = el.querySelector("input")) == null ? void 0 : _k.checked) ?? true;
       card._svc("update_settings", { penalties_paused: !checked });
       break;
     }
@@ -11263,8 +11235,8 @@ This cannot be undone. Any pending redemption requests for this reward will be c
     // The checkbox is also "Penalties active" (checked = on, unchecked = paused).
     // We read the person_id from data-pid and invert the checkbox value.
     case "toggle-person-penalty": {
-      const pid = el.dataset.pid || ((_n = el.closest("[data-pid]")) == null ? void 0 : _n.dataset.pid);
-      const checked = el.checked ?? ((_o = el.querySelector("input")) == null ? void 0 : _o.checked) ?? true;
+      const pid = el.dataset.pid || ((_l = el.closest("[data-pid]")) == null ? void 0 : _l.dataset.pid);
+      const checked = el.checked ?? ((_m = el.querySelector("input")) == null ? void 0 : _m.checked) ?? true;
       if (pid) card._svc("update_person", { person_id: pid, penalties_paused: !checked });
       break;
     }
@@ -11448,76 +11420,9 @@ This cannot be undone. Any pending redemption requests for this reward will be c
     }
     case "ok-add-chore":
     case "ok-edit-chore": {
-      const name = v("m-cname").trim();
-      if (!name) break;
       const isEdit = act === "ok-edit-chore";
-      const recType = v("m-crec");
-      const ctype = v("m-ctype");
-      const assigned = _selectedPersonIds("m-assign-person", sr);
-      const weekdays = Array.from(sr.querySelectorAll(".m-wd-day:checked")).map((cb) => parseInt(cb.value));
-      const dayFilter = Array.from(sr.querySelectorAll(".m-df-day:checked")).map((cb) => parseInt(cb.value));
-      const iconVal = _normalizeIcon(v("m-cicon"));
-      const data = {
-        name,
-        chore_type: ctype,
-        category_label: v("m-clabel"),
-        assigned_to: assigned,
-        points: int("m-cpts"),
-        approval_required: b("m-cappr"),
-        penalty_enabled: b("m-cpenalty"),
-        penalty_points: int("m-cpenalty-pts"),
-        icon: iconVal
-      };
-      if (b("m-cpenalty")) {
-        const thresh = parseInt(v("m-daily-threshold") || "0");
-        if (thresh > 0) data.daily_penalty_after_days = thresh;
-      }
-      if (ctype === "claimable") {
-        data.claimable_subtype = v("m-csubtype") || "fcfs";
-        if (data.claimable_subtype === "multi_claim") {
-          data.max_claimants = Math.max(2, int("m-max-claimants") || 2);
-          data.multi_claim_points_mode = v("m-points-mode") || "full";
-        }
-      }
-      const desc = v("m-cdesc").trim();
-      if (desc) data.description = desc;
-      const expirySection = sr.getElementById("m-chore-expiry-section");
-      const expiryVisible = expirySection && expirySection.style.display !== "none";
-      if (expiryVisible) {
-        const expiryVal = parseInt(v("m-cexpiry") || "0");
-        if (expiryVal > 0) data.expires_after_days = expiryVal;
-      }
-      if (isEdit) {
-        data.chore_id = v("m-cid");
-        data.weekdays = weekdays;
-        data.day_filter = dayFilter;
-        data.recurrence = {
-          type: recType,
-          weekdays,
-          day_filter: dayFilter,
-          ...recType === "monthly_on_date" ? { day_of_month: Math.max(1, Math.min(31, int("m-dom"))) } : {}
-        };
-      } else {
-        data.recurrence_type = recType;
-        if (weekdays.length) data.weekdays = weekdays;
-        if (dayFilter.length) data.day_filter = dayFilter;
-        if (recType === "monthly_on_date")
-          data.day_of_month = Math.max(1, Math.min(31, int("m-dom")));
-      }
-      data.streak_milestone = Math.max(0, int("m-streak-milestone") || 0);
-      data.streak_bonus_points = Math.max(0, int("m-streak-bonus") || 0);
-      const rtRaw = parseInt(v("m-reminder-time") ?? "-1");
-      data.reminder_time = isNaN(rtRaw) ? -1 : rtRaw;
-      if (ctype === "assigned") {
-        const rotOn = b("m-crot-enabled");
-        const poolStr = v("m-crot-pool-order") || "";
-        const pool = rotOn && poolStr ? poolStr.split(",").filter(Boolean) : [];
-        data.rotation_pool = pool;
-        data.rotation_cadence = rotOn && pool.length ? v("m-crot-cadence") || "per_instance" : "";
-      } else {
-        data.rotation_pool = [];
-        data.rotation_cadence = "";
-      }
+      const data = _buildChorePayload(v, b, int, sr, isEdit);
+      if (!data) break;
       console.log(`[family-hub] ${isEdit ? "update_chore" : "add_chore"} payload:`, JSON.parse(JSON.stringify(data)));
       card._svc(isEdit ? "update_chore" : "add_chore", data);
       card._closeModal();
@@ -11525,67 +11430,8 @@ This cannot be undone. Any pending redemption requests for this reward will be c
     }
     // Inline panel save — same logic as ok-edit-chore but closes panel instead of modal
     case "ok-edit-chore-inline": {
-      const name = v("m-cname").trim();
-      if (!name) break;
-      const recType = v("m-crec");
-      const ctype = v("m-ctype");
-      const assigned = _selectedPersonIds("m-assign-person", sr);
-      const weekdays = Array.from(sr.querySelectorAll(".m-wd-day:checked")).map((cb) => parseInt(cb.value));
-      const dayFilter = Array.from(sr.querySelectorAll(".m-df-day:checked")).map((cb) => parseInt(cb.value));
-      const iconVal = _normalizeIcon(v("m-cicon"));
-      const data = {
-        chore_id: v("m-cid"),
-        name,
-        chore_type: ctype,
-        category_label: v("m-clabel"),
-        assigned_to: assigned,
-        points: int("m-cpts"),
-        approval_required: b("m-cappr"),
-        penalty_enabled: b("m-cpenalty"),
-        penalty_points: int("m-cpenalty-pts"),
-        icon: iconVal,
-        weekdays,
-        day_filter: dayFilter,
-        recurrence: {
-          type: recType,
-          weekdays,
-          day_filter: dayFilter,
-          ...recType === "monthly_on_date" ? { day_of_month: Math.max(1, Math.min(31, int("m-dom"))) } : {}
-        }
-      };
-      if (b("m-cpenalty")) {
-        const thresh = parseInt(v("m-daily-threshold") || "0");
-        if (thresh > 0) data.daily_penalty_after_days = thresh;
-      }
-      if (ctype === "claimable") {
-        data.claimable_subtype = v("m-csubtype") || "fcfs";
-        if (data.claimable_subtype === "multi_claim") {
-          data.max_claimants = Math.max(2, int("m-max-claimants") || 2);
-          data.multi_claim_points_mode = v("m-points-mode") || "full";
-        }
-      }
-      const desc = v("m-cdesc").trim();
-      if (desc) data.description = desc;
-      const expirySection = sr.getElementById("m-chore-expiry-section");
-      const expiryVisible = expirySection && expirySection.style.display !== "none";
-      if (expiryVisible) {
-        const expiryVal = parseInt(v("m-cexpiry") || "0");
-        if (expiryVal > 0) data.expires_after_days = expiryVal;
-      }
-      data.streak_milestone = Math.max(0, int("m-streak-milestone") || 0);
-      data.streak_bonus_points = Math.max(0, int("m-streak-bonus") || 0);
-      const rtRaw = parseInt(v("m-reminder-time") ?? "-1");
-      data.reminder_time = isNaN(rtRaw) ? -1 : rtRaw;
-      if (ctype === "assigned") {
-        const rotOn = b("m-crot-enabled");
-        const poolStr = v("m-crot-pool-order") || "";
-        const pool = rotOn && poolStr ? poolStr.split(",").filter(Boolean) : [];
-        data.rotation_pool = pool;
-        data.rotation_cadence = rotOn && pool.length ? v("m-crot-cadence") || "per_instance" : "";
-      } else {
-        data.rotation_pool = [];
-        data.rotation_cadence = "";
-      }
+      const data = _buildChorePayload(v, b, int, sr, true);
+      if (!data) break;
       console.log("[family-hub] update_chore (inline) payload:", JSON.parse(JSON.stringify(data)));
       card._svc("update_chore", data);
       card._adminSelectedChoreId = null;
@@ -11596,7 +11442,7 @@ This cannot be undone. Any pending redemption requests for this reward will be c
     case "set-streak": {
       const cid = el.dataset.cid;
       const pid = el.dataset.pid;
-      const count = Math.max(0, parseInt(((_p = sr.getElementById(`m-streak-${cid}`)) == null ? void 0 : _p.value) || "0"));
+      const count = Math.max(0, parseInt(((_n = sr.getElementById(`m-streak-${cid}`)) == null ? void 0 : _n.value) || "0"));
       card._svc("set_streak", { person_id: pid, chore_id: cid, count });
       break;
     }
@@ -11628,84 +11474,16 @@ This cannot be undone. Any pending redemption requests for this reward will be c
       break;
     }
     case "ok-add-store-item": {
-      const name = v("m-sname").trim();
-      const dollar = parseFloat(v("m-sdollar"));
-      if (!name || !dollar || dollar <= 0) break;
-      const isGroup = ((_q = sr.querySelector("#m-sgroup")) == null ? void 0 : _q.checked) || false;
-      let scope = v("m-sscope");
-      const data = {
-        name,
-        dollar_value: dollar,
-        scope,
-        description: v("m-sdesc").trim(),
-        category_label: v("m-scat") || "",
-        max_per_period: parseInt(v("m-smaxperiod") || "0"),
-        period: v("m-speriod") || "week",
-        icon: _normalizeIcon(v("m-cicon"))
-      };
-      if (isGroup) {
-        const contribs = [...sr.querySelectorAll(".m-scontrib")].filter((inp) => parseInt(inp.value) > 0).map((inp) => ({ person_id: inp.dataset.pid, share_pct: parseInt(inp.value) }));
-        if (contribs.length === 0) {
-          alert("Group reward needs at least one contributor with a share > 0%.");
-          break;
-        }
-        const total = contribs.reduce((s, c) => s + c.share_pct, 0);
-        if (total !== 100) {
-          alert(`Contributor shares must sum to exactly 100% (currently ${total}%). Use the "Equal split" button or adjust manually.`);
-          break;
-        }
-        data.is_group_reward = true;
-        data.contributors = contribs;
-        data.scope = "personal";
-        data.person_ids = contribs.map((c) => c.person_id);
-      } else {
-        if (scope === "personal") data.person_ids = _selectedPersonIds("m-sp-person", sr);
-      }
+      const data = _buildStoreItemPayload(v, sr, false, null);
+      if (!data) break;
       card._svc("add_store_item", data);
       card._closeModal();
       break;
     }
     case "ok-edit-store-item": {
-      const iid = v("m-eiid");
-      const name = v("m-sname").trim();
-      const dollar = parseFloat(v("m-sdollar"));
-      if (!iid || !name || !dollar || dollar <= 0) break;
-      const isGroup = ((_r = sr.querySelector("#m-sgroup")) == null ? void 0 : _r.checked) || false;
-      let scope = v("m-sscope");
-      const data = {
-        item_id: iid,
-        name,
-        dollar_value: dollar,
-        scope,
-        description: v("m-sdesc").trim(),
-        category_label: v("m-scat") || "",
-        max_per_period: parseInt(v("m-smaxperiod") || "0"),
-        period: v("m-speriod") || "week",
-        active: ((_s2 = sr.querySelector("#m-sactive")) == null ? void 0 : _s2.checked) !== false,
-        icon: _normalizeIcon(v("m-cicon"))
-      };
-      if (isGroup) {
-        const contribs = [...sr.querySelectorAll(".m-scontrib")].filter((inp) => parseInt(inp.value) > 0).map((inp) => ({ person_id: inp.dataset.pid, share_pct: parseInt(inp.value) }));
-        if (contribs.length === 0) {
-          alert("Group reward needs at least one contributor with a share > 0%.");
-          break;
-        }
-        const total = contribs.reduce((s, c) => s + c.share_pct, 0);
-        if (total !== 100) {
-          alert(`Contributor shares must sum to exactly 100% (currently ${total}%). Use the "Equal split" button or adjust manually.`);
-          break;
-        }
-        data.is_group_reward = true;
-        data.contributors = contribs;
-        data.scope = "personal";
-        data.person_ids = contribs.map((c) => c.person_id);
-      } else {
-        if ((_v = (_u = (_t = card._modal) == null ? void 0 : _t.data) == null ? void 0 : _u.item) == null ? void 0 : _v.is_group_reward) {
-          data.is_group_reward = false;
-          data.contributors = [];
-        }
-        data.person_ids = scope === "personal" ? _selectedPersonIds("m-sp-person", sr) : [];
-      }
+      const wasGroup = ((_q = (_p = (_o = card._modal) == null ? void 0 : _o.data) == null ? void 0 : _p.item) == null ? void 0 : _q.is_group_reward) ?? false;
+      const data = _buildStoreItemPayload(v, sr, true, wasGroup);
+      if (!data) break;
       card._svc("update_store_item", data);
       card._closeModal();
       break;
@@ -11797,7 +11575,7 @@ This cannot be undone. Any pending redemption requests for this reward will be c
     // Reads the selected template key from #m-ctpl and pre-populates the
     // add-chore form fields. Parent can edit anything before saving.
     case "pick-template": {
-      const key = (_w = sr.getElementById("m-ctpl")) == null ? void 0 : _w.value;
+      const key = (_r = sr.getElementById("m-ctpl")) == null ? void 0 : _r.value;
       if (!key) break;
       const tpl = CHORE_TEMPLATES.find((t) => t.key === key);
       if (!tpl) break;
@@ -11813,7 +11591,7 @@ This cannot be undone. Any pending redemption requests for this reward will be c
         if (opt) catEl.value = tpl.category;
       }
       if (tpl.points) setVal("m-cpts", tpl.points);
-      (_x = sr.getElementById("m-cname")) == null ? void 0 : _x.focus();
+      (_s2 = sr.getElementById("m-cname")) == null ? void 0 : _s2.focus();
       break;
     }
     // ---- Icon picker — grid in the Icon tab; updates hidden input + preview
@@ -11868,6 +11646,128 @@ function _normalizeIcon(raw) {
   if (!s) return "";
   if (s.startsWith("data:")) return s;
   return s.toLowerCase();
+}
+function _buildChorePayload(v, b, int, sr, isEdit) {
+  const name = v("m-cname").trim();
+  if (!name) return null;
+  const recType = v("m-crec");
+  const ctype = v("m-ctype");
+  const assigned = _selectedPersonIds("m-assign-person", sr);
+  const weekdays = Array.from(sr.querySelectorAll(".m-wd-day:checked")).map((cb) => parseInt(cb.value));
+  const dayFilter = Array.from(sr.querySelectorAll(".m-df-day:checked")).map((cb) => parseInt(cb.value));
+  const iconVal = _normalizeIcon(v("m-cicon"));
+  const data = {
+    name,
+    chore_type: ctype,
+    category_label: v("m-clabel"),
+    assigned_to: assigned,
+    points: int("m-cpts"),
+    approval_required: b("m-cappr"),
+    penalty_enabled: b("m-cpenalty"),
+    penalty_points: int("m-cpenalty-pts"),
+    icon: iconVal
+  };
+  if (b("m-cpenalty")) {
+    const thresh = parseInt(v("m-daily-threshold") || "0");
+    if (thresh > 0) data.daily_penalty_after_days = thresh;
+  }
+  if (ctype === "claimable") {
+    data.claimable_subtype = v("m-csubtype") || "fcfs";
+    if (data.claimable_subtype === "multi_claim") {
+      data.max_claimants = Math.max(2, int("m-max-claimants") || 2);
+      data.multi_claim_points_mode = v("m-points-mode") || "full";
+    }
+  }
+  const desc = v("m-cdesc").trim();
+  if (desc) data.description = desc;
+  const expirySection = sr.getElementById("m-chore-expiry-section");
+  const expiryVisible = expirySection && expirySection.style.display !== "none";
+  if (expiryVisible) {
+    const expiryVal = parseInt(v("m-cexpiry") || "0");
+    if (expiryVal > 0) data.expires_after_days = expiryVal;
+  }
+  data.streak_milestone = Math.max(0, int("m-streak-milestone") || 0);
+  data.streak_bonus_points = Math.max(0, int("m-streak-bonus") || 0);
+  const rtRaw = parseInt(v("m-reminder-time") ?? "-1");
+  data.reminder_time = isNaN(rtRaw) ? -1 : rtRaw;
+  if (ctype === "assigned") {
+    const rotOn = b("m-crot-enabled");
+    const poolStr = v("m-crot-pool-order") || "";
+    const pool = rotOn && poolStr ? poolStr.split(",").filter(Boolean) : [];
+    data.rotation_pool = pool;
+    data.rotation_cadence = rotOn && pool.length ? v("m-crot-cadence") || "per_instance" : "";
+  } else {
+    data.rotation_pool = [];
+    data.rotation_cadence = "";
+  }
+  if (isEdit) {
+    data.chore_id = v("m-cid");
+    data.weekdays = weekdays;
+    data.day_filter = dayFilter;
+    data.recurrence = {
+      type: recType,
+      weekdays,
+      day_filter: dayFilter,
+      ...recType === "monthly_on_date" ? { day_of_month: Math.max(1, Math.min(31, int("m-dom"))) } : {}
+    };
+  } else {
+    data.recurrence_type = recType;
+    if (weekdays.length) data.weekdays = weekdays;
+    if (dayFilter.length) data.day_filter = dayFilter;
+    if (recType === "monthly_on_date")
+      data.day_of_month = Math.max(1, Math.min(31, int("m-dom")));
+  }
+  return data;
+}
+function _buildStoreItemPayload(v, sr, isEdit, wasGroupReward) {
+  var _a, _b;
+  const iid = isEdit ? v("m-eiid") : null;
+  const name = v("m-sname").trim();
+  const dollar = parseFloat(v("m-sdollar"));
+  if (isEdit && !iid || !name || !dollar || dollar <= 0) return null;
+  const isGroup = ((_a = sr.querySelector("#m-sgroup")) == null ? void 0 : _a.checked) || false;
+  const scope = v("m-sscope");
+  const data = {
+    name,
+    dollar_value: dollar,
+    scope,
+    description: v("m-sdesc").trim(),
+    category_label: v("m-scat") || "",
+    max_per_period: parseInt(v("m-smaxperiod") || "0"),
+    period: v("m-speriod") || "week",
+    icon: _normalizeIcon(v("m-cicon"))
+  };
+  if (isEdit) {
+    data.item_id = iid;
+    data.active = ((_b = sr.querySelector("#m-sactive")) == null ? void 0 : _b.checked) !== false;
+  }
+  if (isGroup) {
+    const contribs = [...sr.querySelectorAll(".m-scontrib")].filter((inp) => parseInt(inp.value) > 0).map((inp) => ({ person_id: inp.dataset.pid, share_pct: parseInt(inp.value) }));
+    if (contribs.length === 0) {
+      alert("Group reward needs at least one contributor with a share > 0%.");
+      return null;
+    }
+    const total = contribs.reduce((s, c) => s + c.share_pct, 0);
+    if (total !== 100) {
+      alert(`Contributor shares must sum to exactly 100% (currently ${total}%). Use the "Equal split" button or adjust manually.`);
+      return null;
+    }
+    data.is_group_reward = true;
+    data.contributors = contribs;
+    data.scope = "personal";
+    data.person_ids = contribs.map((c) => c.person_id);
+  } else {
+    if (isEdit && wasGroupReward) {
+      data.is_group_reward = false;
+      data.contributors = [];
+    }
+    if (scope === "personal") {
+      data.person_ids = _selectedPersonIds("m-sp-person", sr);
+    } else if (isEdit) {
+      data.person_ids = [];
+    }
+  }
+  return data;
 }
 function handleIconFileSelection(fileInput, sr) {
   var _a;
@@ -11937,6 +11837,8 @@ var init_FamilyHubCard = __esm({
     init_modes_admin();
     init_modes_home();
     init_rooms();
+    init_modes_chores();
+    init_maintenance();
     init_themes();
     init_dispatch();
     init_modals();
@@ -12017,10 +11919,6 @@ var init_FamilyHubCard = __esm({
         root.addEventListener("change", (e) => {
           var _a, _b;
           const t = e.target;
-          if (t.dataset.act === "toggle-dollar") {
-            this._svc("update_settings", { show_dollar_value_to_kids: t.checked });
-            return;
-          }
           if (t.dataset.act === "toggle-dollar") {
             this._svc("update_settings", { show_dollar_value_to_kids: t.checked });
             return;
@@ -12264,7 +12162,7 @@ var init_FamilyHubCard = __esm({
                 card.innerHTML = htmlPersonal(this);
                 break;
               case "maintenance":
-                card.innerHTML = htmlMaintenance(this);
+                card.innerHTML = renderMaintenance(this);
                 break;
               case "admin":
                 card.innerHTML = htmlAdmin(this);
@@ -12276,6 +12174,11 @@ var init_FamilyHubCard = __esm({
           this.shadowRoot.appendChild(card);
           if (this._modal) {
             this.shadowRoot.appendChild(this._buildModal());
+          }
+          if (this._celebration) {
+            const cel = document.createElement("div");
+            cel.innerHTML = htmlCelebration(this._celebration);
+            this.shadowRoot.appendChild(cel.firstElementChild);
           }
           this._syncModalUI();
         } catch (err) {

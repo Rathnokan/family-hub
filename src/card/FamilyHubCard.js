@@ -14,6 +14,8 @@ import { htmlPersonal }                               from "./modes-personal.js"
 import { htmlAdmin }                                  from "./modes-admin.js";
 import { htmlHome, htmlNavBack }                      from "./modes-home.js";
 import { getRoomById }                                from "./rooms/index.js";
+import { htmlCelebration }                            from "./modes-chores.js";
+import { renderMaintenance }                         from "./rooms/maintenance.js";
 import { getTheme }                                   from "./themes/index.js";
 import { dispatch, handleIconFileSelection }          from "./dispatch.js";
 import {
@@ -133,11 +135,6 @@ export class FamilyHubCard extends HTMLElement {
         root.addEventListener("change", e => {
             const t = e.target;
 
-            // Inline toggle: show dollar value to kids
-            if (t.dataset.act === "toggle-dollar") {
-                this._svc("update_settings", { show_dollar_value_to_kids: t.checked });
-                return;
-            }
             // Inline toggle: show dollar value to kids
             if (t.dataset.act === "toggle-dollar") {
                 this._svc("update_settings", { show_dollar_value_to_kids: t.checked });
@@ -431,7 +428,7 @@ export class FamilyHubCard extends HTMLElement {
                 switch (this._cfg.mode) {
                     case "command_center": card.innerHTML = this._htmlCommandCenter(); break;
                     case "personal":       card.innerHTML = htmlPersonal(this);        break;
-                    case "maintenance":    card.innerHTML = htmlMaintenance(this);     break;
+                    case "maintenance":    card.innerHTML = renderMaintenance(this);   break;
                     case "admin":          card.innerHTML = htmlAdmin(this);           break;
                 }
             }
@@ -442,6 +439,12 @@ export class FamilyHubCard extends HTMLElement {
 
             if (this._modal) {
                 this.shadowRoot.appendChild(this._buildModal());
+            }
+
+            if (this._celebration) {
+                const cel = document.createElement("div");
+                cel.innerHTML = htmlCelebration(this._celebration);
+                this.shadowRoot.appendChild(cel.firstElementChild);
             }
 
             this._syncModalUI();

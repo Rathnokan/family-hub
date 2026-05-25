@@ -855,9 +855,16 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
 
     async def handle_force_daily_tick(call: ServiceCall) -> None:
         """Force tick to run immediately. Useful for testing or cleaning up stale instances."""
-        _LOGGER.info("Family Hub: force_daily_tick service called")
-        await store.async_force_daily_tick()
-        await coordinator.async_refresh()
+        if coordinator._tick_running:
+            _LOGGER.warning("Family Hub: force_daily_tick already running, ignoring duplicate call")
+            return
+        coordinator._tick_running = True
+        try:
+            _LOGGER.info("Family Hub: force_daily_tick service called")
+            await store.async_force_daily_tick()
+            await coordinator.async_refresh()
+        finally:
+            coordinator._tick_running = False
 
     hass.services.async_register(
         DOMAIN, "force_daily_tick", handle_force_daily_tick,
