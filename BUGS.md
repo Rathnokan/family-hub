@@ -10,19 +10,74 @@
 
 ---
 
-## Blocking
+## Blocking — v0.6.5 pre-release (must fix before Phase 5 version bump)
 
-_(none)_
+### v0.6.5 #1: Kid's rail shows wrong renewal cost when parent set `dollar_cost_override`
+- **File:** `custom_components/family_hub/data_store.py` — `get_subscriptions_for_person` (~line 1338)
+- **Symptom:** Per-person sensor's `subscriptions` attribute reports `points_cost` based on `item.dollar_value × rank_ppd`, ignoring any admin-set `dollar_cost_override`. The daily-tick processor (`_async_process_subscriptions`) DOES honor the override when actually deducting. So the kid sees one number on the rail and gets charged a different one at renewal.
+- **Fix:** mirror the override logic from the global `subs_all` builder in `sensor.py:511`:
+  ```python
+  dollar = sub.get("dollar_cost_override") if sub.get("dollar_cost_override") is not None else item.get("dollar_value", 0)
+  cost = round(dollar * eff_ppd)
+  ```
+
+### v0.6.5 #2: "Ready / Need X pts" calc ignores `accumulated_debt` in two rail helpers
+- **Files:** `src/card/themes/_shared.js` — `htmlSubscriptionRail` (~line 762) and `htmlRailSubscriptions` (~line 831)
+- **Symptom:** Both helpers compute `ready = balance >= sub.points_cost`. For lapsed subs, recovery requires `cost + accumulated_debt`. Kid sees "✓ Ready" when they don't have enough to actually clear the debt + current period. (The third helper `htmlStoreRail` ~line 880 already does this correctly — only the first two need patching.)
+- **Fix:** in both helpers:
+  ```js
+  const owed  = sub.points_cost + (sub.accumulated_debt || 0);
+  const ready = balance >= owed;
+  // and: `Need ${owed - balance}pts more`
+  ```
 
 ---
 
-## High
+## High — v0.6.5 pre-release
 
-_(none)_
+### v0.6.5 #3: Store row button doesn't tell the kid they're starting a recurring deduction
+- **Files:** All six theme files in `src/card/themes/` (baker, classic, dbz, dinos, engineer, hp) — the store row block that emits `data-act="redeem"`.
+- **Symptom:** Subscription items show the same button as one-time items (theme-specific label like "REQUISITION", "BUY", etc.). The "Subscribed" disabled state works correctly, but a kid clicking an unsubscribed sub-type item has no visual cue they're triggering a recurring commitment.
+- **Fix:** when `item.item_type === "subscription"`, change the button label to include the recurring cost (e.g. `SUBSCRIBE 100pts/mo`) and/or add a "RECURRING" chip on the row. Same pattern across all six themes — consider extracting into a `_shared.js` helper to keep per-theme touches light. The actual subscribe path stays as-is (request_redemption → parent approves with anchor picker — that's the wired flow).
+
+### v0.6.5 #3b (cleanup): Delete dead `case "subscribe":` block in dispatch.js
+- **File:** `src/card/dispatch.js:312-322`
+- **Symptom:** The `case "subscribe":` block with its confirm dialog is unreachable — no theme or component emits `data-act="subscribe"`. Subscriptions actually flow through the redemption-approval path. Dead code is confusing.
+- **Fix:** delete the block. Leave a one-line comment pointing to `approve-subscription-redemption` (the real path).
+
+### v0.6.5 #4: Decline and Update reuse `HISTORY_POINTS_AWARDED` event type
+- **File:** `custom_components/family_hub/data_store.py:1231, 1316` (`async_decline_cancel_subscription`, `async_update_subscription`)
+- **Symptom:** Both functions log history with `event_type=HISTORY_POINTS_AWARDED` because no dedicated event types exist. History feed will misclassify these as point awards (wrong icon, wrong grouping, wrong filtering).
+- **Fix:** add `HISTORY_SUBSCRIPTION_CANCEL_DECLINED` and `HISTORY_SUBSCRIPTION_UPDATED` constants in `const.py`. Use them. Check `src/card/constants.js` `HISTORY_META` and add display entries (icon, color, label) for both.
+
+### v0.6.5 #6: `subscription_anchor` schema allows 0 — crashes monthly subs
+- **File:** `custom_components/family_hub/services.py:476, 518, 696` (schema) and `data_store.py:_advance_renewal_date` (~line 360, where the crash actually happens)
+- **Symptom:** Schema allows `anchor=0`. Weekly uses 0–6 (0=Monday), monthly+ uses 1–31. If a user edits a sub from weekly to monthly without resetting anchor, `_advance_renewal_date` calls `date(year, month, 0)` → `ValueError`.
+- **Fix (defense in depth):** in `_advance_renewal_date`, clamp the month-based branch to `target_day = max(1, min(anchor, max_day))`. Cheap, prevents the crash regardless of how anchor=0 got in.
+
+---
+
+## High — defer to v0.6.5.1 patch (or ship now and patch within a week)
+
+### v0.6.5 #5: Admin attributions hardcode first parent
+- **File:** `src/card/dispatch.js` — multiple cases (`admin-cancel-subscription`, `approve-cancel-subscription`, `decline-cancel-subscription`, `approve-subscription-redemption`, and likely older flows too)
+- **Symptom:** `const parent = card._people().find(p => p.type === "parent")` always returns the first parent. In a two-parent household every action is attributed to Jim regardless of who did it.
+- **Fix:** resolve via `card._hass.user.id` → lookup person by `linked_ha_user_id`. Fall back to "Unknown" if not linked. Codebase-wide pattern — fix systematically in a dedicated pass.
+
+### v0.6.5 #7: Cancel-pending lapse silently grows debt, parent not notified
+- **File:** `custom_components/family_hub/data_store.py:938` (`_async_process_subscriptions`)
+- **Symptom:** A sub in `cancel_pending` that fails to renew has `first_lapse = False` because status isn't `active`. No notification fires. If parent later declines the cancel, sub returns to active with invisible debt.
+- **Fix:** either notify on first lapse regardless of cancel_pending state, OR include accumulated debt total in the cancel-pending queue display (`get_cancel_pending_subscriptions_for_card`) so the parent sees it when deciding.
 
 ---
 
 ## Low
+
+### No UI to clear a subscription dollar_cost_override back to item default
+- **File:** `src/card/modes-admin.js`, `src/card/dispatch.js`
+- **Symptom:** Once a dollar cost override is set on a subscription, there is no button/control in the inline edit form to clear it back to the item default. Setting the cost field to blank and saving does nothing (the blank→null path was removed from dispatch to avoid noisy null payloads).
+- **Fix:** Add a "Use default" checkbox or a small "✕ clear" affordance next to the cost input; when checked/clicked, send `dollar_cost_override: null` in the service payload.
+- **Priority:** Low — workaround is to cancel + re-subscribe.
 
 ### Recorder: sensor attribute payloads exceed 16 KB [v0.6.4 candidate]
 - **File:** `custom_components/family_hub/sensor.py`
@@ -41,6 +96,13 @@ _(none)_
 ---
 
 ## Recently fixed (v0.6.x, retained for context — do not re-open)
+
+### v0.6.5 Phase 3: approve_redemption rejected subscription_anchor + never created subscription
+- **Symptom:** Approving a subscription-type store item redemption failed with "extra keys not allowed @ data['subscription_anchor']". Even if it had succeeded, no subscription record would have been created (async_approve_redemption only marked the redemption approved, never called async_subscribe).
+- **Fix:** Added `vol.Optional("subscription_anchor")` to approve_redemption schema. Modified `async_approve_redemption` to branch on item_type: for subscription items, call `async_subscribe(anchor_override=...)` (which handles point deduction) instead of `async_deduct_points` directly.
+- **Files:** `custom_components/family_hub/data_store.py`, `custom_components/family_hub/services.py`
+
+
 
 ### v0.6.4 post-ship cleanup: Removed dead `src/card/modes-maintenance.js` (~3 KB)
 - **Symptom:** Phase 2.A switched the maintenance routing to `rooms/maintenance.js::renderMaintenance`, but the old `modes-maintenance.js` was left in place. It was no longer imported anywhere yet still pulled into the body bundle.

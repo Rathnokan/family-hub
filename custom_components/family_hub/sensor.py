@@ -49,6 +49,7 @@ from .const import (
     RECURRENCE_ONE_TIME,
     REDEMPTION_PENDING,
     STATUS_PENDING_APPROVAL,
+    SUB_STATUS_CANCEL_PENDING,
 )
 from .coordinator import FamilyHubCoordinator
 
@@ -299,6 +300,9 @@ class FamilyHubPersonSensor(FamilyHubBaseSensor):
 
             # v0.6.3 item 13: group reward proposals pending THIS kid's response
             "group_proposals": store.get_group_proposals_for_person(self._person_id),
+
+            # v0.6.5: subscriptions for this person (non-canceled)
+            "subscriptions": store.get_subscriptions_for_person(self._person_id, rank_index),
         }
 
 
@@ -445,6 +449,7 @@ class FamilyHubNeedsAttentionSensor(FamilyHubBaseSensor):
             + len(store.get_pending_redemptions())
             + len(_get_maintenance_tasks(store, overdue_only=True))
             + len(store.get_group_reward_proposals_for_card())
+            + len([s for s in store._data.get("subscriptions", []) if s["status"] == SUB_STATUS_CANCEL_PENDING])
         )
 
     @property
@@ -474,8 +479,12 @@ class FamilyHubNeedsAttentionSensor(FamilyHubBaseSensor):
                 "max_per_period": i.get("max_per_period", 0),
                 "period":         i.get("period", "week"),
                 # v0.6.3 item 13: group reward fields for admin store management
-                "is_group_reward": i.get("is_group_reward", False),
-                "contributors":    i.get("contributors", []),
+                "is_group_reward":      i.get("is_group_reward", False),
+                "contributors":         i.get("contributors", []),
+                # v0.6.5: subscription fields for admin store-item modal
+                "item_type":            i.get("item_type", "one_time"),
+                "subscription_period":  i.get("subscription_period", ""),
+                "subscription_anchor":  i.get("subscription_anchor", 1),
             }
             for i in sorted(
                 store.store_items,
@@ -483,17 +492,62 @@ class FamilyHubNeedsAttentionSensor(FamilyHubBaseSensor):
             )
         ]
 
+        # v0.6.5: cancel-pending subscription queue
+        cancel_pending_subs = store.get_cancel_pending_subscriptions_for_card()
+
+        # v0.6.5: all non-canceled subscriptions for Family panel rail
+        _people_by_id = {p["id"]: p for p in store.people}
+        _items_by_id  = {i["id"]: i for i in store.store_items}
+        subs_all = []
+        for _sub in store._data.get("subscriptions", []):
+            if _sub.get("status") == "canceled":
+                continue
+            _p = _people_by_id.get(_sub.get("person_id", ""), {})
+            _i = _items_by_id.get(_sub.get("item_id", ""), {})
+            _rank_ppd         = store.get_rank_ppd(_p.get("rank_index", 0))
+            _item_dollar      = _i.get("dollar_value", 0)
+            _item_cost        = round(_item_dollar * _rank_ppd)
+            _override_dollar  = _sub.get("dollar_cost_override")
+            _effective_dollar = _override_dollar if _override_dollar is not None else _item_dollar
+            _effective_cost   = round(_effective_dollar * _rank_ppd)
+            subs_all.append({
+                "subscription_id":      _sub.get("id", ""),
+                "person_id":            _sub.get("person_id", ""),
+                "person_name":          _p.get("name", ""),
+                "person_color":         _p.get("avatar_color", "#7F77DD"),
+                "item_id":              _sub.get("item_id", ""),
+                "item_name":            _i.get("name", ""),
+                "period":               _sub.get("period", ""),
+                "anchor":               _sub.get("anchor", 0),
+                "next_renewal_date":    _sub.get("next_renewal_date", ""),
+                "started_date":         _sub.get("started_date", ""),
+                "status":               _sub.get("status", "active"),
+                "missed_renewals":      _sub.get("missed_renewals", 0),
+                "accumulated_debt":     _sub.get("accumulated_debt", 0),
+                "dollar_cost_override": _override_dollar,
+                "item_cost":            _item_cost,
+                "item_dollar_value":    _item_dollar,
+                "effective_cost":       _effective_cost,
+                "effective_dollar":     _effective_dollar,
+            })
+
         return {
             # Counts for automations / badges
             "pending_task_approvals": len(pending_tasks),
             "pending_redemptions":    len(pending_redeem),
             "overdue_maintenance":    len(overdue_maint),
+            # v0.6.5: subscription cancel requests
+            "pending_subscription_cancellations": len(cancel_pending_subs),
 
             # Full queues — actionable rows for the admin card
             "approval_queue":        store.get_approval_queue_for_card(),
             "redemption_queue":      store.get_redemption_queue_for_card(),
             # v0.6.3 item 13: group reward proposals awaiting parent sign-off
             "group_proposal_queue":  store.get_group_reward_proposals_for_card(),
+            # v0.6.5: subscription cancel requests awaiting parent action
+            "subscription_cancel_queue": cancel_pending_subs,
+            # v0.6.5: all active subscriptions for Family panel rail
+            "all_subscriptions": subs_all,
 
             # All active people with balances for admin overview
             "people": [

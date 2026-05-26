@@ -50,6 +50,7 @@ from .const import (
     ROTATION_CADENCES,
     SCOPE_COMMON,
     STORE_SCOPES,
+    SUB_PERIODS,
 )
 from .coordinator import FamilyHubCoordinator
 
@@ -441,6 +442,9 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             period=call.data.get("period", "week"),
             is_group_reward=call.data.get("is_group_reward", False),
             contributors=call.data.get("contributors", []),
+            item_type=call.data.get("item_type", "one_time"),
+            subscription_period=call.data.get("subscription_period", ""),
+            subscription_anchor=call.data.get("subscription_anchor", 1),
         )
         await coordinator.async_refresh()
 
@@ -466,6 +470,10 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
                     vol.Optional("contributed_pts", default=0): vol.All(vol.Coerce(int), vol.Range(min=0)),
                 })],
             ),
+            # v0.6.5: subscription fields
+            vol.Optional("item_type", default="one_time"):    vol.In(["one_time", "subscription"]),
+            vol.Optional("subscription_period", default=""):  vol.Any("", vol.In(SUB_PERIODS)),
+            vol.Optional("subscription_anchor", default=1):   vol.All(vol.Coerce(int), vol.Range(min=0, max=31)),
         }),
     )
 
@@ -504,6 +512,10 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
                     vol.Optional("target_pts", default=0): vol.All(vol.Coerce(int), vol.Range(min=0)),
                 })],
             ),
+            # v0.6.5: subscription fields
+            vol.Optional("item_type"):           vol.In(["one_time", "subscription"]),
+            vol.Optional("subscription_period"): vol.Any("", vol.In(SUB_PERIODS)),
+            vol.Optional("subscription_anchor"): vol.All(vol.Coerce(int), vol.Range(min=0, max=31)),
         }),
     )
 
@@ -669,7 +681,9 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
 
     async def handle_approve_redemption(call: ServiceCall) -> None:
         result = await store.async_approve_redemption(
-            call.data["redemption_id"], call.data["approved_by"]
+            call.data["redemption_id"],
+            call.data["approved_by"],
+            subscription_anchor=call.data.get("subscription_anchor"),
         )
         if result:
             await coordinator.async_refresh()
@@ -677,8 +691,9 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
     hass.services.async_register(
         DOMAIN, "approve_redemption", handle_approve_redemption,
         schema=vol.Schema({
-            vol.Required("redemption_id"): cv.string,
-            vol.Required("approved_by"):   cv.string,
+            vol.Required("redemption_id"):       cv.string,
+            vol.Required("approved_by"):         cv.string,
+            vol.Optional("subscription_anchor"): vol.Coerce(int),
         }),
     )
 
@@ -989,6 +1004,171 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
     hass.services.async_register(
         DOMAIN, "export_backup", handle_export_backup,
         schema=vol.Schema({}),
+    )
+
+    # ------------------------------------------------------------------
+    # Subscriptions (v0.6.5)
+    # ------------------------------------------------------------------
+
+    async def handle_subscribe(call: ServiceCall) -> None:
+        """Kid subscribes to a subscription-type store item."""
+        result = await store.async_subscribe(
+            call.data["person_id"],
+            call.data["item_id"],
+        )
+        if result:
+            await coordinator.async_refresh()
+        else:
+            _LOGGER.warning(
+                "Family Hub: subscribe failed for person=%s item=%s",
+                call.data["person_id"], call.data["item_id"],
+            )
+
+    hass.services.async_register(
+        DOMAIN, "subscribe", handle_subscribe,
+        schema=vol.Schema({
+            vol.Required("person_id"): cv.string,
+            vol.Required("item_id"):   cv.string,
+        }),
+    )
+
+    async def handle_request_cancel_subscription(call: ServiceCall) -> None:
+        """Kid requests cancellation of their subscription."""
+        result = await store.async_request_cancel_subscription(
+            call.data["subscription_id"],
+            call.data["person_id"],
+        )
+        if result:
+            await coordinator.async_refresh()
+        else:
+            _LOGGER.warning(
+                "Family Hub: request_cancel_subscription failed for %s",
+                call.data["subscription_id"],
+            )
+
+    hass.services.async_register(
+        DOMAIN, "request_cancel_subscription", handle_request_cancel_subscription,
+        schema=vol.Schema({
+            vol.Required("subscription_id"): cv.string,
+            vol.Required("person_id"):       cv.string,
+        }),
+    )
+
+    async def handle_approve_cancel_subscription(call: ServiceCall) -> None:
+        """Parent approves a kid's cancellation request."""
+        result = await store.async_approve_cancel_subscription(
+            call.data["subscription_id"],
+            call.data["approved_by"],
+        )
+        if result:
+            await coordinator.async_refresh()
+        else:
+            _LOGGER.warning(
+                "Family Hub: approve_cancel_subscription failed for %s",
+                call.data["subscription_id"],
+            )
+
+    hass.services.async_register(
+        DOMAIN, "approve_cancel_subscription", handle_approve_cancel_subscription,
+        schema=vol.Schema({
+            vol.Required("subscription_id"): cv.string,
+            vol.Required("approved_by"):     cv.string,
+        }),
+    )
+
+    async def handle_decline_cancel_subscription(call: ServiceCall) -> None:
+        """Parent declines a kid's cancellation request — subscription resumes."""
+        result = await store.async_decline_cancel_subscription(
+            call.data["subscription_id"],
+            call.data["declined_by"],
+        )
+        if result:
+            await coordinator.async_refresh()
+        else:
+            _LOGGER.warning(
+                "Family Hub: decline_cancel_subscription failed for %s",
+                call.data["subscription_id"],
+            )
+
+    hass.services.async_register(
+        DOMAIN, "decline_cancel_subscription", handle_decline_cancel_subscription,
+        schema=vol.Schema({
+            vol.Required("subscription_id"): cv.string,
+            vol.Required("declined_by"):     cv.string,
+        }),
+    )
+
+    async def handle_admin_cancel_subscription(call: ServiceCall) -> None:
+        """Parent unilaterally cancels any subscription."""
+        result = await store.async_admin_cancel_subscription(
+            call.data["subscription_id"],
+            call.data["canceled_by"],
+        )
+        if result:
+            await coordinator.async_refresh()
+        else:
+            _LOGGER.warning(
+                "Family Hub: admin_cancel_subscription failed for %s",
+                call.data["subscription_id"],
+            )
+
+    hass.services.async_register(
+        DOMAIN, "admin_cancel_subscription", handle_admin_cancel_subscription,
+        schema=vol.Schema({
+            vol.Required("subscription_id"): cv.string,
+            vol.Required("canceled_by"):     cv.string,
+        }),
+    )
+
+    async def handle_update_subscription(call: ServiceCall) -> None:
+        """Parent edits period, anchor, cost override, or renewal date."""
+        override = call.data.get("dollar_cost_override", store._UNSET)
+        result = await store.async_update_subscription(
+            call.data["subscription_id"],
+            period=call.data.get("period"),
+            anchor=call.data.get("anchor"),
+            dollar_cost_override=override,
+            next_renewal_date=call.data.get("next_renewal_date"),
+        )
+        if result:
+            await coordinator.async_refresh()
+        else:
+            _LOGGER.warning(
+                "Family Hub: update_subscription failed for %s",
+                call.data["subscription_id"],
+            )
+
+    hass.services.async_register(
+        DOMAIN, "update_subscription", handle_update_subscription,
+        schema=vol.Schema({
+            vol.Required("subscription_id"):       cv.string,
+            vol.Optional("period"):                cv.string,
+            vol.Optional("anchor"):                vol.Coerce(int),
+            vol.Optional("dollar_cost_override"):  vol.Any(None, vol.Coerce(float)),
+            vol.Optional("next_renewal_date"):     cv.string,
+        }),
+    )
+
+    async def handle_admin_subscribe_for_person(call: ServiceCall) -> None:
+        """Parent creates a subscription on behalf of a kid (bypasses affordability check)."""
+        result = await store.async_admin_subscribe_for_person(
+            call.data["person_id"],
+            call.data["item_id"],
+        )
+        if result:
+            await coordinator.async_refresh()
+        else:
+            _LOGGER.warning(
+                "Family Hub: admin_subscribe_for_person failed for person=%s item=%s",
+                call.data["person_id"], call.data["item_id"],
+            )
+
+    hass.services.async_register(
+        DOMAIN, "admin_subscribe_for_person", handle_admin_subscribe_for_person,
+        schema=vol.Schema({
+            vol.Required("person_id"): cv.string,
+            vol.Required("item_id"):   cv.string,
+        }),
     )
 
 

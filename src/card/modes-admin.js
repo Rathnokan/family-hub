@@ -22,14 +22,15 @@ import { choreIcon } from "./icons.js";
 export function htmlAdmin(card) {
     const attr        = card._attrs("sensor.family_hub_needs_attention");
     const people      = attr.people           || [];
-    const approvals       = attr.approval_queue       || [];
-    const redemptions     = attr.redemption_queue     || [];
-    const groupProposals  = attr.group_proposal_queue || [];
+    const approvals       = attr.approval_queue            || [];
+    const redemptions     = attr.redemption_queue          || [];
+    const groupProposals  = attr.group_proposal_queue      || [];
+    const cancelSubs      = attr.subscription_cancel_queue || [];
     const chores          = attr.active_chores        || [];
     const catLabels       = attr.category_labels      || [];
     const famName         = attr.family_name          || "Family Hub";
     const storeItems      = attr.store_items          || [];
-    const actionCount     = approvals.length + redemptions.length + groupProposals.length;
+    const actionCount     = approvals.length + redemptions.length + groupProposals.length + cancelSubs.length;
 
     const sections = [
         { id: "today",    label: "Today",    icon: "◐", badge: actionCount },
@@ -44,13 +45,13 @@ export function htmlAdmin(card) {
 
     let body = "";
     switch (sec) {
-        case "today":    body = _htmlAdToday(approvals, redemptions, groupProposals, attr); break;
-        case "family":   body = _htmlAdFamily(people, attr);                          break;
+        case "today":    body = _htmlAdToday(approvals, redemptions, groupProposals, cancelSubs, attr); break;
+        case "family":   body = _htmlAdFamily(people, attr, card);                     break;
         case "tasks":    body = _htmlAdTasks(chores, people, catLabels, card);        break;
         case "rewards":  body = _htmlAdRewards(storeItems, people, catLabels, card);  break;
         case "history":  body = _htmlAdHistory(attr, card);                           break;
         case "settings": body = _htmlAdSettings(attr, people, card);                  break;
-        default:         body = _htmlAdToday(approvals, redemptions, attr);
+        default:         body = _htmlAdToday(approvals, redemptions, groupProposals, [], attr);
     }
 
     const TB = {
@@ -119,7 +120,7 @@ export function htmlAdmin(card) {
 // Today — unified action queue + stat strip + recent activity
 // ---------------------------------------------------------------------------
 
-function _htmlAdToday(approvals, redemptions, groupProposals, attr) {
+function _htmlAdToday(approvals, redemptions, groupProposals, cancelSubs, attr) {
     const people     = attr.people          || [];
     const chores     = attr.active_chores   || [];
     const historyLog = attr.history_log     || [];
@@ -151,6 +152,8 @@ function _htmlAdToday(approvals, redemptions, groupProposals, attr) {
         ...redemptions.map(r => ({ ...r, kind: "redemption"     })),
         ...groupProposals.map(p => ({ ...p, kind: "group-proposal" })),
         ...fundedGroupItems.map(i => ({ ...i, kind: "group-funded" })),
+        // v0.6.5: subscription cancel requests
+        ...cancelSubs.map(s => ({ ...s, kind: "cancel-sub" })),
     ];
     const queueRows = queue.length > 0
         ? queue.map(q => {
@@ -196,16 +199,83 @@ function _htmlAdToday(approvals, redemptions, groupProposals, attr) {
                             data-iname="${escAttr(q.name || "")}">Redeem</button>
                   </div>`;
             }
+            // v0.6.5: subscription cancellation request
+            if (q.kind === "cancel-sub") {
+                const color = q.person_color || DEFAULT_COLOR;
+                const periodLabel = (q.period || "").replace("_", " ");
+                return `
+                  <div class="fh-ad-queue-row">
+                    <div class="fh-avatar" style="background:${color};width:32px;height:32px;font-size:.75rem;flex-shrink:0">${ini(q.person_name || "?")}</div>
+                    <div class="fh-ad-queue-info">
+                      <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+                        <span class="fh-ad-pill" style="background:#9B59B6">CANCEL</span>
+                        <span class="fh-ad-queue-time">${relTime(q.cancellation_requested_at || "")}</span>
+                      </div>
+                      <div class="fh-ad-queue-name">${escHTML(q.item_name || "")}</div>
+                      <div class="fh-ad-queue-meta">${escHTML(q.person_name || "")} · ${escHTML(periodLabel)} subscription</div>
+                    </div>
+                    <button class="fh-btn fh-btn-success fh-btn-sm"
+                            data-act="approve-cancel-subscription"
+                            data-subid="${escAttr(q.subscription_id || q.id || "")}">${I.check}</button>
+                    <button class="fh-btn fh-btn-danger fh-btn-sm"
+                            data-act="decline-cancel-subscription"
+                            data-subid="${escAttr(q.subscription_id || q.id || "")}">${I.close}</button>
+                  </div>`;
+            }
             const color    = q.person_color || DEFAULT_COLOR;
             const isAppr   = q.kind === "approval";
             const name     = isAppr ? (q.chore_name  || "") : (q.item_name || "");
             const pts      = isAppr ? q.chore_points        :  q.points_cost;
-            const actOk    = isAppr ? "approve-task"        : "approve-redemption";
-            const actNo    = isAppr ? "deny-task"           : "decline-redemption";
-            const itemAttr = isAppr ? `data-tid="${q.task_id}"` : `data-rid="${q.redemption_id}"`;
             const pill     = isAppr
                 ? `<span class="fh-ad-pill fh-ad-pill--amber">CHORE</span>`
                 : `<span class="fh-ad-pill fh-ad-pill--rose">REWARD</span>`;
+
+            // v0.6.5: detect if this redemption is for a subscription item
+            const allStoreItemsFlat = attr.store_items || [];
+            const redeemedItem = !isAppr
+                ? allStoreItemsFlat.find(i => i.item_id === q.item_id)
+                : null;
+            const isSubRedemption = !isAppr && redeemedItem?.item_type === "subscription";
+
+            if (isSubRedemption) {
+                const subPeriod = redeemedItem.subscription_period || "monthly";
+                const rid       = escAttr(q.redemption_id);
+                const WDAY_NAMES = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+                const anchorPicker = subPeriod === "daily" ? "" :
+                    subPeriod === "weekly"
+                    ? `<div style="display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap">
+                         <span style="font-size:.78rem;color:var(--fh-text-sec)">Renews on:</span>
+                         <select id="m-sub-wday-${rid}" class="fh-select" style="width:auto">
+                           ${WDAY_NAMES.map((d, i) => `<option value="${i}">${d}</option>`).join("")}
+                         </select>
+                       </div>`
+                    : `<div style="display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap">
+                         <span style="font-size:.78rem;color:var(--fh-text-sec)">Renews day of month:</span>
+                         <input type="number" id="m-sub-dom-${rid}" class="fh-input"
+                                min="1" max="31" value="1" style="width:64px">
+                       </div>`;
+                return `
+                  <div class="fh-ad-queue-row" style="flex-wrap:wrap;row-gap:4px">
+                    <div class="fh-avatar" style="background:${color};width:32px;height:32px;font-size:.75rem;flex-shrink:0">${ini(q.person_name)}</div>
+                    <div class="fh-ad-queue-info" style="flex:1;min-width:0">
+                      <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+                        <span class="fh-ad-pill" style="background:#9B59B6">SUBSCRIBE</span>
+                        <span class="fh-ad-queue-time">${q.when || ""}</span>
+                      </div>
+                      <div class="fh-ad-queue-name">${escHTML(q.item_name || "")}</div>
+                      <div class="fh-ad-queue-meta">${escHTML(q.person_name || "")} · ${escHTML(subPeriod)} · −${fPts(pts)}pts</div>
+                      ${anchorPicker}
+                    </div>
+                    <button class="fh-btn fh-btn-success fh-btn-sm"
+                            data-act="approve-subscription-redemption"
+                            data-rid="${rid}"
+                            data-period="${escAttr(subPeriod)}">${I.check}</button>
+                    <button class="fh-btn fh-btn-danger fh-btn-sm"
+                            data-act="decline-redemption"
+                            data-rid="${rid}">${I.close}</button>
+                  </div>`;
+            }
+
             return `
               <div class="fh-ad-queue-row">
                 <div class="fh-avatar" style="background:${color};width:32px;height:32px;font-size:.75rem;flex-shrink:0">${ini(q.person_name)}</div>
@@ -217,8 +287,8 @@ function _htmlAdToday(approvals, redemptions, groupProposals, attr) {
                   <div class="fh-ad-queue-name">${escHTML(name)}</div>
                   <div class="fh-ad-queue-meta">${escHTML(q.person_name || "")} · ${isAppr ? "+" : "−"}${fPts(pts)}</div>
                 </div>
-                <button class="fh-btn fh-btn-success fh-btn-sm" data-act="${actOk}" ${itemAttr}>${I.check}</button>
-                <button class="fh-btn fh-btn-danger  fh-btn-sm" data-act="${actNo}"  ${itemAttr}>${I.close}</button>
+                <button class="fh-btn fh-btn-success fh-btn-sm" data-act="${isAppr ? "approve-task" : "approve-redemption"}" data-${isAppr ? "tid" : "rid"}="${isAppr ? q.task_id : q.redemption_id}">${I.check}</button>
+                <button class="fh-btn fh-btn-danger  fh-btn-sm" data-act="${isAppr ? "deny-task" : "decline-redemption"}" data-${isAppr ? "tid" : "rid"}="${isAppr ? q.task_id : q.redemption_id}">${I.close}</button>
               </div>`;
         }).join("")
         : `<div class="fh-empty fh-ad-empty">Nothing needs your attention right now. ✓</div>`;
@@ -275,7 +345,7 @@ function _htmlAdToday(approvals, redemptions, groupProposals, attr) {
 // Family — person cards + global controls
 // ---------------------------------------------------------------------------
 
-function _htmlAdFamily(people, attr) {
+function _htmlAdFamily(people, attr, card) {
     const ppdollar    = attr.points_per_dollar      || 10;
     const globalPause = attr.penalties_paused_global || false;
 
@@ -361,33 +431,163 @@ function _htmlAdFamily(people, attr) {
           </div>`;
     }).join("") || `<div class="fh-empty fh-ad-empty">No people found.</div>`;
 
+    // v0.6.5: active subscriptions rail
+    const allSubs      = attr.all_subscriptions || [];
+    const editingSubId = card._editingSubId || null;
+    const subsByPerson = new Map();
+    for (const sub of allSubs) {
+        if (!subsByPerson.has(sub.person_id)) subsByPerson.set(sub.person_id, []);
+        subsByPerson.get(sub.person_id).push(sub);
+    }
+
+    const PERIOD_SHORT = { daily: "Daily", weekly: "Weekly", monthly: "Monthly", quarterly: "Quarterly", biannual: "Biannual", annual: "Annual" };
+    const PERIOD_OPTS  = [
+        { v: "weekly",    l: "Weekly"    },
+        { v: "monthly",   l: "Monthly"   },
+        { v: "quarterly", l: "Quarterly" },
+        { v: "biannual",  l: "Biannual"  },
+        { v: "annual",    l: "Annual"    },
+    ];
+    const STATUS_LABEL = { active: "Active", lapsed: "Lapsed", cancel_pending: "Cancel pending" };
+    const STATUS_COLOR = { active: "var(--fh-success)", lapsed: "var(--fh-overdue)", cancel_pending: "var(--fh-warning)" };
+
+    const subRailRows = allSubs.length === 0
+        ? `<div class="fh-empty fh-ad-empty">No active subscriptions.</div>`
+        : [...subsByPerson.entries()].map(([pid, subs]) => {
+            const pColor = subs[0].person_color || DEFAULT_COLOR;
+            const pName  = subs[0].person_name  || "Unknown";
+            const subRows = subs.map(sub => {
+                const sid         = sub.subscription_id;
+                const isEditing   = sid === editingSubId;
+                const statusColor = STATUS_COLOR[sub.status] || "var(--fh-text-sec)";
+                const statusLabel = STATUS_LABEL[sub.status] || sub.status;
+                const periodShort = PERIOD_SHORT[sub.period] || sub.period;
+                const debtLine    = sub.accumulated_debt > 0
+                    ? `<span style="color:var(--fh-overdue);font-size:.75rem"> · owes ${fPts(sub.accumulated_debt)}pts</span>`
+                    : "";
+                const costDisplay = sub.dollar_cost_override != null
+                    ? `${fUSD(sub.effective_dollar)} (override) · ${fPts(sub.effective_cost)}pts`
+                    : `${fUSD(sub.effective_dollar)} · ${fPts(sub.effective_cost)}pts`;
+
+                if (isEditing) {
+                    const periodSelOpts = PERIOD_OPTS.map(o =>
+                        `<option value="${o.v}"${sub.period === o.v ? " selected" : ""}>${o.l}</option>`
+                    ).join("");
+                    return `
+                      <div style="padding:10px 0;border-bottom:1px solid var(--fh-border)">
+                        <div style="font-size:.88rem;font-weight:600;margin-bottom:8px">${escHTML(sub.item_name)}</div>
+                        <div style="display:grid;grid-template-columns:90px 1fr;gap:5px 10px;align-items:center;margin-bottom:8px">
+                          <label style="font-size:.75rem;color:var(--fh-text-sec)">Period</label>
+                          <select id="sub-edit-period-${escAttr(sid)}" class="fh-input" style="height:28px;font-size:.8rem;padding:0 6px">
+                            ${periodSelOpts}
+                          </select>
+                          <label style="font-size:.75rem;color:var(--fh-text-sec)">Cost override $</label>
+                          <input id="sub-edit-cost-${escAttr(sid)}"
+                                 type="number" min="0" step="0.01"
+                                 value="${sub.dollar_cost_override ?? ""}"
+                                 placeholder="${fUSD(sub.item_dollar_value)}"
+                                 class="fh-input" style="height:28px;font-size:.8rem;padding:0 6px">
+                          <label style="font-size:.75rem;color:var(--fh-text-sec)">Next renewal</label>
+                          <input id="sub-edit-date-${escAttr(sid)}"
+                                 type="date"
+                                 value="${escAttr(sub.next_renewal_date || "")}"
+                                 class="fh-input" style="height:28px;font-size:.8rem;padding:0 6px">
+                        </div>
+                        <div style="font-size:.7rem;color:var(--fh-text-sec);margin-bottom:8px">
+                          Leave cost blank to use item default (${fUSD(sub.item_dollar_value)})
+                        </div>
+                        <div style="display:flex;gap:6px">
+                          <button class="fh-btn fh-btn-success fh-btn-sm"
+                                  data-act="admin-update-subscription"
+                                  data-subid="${escAttr(sid)}"
+                                  title="Save changes">✓ Save</button>
+                          <button class="fh-btn fh-btn-ghost fh-btn-sm"
+                                  data-act="admin-edit-subscription-cancel"
+                                  title="Discard">✗ Cancel</button>
+                        </div>
+                      </div>`;
+                }
+
+                return `
+                  <div class="fh-point-row" style="gap:8px;padding:8px 0;border-bottom:1px solid var(--fh-border)">
+                    <div style="flex:1;min-width:0">
+                      <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+                        <span style="font-size:.88rem;font-weight:600">${escHTML(sub.item_name)}</span>
+                        <span style="font-size:.7rem;font-weight:700;color:${statusColor}">${escHTML(statusLabel)}</span>
+                      </div>
+                      <div style="font-size:.75rem;color:var(--fh-text-sec)">
+                        ${escHTML(periodShort)} · ${costDisplay}${debtLine}
+                      </div>
+                      <div style="font-size:.72rem;color:var(--fh-text-sec);margin-top:1px">
+                        Renews ${escHTML(sub.next_renewal_date || "—")}
+                      </div>
+                    </div>
+                    <button class="fh-btn fh-btn-ghost fh-btn-sm"
+                            data-act="admin-edit-subscription-open"
+                            data-subid="${escAttr(sid)}"
+                            title="Edit period / cost">✎</button>
+                    <button class="fh-btn fh-btn-danger fh-btn-sm"
+                            data-act="admin-cancel-subscription"
+                            data-subid="${escAttr(sid)}"
+                            data-sname="${escAttr(sub.item_name)}"
+                            title="Cancel subscription">✕</button>
+                  </div>`;
+            }).join("");
+            return `
+              <div style="margin-bottom:12px">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                  <div class="fh-avatar" style="background:${pColor};width:26px;height:26px;font-size:.7rem;flex-shrink:0">${ini(pName)}</div>
+                  <span style="font-size:.9rem;font-weight:600">${escHTML(pName)}</span>
+                </div>
+                ${subRows}
+              </div>`;
+        }).join("");
+
     return `
-      <div class="fh-ad-family-grid">${cards}</div>
-      <div class="fh-ad-panel" style="margin-top:4px">
-        <div class="fh-ad-panel-hdr">
-          <span class="fh-ad-panel-title">Global controls</span>
-        </div>
-        <div class="fh-ad-panel-body">
-          <div class="fh-toggle-row" style="border-left:3px solid ${globalPause ? "var(--fh-warning)" : "var(--fh-success)"}">
-            <div>
-              <div style="font-size:.9rem;font-weight:600">Penalties &amp; streaks active</div>
-              <div style="font-size:.75rem;color:var(--fh-text-sec)">
-                ${globalPause
-                    ? "⏸ Paused globally — skips won&#39;t break streaks or deduct points"
-                    : "Applying normally at the daily tick"}
+      <div style="display:flex;gap:16px;align-items:flex-start">
+
+        <div style="flex:1;min-width:0">
+          <div class="fh-ad-family-grid">${cards}</div>
+          <div class="fh-ad-panel" style="margin-top:4px">
+            <div class="fh-ad-panel-hdr">
+              <span class="fh-ad-panel-title">Global controls</span>
+            </div>
+            <div class="fh-ad-panel-body">
+              <div class="fh-toggle-row" style="border-left:3px solid ${globalPause ? "var(--fh-warning)" : "var(--fh-success)"}">
+                <div>
+                  <div style="font-size:.9rem;font-weight:600">Penalties &amp; streaks active</div>
+                  <div style="font-size:.75rem;color:var(--fh-text-sec)">
+                    ${globalPause
+                        ? "⏸ Paused globally — skips won&#39;t break streaks or deduct points"
+                        : "Applying normally at the daily tick"}
+                  </div>
+                </div>
+                <label class="fh-toggle">
+                  <input type="checkbox" data-act="toggle-global-penalty" ${globalPause ? "" : "checked"}>
+                  <span class="fh-toggle-slider"></span>
+                </label>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+                <button class="fh-btn fh-btn-primary fh-btn-sm" data-act="open-add-task">
+                  ${I.plus} Assign one-time task
+                </button>
               </div>
             </div>
-            <label class="fh-toggle">
-              <input type="checkbox" data-act="toggle-global-penalty" ${globalPause ? "" : "checked"}>
-              <span class="fh-toggle-slider"></span>
-            </label>
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
-            <button class="fh-btn fh-btn-primary fh-btn-sm" data-act="open-add-task">
-              ${I.plus} Assign one-time task
-            </button>
           </div>
         </div>
+
+        <div class="fh-ad-tasks-panel" style="flex-shrink:0">
+          <div class="fh-ad-tasks-panel-hdr">
+            <div style="flex:1">
+              <div class="fh-ad-tasks-panel-title">Active Subscriptions</div>
+              <div class="fh-ad-tasks-panel-sub">${allSubs.length} across family</div>
+            </div>
+          </div>
+          <div class="fh-ad-tasks-panel-body" style="overflow-y:auto">
+            ${subRailRows}
+          </div>
+        </div>
+
       </div>`;
 }
 

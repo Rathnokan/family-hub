@@ -12,7 +12,7 @@
  */
 
 import { choreIcon } from "../icons.js";
-import { escHTML, escAttr } from "../utils.js";
+import { escHTML, escAttr, relTime } from "../utils.js";
 
 // v0.6.3: small wrapper that renders the store-item icon only when one is set.
 // Themes call this rather than choreIcon directly so unset items don't get a
@@ -727,6 +727,250 @@ export function htmlChipInBtn(item, personId, balance) {
                 ${canAfford ? "" : "disabled"}>
             🤝 Chip In (${remaining} left)
         </button>`;
+}
+
+/**
+ * Render the "Your Subscriptions" rail above the store tab. (v0.6.5 Phase 4)
+ * Returns "" when there are no non-canceled subscriptions so themes can call
+ * it unconditionally. Shows name, renewal countdown, affordability, and a
+ * cancel button (replaced by a pending-approval chip when cancel_pending).
+ *
+ * @param {object[]} subs      attr.subscriptions — enriched by the sensor
+ * @param {string}   personId  person.person_id (for cancel button data-pid)
+ * @param {number}   balance   current points balance (for ready/unready state)
+ */
+export function htmlSubscriptionRail(subs, personId, balance) {
+    if (!subs || !subs.length) return "";
+
+    const PERIOD_LBL = {
+        weekly: "wk", monthly: "mo", quarterly: "qtr", biannual: "6mo", annual: "yr",
+    };
+
+    const rows = subs.map(sub => {
+        const isLapsed        = sub.status === "lapsed";
+        const isCancelPending = sub.status === "cancel_pending";
+        const periodLabel     = PERIOD_LBL[sub.period] || sub.period;
+
+        let infoHtml;
+        if (isLapsed) {
+            infoHtml = `<span class="fh-sub-status fh-sub-status--lapsed">Lapsed — owe ${sub.accumulated_debt}pts to resume</span>`;
+        } else if (isCancelPending) {
+            infoHtml = `<span class="fh-sub-status fh-sub-status--pending">Cancellation pending approval</span>`;
+        } else {
+            const n = sub.days_until_renewal;
+            const renewLabel = n <= 0 ? "Renews today" : n === 1 ? "Renews tomorrow" : `Renews in ${n}d`;
+            const owed       = sub.points_cost + (sub.accumulated_debt || 0);
+            const canAfford  = balance >= owed;
+            const readiness  = canAfford
+                ? `<span class="fh-sub-ready">✓ Ready</span>`
+                : `<span class="fh-sub-unready">⚠ Need ${owed - balance}pts more</span>`;
+            infoHtml = `<span class="fh-sub-renews">${escHTML(renewLabel)}</span><span class="fh-sub-sep">·</span>${readiness}`;
+        }
+
+        const iconHtml = sub.item_icon
+            ? `<span class="fh-sub-icon">${choreIcon(sub.item_icon, null, "22px")}</span>`
+            : "";
+
+        const cancelBtn = isCancelPending ? "" : `
+            <button class="fh-sub-cancel-btn"
+                    data-act="request-cancel-sub"
+                    data-subid="${escAttr(sub.subscription_id)}"
+                    data-pid="${escAttr(personId)}"
+                    data-name="${escAttr(sub.item_name)}">Cancel</button>`;
+
+        const rowMod = isLapsed ? " fh-sub-row--lapsed" : isCancelPending ? " fh-sub-row--cancel-pending" : "";
+        return `
+            <div class="fh-sub-row${rowMod}">
+                ${iconHtml}
+                <div class="fh-sub-body">
+                    <div class="fh-sub-name">${escHTML(sub.item_name)}</div>
+                    <div class="fh-sub-info">${infoHtml}</div>
+                </div>
+                <div class="fh-sub-price">${sub.points_cost}pts/${periodLabel}</div>
+                ${cancelBtn}
+            </div>`;
+    }).join("");
+
+    return `
+        <div class="fh-sub-rail">
+            <div class="fh-sub-rail-hdr">YOUR SUBSCRIPTIONS</div>
+            ${rows}
+        </div>`;
+}
+
+/**
+ * Compact "SUBSCRIPTIONS" panel for the tasks-tab right rail. (v0.6.5 follow-up)
+ * Shows each active sub with an affordability progress bar and a one-line status.
+ * Returns "" when there are no non-canceled subs so themes can call unconditionally.
+ *
+ * @param {object[]} subs     attr.subscriptions — enriched by the sensor
+ * @param {number}   balance  current points balance
+ * @param {string}   personId person.person_id (for the cancel button)
+ */
+export function htmlRailSubscriptions(subs, balance, personId) {
+    const active = (subs || []).filter(s => s.status !== "canceled");
+    if (!active.length) return "";
+
+    const PERIOD_LBL = { weekly:"wk", monthly:"mo", quarterly:"qtr", biannual:"6mo", annual:"yr" };
+
+    const rows = active.map(sub => {
+        const isLapsed  = sub.status === "lapsed";
+        const isPending = sub.status === "cancel_pending";
+        const periodLbl = PERIOD_LBL[sub.period] || sub.period;
+        const totalCost = sub.points_cost + (sub.accumulated_debt || 0);
+        const pct       = Math.min(100, Math.round((balance / Math.max(totalCost, 1)) * 100));
+        const barColor  = isLapsed ? "#E85A5A" : isPending ? "#E0B84C" : "currentColor";
+
+        let statusLine;
+        if (isLapsed) {
+            statusLine = `Lapsed · owes ${sub.accumulated_debt}pts`;
+        } else if (isPending) {
+            statusLine = "Cancellation pending approval";
+        } else {
+            const n        = sub.days_until_renewal;
+            const renewStr = n <= 0 ? "Renews today" : n === 1 ? "Renews tomorrow" : `Renews in ${n}d`;
+            const owed     = sub.points_cost + (sub.accumulated_debt || 0);
+            const ready    = balance >= owed;
+            statusLine = ready
+                ? `✓ Ready · ${renewStr}`
+                : `⚠ Need ${owed - balance}pts · ${renewStr}`;
+        }
+
+        const iconHtml = sub.item_icon
+            ? `<span class="fh-sub-mini-icon">${choreIcon(sub.item_icon, null, "18px")}</span>` : "";
+
+        const cancelBtn = isPending ? "" : `
+            <button class="fh-sub-cancel-btn"
+                    data-act="request-cancel-sub"
+                    data-subid="${escAttr(sub.subscription_id)}"
+                    data-pid="${escAttr(personId)}"
+                    data-name="${escAttr(sub.item_name)}">Cancel</button>`;
+
+        return `
+            <div class="fh-sub-mini-row">
+                <div class="fh-sub-mini-head">
+                    ${iconHtml}
+                    <span class="fh-sub-mini-name">${escHTML(sub.item_name)}</span>
+                    <span class="fh-sub-mini-price">${sub.points_cost}/${periodLbl}</span>
+                </div>
+                <div class="fh-sub-mini-bar-wrap">
+                    <div class="fh-sub-mini-bar" style="width:${pct}%;background:${barColor}"></div>
+                </div>
+                <div class="fh-sub-mini-status">${escHTML(statusLine)}</div>
+                ${cancelBtn}
+            </div>`;
+    }).join("");
+
+    return rows;
+}
+
+/**
+ * Content for the 480px right rail on the store/rewards tab. (v0.6.5 follow-up)
+ * Section 1: active subscriptions with affordability bars + status.
+ * Section 2: last 10 purchases (redemption_approved + subscription_renewed).
+ * Returns "" when both sections are empty.
+ *
+ * @param {object[]} subs       attr.subscriptions
+ * @param {number}   balance    current points balance
+ * @param {object[]} historyLog naAttr.history_log
+ * @param {string}   personId   person.person_id
+ */
+export function htmlStoreRailContent(subs, balance, historyLog, personId) {
+    const PERIOD_LBL     = { weekly:"wk", monthly:"mo", quarterly:"qtr", biannual:"6mo", annual:"yr" };
+    // points_awarded covers one-time purchases (async_deduct_points stores note='Redeemed "name"')
+    // subscription_started covers new subs; subscription_renewed covers renewals.
+    // redemption_approved is intentionally excluded — it holds approver UUIDs, not item names.
+    const PURCHASE_TYPES = new Set(["points_awarded", "subscription_started", "subscription_renewed"]);
+    const TYPE_LBL       = { points_awarded:"Purchased", subscription_started:"Subscribed", subscription_renewed:"Sub renewal" };
+
+    const active = (subs || []).filter(s => s.status !== "canceled");
+
+    let subSection = "";
+    if (active.length) {
+        const rows = active.map(sub => {
+            const isLapsed  = sub.status === "lapsed";
+            const isPending = sub.status === "cancel_pending";
+            const periodLbl = PERIOD_LBL[sub.period] || sub.period;
+            const totalCost = sub.points_cost + (sub.accumulated_debt || 0);
+            const pct       = Math.min(100, Math.round((balance / Math.max(totalCost, 1)) * 100));
+            const barColor  = isLapsed ? "#E85A5A" : isPending ? "#E0B84C" : "currentColor";
+
+            let statusLine;
+            if (isLapsed) {
+                statusLine = `Lapsed · owes ${sub.accumulated_debt}pts`;
+            } else if (isPending) {
+                statusLine = "Cancellation pending approval";
+            } else {
+                const n        = sub.days_until_renewal;
+                const renewStr = n <= 0 ? "Renews today" : n === 1 ? "Renews tomorrow" : `Renews in ${n}d`;
+                const ready    = balance >= sub.points_cost;
+                statusLine = ready
+                    ? `✓ Ready · ${renewStr}`
+                    : `⚠ Need ${sub.points_cost - balance}pts · ${renewStr}`;
+            }
+
+            const iconHtml = sub.item_icon
+                ? `<span class="fh-sub-mini-icon">${choreIcon(sub.item_icon, null, "18px")}</span>` : "";
+
+            const cancelBtn = isPending ? "" : `
+                <button class="fh-sub-cancel-btn"
+                        data-act="request-cancel-sub"
+                        data-subid="${escAttr(sub.subscription_id)}"
+                        data-pid="${escAttr(personId)}"
+                        data-name="${escAttr(sub.item_name)}">Cancel</button>`;
+
+            return `
+                <div class="fh-store-sub-row">
+                    <div class="fh-sub-mini-head">
+                        ${iconHtml}
+                        <span class="fh-sub-mini-name">${escHTML(sub.item_name)}</span>
+                        <span class="fh-sub-mini-price">${sub.points_cost}/${periodLbl}</span>
+                    </div>
+                    <div class="fh-sub-mini-bar-wrap">
+                        <div class="fh-sub-mini-bar" style="width:${pct}%;background:${barColor}"></div>
+                    </div>
+                    <div class="fh-sub-mini-status">${escHTML(statusLine)}</div>
+                    ${cancelBtn}
+                </div>`;
+        }).join("");
+        subSection = `<div class="fh-store-rail-section"><div class="fh-store-rail-hdr">YOUR SUBSCRIPTIONS</div>${rows}</div>`;
+    }
+
+    const purchases = (historyLog || [])
+        .filter(e => {
+            if (e.person_id !== personId || !PURCHASE_TYPES.has(e.type)) return false;
+            // For points_awarded only include redemption-related entries
+            // (async_deduct_points writes note='Redeemed "Item Name"' for purchases)
+            if (e.type === "points_awarded") return /^Redeemed "/.test(e.note || "");
+            return true;
+        })
+        .slice(0, 10);
+
+    let purchSection = "";
+    if (purchases.length) {
+        const rows = purchases.map(e => {
+            const typeLbl = TYPE_LBL[e.type] || e.type;
+            const when    = e.timestamp ? relTime(e.timestamp) : "";
+            // points_awarded note format: 'Redeemed "Item Name"' — extract inner text.
+            // subscription_started / subscription_renewed store item name directly in note.
+            const name = e.type === "points_awarded"
+                ? ((e.note || "").replace(/^Redeemed "(.+)"$/, "$1") || "—")
+                : (e.chore_name || e.note || "—");
+            const delta   = e.points_delta ? `−${Math.abs(e.points_delta)}pts` : "";
+            return `
+                <div class="fh-store-purchase-row">
+                    <div class="fh-store-purchase-name">${escHTML(name)}</div>
+                    <div class="fh-store-purchase-meta">
+                        <span class="fh-store-purchase-type">${escHTML(typeLbl)}</span>
+                        ${delta ? `<span class="fh-store-purchase-pts">${delta}</span>` : ""}
+                        <span class="fh-store-purchase-when">${escHTML(when)}</span>
+                    </div>
+                </div>`;
+        }).join("");
+        purchSection = `<div class="fh-store-rail-section"><div class="fh-store-rail-hdr">RECENT PURCHASES</div>${rows}</div>`;
+    }
+
+    return subSection + purchSection;
 }
 
 /**

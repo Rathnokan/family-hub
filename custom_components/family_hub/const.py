@@ -1,7 +1,7 @@
 """Constants for Family Hub integration."""
 
 DOMAIN = "family_hub"
-VERSION = "0.6.4"
+VERSION = "0.6.5"
 
 # Config entry keys
 CONF_FAMILY_NAME = "family_name"
@@ -142,6 +142,39 @@ PROPOSAL_APPROVED       = "approved"                 # Live — item is now a gr
 PROPOSAL_DECLINED       = "declined"                 # Rejected by a kid or parent
 
 # ---------------------------------------------------------------------------
+# Store item types (v0.6.5)
+# ---------------------------------------------------------------------------
+ITEM_TYPE_ONE_TIME     = "one_time"      # Redeem once (existing behavior)
+ITEM_TYPE_SUBSCRIPTION = "subscription"  # Recurring deduction on a period/anchor schedule
+ITEM_TYPES = [ITEM_TYPE_ONE_TIME, ITEM_TYPE_SUBSCRIPTION]
+
+# ---------------------------------------------------------------------------
+# Subscription periods (v0.6.5)
+# ---------------------------------------------------------------------------
+SUB_PERIOD_DAILY     = "daily"
+SUB_PERIOD_WEEKLY    = "weekly"
+SUB_PERIOD_MONTHLY   = "monthly"
+SUB_PERIOD_QUARTERLY = "quarterly"
+SUB_PERIOD_BIANNUAL  = "biannual"
+SUB_PERIOD_ANNUAL    = "annual"
+SUB_PERIODS = [
+    SUB_PERIOD_DAILY,
+    SUB_PERIOD_WEEKLY,
+    SUB_PERIOD_MONTHLY,
+    SUB_PERIOD_QUARTERLY,
+    SUB_PERIOD_BIANNUAL,
+    SUB_PERIOD_ANNUAL,
+]
+
+# ---------------------------------------------------------------------------
+# Subscription statuses (v0.6.5)
+# ---------------------------------------------------------------------------
+SUB_STATUS_ACTIVE         = "active"           # Renewing normally
+SUB_STATUS_LAPSED         = "lapsed"           # Missed renewal(s); debt accumulating
+SUB_STATUS_CANCEL_PENDING = "cancel_pending"   # Kid requested cancel; awaiting parent
+SUB_STATUS_CANCELED       = "canceled"         # Stopped — no further processing
+
+# ---------------------------------------------------------------------------
 # History event types
 # ---------------------------------------------------------------------------
 HISTORY_TASK_COMPLETED        = "task_completed"
@@ -162,6 +195,14 @@ HISTORY_COMPLETION_STREAK_MILESTONE = "completion_streak_milestone"  # v0.6.1 su
 HISTORY_GROUP_CHIP_IN               = "group_chip_in"   # v0.6.3 item 13 — points chipped in
 HISTORY_GROUP_REDEEMED              = "group_redeemed"  # v0.6.3 item 13 — group reward redeemed
 HISTORY_GROUP_PROPOSED              = "group_proposed"  # v0.6.3 item 13 — kid proposed sharing
+# v0.6.5: subscription events
+HISTORY_SUBSCRIPTION_STARTED          = "subscription_started"
+HISTORY_SUBSCRIPTION_RENEWED          = "subscription_renewed"
+HISTORY_SUBSCRIPTION_LAPSED           = "subscription_lapsed"
+HISTORY_SUBSCRIPTION_CANCELED         = "subscription_canceled"
+HISTORY_SUBSCRIPTION_CANCEL_REQUESTED = "subscription_cancel_requested"
+HISTORY_SUBSCRIPTION_CANCEL_DECLINED  = "subscription_cancel_declined"
+HISTORY_SUBSCRIPTION_UPDATED          = "subscription_updated"
 
 # Rolling retention window — history entries older than this are trimmed on each
 # daily tick to keep the data file from growing unbounded.
@@ -215,6 +256,13 @@ SERVICE_MARK_TASK_COMPLETE  = "mark_task_complete"  # Retroactively mark skipped
 SERVICE_FORCE_DAILY_TICK    = "force_daily_tick"    # Trigger tick immediately (admin/debug)
 SERVICE_REBUILD_DATA        = "rebuild_data"         # Heavy-lift data cleanup on demand
 SERVICE_SET_STREAK          = "set_streak"           # Admin override of a person's streak count
+# v0.6.5: subscription services
+SERVICE_SUBSCRIBE                   = "subscribe"
+SERVICE_REQUEST_CANCEL_SUBSCRIPTION = "request_cancel_subscription"
+SERVICE_APPROVE_CANCEL_SUBSCRIPTION = "approve_cancel_subscription"
+SERVICE_DECLINE_CANCEL_SUBSCRIPTION = "decline_cancel_subscription"
+SERVICE_ADMIN_CANCEL_SUBSCRIPTION   = "admin_cancel_subscription"
+SERVICE_ADMIN_SUBSCRIBE_FOR_PERSON  = "admin_subscribe_for_person"
 
 # Coordinator update interval (seconds)
 UPDATE_INTERVAL = 30

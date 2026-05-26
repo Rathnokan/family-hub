@@ -18,9 +18,13 @@
 
 ---
 
-## Active Scope — v0.6.4 (Bug Fixes — Shipped Locally)
+## Active Scope — v0.6.6 (Codebase Cleanup)
 
-All five phases complete; awaiting user "go" to push + tag.
+See "Then: v0.6.6" section below for full phase breakdown.
+
+---
+
+## Shipped — v0.6.4 (Bug Fixes)
 
 | Phase | Scope | Status |
 |---|---|---|
@@ -35,7 +39,7 @@ Per-bug fix detail is in [BUGS.md](BUGS.md) "Recently fixed". The original execu
 
 ---
 
-## Next: v0.6.5 — Subscription Rewards
+## Shipped — v0.6.5 (Subscription Rewards)
 
 ### Concept
 Store items can be marked `item_type = "subscription"`. When a kid subscribes, the system creates an active subscription with a recurring renewal date. The daily tick deducts the period cost on the renewal date. Cancellation requires parent approval to prevent siblings interfering with each other's subs.
@@ -114,11 +118,11 @@ For each subscription where `status in ("active", "lapsed")` and `today >= next_
 - Parent admin view of all active subs across the family (separate panel)
 
 ### Phasing (recommended split)
-- **Phase 1 — Backend:** data model, services, daily-tick processing, migration. Reload to test.
-- **Phase 2 — Admin UI:** store-item modal additions (type toggle, period, anchor) + cancellation-approval queue + admin sub-management panel.
-- **Phase 3 — Kid UI:** rail "Your Subscriptions" block + store row subscribe button + cancel modal + lapsed-state styling.
-- **Phase 4 — Theme parity:** apply rail block to all six themes via `_shared.js` helper.
-- **Phase 5 — Version bump + release.**
+- **Phase 1 — Backend:** data model, services, daily-tick processing, migration. Reload to test. ✓
+- **Phase 2 — Admin UI:** store-item modal additions (type toggle, period, anchor) + cancellation-approval queue + admin sub-management panel. ✓
+- **Phase 3 — Family rail edit:** inline edit (period, dollar cost override, next renewal date) + cancel in admin Family tab subscriptions rail. ✓ — also fixed Phase 2 approve_redemption bug (schema + missing async_subscribe call).
+- **Phase 4 — Kid UI:** rail "Your Subscriptions" block + store row subscribe button + cancel modal + lapsed-state styling. ✓ — `htmlSubscriptionRail` helper in `_shared.js`; all 6 themes wired; `subscribe` and `request-cancel-sub` dispatch handlers added.
+- **Phase 5 — Version bump + release.** ✓ Tagged v0.6.5, pushed to GitHub.
 
 ---
 

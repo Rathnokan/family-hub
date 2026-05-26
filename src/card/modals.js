@@ -612,17 +612,20 @@ export function mChoreForm(chore, isEdit, people, catLabels, activeTab = "detail
  * Uses the same m-* IDs as the modals (never simultaneously in the DOM).
  */
 export function storeItemFormFields(item, isEdit, people, catLabels) {
-    const name          = item?.name           || "";
-    const desc          = item?.description    || "";
-    const dollar        = item?.dollar_value   ?? "";
-    const scope         = item?.scope          || "common";
-    const personIds     = item?.person_ids     || [];
-    const icon          = item?.icon           || "";
-    const catLabel      = item?.category_label || "";
-    const maxPeriod     = item?.max_per_period ?? 0;
-    const period        = item?.period         || "week";
-    const active        = item?.active         !== false;
-    const isGroupReward = !!item?.is_group_reward;
+    const name           = item?.name             || "";
+    const desc           = item?.description      || "";
+    const dollar         = item?.dollar_value     ?? "";
+    const scope          = item?.scope            || "common";
+    const personIds      = item?.person_ids       || [];
+    const icon           = item?.icon             || "";
+    const catLabel       = item?.category_label   || "";
+    const maxPeriod      = item?.max_per_period   ?? 0;
+    const period         = item?.period           || "week";
+    const active         = item?.active           !== false;
+    const isGroupReward  = !!item?.is_group_reward;
+    // v0.6.5 subscription fields
+    const isSubscription = item?.item_type           === "subscription";
+    const subPeriod      = item?.subscription_period || "monthly";
 
     const catOptions = catLabels.map(l =>
         `<option value="${escAttr(l)}" ${catLabel === l ? "selected" : ""}>${escHTML(l)}</option>`
@@ -673,6 +676,14 @@ export function storeItemFormFields(item, isEdit, people, catLabels) {
             `const el=sec.querySelector('#m-sgroup-total');` +
             `if(el){el.textContent='Total: '+tot+'%';` +
             `el.style.color=tot===100?'var(--fh-success)':tot>100?'var(--fh-overdue)':'var(--fh-text-sec)';}` +
+        `})(this)`;
+
+    // v0.6.5: show/hide the subscription section based on the type toggle
+    const subTypeToggle =
+        `((cb)=>{` +
+            `const r=cb.getRootNode();` +
+            `const s=r.getElementById('m-ssub-section');` +
+            `if(s)s.style.display=cb.checked?'':'none';` +
         `})(this)`;
 
     const contribRows = kids.map(k => {
@@ -742,6 +753,31 @@ export function storeItemFormFields(item, isEdit, people, catLabels) {
         ${kids.length
             ? contribRows + `<div id="m-sgroup-total" style="font-size:.8rem;color:${totalColor}">Total: ${initialTotal}%</div>`
             : `<span style="font-size:.82rem;color:var(--fh-text-sec)">No kids found — add people first.</span>`}
+      </div>
+
+      <!-- v0.6.5: subscription type toggle + period (anchor set at subscription-approval time) -->
+      <div class="fh-field" style="border-top:1px solid var(--fh-border);padding-top:10px;margin-top:4px">
+        <label class="fh-label" style="display:flex;align-items:center;gap:10px;cursor:pointer">
+          <label class="fh-toggle">
+            <input type="checkbox" id="m-ssubtype" ${isSubscription ? "checked" : ""} oninput="${subTypeToggle}">
+            <span class="fh-toggle-slider"></span>
+          </label>
+          Subscription — recurring deduction
+        </label>
+      </div>
+      <div id="m-ssub-section" ${isSubscription ? "" : `style="display:none"`}>
+        <div class="fh-field">
+          <label class="fh-label">Subscription period</label>
+          <select class="fh-select" id="m-ssperiod">
+            <option value="daily"     ${subPeriod === "daily"     ? "selected" : ""}>Daily</option>
+            <option value="weekly"    ${subPeriod === "weekly"    ? "selected" : ""}>Weekly</option>
+            <option value="monthly"   ${subPeriod === "monthly"   ? "selected" : ""}>Monthly</option>
+            <option value="quarterly" ${subPeriod === "quarterly" ? "selected" : ""}>Quarterly</option>
+            <option value="biannual"  ${subPeriod === "biannual"  ? "selected" : ""}>Bi-annual</option>
+            <option value="annual"    ${subPeriod === "annual"    ? "selected" : ""}>Annual</option>
+          </select>
+          <div class="fh-field-help">The renewal anchor day is set by the parent when approving a child's subscription request.</div>
+        </div>
       </div>
 
       <div class="fh-row">

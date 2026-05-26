@@ -309,6 +309,14 @@ export function dispatch(act, el, card) {
             card._svc("request_redemption", { person_id: el.dataset.pid, item_id: el.dataset.iid });
             break;
 
+        // Subscriptions go through data-act="redeem" → approve-subscription-redemption (not "subscribe").
+
+        // ---- Subscription: kid request cancel (v0.6.5) --------------------
+        case "request-cancel-sub":
+            if (!confirm(`Cancel "${el.dataset.name || "this subscription"}"?\nThis requires parent approval before it takes effect.`)) break;
+            card._svc("request_cancel_subscription", { subscription_id: el.dataset.subid, person_id: el.dataset.pid });
+            break;
+
         // ---- Group reward: chip-in (v0.6.3 item 13) -----------------------
         case "open-chip-in": {
             const iid       = el.dataset.iid;
@@ -926,6 +934,87 @@ export function dispatch(act, el, card) {
             sr.querySelectorAll(".fh-icon-cell.selected").forEach(c => c.classList.remove("selected"));
             break;
         }
+
+        // ---- v0.6.5: subscription redemption approval (with anchor picker) ----
+        case "approve-subscription-redemption": {
+            const rid    = el.dataset.rid;
+            const period = el.dataset.period || "monthly";
+            const parent = card._people().find(p => p.type === "parent");
+            const svcData = { redemption_id: rid, approved_by: parent?.person_id || "" };
+            if (period === "weekly") {
+                svcData.subscription_anchor = parseInt(sr.getElementById(`m-sub-wday-${rid}`)?.value ?? "0");
+            } else if (period !== "daily") {
+                svcData.subscription_anchor = Math.max(1, Math.min(31,
+                    parseInt(sr.getElementById(`m-sub-dom-${rid}`)?.value ?? "1")
+                ));
+            }
+            card._svc("approve_redemption", svcData);
+            break;
+        }
+
+        // ---- v0.6.5: admin cancel a subscription unilaterally ---------------
+        case "admin-cancel-subscription": {
+            const sname = el.dataset.sname || "this subscription";
+            if (!confirm(`Cancel "${sname}"?\n\nThis will immediately end the subscription.`)) break;
+            const parent = card._people().find(p => p.type === "parent");
+            card._svc("admin_cancel_subscription", {
+                subscription_id: el.dataset.subid,
+                canceled_by:     parent?.person_id || "",
+            });
+            break;
+        }
+
+        // ---- v0.6.5: inline edit — open / cancel ----
+        case "admin-edit-subscription-open":
+            card._editingSubId = el.dataset.subid;
+            card._dirty = true;
+            card._doRender();
+            break;
+        case "admin-edit-subscription-cancel":
+            card._editingSubId = null;
+            card._dirty = true;
+            card._doRender();
+            break;
+
+        // ---- v0.6.5: inline edit — save ----
+        case "admin-update-subscription": {
+            const sid      = el.dataset.subid;
+            const root     = el.closest(".fh-point-row");
+            const period   = root?.querySelector(`#sub-edit-period-${CSS.escape(sid)}`)?.value || null;
+            const costRaw  = root?.querySelector(`#sub-edit-cost-${CSS.escape(sid)}`)?.value?.trim();
+            const dateRaw  = root?.querySelector(`#sub-edit-date-${CSS.escape(sid)}`)?.value?.trim();
+            const svcData  = { subscription_id: sid };
+            if (period) svcData.period = period;
+            // Non-empty string → set dollar override; empty string → send null only
+            // if there was already an override (to clear it); otherwise omit entirely.
+            if (costRaw !== undefined && costRaw !== "") {
+                const parsed = parseFloat(costRaw);
+                if (!isNaN(parsed) && parsed >= 0) svcData.dollar_cost_override = parsed;
+            }
+            // Date: only send if non-empty (YYYY-MM-DD)
+            if (dateRaw) svcData.next_renewal_date = dateRaw;
+            card._editingSubId = null;
+            card._svc("update_subscription", svcData);
+            break;
+        }
+
+        // ---- v0.6.5: subscription cancel-request approvals -------------------
+        case "approve-cancel-subscription": {
+            const parent = card._people().find(p => p.type === "parent");
+            card._svc("approve_cancel_subscription", {
+                subscription_id: el.dataset.subid,
+                approved_by:     parent?.person_id || "",
+            });
+            break;
+        }
+        case "decline-cancel-subscription": {
+            const parent = card._people().find(p => p.type === "parent");
+            card._svc("decline_cancel_subscription", {
+                subscription_id: el.dataset.subid,
+                declined_by:     parent?.person_id || "",
+            });
+            break;
+        }
     }
 }
 
@@ -1085,6 +1174,14 @@ function _buildStoreItemPayload(v, sr, isEdit, wasGroupReward) {
             data.person_ids = [];
         }
     }
+
+    // v0.6.5: subscription type + period (anchor is set at approval time, not here)
+    const isSub = sr.querySelector("#m-ssubtype")?.checked || false;
+    data.item_type = isSub ? "subscription" : "one_time";
+    if (isSub) {
+        data.subscription_period = v("m-ssperiod") || "monthly";
+    }
+
     return data;
 }
 

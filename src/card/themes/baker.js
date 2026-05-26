@@ -19,7 +19,8 @@ import { getEffectiveRank, getWeeklyPts, htmlRankBar, htmlSuccessStreak,
          htmlGoalBanner, htmlRailGoal, htmlGoalToggleBtn,
          storeItemIcon, htmlStoreItemLimit,
          htmlStreakFreezeChip, htmlDailyProgress,
-         htmlGroupContributorBars, htmlChipInBtn, htmlGroupProposalBanner } from "./_shared.js";
+         htmlGroupContributorBars, htmlChipInBtn, htmlGroupProposalBanner,
+         htmlSubscriptionRail, htmlRailSubscriptions, htmlStoreRailContent } from "./_shared.js";
 
 // ---- Palette ----------------------------------------------------------------
 
@@ -159,6 +160,7 @@ function _railPanels({ attr, naAttr, person, balance, weekly, openCount,
         ${htmlRailGoal(attr)}
         ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, person, attr)}
         ${_railPanelStreaks(attr, naAttr, person)}
+        ${_railPanelSubs(attr, balance, person.person_id)}
         ${_railPanelRecent(person, naAttr)}`;
 }
 
@@ -168,6 +170,11 @@ function _railPanel(label, contentHTML) {
             <div class="fh-bk-rpanel-hdr">~ ${label} ~</div>
             <div class="fh-bk-rpanel-body">${contentHTML}</div>
         </div>`;
+}
+
+function _railPanelSubs(attr, balance, personId) {
+    const rows = htmlRailSubscriptions(attr.subscriptions, balance, personId);
+    return rows ? _railPanel("SUBSCRIPTIONS", rows) : "";
 }
 
 function _railPanelKPIs(balance, weekly, openCount, dollarValue) {
@@ -310,16 +317,22 @@ function _menu(attr, person, balance, card) {
     const personPending = (naAttr.redemption_queue || []).filter(r => r.person_id === person.person_id);
     const pendingByItemId = new Set(personPending.map(r => r.item_id).filter(Boolean));
     const pendingByName   = new Set(personPending.filter(r => !r.item_id).map(r => r.item_name));
+    const activeSubs      = new Set((attr.subscriptions || []).map(s => s.item_id));
 
     return `
+        <div class="fh-store-with-rail">
+        <div class="fh-store-main">
         ${htmlGroupProposalBanner(attr.group_proposals, person.person_id)}
         ${htmlGoalBanner(attr)}
         <div class="fh-bk-menu">
             ${items.map(item => {
-                const isGroup   = !!item.is_group_reward;
-                const can       = balance >= item.points_cost;
-                const requested = pendingByItemId.has(item.item_id) || pendingByName.has(item.name);
-                const blocked   = !!item.next_available;
+                const isGroup        = !!item.is_group_reward;
+                const isSubscription = item.item_type === "subscription";
+                const isSubscribed   = isSubscription && activeSubs.has(item.item_id);
+                const can            = balance >= item.points_cost;
+                const requested      = pendingByItemId.has(item.item_id) || pendingByName.has(item.name);
+                const blocked        = !!item.next_available;
+                const pLbl           = { weekly:"wk", monthly:"mo", quarterly:"qtr", biannual:"6mo", annual:"yr" }[item.subscription_period] || "mo";
                 return `
                 <div class="fh-bk-menu-item">
                     ${storeItemIcon(item)}
@@ -333,6 +346,18 @@ function _menu(attr, person, balance, card) {
                     ${htmlGoalToggleBtn(item, attr, person.person_id)}
                     ${isGroup
                         ? htmlChipInBtn(item, person.person_id, balance)
+                        : isSubscription
+                        ? isSubscribed
+                            ? `<span class="fh-bk-badge" style="color:${BK.terra}">Subscribed ✓</span>`
+                            : requested
+                            ? `<span class="fh-bk-badge" style="color:${BK.terra}">Requested ✓</span>`
+                            : `<button class="fh-bk-go-btn ${can ? "" : "disabled"}"
+                                       data-act="redeem"
+                                       data-iid="${escAttr(item.item_id)}"
+                                       data-pid="${escAttr(person.person_id)}"
+                                       ${!can ? 'disabled style="opacity:.4;cursor:not-allowed"' : ""}>
+                                   ${can ? `Subscribe · ${item.points_cost}pts/${pLbl}` : "Need more"}
+                               </button>`
                         : requested
                         ? `<span class="fh-bk-badge" style="color:${BK.terra}">Requested ✓</span>`
                         : blocked
@@ -344,6 +369,11 @@ function _menu(attr, person, balance, card) {
                            </button>`}
                 </div>`;
             }).join("")}
+        </div>
+        </div>
+        <div class="fh-store-rail-panel">
+            ${htmlStoreRailContent(attr.subscriptions, balance, naAttr.history_log, person.person_id)}
+        </div>
         </div>`;
 }
 

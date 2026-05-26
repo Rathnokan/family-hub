@@ -3178,6 +3178,7 @@ export const CSS = `
   @media (min-width: 1280px) {
     .fh-ad-tasks-panel {
       display: flex; flex-direction: column;
+      width: 480px; flex-shrink: 0;
       background: #1A2538;
       border: 1px solid #2A3852;
       border-radius: 12px;
@@ -3775,6 +3776,181 @@ export const CSS = `
   }
   .fh-group-proposal-accept:hover { filter:brightness(1.08); }
   .fh-group-proposal-decline:hover { filter:brightness(.9); }
+
+  /* -------------------------------------------------------------------------
+     Subscription rail — kid "Your Subscriptions" above the store tab (v0.6.5)
+     ------------------------------------------------------------------------- */
+
+  .fh-sub-rail {
+    display:flex; flex-direction:column; gap:6px; margin-bottom:14px;
+  }
+  .fh-sub-rail-hdr {
+    font-family:var(--fh-font-mono); font-size:var(--fh-text-xs);
+    letter-spacing:.1em; text-transform:uppercase; opacity:.65;
+    padding:0 2px; margin-bottom:2px;
+  }
+  .fh-sub-row {
+    display:flex; align-items:center; gap:8px;
+    padding:8px 10px; border-radius:8px;
+    background:var(--fh-surface);
+    border-left:3px solid currentColor;
+  }
+  .fh-sub-row--lapsed {
+    border-left-color:#CC2200;
+    background:color-mix(in srgb, #CC2200 6%, var(--fh-surface));
+  }
+  .fh-sub-row--cancel-pending {
+    border-left-color:#E0B84C;
+    opacity:.8;
+  }
+  .fh-sub-icon { flex-shrink:0; display:flex; align-items:center; }
+  .fh-sub-body { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+  .fh-sub-name { font-size:.88rem; font-weight:700; }
+  .fh-sub-info {
+    display:flex; align-items:center; gap:4px; flex-wrap:wrap;
+    font-size:.75rem;
+  }
+  .fh-sub-renews  { color:var(--fh-text-sec); }
+  .fh-sub-sep     { color:var(--fh-text-sec); opacity:.5; }
+  .fh-sub-ready   { color:var(--fh-success,#30d158); font-weight:600; }
+  .fh-sub-unready { color:var(--fh-overdue,#CC2200); font-weight:600; }
+  .fh-sub-status  { font-size:.75rem; font-weight:600; }
+  .fh-sub-status--lapsed  { color:var(--fh-overdue,#CC2200); }
+  .fh-sub-status--pending { color:#E0B84C; }
+  .fh-sub-price {
+    flex-shrink:0; font-size:.75rem; font-family:var(--fh-font-mono);
+    color:var(--fh-text-sec); white-space:nowrap;
+  }
+  .fh-sub-cancel-btn {
+    flex-shrink:0; padding:4px 8px;
+    border:1px solid var(--fh-text-sec); border-radius:5px;
+    background:transparent; color:var(--fh-text-sec);
+    font-size:.72rem; cursor:pointer;
+  }
+  .fh-sub-cancel-btn:hover { background:color-mix(in srgb, currentColor 10%, transparent); }
+
+  /* Subscribed badge on store rows */
+  .fh-badge-subscribed {
+    display:inline-block; padding:4px 10px; border-radius:5px;
+    background:color-mix(in srgb, var(--fh-success,#30d158) 15%, transparent);
+    color:var(--fh-success,#30d158); font-size:.75rem; font-weight:700;
+    white-space:nowrap;
+  }
+
+  /* ---- Subscription mini rows (shared across tasks rail + store rail) ---- */
+  .fh-sub-mini-row { margin-bottom:10px; }
+  .fh-sub-mini-row:last-child { margin-bottom:0; }
+  .fh-sub-mini-head {
+    display:flex; align-items:center; gap:6px; margin-bottom:4px;
+  }
+  .fh-sub-mini-icon { line-height:1; flex-shrink:0; }
+  .fh-sub-mini-name {
+    flex:1; font-size:.8rem; font-weight:600;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .fh-sub-mini-price { font-size:.7rem; opacity:.7; white-space:nowrap; flex-shrink:0; }
+  .fh-sub-mini-bar-wrap {
+    height:4px; border-radius:2px;
+    background:rgba(255,255,255,.12); overflow:hidden; margin-bottom:3px;
+  }
+  .fh-sub-mini-bar { height:100%; border-radius:2px; transition:width .3s; }
+  .fh-sub-mini-status { font-size:.7rem; opacity:.7; }
+  /* Light-themed panels need a dark progress track */
+  .fh-hp-rpanel .fh-sub-mini-bar-wrap,
+  .fh-dn-rpanel .fh-sub-mini-bar-wrap,
+  .fh-bk-rpanel .fh-sub-mini-bar-wrap,
+  .fh-dbz-rpanel .fh-sub-mini-bar-wrap { background:rgba(0,0,0,.12); }
+
+  /* ---- Store tab two-column layout (main + 480px rail) ---- */
+  .fh-store-with-rail { display:block; }
+  .fh-store-main { width:100%; }
+  .fh-store-rail-panel { display:none; width:480px; flex-shrink:0; flex-direction:column; gap:8px; }
+  @container fh (min-width: 960px) {
+    .fh-store-with-rail { display:flex; gap:16px; align-items:flex-start; }
+    .fh-store-rail-panel { display:flex; }
+  }
+  .fh-store-rail-section {
+    background:rgba(255,255,255,.06); border-radius:8px; padding:12px;
+  }
+  .fh-store-rail-hdr {
+    font-size:.65rem; font-weight:700; letter-spacing:.08em;
+    opacity:.55; margin-bottom:10px;
+  }
+  .fh-store-sub-row { margin-bottom:10px; }
+  .fh-store-sub-row:last-child { margin-bottom:0; }
+  .fh-store-purchase-row {
+    display:flex; flex-direction:column; gap:2px;
+    padding:6px 0; border-bottom:1px solid rgba(255,255,255,.08);
+  }
+  .fh-store-purchase-row:last-child { border-bottom:none; }
+  .fh-store-purchase-name { font-size:.82rem; font-weight:600; }
+  .fh-store-purchase-meta {
+    display:flex; gap:8px; font-size:.7rem; opacity:.65; align-items:center;
+  }
+  .fh-store-purchase-when { margin-left:auto; }
+
+  /* ---- Per-theme store rail section colors ---- */
+  .fh-classic-page .fh-store-rail-section {
+    background:var(--fh-surface); border:1px solid var(--fh-border); border-radius:8px;
+  }
+  .fh-classic-page .fh-store-rail-hdr {
+    font-family:var(--fh-font-mono); color:var(--fh-text-sec); opacity:1;
+    border-bottom:1px solid var(--fh-border); padding-bottom:4px;
+  }
+  .fh-classic-page .fh-store-purchase-row { border-bottom-color:var(--fh-border); }
+
+  .fh-eng-page .fh-store-rail-section {
+    background:#0B2D48; border:1px solid rgba(60,122,165,.4); border-radius:0;
+  }
+  .fh-eng-page .fh-store-rail-hdr {
+    font-family:var(--fh-font-mono); color:#E0B84C; opacity:1; letter-spacing:.18em;
+  }
+  .fh-eng-page .fh-store-purchase-row { border-bottom-color:rgba(60,122,165,.25); }
+
+  .fh-hp-page .fh-store-rail-section {
+    background:#FAF0D7; border:1px solid rgba(36,25,20,.3); border-radius:4px; color:#241914;
+    box-shadow:inset 0 0 0 3px rgba(36,25,20,.04);
+  }
+  .fh-hp-page .fh-store-rail-hdr {
+    font-family:"Cinzel","Georgia",serif; color:#1F4F3C; opacity:1; font-size:.9rem; letter-spacing:.1em;
+    border-bottom:1px solid rgba(36,25,20,.2); padding-bottom:4px;
+  }
+  .fh-hp-page .fh-sub-mini-bar-wrap { background:rgba(0,0,0,.12); }
+  .fh-hp-page .fh-store-purchase-row { border-bottom-color:rgba(36,25,20,.15); }
+
+  .fh-dn-page .fh-store-rail-section {
+    background:#F0E5C8; border:1px solid rgba(43,31,14,.25); color:#2B1F0E;
+    box-shadow:1px 1px 0 rgba(43,31,14,.08);
+  }
+  .fh-dn-page .fh-store-rail-hdr {
+    font-family:"JetBrains Mono",monospace; color:#8C281E; opacity:1;
+    letter-spacing:.18em; font-size:.7rem;
+    border-bottom:1px dashed rgba(43,31,14,.25); padding-bottom:4px;
+  }
+  .fh-dn-page .fh-sub-mini-bar-wrap { background:rgba(0,0,0,.12); }
+  .fh-dn-page .fh-store-purchase-row { border-bottom-color:rgba(43,31,14,.15); }
+
+  .fh-bk-page .fh-store-rail-section {
+    background:#FBF3E2; border:1px solid rgba(58,31,18,.2); color:#3A1F12;
+  }
+  .fh-bk-page .fh-store-rail-hdr {
+    font-family:"DM Serif Display","Georgia",serif; color:#8B3A2A; opacity:1; font-size:.9rem;
+    text-align:center; border-bottom:1px dashed rgba(58,31,18,.25); padding-bottom:4px;
+  }
+  .fh-bk-page .fh-sub-mini-bar-wrap { background:rgba(0,0,0,.12); }
+  .fh-bk-page .fh-store-purchase-row { border-bottom-color:rgba(58,31,18,.15); }
+
+  .fh-dbz-page .fh-store-rail-section {
+    background:#FFFFFF; border:3px solid #0F1E2E; border-radius:8px;
+    box-shadow:0 4px 0 #0F1E2E; color:#0F1E2E;
+  }
+  .fh-dbz-page .fh-store-rail-hdr {
+    font-family:"Bangers","Impact",sans-serif; color:#0F1E2E; opacity:1;
+    letter-spacing:.08em; font-size:.9rem;
+    border-bottom:2px solid #0F1E2E; padding-bottom:4px;
+  }
+  .fh-dbz-page .fh-sub-mini-bar-wrap { background:rgba(0,0,0,.15); }
+  .fh-dbz-page .fh-store-purchase-row { border-bottom-color:rgba(15,30,46,.2); }
 
   /* Group reward info block — compact single-line layout */
   .fh-group-reward-info { margin-top:4px; }
