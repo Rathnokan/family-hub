@@ -37,6 +37,7 @@ import voluptuous as vol
 
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import entity_registry as er
 
 from .const import (
     CHORE_TYPES,
@@ -270,6 +271,46 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
 
     hass.services.async_register(
         DOMAIN, "remove_person", handle_remove_person,
+        schema=vol.Schema({vol.Required("person_id"): cv.string}),
+    )
+
+    async def handle_reactivate_person(call: ServiceCall) -> None:
+        person_id = call.data["person_id"]
+        success = await store.async_reactivate_person(person_id)
+        if success:
+            await coordinator.async_refresh()
+            # Re-create the person's sensor (no-op if it still exists).
+            add_sensor = _get_entry_data().get("add_person_sensor")
+            if add_sensor:
+                add_sensor(person_id)
+        else:
+            _LOGGER.warning("Family Hub: reactivate_person — person not found: %s", person_id)
+
+    hass.services.async_register(
+        DOMAIN, "reactivate_person", handle_reactivate_person,
+        schema=vol.Schema({vol.Required("person_id"): cv.string}),
+    )
+
+    async def handle_hard_delete_person(call: ServiceCall) -> None:
+        person_id = call.data["person_id"]
+        success = await store.async_hard_delete_person(person_id)
+        if success:
+            await coordinator.async_refresh()
+            # Remove the now-orphaned sensor entity from the registry immediately.
+            registry = er.async_get(hass)
+            entity_id = registry.async_get_entity_id(
+                "sensor", DOMAIN, f"{DOMAIN}_person_{person_id}"
+            )
+            if entity_id:
+                registry.async_remove(entity_id)
+            _get_entry_data().get("person_entities", {}).pop(person_id, None)
+        else:
+            _LOGGER.warning(
+                "Family Hub: hard_delete_person — not found or still active: %s", person_id
+            )
+
+    hass.services.async_register(
+        DOMAIN, "hard_delete_person", handle_hard_delete_person,
         schema=vol.Schema({vol.Required("person_id"): cv.string}),
     )
 

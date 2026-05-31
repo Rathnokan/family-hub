@@ -1057,6 +1057,26 @@ export function mConfirmRemovePerson(d) {
       </div>`;
 }
 
+export function mConfirmHardDeletePerson(d) {
+    return `
+      <div class="fh-modal">
+        <div class="fh-modal-title">Permanently delete ${escHTML(d.pname)}?</div>
+        <p style="font-size:.88rem;color:var(--fh-text-sec);margin:0;line-height:1.5">
+          This permanently removes <strong>${escHTML(d.pname)}</strong> and purges ALL of their data —
+          task instances, redemptions, subscriptions, group contributions, and activity-log entries.
+          <strong style="color:var(--fh-overdue)">This cannot be undone.</strong>
+          To keep them recoverable (e.g. away at camp), use Reactivate instead.
+        </p>
+        <input type="hidden" id="m-hdpid" value="${d.pid}">
+        <div class="fh-modal-footer">
+          <button class="fh-btn fh-btn-ghost" data-act="close-modal">Cancel</button>
+          <button class="fh-btn fh-btn-danger" data-act="ok-hard-delete-person">
+            Delete permanently
+          </button>
+        </div>
+      </div>`;
+}
+
 // ---------------------------------------------------------------------------
 // Edit streaks (admin correction modal — per-row Set buttons, no mWrap)
 // ---------------------------------------------------------------------------

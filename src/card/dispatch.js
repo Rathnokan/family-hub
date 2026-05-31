@@ -622,6 +622,13 @@ export function dispatch(act, el, card) {
             card._modal = { type: "confirm-remove-person", data: { pid: el.dataset.pid, pname: el.dataset.pname } };
             card._doRender(true);
             break;
+        case "reactivate-person":
+            card._svc("reactivate_person", { person_id: el.dataset.pid });
+            break;
+        case "open-confirm-hard-delete-person":
+            card._modal = { type: "confirm-hard-delete-person", data: { pid: el.dataset.pid, pname: el.dataset.pname } };
+            card._doRender(true);
+            break;
         case "open-edit-settings":
             card._modal = { type: "edit-settings", data: {
                 fname:          el.dataset.fname,
@@ -830,6 +837,14 @@ export function dispatch(act, el, card) {
             const pid = v("m-rpid");
             if (!pid) break;
             card._svc("remove_person", { person_id: pid });
+            card._closeModal();
+            break;
+        }
+
+        case "ok-hard-delete-person": {
+            const pid = v("m-hdpid");
+            if (!pid) break;
+            card._svc("hard_delete_person", { person_id: pid });
             card._closeModal();
             break;
         }

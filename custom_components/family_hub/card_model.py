@@ -334,6 +334,22 @@ def build_needs_attention_payload(store) -> dict:
             for p in store.people if p.get("active", True)
         ],
 
+        # Inactive (deactivated) people — for the admin "Inactive members"
+        # management UI (reactivate / permanently delete).
+        "inactive_people": [
+            {
+                "person_id":       p["id"],
+                "name":            p["name"],
+                "type":            p.get("type", "kid"),
+                "avatar_color":    p.get("avatar_color", "#7F77DD"),
+                "points_balance":  p.get("points_balance", 0),
+                "points_lifetime": p.get("points_lifetime", 0),
+                "code":            p.get("code", ""),
+                "theme_key":       p.get("theme_key", "classic"),
+            }
+            for p in store.people if not p.get("active", True)
+        ],
+
         # Chores for the admin Tasks tab
         "active_chores": store.get_active_chores_for_card(),
         "all_chores":    store.get_all_chores_for_card(),

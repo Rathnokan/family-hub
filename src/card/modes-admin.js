@@ -624,6 +624,38 @@ function _htmlAdFamily(people, attr, card) {
               </div>`;
         }).join("");
 
+    // Inactive (deactivated) members — reactivate or permanently delete.
+    const inactivePeople = attr.inactive_people || [];
+    const inactivePanel  = inactivePeople.length === 0 ? "" : `
+      <div class="fh-ad-panel" style="margin-top:4px">
+        <div class="fh-ad-panel-hdr">
+          <span class="fh-ad-panel-title">Inactive members</span>
+          <span class="fh-ad-panel-sub">${inactivePeople.length} deactivated</span>
+        </div>
+        <div class="fh-ad-panel-body">
+          <div style="font-size:var(--fh-text-sm);color:var(--fh-text-sec);margin-bottom:10px">
+            Deactivated people are hidden from dashboards but kept so their history stays intact
+            (e.g. a kid away at camp). Reactivate to bring them back, or permanently delete to purge
+            them and all their data.
+          </div>
+          ${inactivePeople.map(p => `
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--fh-border)">
+              <div class="fh-avatar" style="background:${p.avatar_color || DEFAULT_COLOR};width:30px;height:30px;font-size:.85rem;flex-shrink:0">${ini(p.name)}</div>
+              <div style="flex:1;min-width:0">
+                <span style="font-weight:600;font-size:var(--fh-text-base)">${escHTML(p.name)}</span>
+                <span style="font-size:var(--fh-text-xs);color:var(--fh-text-sec)"> · ${cap(p.type)} · lifetime ${fPts(p.points_lifetime)}</span>
+              </div>
+              <button class="fh-btn fh-btn-success fh-btn-sm" data-act="reactivate-person"
+                      data-pid="${p.person_id}" data-pname="${escAttr(p.name)}"
+                      title="Reactivate ${escAttr(p.name)}">↺ Reactivate</button>
+              <button class="fh-btn fh-btn-danger fh-btn-sm" data-act="open-confirm-hard-delete-person"
+                      data-pid="${p.person_id}" data-pname="${escAttr(p.name)}"
+                      title="Permanently delete ${escAttr(p.name)}">${I.trash}</button>
+            </div>
+          `).join("")}
+        </div>
+      </div>`;
+
     return `
       <div style="display:flex;gap:16px;align-items:flex-start">
 
@@ -655,6 +687,7 @@ function _htmlAdFamily(people, attr, card) {
               </div>
             </div>
           </div>
+          ${inactivePanel}
         </div>
 
         <div class="fh-ad-tasks-panel" style="flex-shrink:0">

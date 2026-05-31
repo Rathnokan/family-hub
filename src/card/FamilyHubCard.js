@@ -30,6 +30,7 @@ import {
     mClaim,
     mAddReminder,
     mConfirmRemovePerson,
+    mConfirmHardDeletePerson,
     mEditStreaks,
     mChipIn,
 } from "./modals.js";
@@ -636,6 +637,7 @@ export class FamilyHubCard extends HTMLElement {
             case "claim":               return mClaim(this._modal, people);
             case "add-reminder":        return mAddReminder(this._modal, people);
             case "confirm-remove-person": return mConfirmRemovePerson(data);
+            case "confirm-hard-delete-person": return mConfirmHardDeletePerson(data);
             case "edit-streaks": {
                 const p       = this._people().find(pp => pp.person_id === data.pid);
                 const streaks = p?.streaks || {};

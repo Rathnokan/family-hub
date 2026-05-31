@@ -1703,6 +1703,53 @@ class FamilyHubDataStore:
         await self.async_save()
         return True
 
+    async def async_reactivate_person(self, person_id: str) -> bool:
+        """Reactivate a previously-deactivated person (e.g. back from camp). Their
+        next daily tick regenerates task instances for any chores they're assigned
+        to; the sensor is re-created by the service handler."""
+        person = self.get_person(person_id)
+        if not person:
+            return False
+        person["active"] = True
+        await self.async_save()
+        return True
+
+    async def async_hard_delete_person(self, person_id: str) -> bool:
+        """Permanently remove an INACTIVE person and purge ALL their data: task
+        instances, redemptions, subscriptions, history entries, and any group-reward
+        contributions. Active people cannot be hard-deleted — deactivate first.
+        Irreversible; for cleanup of people who have truly left."""
+        person = self.get_person(person_id)
+        if not person:
+            return False
+        if person.get("active", True):
+            _LOGGER.warning(
+                "Family Hub: refusing to hard-delete ACTIVE person %s — deactivate first",
+                person_id,
+            )
+            return False
+
+        d = self._data
+        d["people"] = [p for p in d.get("people", []) if p.get("id") != person_id]
+        d["task_instances"] = [
+            t for t in d.get("task_instances", [])
+            if t.get("assigned_to") != person_id and t.get("completed_by") != person_id
+        ]
+        d["redemptions"]  = [r for r in d.get("redemptions", [])  if r.get("person_id") != person_id]
+        d["subscriptions"] = [s for s in d.get("subscriptions", []) if s.get("person_id") != person_id]
+        d["history"]      = [h for h in d.get("history", [])      if h.get("person_id") != person_id]
+        # Drop any group-reward contributions by this person.
+        for item in d.get("store_items", []):
+            if item.get("contributors"):
+                item["contributors"] = [c for c in item["contributors"] if c.get("person_id") != person_id]
+        for prop in d.get("group_reward_proposals", []):
+            if prop.get("contributors"):
+                prop["contributors"] = [c for c in prop["contributors"] if c.get("person_id") != person_id]
+
+        await self.async_save()
+        _LOGGER.info("Family Hub: hard-deleted person %s and purged their data", person_id)
+        return True
+
     async def async_award_points(
         self, person_id: str, points: int, reference_id: str, note: str = ""
     ) -> dict | None:
