@@ -1,0 +1,272 @@
+# Family Hub — service descriptions for Dev Tools → Actions.
+# Most services are driven by the dashboard card; the ones with input fields
+# below are the ones you might reasonably call by hand.
+
+# ---------------------------------------------------------------------------
+# Tasks
+# ---------------------------------------------------------------------------
+complete_task:
+  name: Complete task
+  description: Mark a task instance complete (kid self-report or parent on their behalf).
+  fields:
+    task_id:
+      name: Task ID
+      description: The task instance ID.
+      required: true
+      selector:
+        text:
+    person_id:
+      name: Person ID
+      description: The person completing it (optional).
+      selector:
+        text:
+claim_task:
+  name: Claim task
+  description: Claim a task from the claimable/bonus pool.
+approve_task:
+  name: Approve task
+  description: Parent approval of a completed task; awards its points.
+deny_task:
+  name: Deny task
+  description: Parent denial of a completed task; returns it to pending.
+excuse_task:
+  name: Excuse task
+  description: Excuse a skipped task and reverse its penalty (sick day, etc.).
+reject_task:
+  name: Reject task
+  description: Claw back points on an approved or self-reported task.
+mark_task_complete:
+  name: Mark task complete
+  description: Retroactively mark a skipped instance as done and award points.
+
+# ---------------------------------------------------------------------------
+# People
+# ---------------------------------------------------------------------------
+add_person:
+  name: Add person
+  description: Add a family member.
+  fields:
+    name:
+      name: Name
+      required: true
+      selector:
+        text:
+    person_type:
+      name: Type
+      description: parent or kid.
+      selector:
+        select:
+          options: ["parent", "kid"]
+    avatar_color:
+      name: Avatar color
+      selector:
+        text:
+update_person:
+  name: Update person
+  description: Update a person's settings (name, theme, allowance, rank, active flag, etc.).
+  fields:
+    person_id:
+      name: Person ID
+      required: true
+      selector:
+        text:
+remove_person:
+  name: Deactivate person
+  description: Soft-remove (deactivate) a person. Hidden from dashboards; history preserved. Reversible via Reactivate.
+  fields:
+    person_id:
+      name: Person ID
+      required: true
+      selector:
+        text:
+reactivate_person:
+  name: Reactivate person
+  description: Bring a deactivated person back (e.g. home from camp). Recreates their sensor.
+  fields:
+    person_id:
+      name: Person ID
+      required: true
+      selector:
+        text:
+hard_delete_person:
+  name: Permanently delete person
+  description: >-
+    Permanently remove an INACTIVE person and purge all their data (task instances,
+    redemptions, subscriptions, history, group contributions). Irreversible. Active
+    people are refused — deactivate first.
+  fields:
+    person_id:
+      name: Person ID
+      required: true
+      selector:
+        text:
+
+# ---------------------------------------------------------------------------
+# Chores
+# ---------------------------------------------------------------------------
+add_chore:
+  name: Add chore
+  description: Create a chore definition.
+update_chore:
+  name: Update chore
+  description: Update a chore definition (incl. the active toggle).
+delete_chore:
+  name: Delete chore
+  description: Permanently delete a chore and purge all of its task instances.
+
+# ---------------------------------------------------------------------------
+# Store / rewards
+# ---------------------------------------------------------------------------
+add_store_item:
+  name: Add store item
+  description: Add a reward to the store.
+update_store_item:
+  name: Update store item
+  description: Update a store item (incl. the active toggle).
+delete_store_item:
+  name: Deactivate store item
+  description: Soft-deactivate a store item (kept for historical redemptions).
+hard_delete_store_item:
+  name: Permanently delete store item
+  description: Permanently remove a store item, cancel pending redemptions, and refund group chip-ins.
+
+# ---------------------------------------------------------------------------
+# Group rewards
+# ---------------------------------------------------------------------------
+propose_group_reward:
+  name: Propose group reward
+  description: Kid-initiated proposal to share a reward.
+respond_group_proposal:
+  name: Respond to group proposal
+  description: A kid accepts or declines a group-reward proposal.
+approve_group_proposal:
+  name: Approve group proposal
+  description: Parent approval of a group-reward proposal.
+decline_group_proposal:
+  name: Decline group proposal
+  description: Parent declines a group-reward proposal.
+chip_in_group_reward:
+  name: Chip in to group reward
+  description: A kid contributes points toward a group reward.
+redeem_group_reward:
+  name: Redeem group reward
+  description: Redeem a fully-funded group reward.
+
+# ---------------------------------------------------------------------------
+# Redemptions
+# ---------------------------------------------------------------------------
+request_redemption:
+  name: Request redemption
+  description: Kid requests to spend points on a reward.
+approve_redemption:
+  name: Approve redemption
+  description: Parent approves a redemption and deducts the points.
+decline_redemption:
+  name: Decline redemption
+  description: Parent declines a pending redemption.
+
+# ---------------------------------------------------------------------------
+# Points
+# ---------------------------------------------------------------------------
+award_bonus_points:
+  name: Award bonus points
+  description: Manually award points to a person.
+  fields:
+    person_id:
+      name: Person ID
+      required: true
+      selector:
+        text:
+    points:
+      name: Points
+      required: true
+      selector:
+        number:
+          min: 1
+          mode: box
+deduct_points:
+  name: Deduct points
+  description: Manually deduct points from a person.
+  fields:
+    person_id:
+      name: Person ID
+      required: true
+      selector:
+        text:
+    points:
+      name: Points
+      required: true
+      selector:
+        number:
+          min: 1
+          mode: box
+
+# ---------------------------------------------------------------------------
+# Settings / admin
+# ---------------------------------------------------------------------------
+update_settings:
+  name: Update settings
+  description: Update global settings (family name, points-per-dollar, penalty pause, ranks, etc.).
+force_daily_tick:
+  name: Force daily tick
+  description: Run the daily tick immediately (generate instances, process penalties/allowances, advance rotations). For testing/admin.
+rebuild_data:
+  name: Rebuild data
+  description: Rebuild derived task data from chore definitions. Maintenance/recovery tool.
+set_streak:
+  name: Set chore streak
+  description: Admin-override a per-chore streak count for a person.
+set_completion_streak:
+  name: Set success-rate streak
+  description: Admin-override a person's daily success-rate streak count.
+set_rank:
+  name: Set rank
+  description: Admin-set a person's rank index.
+  fields:
+    person_id:
+      name: Person ID
+      required: true
+      selector:
+        text:
+    rank_index:
+      name: Rank index
+      required: true
+      selector:
+        number:
+          min: 0
+          mode: box
+export_backup:
+  name: Export backup
+  description: Write a full JSON backup of all Family Hub data to a path.
+  fields:
+    export_path:
+      name: Export path
+      description: Absolute file path to write the backup to.
+      required: true
+      selector:
+        text:
+
+# ---------------------------------------------------------------------------
+# Subscriptions
+# ---------------------------------------------------------------------------
+subscribe:
+  name: Subscribe
+  description: Kid subscribes to a recurring-reward store item.
+request_cancel_subscription:
+  name: Request cancel subscription
+  description: Kid requests to cancel a subscription (needs parent approval).
+approve_cancel_subscription:
+  name: Approve cancel subscription
+  description: Parent approves a subscription cancellation.
+decline_cancel_subscription:
+  name: Decline cancel subscription
+  description: Parent declines a subscription cancellation request.
+admin_cancel_subscription:
+  name: Cancel subscription (admin)
+  description: Parent cancels a subscription unilaterally.
+update_subscription:
+  name: Update subscription
+  description: Edit a subscription (period, dollar-cost override, next renewal date).
+admin_subscribe_for_person:
+  name: Subscribe for person (admin)
+  description: Parent starts a subscription on a kid's behalf.

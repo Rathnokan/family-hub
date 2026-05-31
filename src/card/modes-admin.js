@@ -465,7 +465,8 @@ function _htmlAdFamily(people, attr, card) {
                   }
                 </div>
               </div>
-              <div class="fh-ad-person-btns">
+            </div>
+            <div class="fh-ad-person-btns">
                 <button class="fh-btn fh-btn-success fh-btn-sm" data-act="open-award"
                         data-pid="${p.person_id}" data-pname="${escAttr(p.name)}"
                         title="Award points">${I.award}</button>
@@ -495,7 +496,6 @@ function _htmlAdFamily(people, attr, card) {
                 <button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="open-confirm-remove-person"
                         data-pid="${p.person_id}" data-pname="${escAttr(p.name)}"
                         title="Remove person">${I.remove}</button>
-              </div>
             </div>
             ${isKid ? `
               <div class="fh-ad-person-foot">

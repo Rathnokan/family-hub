@@ -3110,10 +3110,12 @@ var O=(e,t)=>()=>(e&&(t=e(e=0)),t);var Ra=(e,t)=>()=>(t||e((t={exports:{}}).expo
     border-radius: 10px; overflow: hidden;
   }
   .fh-ad-person-top {
-    display: flex; align-items: flex-start; gap: 12px;
-    padding: 14px 14px;
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 14px 6px;
   }
-  .fh-ad-person-btns { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+  /* v0.7.0 P4: own row beneath name/balance so the name always gets full width
+     (the old inline layout squeezed names to "Ji" at narrow admin column widths). */
+  .fh-ad-person-btns { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; padding: 2px 14px 12px; }
   .fh-ad-person-name {
     font-family: 'Bricolage Grotesque', sans-serif;
     font-weight: 800; font-size: var(--fh-text-base); color: #ECEFF6;
@@ -6901,7 +6903,8 @@ FUNDS`}
                   ${I(p.points_balance)}pts \xB7 ${j(p.points_balance/s)} \xB7 lifetime ${I(p.points_lifetime)}${p.allowance_points>0?` \xB7 ${p.allowance_points}pts/${p.allowance_schedule==="monthly"?"mo":p.allowance_schedule==="biweekly"?"2wk":"wk"} allowance`:""}
                 </div>
               </div>
-              <div class="fh-ad-person-btns">
+            </div>
+            <div class="fh-ad-person-btns">
                 <button class="fh-btn fh-btn-success fh-btn-sm" data-act="open-award"
                         data-pid="${p.person_id}" data-pname="${$(p.name)}"
                         title="Award points">${L.award}</button>
@@ -6931,7 +6934,6 @@ FUNDS`}
                 <button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="open-confirm-remove-person"
                         data-pid="${p.person_id}" data-pname="${$(p.name)}"
                         title="Remove person">${L.remove}</button>
-              </div>
             </div>
             ${w?`
               <div class="fh-ad-person-foot">
