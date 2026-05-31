@@ -381,6 +381,15 @@ export function choreFormFields(chore, isEdit, people, catLabels, activeTab = "d
             </select>
           </div>
         </div>
+        ${isEdit ? `
+        <div class="fh-field">
+          <label class="fh-label">Active</label>
+          <label class="fh-toggle" style="margin-top:10px">
+            <input type="checkbox" id="m-cactive" ${c.active !== false ? "checked" : ""}>
+            <span class="fh-toggle-slider"></span>
+          </label>
+          <div class="fh-field-help">Uncheck to pause this chore — no new tasks will be generated.</div>
+        </div>` : ""}
         <div class="fh-field">
           <label class="fh-label">Assign to</label>
           <div class="fh-checkbox-row" style="margin-bottom:4px">

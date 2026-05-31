@@ -52,14 +52,16 @@ The handoff prompt is part of "Phase Complete" — do not declare a phase done w
 
 ---
 
-## Current Status — 2026-05-25
+## Current Status — 2026-05-30
 
 | Item | State |
 |---|---|
-| **Live on HA (Samba)** | v0.6.5 shipped and live-tested. |
-| **GitHub / HACS** | v0.6.5 tagged + pushed. |
-| **manifest.json / hacs.json / constants.js VERSION** | 0.6.5 |
-| **Phase** | v0.6.5 complete. Next: v0.6.6 Codebase Cleanup. See [ROADMAP.md](ROADMAP.md). |
+| **Live on HA (Samba)** | v0.7.0 **P0+P1+P2 deployed to Samba and live-tested.** NOT committed to git, NOT version-bumped (still 0.6.5 in manifest/constants). |
+| **GitHub / HACS** | Last tag = v0.6.5. v0.7.0 work is Samba-only so far — commit when the whole release is stable. |
+| **manifest.json / hacs.json / constants.js VERSION** | 0.6.5 (bump to 0.7.0 only when shipping the release) |
+| **Phase** | **v0.7.0 "Re-foundation" in progress. P0/P1/P2 DONE + live-tested. Next: P3 (storage migration), then P4 (code/theme splits).** See [ROADMAP.md](ROADMAP.md) → "v0.7.0 — Re-foundation". |
+
+> ⚠️ **Uncommitted v0.7.0 work lives in the local repo + Samba.** Before P3, run `git status` / `git diff` to see everything P0–P2 changed. Consider committing the green P0–P2 state first (with the user's go) so P3 starts from a clean tree.
 
 ---
 
@@ -67,27 +69,35 @@ The handoff prompt is part of "Phase Complete" — do not declare a phase done w
 
 > **Read this section before starting work.** Then run the Session Start Checklist above and pick up wherever the prior session left off.
 
-### Where things stand
+### Where things stand (v0.7.0 — P0/P1/P2 shipped to Samba, 2026-05-30)
 
-- **v0.6.5 is tagged and pushed to GitHub.** All subscription-rewards work is live.
-- **v0.6.5 feature summary:**
-  - Backend: `item_type` field, subscriptions data model, daily-tick renewal/lapse logic, 6 new services (`subscribe`, `request_cancel_subscription`, `approve_cancel_subscription`, `decline_cancel_subscription`, `admin_cancel_subscription`, `admin_subscribe_for_person`).
-  - Admin UI: store-item modal type toggle + period/anchor picker; cancellation approval queue; family-tab subscriptions rail with inline edit.
-  - Kid UI: `htmlSubscriptionRail` in `_shared.js` — all 6 themes wired; subscribe/cancel dispatch handlers.
-  - UI polish: tasks-tab sub-progress panel, store-tab 480px right rail, Recent Purchases names fix, cancel button restored, subscribe button routes through `redeem`.
-- **Next: v0.6.6 Codebase Cleanup** — `data_store.py` split, `css.js` split, `modals.js` split, `modes-admin.js` split, sensor unrecorded-attributes. No user-visible changes.
+**Done + live-tested (Samba only, not committed/version-bumped):**
+- **P0 — free wins:** esbuild `--minify` on `build:body` (607→~491 KB); `_unrecorded_attributes` on all sensors (recorder bloat + ">16 KB" warning gone); removed placeholder `FamilyHubTodaySensor`; coordinator isolates `async_check_notifications` failures from `UpdateFailed`.
+- **P1 — scheduled tick (no more 30 s poll):** `coordinator.update_interval=None`. `__init__` registers via `async_track_time_change`: a midnight rollover (`coordinator.async_daily_rollover` → `async_request_refresh`) and a per-minute notification heartbeat (`coordinator.async_notification_heartbeat` → `store.async_check_notifications`). Services still drive instant `async_refresh()`.
+- **P2 — sensor + data-bus redesign (the big one):**
+  - `card_model.py` (NEW) = single source: `build_*_scalars` (lean sensor payloads) + `build_*_payload` (full sections) + `build_card_model(store)` (keyed by entity_id).
+  - `websocket.py` (NEW) = `family_hub/get_model` command, registered in `async_setup`. `manifest.json` gained `websocket_api` dep.
+  - `store.data_rev` counter (bumped in `async_save`), exposed on `needs_attention`.
+  - Card (`FamilyHubCard.js`): `_attrs(id)` reads `this._model` first (fallback to live attrs); `_maybeRender` dirty-checks `needs_attention.data_rev`; `_fetchModel` pulls the websocket model. `FH_SENSORS` import removed (now unused). `_doRender` shows "Loading…" until the model arrives. Direct attr reads in `dispatch.js` (×2) + `print-chore-list.js` repointed through `_attrs`. Removed 3 debug `console.log`s in `dispatch.js`.
+  - **Sensors are now lean scalars** — verified live: `needs_attention` = `data_rev` + counts + slim roster + `rooms_config` + `family_name`.
+  - **GOTCHA fixed (see DECISIONS_LOG "Card dirty-check keys off `data_rev`"):** track the SENSOR's data_rev in `_lastDataRev`, never the model's — the heartbeat bumps the store counter without refreshing the sensor, so the model's value runs ahead and caused re-render-on-every-state-change (dropdowns self-closing).
 
-### First moves for the next session
+**Not done:** P3 (storage migration) and P4 (code/theme splits).
 
-1. Run the **Session Start Checklist** above.
-2. Run `git status` — should be clean (v0.6.5 fully committed).
-3. Pick up at **v0.6.6 Phase 1** — `data_store.py` split. See [ROADMAP.md](ROADMAP.md).
+### First moves for the next session — START P3
+
+1. Run the Session Start Checklist. **`git status`/`git diff` to review the uncommitted P0–P2 work** (offer to commit the green state first, with the user's go).
+2. Read [ROADMAP.md](ROADMAP.md) → "v0.7.0 — Re-foundation" **Phase 3 + the Migration section**, and the locked decisions there (module-oriented stores; assets → `/local`; reserve meals/maintenance seams; reward store NOT migrated). Skim DECISIONS_LOG storage entries.
+3. **P3 safety constraints (critical — user has NO local Python, so you CANNOT dry-run; the only test is live HA):**
+   - The original `/config/family_hub_data.json` must be treated as **read-only** during migration — migrate by READING it and WRITING the new HA `Store`s elsewhere (`.storage/`). Never modify the original. This keeps a clean revert path (restore old `data_store.py`, delete new stores).
+   - Back it up to `family_hub_data.v1.bak.json` anyway. **Verify row counts** (people/chores/task_instances/history/store_items) match the source BEFORE committing to the new stores; on mismatch, abort + fall back to the legacy file.
+   - Keep `self._data`'s in-memory shape IDENTICAL so the ~4,100 lines of business logic in `data_store.py` are untouched — only the load/save plumbing changes. Lowest-risk path.
+   - Stores (decided): `core` (settings+people), `chores` (chores+task_instances), `rewards` (store_items+redemptions+subscriptions+group_reward_proposals), `history`. Use `Store.async_delay_save` (debounce ~2 s). Add a flush on `async_unload_entry`. Assets/upload service + the `data/` code-package split can be deferred (additive / cheap-later).
+4. Then P4 (css/modals/modes-admin splits + theme co-location) + the deferred P0-triage items (admin Family-panel layout fix; author `services.yaml`).
 
 ### Model recommendation
 
-**Sonnet 4.6 (High) is the default.** Enough for ~90% of work in this codebase.
-
-**Reach for Opus when** the work involves cross-file invariants — for example v0.6.6's `data_store.py` split, or v0.6.5's daily-tick subscription processing where renewal date math, point deduction, and lapse handling all interact.
+**Opus for v0.7.0.** This pass is cross-file and cross-layer (sensor/data-bus redesign, multi-store migration, card data-source repoint) — the kind of cross-file invariant work that warrants Opus. Sonnet 4.6 (High) remains fine for routine feature work and the Phase 4 file-splits.
 
 ### Sonnet system-prompt addendum (paste into the next session)
 

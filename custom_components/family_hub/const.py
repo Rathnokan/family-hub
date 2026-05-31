@@ -208,9 +208,10 @@ HISTORY_SUBSCRIPTION_UPDATED          = "subscription_updated"
 # daily tick to keep the data file from growing unbounded.
 HISTORY_RETENTION_DAYS = 30
 
-# Terminal task instances (skipped/approved/denied/rejected/excused) older than
-# this many days are pruned on each daily tick.
-TASK_INSTANCE_RETENTION_DAYS = 60
+# Terminal task instances (skipped/approved/denied/rejected/excused/self_reported)
+# older than this many days are pruned on each daily tick. Active instances
+# (pending/claimed/pending_approval) are never pruned regardless of age.
+TASK_INSTANCE_RETENTION_DAYS = 30
 
 # ---------------------------------------------------------------------------
 # Sensor names

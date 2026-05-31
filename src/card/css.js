@@ -89,6 +89,15 @@ export const CSS = `
   }
   .fh-chip-dot { width:8px; height:8px; border-radius:50%; background:currentColor; opacity:.75; }
 
+  /* Compact filter bar (Chores tab) — replaces stacked chip rows with dropdowns */
+  .fh-ad-filter-bar { display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; margin-bottom:14px; }
+  .fh-ad-filter-lbl {
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:.72rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase;
+    color:#6F7E9C; white-space:nowrap;
+  }
+  .fh-ad-filter-select { width:auto; min-width:118px; padding:6px 10px; font-size:.85rem; }
+
   /* Tab bar */
   .fh-tabs {
     display:flex; gap:2px; margin-bottom:var(--fh-gap);
@@ -155,6 +164,17 @@ export const CSS = `
   }
   .fh-task-sub  { font-size:.75rem; color:var(--fh-text-sec); }
   .fh-task-body { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+
+  /* Awarded-points + streak-at-a-glance column (Chore definitions rows) */
+  .fh-task-pts-col {
+    display:flex; flex-direction:column; align-items:flex-end;
+    gap:3px; flex-shrink:0;
+  }
+  .fh-task-streak {
+    font-size:var(--fh-text-xs); font-weight:700; line-height:1;
+    color:var(--fh-warning); white-space:nowrap;
+  }
+  .fh-task-streak--off { color:var(--fh-text-sec); font-weight:500; opacity:.75; }
   .fh-desc-inline {
     font-size:.76rem; color:var(--fh-text-sec); line-height:1.4;
     white-space:normal; padding-top:2px;
@@ -743,6 +763,11 @@ export const CSS = `
     max-height:420px; overflow-y:auto;
     display:flex; flex-direction:column; gap:var(--fh-gap-sm);
   }
+  /* Children MUST NOT shrink — when total content exceeds max-height,
+     the flex column would otherwise squish every row down to a few px
+     to fit instead of overflowing. overflow-y:auto needs natural-height
+     children to actually scroll. */
+  .fh-hist-scroll > * { flex-shrink: 0; }
 
   /* Skipped-chore rollup group */
   .fh-hist-group {
@@ -2978,7 +3003,11 @@ export const CSS = `
 
   /* ---- Wide layout: sidebar + main side by side (VIEWPORT media query) ---- */
   @media (min-width: 1100px) {
-    .fh-ad-shell   { flex-direction: row; min-height: 620px; }
+    /* Bound the shell height so .fh-ad-body scrolls INTERNALLY instead of
+       growing the page. This is what gives the sticky chore-editor panel a
+       real scroll container to pin against. min-height keeps it usable on
+       short content; max-height caps it near the viewport on long lists. */
+    .fh-ad-shell   { flex-direction: row; min-height: 620px; max-height: calc(92vh - 24px); }
     .fh-ad-sidebar { display: flex; }
     .fh-ad-bottom-nav { display: none; }
     .fh-ad-body    { padding: 20px 24px 26px; }
@@ -3172,8 +3201,10 @@ export const CSS = `
 
   /* ---- Inline editor side panel — reuses .fh-ad-panel chrome ---------
      Matches list panel exactly: same bg, border, radius, header padding.
-     No internal scroll, no sticky positioning. With tabs, panes stay short
-     enough that the outer admin body scrolls naturally if needed. */
+     Sticky within the scrolling .fh-ad-body so the editor follows the list
+     down the page: selecting a chore near the bottom shows the editor in
+     view at the top of the viewport instead of forcing a scroll back up.
+     Header/footer stay pinned; the form body scrolls internally when tall. */
   .fh-ad-tasks-panel { display: none; }
   @media (min-width: 1280px) {
     .fh-ad-tasks-panel {
@@ -3183,6 +3214,8 @@ export const CSS = `
       border: 1px solid #2A3852;
       border-radius: 12px;
       overflow: hidden;
+      position: sticky; top: 0;
+      max-height: calc(92vh - 96px);
     }
   }
   .fh-ad-tasks-panel-hdr {
@@ -3202,7 +3235,10 @@ export const CSS = `
   .fh-ad-tasks-panel-body {
     padding: 14px 16px;
     display: flex; flex-direction: column;
-    /* No max-height / overflow — let the page scroll if needed. */
+    /* Scroll the form internally so header (title) + footer (Save/Delete)
+       stay pinned when the panel is sticky and the form is taller than the
+       viewport. flex:1 lets it absorb the panel's max-height. */
+    flex: 1 1 auto; overflow-y: auto; min-height: 0;
   }
   .fh-ad-tasks-panel-footer {
     display: flex; gap: 8px; padding: 12px 16px;
@@ -3253,6 +3289,32 @@ export const CSS = `
   .fh-ad-rewards-panel .fh-person-cb-chip { border-color: #3A4B6B; color: #A6B3CC; }
   /* Rank ladder inputs in settings */
   .fh-ad-rank-ladder-input { text-align: right; }
+
+  /* ---- History section — chore history left + reward history right rail ---- */
+  .fh-ad-history-wrap {
+    display: flex; flex-direction: column; gap: 14px; min-width: 0;
+  }
+  @media (min-width: 1280px) {
+    .fh-ad-history-wrap {
+      display: grid; grid-template-columns: 1fr 480px;
+      gap: 16px; align-items: start;
+    }
+  }
+  .fh-ad-history-rail { display: none; }
+  @media (min-width: 1280px) {
+    .fh-ad-history-rail {
+      display: flex; flex-direction: column;
+      background: #1A2538;
+      border: 1px solid #2A3852;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+  }
+  .fh-ad-history-rail-body {
+    padding: 14px 16px;
+    display: flex; flex-direction: column; gap: 8px;
+    overflow-y: auto; max-height: 55vh;
+  }
 
   /* ---- Template picker (v0.6.3 item 8) ---- */
   .fh-tpl-picker-row {
@@ -3388,9 +3450,12 @@ export const CSS = `
     background: rgba(91,141,239,.07) !important;
   }
 
-  /* ---- Hide mobile-only edit button at ≥1280px (row click opens panel instead) ---- */
+  /* ---- Hide mobile-only edit + delete buttons at ≥1280px (row click opens the
+         inline panel, which has its own Save in the header + Delete in the footer).
+         Below 1280px these stay so the modal-based flow keeps edit/delete. ---- */
   @media (min-width: 1280px) {
-    .fh-ad-tasks-edit-btn { display: none !important; }
+    .fh-ad-tasks-edit-btn,
+    .fh-ad-tasks-del-btn { display: none !important; }
     .fh-ad-tasks-list-panel .fh-task-row { cursor: pointer; }
     .fh-ad-tasks-list-panel .fh-task-row:not(.fh-task-row--selected):hover {
       background: rgba(255,255,255,.025);

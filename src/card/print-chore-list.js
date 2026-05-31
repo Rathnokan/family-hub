@@ -280,7 +280,7 @@ export function buildPrintableChoreList(naAttr) {
  * @param {FamilyHubCard} card
  */
 export function openPrintableChoreList(card) {
-    const naAttr = card._hass?.states?.["sensor.family_hub_needs_attention"]?.attributes || {};
+    const naAttr = card._attrs("sensor.family_hub_needs_attention");
     const html   = buildPrintableChoreList(naAttr);
     const w = window.open("", "_blank");
     if (!w) {

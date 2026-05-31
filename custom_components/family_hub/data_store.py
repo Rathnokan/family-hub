@@ -285,6 +285,9 @@ def _migrate_chore(chore: dict) -> dict:
     chore.setdefault("rotation_index", 0)
     chore.setdefault("rotation_last_advanced", "")  # iso date string of last advance
 
+    # v0.6.6: active flag — False = paused/inactive (no new instances generated)
+    chore.setdefault("active", True)
+
     return chore
 
 
@@ -421,6 +424,11 @@ class FamilyHubDataStore:
         self._data: dict[str, Any] = {}
         # Serialises all mutations + saves so concurrent service calls don't race
         self._lock = asyncio.Lock()
+        # v0.7.0 P2: monotonic mutation counter bumped on every save. Exposed on
+        # the needs_attention sensor so the card knows when to refetch the
+        # websocket model. In-memory only — resets to 0 on reload (the card
+        # always fetches on first render regardless).
+        self.data_rev = 0
 
     # ------------------------------------------------------------------
     # Load / Save
@@ -539,6 +547,9 @@ class FamilyHubDataStore:
 
     async def async_save(self) -> None:
         """Persist data to disk atomically. Lock acquired here."""
+        # Bump the mutation counter so the card knows the model changed.
+        self.data_rev += 1
+
         def _write() -> None:
             os.makedirs(os.path.dirname(self._path), exist_ok=True)
             tmp = self._path + ".tmp"
@@ -1797,6 +1808,16 @@ class FamilyHubDataStore:
 
         new_assigned = chore.get("assigned_to", [])
 
+        # Auto-deactivate an assigned chore when all assignees are removed,
+        # unless the caller explicitly passed active= in kwargs.
+        if (
+            chore.get("chore_type") == CHORE_TYPE_ASSIGNED
+            and old_assigned
+            and not new_assigned
+            and "active" not in kwargs
+        ):
+            chore["active"] = False
+
         # Sync pending task instances to new assignment when it has changed.
         #
         # The previous logic collapsed all existing instances to a single one
@@ -1825,7 +1846,11 @@ class FamilyHubDataStore:
                 existing_by_person.setdefault(pid, set()).add(instance["due_date"])
 
             # Step 1: remove pending instances for people no longer assigned.
-            # We keep them if new_assigned is empty (unassigned chore stays as-is).
+            # When new_assigned is empty the chore is being deactivated — purge
+            # all pending instances so they stop showing on kids' task lists.
+            # Previously we kept them ("unassigned chore stays as-is") but now
+            # empty assigned_to triggers auto-deactivation, so keeping orphaned
+            # instances would be confusing.
             if new_assigned:
                 self._data["task_instances"] = [
                     t for t in self._data["task_instances"]
@@ -1835,6 +1860,12 @@ class FamilyHubDataStore:
                         and t.get("assigned_to") not in new_assigned
                         and t.get("assigned_to") is not None  # never remove unowned instances here
                     )
+                ]
+            else:
+                # All assignees removed — purge all pending instances for this chore.
+                self._data["task_instances"] = [
+                    t for t in self._data["task_instances"]
+                    if not (t["chore_id"] == chore_id and t["status"] in ACTIVE_STATUSES)
                 ]
 
             # Step 2: create new instances for people who were just added.
@@ -1850,13 +1881,30 @@ class FamilyHubDataStore:
         return chore
 
     async def async_delete_chore(self, chore_id: str) -> bool:
+        """
+        Hard-delete a chore: remove the definition entirely and purge ALL of
+        its task instances (every status).
+
+        Safe because the data that matters is stored independently:
+          - Point balances live on each person record (never recomputed from
+            instances), so removing instances can't change anyone's balance.
+          - The history log keeps its own denormalized chore_name, so the
+            activity log still reads correctly after the chore is gone.
+          - Person-level completion streaks are stored counters, not derived
+            from instances.
+
+        For a recoverable "turn this off for now" state, set active=False
+        (via update_chore / the admin Active toggle) instead — that keeps the
+        definition and lets you re-engage it later. Delete is permanent.
+        """
         chore = self.get_chore(chore_id)
         if not chore:
             return False
-        chore["active"] = False
+        self._data["chores"] = [
+            c for c in self._data["chores"] if c.get("id") != chore_id
+        ]
         self._data["task_instances"] = [
-            t for t in self._data["task_instances"]
-            if not (t["chore_id"] == chore_id and t["status"] in ACTIVE_STATUSES)
+            t for t in self._data["task_instances"] if t.get("chore_id") != chore_id
         ]
         await self.async_save()
         return True
@@ -1947,6 +1995,19 @@ class FamilyHubDataStore:
         self._data["task_instances"].append(instance)
         return instance
 
+    def _park_one_time_if_done(self, chore: dict) -> None:
+        """
+        When a one-time chore's instance reaches a completed state, flip the
+        chore to inactive rather than leaving it live with no future instances.
+
+        One-time chores never regenerate, so a finished one would otherwise just
+        vanish from view. Parking it as active=False keeps the definition in the
+        Chores list (under the Inactive filter) so a parent can re-activate and
+        reuse it later. No-op for recurring chores.
+        """
+        if chore.get("recurrence", {}).get("type") == RECURRENCE_ONE_TIME:
+            chore["active"] = False
+
     async def async_complete_task(self, instance_id: str, completed_by: str) -> dict | None:
         instance = self.get_task_instance(instance_id)
         if not instance:
@@ -1986,6 +2047,8 @@ class FamilyHubDataStore:
                 )
             if completed_by and not self.is_penalty_paused_for(completed_by):
                 await self._increment_streak(completed_by, chore["id"], chore, date.today())
+            # Auto-completed (no approval needed) — park one-time chores now.
+            self._park_one_time_if_done(chore)
 
         await self.async_save()
         return instance
@@ -2018,6 +2081,8 @@ class FamilyHubDataStore:
             )
         if completed_by and not self.is_penalty_paused_for(completed_by):
             await self._increment_streak(completed_by, chore["id"], chore, date.today())
+        # Approved & terminal — park one-time chores so they don't vanish.
+        self._park_one_time_if_done(chore)
         await self.async_save()
         return instance
 
@@ -3672,12 +3737,6 @@ class FamilyHubDataStore:
         result: list[dict] = []
         seen_instance_ids: set[str] = set()
 
-        _task_event_types = {
-            HISTORY_TASK_COMPLETED, HISTORY_TASK_APPROVED, HISTORY_TASK_SKIPPED,
-            HISTORY_TASK_EXCUSED, HISTORY_TASK_REJECTED, HISTORY_TASK_DENIED,
-            HISTORY_TASK_MARKED_COMPLETE,
-        }
-
         for e in entries:
             ref_id   = e.get("reference_id", "")
             instance = self.get_task_instance(ref_id)
@@ -3756,14 +3815,15 @@ class FamilyHubDataStore:
                 result.append(row)
 
             else:
-                # No matching task instance. Skip stale task-type events whose
-                # instance has been pruned. Keep non-task events (bonus points,
-                # person/redemption events, etc.).
-                if e["type"] in _task_event_types:
-                    continue
-
+                # No matching task instance (pruned after retention, chore
+                # deleted, instance manually removed, etc.). Render the row
+                # using the cached chore_name + original event type. No
+                # reversible action since the instance is gone, but the
+                # row is still informational and must remain visible —
+                # otherwise the History panel silently goes dark for any
+                # person whose old task instances have been pruned.
                 person = self.get_person(e.get("person_id", "")) if e.get("person_id") else None
-                result.append({
+                row = {
                     "history_id":      e["id"],
                     "type":            e["type"],
                     "person_id":       e.get("person_id"),
@@ -3777,7 +3837,12 @@ class FamilyHubDataStore:
                     "note":            e.get("note", ""),
                     "reversible":      None,
                     "instance_status": None,
-                })
+                }
+                # Skipped entries still need skipped_date so the frontend can
+                # roll them into the per-day collapsible group.
+                if e["type"] == HISTORY_TASK_SKIPPED:
+                    row["skipped_date"] = e["timestamp"][:10]
+                result.append(row)
 
         return result[:limit]
 
@@ -4277,6 +4342,7 @@ class FamilyHubDataStore:
                 "person_name":  person["name"] if person else "Unknown",
                 "person_color": person.get("avatar_color", "#7F77DD") if person else "#7F77DD",
                 "completed_at": t.get("completed_at"),
+                "due_date":     t.get("due_date"),
             })
         return sorted(queue, key=lambda x: x.get("completed_at") or "")
 
@@ -4496,6 +4562,55 @@ class FamilyHubDataStore:
                 "rotation_pool":          c.get("rotation_pool", []),
                 "rotation_cadence":       c.get("rotation_cadence", ""),
                 "rotation_index":         c.get("rotation_index", 0),
+            })
+        return sorted(result, key=lambda x: (x["sort_order"], x["name"]))
+
+    def get_all_chores_for_card(self) -> list[dict]:
+        """
+        All non-maintenance chores (active AND inactive, including one-time) for
+        the admin chore list.  Includes an 'active' field so the card can style
+        inactive rows differently and expose the toggle to parents.
+        Sorted by sort_order then name.
+        """
+        result = []
+        for c in self.chores:
+            if not c.get("id"):
+                continue
+            if self._chore_is_maintenance(c):
+                continue
+            # One-time chores ARE included here (unlike the active-only view) so
+            # they appear in the admin Chores list and can be filtered/reused.
+            assigned_names = []
+            for pid in c.get("assigned_to", []):
+                p = self.get_person(pid)
+                if p:
+                    assigned_names.append(p["name"])
+            result.append({
+                "chore_id":               c["id"],
+                "name":                   c["name"],
+                "description":            c.get("description", ""),
+                "icon":                   c.get("icon", ""),
+                "chore_type":             c.get("chore_type", CHORE_TYPE_ASSIGNED),
+                "category_label":         c.get("category_label", ""),
+                "sort_order":             c.get("sort_order", 0),
+                "assigned_to":            c.get("assigned_to", []),
+                "assigned_names":         assigned_names,
+                "points":                 c.get("points", 0),
+                "approval_required":      c.get("approval_required", True),
+                "penalty_enabled":        c.get("penalty_enabled", False),
+                "penalty_points":         c.get("penalty_points", 0),
+                "daily_penalty_after_days": c.get("daily_penalty_after_days"),
+                "expires_after_days":     c.get("expires_after_days"),
+                "claimable_subtype":      c.get("claimable_subtype", CLAIMABLE_SUBTYPE_FCFS),
+                "max_claimants":          c.get("max_claimants", 2),
+                "multi_claim_points_mode": c.get("multi_claim_points_mode", MULTI_CLAIM_POINTS_FULL),
+                "recurrence":             c.get("recurrence", {}),
+                "streak_milestone":       c.get("streak_milestone", 0),
+                "streak_bonus_points":    c.get("streak_bonus_points", 0),
+                "rotation_pool":          c.get("rotation_pool", []),
+                "rotation_cadence":       c.get("rotation_cadence", ""),
+                "rotation_index":         c.get("rotation_index", 0),
+                "active":                 c.get("active", True),
             })
         return sorted(result, key=lambda x: (x["sort_order"], x["name"]))
 

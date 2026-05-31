@@ -433,7 +433,7 @@ function _skippedGroup(group, card) {
     const expanded = card._expandedSkippedDates.has(group.key);
     const penLabel = group.totalPenalty > 0 ? `−${group.totalPenalty}pts` : "no penalty";
 
-    const subItems = expanded ? group.items.map(e => {
+    const subItems = group.items.map(e => {
         const pts = e.points_delta
             ? `<span style="color:var(--fh-overdue);font-weight:700">${e.points_delta}pts</span>` : "";
         return `
@@ -443,7 +443,7 @@ function _skippedGroup(group, card) {
                     <div class="fh-hist-meta">${pts}</div>
                 </div>
             </div>`;
-    }).join("") : "";
+    }).join("");
 
     return `
         <div class="fh-hist-group">
@@ -454,6 +454,6 @@ function _skippedGroup(group, card) {
                 </div>
                 <span class="fh-hist-expand-icon">${expanded ? "▲" : "▼"}</span>
             </div>
-            ${expanded ? `<div class="fh-hist-subitems">${subItems}</div>` : ""}
+            <div class="fh-hist-subitems"${expanded ? "" : ' style="display:none"'}>${subItems}</div>
         </div>`;
 }

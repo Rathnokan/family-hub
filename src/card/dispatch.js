@@ -60,8 +60,20 @@ export function dispatch(act, el, card) {
             card._doRender(true);
             break;
 
+        // Chores-tab filter dropdowns (fired via the delegated `change` handler).
+        // Value comes from the <select>, so read el.value rather than a dataset attr.
         case "chore-filter":
-            card._choreFilter = el.dataset.cpid || null;
+            card._choreFilter = el.value || null;
+            card._doRender(true);
+            break;
+
+        case "chore-status-filter":
+            card._choreStatusFilter = el.value || null;
+            card._doRender(true);
+            break;
+
+        case "chore-rec-filter":
+            card._choreRecFilter = el.value || null;
             card._doRender(true);
             break;
 
@@ -167,7 +179,6 @@ export function dispatch(act, el, card) {
             const origItem  = origItems.find(i => i.item_id === iid);
             const data = _buildStoreItemPayload(v, sr, true, origItem?.is_group_reward ?? false);
             if (!data) break;
-            console.log("[family-hub] update_store_item (inline) payload:", JSON.parse(JSON.stringify(data)));
             card._svc("update_store_item", data);
             card._adminSelectedItemId = null;
             card._doRender(true);
@@ -251,11 +262,26 @@ export function dispatch(act, el, card) {
         }
 
         // ---- Skipped-group expand/collapse ---------------------------------
+        // Admin and classic theme use .fh-hist-group + .fh-hist-subitems —
+        // toggle display directly so scroll position is never disturbed.
+        // Flat-structure themes (engineer, baker, dbz, dinos, hp) have no
+        // .fh-hist-group wrapper, so they fall back to _doRender.
         case "toggle-skipped-group": {
             const key = el.dataset.key;
-            if (card._expandedSkippedDates.has(key)) card._expandedSkippedDates.delete(key);
-            else card._expandedSkippedDates.add(key);
-            card._doRender(true);
+            const expanding = !card._expandedSkippedDates.has(key);
+            if (expanding) card._expandedSkippedDates.add(key);
+            else           card._expandedSkippedDates.delete(key);
+
+            const group = el.closest(".fh-hist-group");
+            if (group) {
+                const subitems = group.querySelector(".fh-hist-subitems");
+                const icon     = group.querySelector(".fh-hist-expand-icon");
+                if (subitems) subitems.style.display = expanding ? "flex" : "none";
+                if (icon)     icon.textContent       = expanding ? "▲" : "▼";
+            } else {
+                // Flat-structure theme: full re-render preserves _expandedSkippedDates state
+                card._doRender(true);
+            }
             break;
         }
 
@@ -328,7 +354,7 @@ export function dispatch(act, el, card) {
             const pAttrKey  = person
                 ? `sensor.family_hub_${person.name.toLowerCase().replace(/ /g, "_")}`
                 : null;
-            const pAttrs    = pAttrKey ? (card._hass?.states?.[pAttrKey]?.attributes || {}) : {};
+            const pAttrs    = pAttrKey ? card._attrs(pAttrKey) : {};
             const storeItem = (pAttrs.store_items || []).find(i => i.item_id === iid) || { item_id: iid, name: "reward" };
             card._modal = { type: "chip-in", data: { item: storeItem, pid, balance, remaining } };
             card._doRender(true);
@@ -402,7 +428,7 @@ export function dispatch(act, el, card) {
             if (!pid || !iid) break;
             const person = card._people().find(p => p.person_id === pid);
             if (!person) break;
-            const attrs = card._hass?.states?.[`sensor.family_hub_${person.name.toLowerCase().replace(/ /g, "_")}`]?.attributes || {};
+            const attrs = card._attrs(card._personEntityId(person.name));
             const newGoal = (attrs.goal_item_id === iid) ? "" : iid;
             card._svc("update_person", { person_id: pid, goal_item_id: newGoal });
             break;
@@ -535,7 +561,8 @@ export function dispatch(act, el, card) {
             card._doRender(true);
             break;
         case "open-edit-chore": {
-            const chores = card._attrs("sensor.family_hub_needs_attention").active_chores || [];
+            const naAttr = card._attrs("sensor.family_hub_needs_attention");
+            const chores = naAttr.all_chores || naAttr.active_chores || [];
             const chore  = chores.find(c => c.chore_id === el.dataset.cid);
             if (!chore) break;
             // Close inline panel first — modal and panel share m-* element IDs
@@ -692,7 +719,6 @@ export function dispatch(act, el, card) {
             const isEdit = (act === "ok-edit-chore");
             const data = _buildChorePayload(v, b, int, sr, isEdit);
             if (!data) break;
-            console.log(`[family-hub] ${isEdit ? "update_chore" : "add_chore"} payload:`, JSON.parse(JSON.stringify(data)));
             card._svc(isEdit ? "update_chore" : "add_chore", data);
             card._closeModal();
             break;
@@ -702,7 +728,6 @@ export function dispatch(act, el, card) {
         case "ok-edit-chore-inline": {
             const data = _buildChorePayload(v, b, int, sr, true);
             if (!data) break;
-            console.log("[family-hub] update_chore (inline) payload:", JSON.parse(JSON.stringify(data)));
             card._svc("update_chore", data);
             card._adminSelectedChoreId = null;
             card._choreFormTab = "details";
@@ -1100,6 +1125,7 @@ function _buildChorePayload(v, b, int, sr, isEdit) {
     }
     if (isEdit) {
         data.chore_id   = v("m-cid");
+        data.active     = sr.querySelector("#m-cactive")?.checked !== false;
         data.weekdays   = weekdays;
         data.day_filter = dayFilter;
         data.recurrence = {

@@ -14,6 +14,7 @@
 - **Decision:** All family data lives in `config/family_hub_data.json`. The integration reads/writes this single file via `FamilyHubDataStore`. The data file path is captured into the config entry at install time and never changes.
 - **Why:** Private, self-hosted, no third-party accounts. Migrations are field-level (additive) so deploying new code never rewrites user data wholesale.
 - **Don't:** Don't sync the data file via Samba during deploys. Don't add a "wipe and recreate" path. Don't introduce per-record files or a SQL store without a real, separate migration plan.
+- **⚠️ Scheduled for reversal — v0.7.0 "Re-foundation" (user-approved 2026-05-30).** The single 1 MB file is rewritten synchronously on every mutation and is 73% cold log data (task_instances 432 KB + history 331 KB). v0.7.0 splits it into three `homeassistant.helpers.storage.Store` instances (`core` / `history` / `task_archive`) with debounced `async_delay_save`, bumps `STORAGE_VERSION 1→2`, and runs a **one-time migration that backs up the old file to `family_hub_data.v1.bak.json`** (still never deletes user data). Stays JSON — not SQL. The atomic-save and silent-migration decisions below are superseded by HA `Store` semantics in the same release. See ROADMAP.md → "v0.7.0 — Re-foundation", Phase 3.
 
 ### Schema migration is silent + idempotent + per-record
 - **Decision:** `_migrate_chore`, `_migrate_store_item`, `_migrate_task_instance` run on every load and use `setdefault` to fill in new fields without touching existing values. `STORAGE_VERSION` is still 1 even though we're at v0.6.3.
@@ -65,6 +66,7 @@
 - **Decision:** `_maybeRender` compares `state.last_updated` for each Family Hub sensor.
 - **Why:** HA only bumps `last_changed` when the state value differs. Most Family Hub changes are attribute-only (queue updates, task progression) and don't change the state value, so `last_changed` would silently swallow updates.
 - **Don't:** Don't switch to `last_changed`. Don't try to subscribe to specific attributes — just trust the timestamp.
+- **Superseded by v0.7.0 P2:** the `last_updated`/`FH_SENSORS` dirty-check loop is gone. The card now dirty-checks the single `data_rev` scalar on `needs_attention` (see "Card dirty-check keys off `data_rev`" below) and fetches the websocket model on change. `FH_SENSORS` is now an unused export in `constants.js`.
 
 ### `_doRender` appends the modal as a SEPARATE DOM node
 - **Decision:** The modal `<div class="fh-modal-bg">` is appended to the shadow root after the main `.fh-card` div, not nested inside it.
@@ -90,6 +92,16 @@
 - **Decision:** `sensor.family_hub_needs_attention` exposes approval/redemption/group-proposal queues, all people, all active chores, all store items, settings, and a 30-day history log all in one attribute payload.
 - **Why:** The card needs nearly all of this on every render; pulling it via multiple sensor subscriptions would multiply websocket traffic with no benefit. One big payload is fine for our scale (small family).
 - **Don't:** Don't pre-emptively split the payload to "save memory" — the card's container queries are the bottleneck, not the JSON size.
+- **✅ REVERSED + SHIPPED — v0.7.0 P2 (2026-05-30).** This "Don't" was wrong at scale: the payload included the 30-day `history_log` + all chores (×2) + all store items (×2), pushed through the HA **state machine + recorder to every device on every mutation** (HA logged the ">16 KB state attributes" warning). **Now implemented:**
+  - The full card model lives in `card_model.py` (`build_card_model(store)` → dict keyed by entity_id) and is served by a websocket command **`family_hub/get_model`** (`websocket.py`, registered once in `async_setup`).
+  - The card (`FamilyHubCard._fetchModel`) pulls the model over the websocket and reads it via `card._attrs(<entity_id>)` (model-first, falls back to live attrs). Balance is still read from the per-person sensor **state** (`card._states(eid).state`).
+  - **Sensors are now lean scalars** (`build_*_scalars` in `card_model.py`): `needs_attention` = `data_rev` + action counts + a SLIM roster (`people` = id/name/type/theme) + `rooms_config` + `family_name` (the slim roster + rooms_config exist purely so the **card config editor** still works); per-person = identity + point summary + counts; maintenance = summary; claimable = `{}`.
+  - `_unrecorded_attributes` (P0) still excludes the volatile `data_rev` + slim roster from the recorder.
+
+### Card dirty-check keys off `data_rev` — track the SENSOR's value, NOT the model's (v0.7.0 P2)
+- **Decision:** `store.data_rev` is an in-memory counter bumped on every `async_save()`. It's exposed as a scalar attr on `needs_attention`. The card's `_maybeRender` compares `hass.states["sensor.family_hub_needs_attention"].attributes.data_rev` to `this._lastDataRev`; on change it calls `_fetchModel`, which sets `this._lastDataRev = <the sensor rev that triggered the fetch>` — **not** the `data_rev` embedded in the fetched model.
+- **Why (the trap):** the model's `data_rev` is read straight from the store at fetch time, while the sensor's `data_rev` only updates on a coordinator refresh. The **per-minute notification heartbeat** (P1) calls `async_check_notifications` → `async_save` (bumps `data_rev`) **without** a coordinator refresh, so the store's counter — and therefore the model's `data_rev` — runs *ahead* of the sensor's. Keying `_lastDataRev` off the model value made `rev !== _lastDataRev` perpetually true, so the card refetched + re-rendered on **every** `set hass` (which fires on any HA state change anywhere) → open `<select>` dropdowns rebuilt and closed themselves ("tick refresh"). Tracking the sensor-sourced rev makes the comparison apples-to-apples.
+- **Don't:** Don't set `_lastDataRev` from `model[...].data_rev`. Don't bump `data_rev` on the notification heartbeat path expecting the card to react (it can't see it until the next coordinator refresh — which is correct; notification flags aren't card-relevant).
 
 ### Person sensors are added/removed dynamically without HA restart
 - **Decision:** `sensor.async_setup_entry` stashes `add_person_sensor` and `remove_person_sensor` callables in `hass.data`. The `add_person` / `remove_person` service handlers look them up and call them after mutating the data store.

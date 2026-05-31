@@ -15,6 +15,30 @@ import { ROOMS } from "./rooms/index.js";
 import { choreFormFields, storeItemFormFields } from "./modals.js";
 import { choreIcon } from "./icons.js";
 
+// Format a chore instance due_date ("YYYY-MM-DD") as a short local-day label
+// (e.g. "Thu, May 29"). Parsed from explicit parts to avoid UTC date shift.
+function _fmtDueDay(iso) {
+    if (!iso) return "";
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+    if (!m) return iso;
+    const d = new Date(+m[1], +m[2] - 1, +m[3]);
+    return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+}
+
+// Collapse a chore's recurrence type into one of the four admin filter buckets.
+// "every N days" rolls up under Daily; "every N weeks" under Weekly.
+function _recBucket(c) {
+    switch (c.recurrence?.type) {
+        case "daily":
+        case "every_n_days":    return "daily";
+        case "weekly":
+        case "every_n_weeks":   return "weekly";
+        case "monthly_on_date": return "monthly";
+        case "one_time":        return "one_time";
+        default:                return "other";
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Shell
 // ---------------------------------------------------------------------------
@@ -27,6 +51,7 @@ export function htmlAdmin(card) {
     const groupProposals  = attr.group_proposal_queue      || [];
     const cancelSubs      = attr.subscription_cancel_queue || [];
     const chores          = attr.active_chores        || [];
+    const allChores       = attr.all_chores           || chores;
     const catLabels       = attr.category_labels      || [];
     const famName         = attr.family_name          || "Family Hub";
     const storeItems      = attr.store_items          || [];
@@ -35,7 +60,7 @@ export function htmlAdmin(card) {
     const sections = [
         { id: "today",    label: "Today",    icon: "◐", badge: actionCount },
         { id: "family",   label: "Family",   icon: "◍", badge: 0 },
-        { id: "tasks",    label: "Tasks",    icon: "◉", badge: 0 },
+        { id: "tasks",    label: "Chores",   icon: "◉", badge: 0 },
         { id: "rewards",  label: "Rewards",  icon: "◈", badge: 0 },
         { id: "history",  label: "History",  icon: "◑", badge: 0 },
         { id: "settings", label: "Settings", icon: "◎", badge: 0 },
@@ -47,7 +72,7 @@ export function htmlAdmin(card) {
     switch (sec) {
         case "today":    body = _htmlAdToday(approvals, redemptions, groupProposals, cancelSubs, attr); break;
         case "family":   body = _htmlAdFamily(people, attr, card);                     break;
-        case "tasks":    body = _htmlAdTasks(chores, people, catLabels, card);        break;
+        case "tasks":    body = _htmlAdTasks(allChores, people, catLabels, card);      break;
         case "rewards":  body = _htmlAdRewards(storeItems, people, catLabels, card);  break;
         case "history":  body = _htmlAdHistory(attr, card);                           break;
         case "settings": body = _htmlAdSettings(attr, people, card);                  break;
@@ -60,7 +85,7 @@ export function htmlAdmin(card) {
                               <button class="fh-ad-btn fh-ad-btn--primary" data-act="open-add-chore">${I.plus} Add chore</button>` },
         family:   { crumb: "PEOPLE",        title: "Family",
                     actions: `<button class="fh-ad-btn fh-ad-btn--primary" data-act="open-add-person">${I.person} Add person</button>` },
-        tasks:    { crumb: "CHORES",        title: "Tasks",
+        tasks:    { crumb: "CHORES",        title: "Chores",
                     actions: `<button class="fh-ad-btn fh-ad-btn--ghost" data-act="print-chore-list" title="Open a printable chore list in a new tab">${I.print} Print</button>
                               <button class="fh-ad-btn fh-ad-btn--primary" data-act="open-add-chore">${I.plus} Add chore</button>` },
         rewards:  { crumb: "REWARDS",       title: "Rewards",
@@ -138,7 +163,7 @@ function _htmlAdToday(approvals, redemptions, groupProposals, cancelSubs, attr) 
         { label: "APPROVAL QUEUE",   value: approvals.length,                                accent: approvals.length   > 0 ? "#F5C24A" : "#58D38A" },
         { label: "REDEEM QUEUE",     value: redemptions.length,                              accent: redemptions.length > 0 ? "#E36DA4" : "#58D38A" },
         { label: "GROUP PROPOSALS",  value: groupProposals.length + fundedGroupItems.length, accent: (groupProposals.length + fundedGroupItems.length) > 0 ? "#58D38A" : "#A6B3CC" },
-        { label: "ACTIVE CHORES",    value: chores.length,                                   accent: "#5B8DEF" },
+        { label: "ACTIVE CHORES",    value: chores.filter(c => c.active !== false).length,    accent: "#5B8DEF" },
     ];
     const statCards = stats.map(s => `
       <div class="fh-ad-stat">
@@ -285,7 +310,7 @@ function _htmlAdToday(approvals, redemptions, groupProposals, cancelSubs, attr) 
                     <span class="fh-ad-queue-time">${q.when || ""}</span>
                   </div>
                   <div class="fh-ad-queue-name">${escHTML(name)}</div>
-                  <div class="fh-ad-queue-meta">${escHTML(q.person_name || "")} · ${isAppr ? "+" : "−"}${fPts(pts)}</div>
+                  <div class="fh-ad-queue-meta">${escHTML(q.person_name || "")} · ${isAppr ? "+" : "−"}${fPts(pts)}${isAppr && q.due_date ? ` · for ${escHTML(_fmtDueDay(q.due_date))}` : ""}</div>
                 </div>
                 <button class="fh-btn fh-btn-success fh-btn-sm" data-act="${isAppr ? "approve-task" : "approve-redemption"}" data-${isAppr ? "tid" : "rid"}="${isAppr ? q.task_id : q.redemption_id}">${I.check}</button>
                 <button class="fh-btn fh-btn-danger  fh-btn-sm" data-act="${isAppr ? "deny-task" : "decline-redemption"}" data-${isAppr ? "tid" : "rid"}="${isAppr ? q.task_id : q.redemption_id}">${I.close}</button>
@@ -293,11 +318,67 @@ function _htmlAdToday(approvals, redemptions, groupProposals, cancelSubs, attr) 
         }).join("")
         : `<div class="fh-empty fh-ad-empty">Nothing needs your attention right now. ✓</div>`;
 
-    // Recent activity — last 48 h, max 15 entries
+    // Recent activity — last 48 h.
+    // task_skipped entries are rolled up into per-person-per-day summary rows
+    // to avoid flooding the panel when penalties run at the daily tick.
     const cutoff = Date.now() - 172800000;
-    const recent = historyLog.filter(e => new Date(e.timestamp).getTime() > cutoff).slice(0, 15);
-    const activityRows = recent.length > 0
-        ? recent.map(e => {
+    const recent = historyLog.filter(e => new Date(e.timestamp).getTime() > cutoff);
+
+    const skipSummaries = new Map();  // "pid:date" → { personName, color, date, totalPts, count, timestamp }
+    const otherEntries  = [];
+
+    for (const e of recent) {
+        if (e.type === "task_skipped") {
+            const dateKey = e.skipped_date || (e.timestamp || "").slice(0, 10) || "";
+            const key = `${e.person_id}:${dateKey}`;
+            if (!skipSummaries.has(key)) {
+                skipSummaries.set(key, {
+                    personName: e.person_name || "",
+                    color:      e.person_color || DEFAULT_COLOR,
+                    date:       dateKey,
+                    totalPts:   0,
+                    count:      0,
+                    timestamp:  e.timestamp || "",
+                });
+            }
+            const g = skipSummaries.get(key);
+            g.totalPts += Math.abs(e.points_delta || 0);
+            g.count++;
+            if ((e.timestamp || "") > g.timestamp) g.timestamp = e.timestamp;
+        } else {
+            otherEntries.push(e);
+        }
+    }
+
+    const activityItems = [
+        ...otherEntries.map(e => ({ kind: "entry", e })),
+        ...[...skipSummaries.values()].map(g => ({ kind: "skip", g })),
+    ].sort((a, b) => {
+        const ta = a.kind === "entry" ? (a.e.timestamp || "") : (a.g.timestamp || "");
+        const tb = b.kind === "entry" ? (b.e.timestamp || "") : (b.g.timestamp || "");
+        return tb.localeCompare(ta);
+    }).slice(0, 15);
+
+    const activityRows = activityItems.length > 0
+        ? activityItems.map(item => {
+            if (item.kind === "skip") {
+                const { personName, color, date, totalPts, count } = item.g;
+                return `
+                  <div class="fh-ad-activity-row">
+                    <div class="fh-avatar" style="background:${color};width:28px;height:28px;font-size:var(--fh-text-xs);flex-shrink:0">${personName ? ini(personName) : "—"}</div>
+                    <div style="flex:1;min-width:0">
+                      <div class="fh-ad-activity-name">
+                        <span style="font-weight:700">${escHTML(personName)}</span>
+                        missed ${count} task${count !== 1 ? "s" : ""}
+                      </div>
+                      <div class="fh-ad-activity-meta" style="color:var(--fh-warning)">Skipped · ${escHTML(date)}</div>
+                    </div>
+                    ${totalPts > 0
+                        ? `<span style="font-family:'JetBrains Mono',monospace;font-size:var(--fh-text-xs);font-weight:700;color:var(--fh-overdue);flex-shrink:0">−${totalPts}pts</span>`
+                        : ""}
+                  </div>`;
+            }
+            const e = item.e;
             const meta    = HISTORY_META[e.type] || { label: e.type, color: "#6F7E9C" };
             const color   = e.person_color || DEFAULT_COLOR;
             const pts     = e.points_delta;
@@ -598,22 +679,54 @@ function _htmlAdFamily(people, attr, card) {
 function _htmlAdTasks(chores, people, catLabels, card) {
     card._sortedChores = chores;
 
+    const statusFilter = card._choreStatusFilter || "";
+    const recFilter    = card._choreRecFilter    || "";
+    const personFilter = card._choreFilter        || "";
+
+    const statusOpts = [
+        { val: "",         label: "All"      },
+        { val: "active",   label: "Active"   },
+        { val: "inactive", label: "Inactive" },
+    ];
+    const recOpts = [
+        { val: "",         label: "All types" },
+        { val: "daily",    label: "Daily"     },
+        { val: "weekly",   label: "Weekly"    },
+        { val: "monthly",  label: "Monthly"   },
+        { val: "one_time", label: "One-Time"  },
+    ];
+    const personOpts = [
+        { val: "", label: "Everyone" },
+        ...people.map(p => ({ val: p.person_id, label: p.name })),
+    ];
+
+    // Compact dropdown filter bar (one wrapping row) instead of three chip rows.
+    const filterSelect = (act, opts, cur) => `
+      <select class="fh-select fh-ad-filter-select" data-act="${act}">
+        ${opts.map(o => `<option value="${escAttr(o.val)}" ${String(cur) === String(o.val) ? "selected" : ""}>${escHTML(o.label)}</option>`).join("")}
+      </select>`;
+
     const filterChips = `
-      <div class="fh-chips">
-        <div class="fh-chip ${!card._choreFilter ? "active" : ""}"
-             data-act="chore-filter" data-cpid="">All</div>
-        ${people.map(p => `
-          <div class="fh-chip ${card._choreFilter === p.person_id ? "active" : ""}"
-               style="--chip-color:${p.avatar_color || DEFAULT_COLOR}"
-               data-act="chore-filter" data-cpid="${p.person_id}">
-            <span class="fh-chip-dot"></span>${escHTML(p.name)}
-          </div>`).join("")}
+      <div class="fh-ad-filter-bar">
+        <label class="fh-ad-filter-lbl">Status ${filterSelect("chore-status-filter", statusOpts, statusFilter)}</label>
+        <label class="fh-ad-filter-lbl">Type ${filterSelect("chore-rec-filter", recOpts, recFilter)}</label>
+        <label class="fh-ad-filter-lbl">Assignee ${filterSelect("chore-filter", personOpts, personFilter)}</label>
       </div>`;
 
-    // Filter by person
-    const visible = card._choreFilter
-        ? chores.filter(c => (c.assigned_to || []).includes(card._choreFilter))
-        : chores;
+    // Filter by active/inactive status
+    let visible = chores;
+    if (statusFilter === "active")   visible = chores.filter(c => c.active !== false);
+    if (statusFilter === "inactive") visible = chores.filter(c => c.active === false);
+
+    // Then filter by recurrence bucket
+    if (recFilter) {
+        visible = visible.filter(c => _recBucket(c) === recFilter);
+    }
+
+    // Then filter by person
+    if (card._choreFilter) {
+        visible = visible.filter(c => (c.assigned_to || []).includes(card._choreFilter));
+    }
 
     // Sort
     const sort = card._adminSort || { col: null, dir: "asc" };
@@ -681,9 +794,20 @@ function _htmlAdTasks(chores, people, catLabels, card) {
     const selectedId    = card._adminSelectedChoreId || null;
     const collapsedCats = card._adminCollapsedCats || new Set();
 
+    const activeCount   = chores.filter(c => c.active !== false).length;
+    const inactiveCount = chores.filter(c => c.active === false).length;
+    const choreSummary  = inactiveCount
+        ? `${activeCount} active · ${inactiveCount} inactive`
+        : `${activeCount} total`;
+
+    const anyFilterActive = card._choreFilter || recFilter || statusFilter;
+
     let content = "";
     if (!sorted.length) {
-        content = `<div class="fh-empty fh-ad-empty">${card._choreFilter ? "No chores assigned to this person." : "No active chores. Add one above."}</div>`;
+        content = `<div class="fh-empty fh-ad-empty">${
+            anyFilterActive ? "No chores match this filter." :
+            "No active chores. Add one above."
+        }</div>`;
     } else {
         content = [...groups.entries()].map(([label, list]) => {
             const collapsed = collapsedCats.has(label);
@@ -711,7 +835,7 @@ function _htmlAdTasks(chores, people, catLabels, card) {
         <div class="fh-ad-panel fh-ad-tasks-list-panel">
           <div class="fh-ad-panel-hdr">
             <span class="fh-ad-panel-title">Chore definitions</span>
-            <span class="fh-ad-panel-sub">${chores.length} total</span>
+            <span class="fh-ad-panel-sub">${choreSummary}</span>
           </div>
           <div class="fh-ad-panel-body">
             ${filterChips}
@@ -728,8 +852,9 @@ function _htmlAdTasks(chores, people, catLabels, card) {
 /**
  * Render a single chore row inside the sortable/collapsible table.
  * Clicking the row body (data-act="select-chore-row") opens the inline panel at ≥1280px.
- * The edit button (fh-ad-tasks-edit-btn) is CSS-hidden at ≥1280px.
- * The delete button remains at all sizes.
+ * The edit + delete buttons (fh-ad-tasks-edit-btn / fh-ad-tasks-del-btn) are CSS-hidden
+ * at ≥1280px — the inline panel provides Save (header) and Delete (footer) there.
+ * Below 1280px both buttons stay for the modal-based edit/delete flow.
  */
 function _htmlChoreTableRow(c, people, card, selectedId) {
     const assignedPeople = (c.assigned_to || [])
@@ -754,6 +879,13 @@ function _htmlChoreTableRow(c, people, card, selectedId) {
     const expiryLabel = c.expires_after_days
         ? `<span class="fh-badge fh-badge-expiry" style="margin-left:4px">Expires in ${c.expires_after_days}d</span>`
         : "";
+    // At-a-glance streak settings, shown under the awarded-points badge.
+    // streak_milestone = bonus fires every N completions; streak_bonus_points = the reward.
+    const sMilestone = c.streak_milestone || 0;
+    const sBonus     = c.streak_bonus_points || 0;
+    const streakLine = (sMilestone > 0 && sBonus > 0)
+        ? `<span class="fh-task-streak" title="Bonus: +${sBonus}pts every ${sMilestone} completions">🔥 ${sMilestone} → +${sBonus}</span>`
+        : `<span class="fh-task-streak fh-task-streak--off" title="No streak bonus set">no streak</span>`;
     const isSelected = c.chore_id === selectedId;
 
     return `
@@ -764,7 +896,9 @@ function _htmlChoreTableRow(c, people, card, selectedId) {
         <span class="fh-drag-handle" title="Drag to reorder">⠿</span>
         ${avatarHtml}
         <div class="fh-task-body">
-          <span class="fh-task-name">${escHTML(c.name)}</span>
+          <span class="fh-task-name">${escHTML(c.name)}${c.active === false
+              ? ` <span style="font-size:.72rem;color:#6F7E9C;font-weight:400">[inactive]</span>`
+              : ""}</span>
           ${descExp && c.description
               ? `<span class="fh-desc-inline">${escHTML(c.description)}</span>`
               : ""}
@@ -775,11 +909,14 @@ function _htmlChoreTableRow(c, people, card, selectedId) {
                        title="Toggle description">?</button>`
             : ""}
         ${expiryLabel}
-        <span class="fh-badge fh-badge-pts" style="--row-color:${rowColor}">${c.points}pts</span>
+        <div class="fh-task-pts-col">
+          <span class="fh-badge fh-badge-pts" style="--row-color:${rowColor}">${c.points}pts</span>
+          ${streakLine}
+        </div>
         <button class="fh-btn fh-btn-ghost fh-btn-sm fh-ad-tasks-edit-btn"
                 data-act="open-edit-chore" data-cid="${c.chore_id}"
                 title="Edit chore">${I.edit}</button>
-        <button class="fh-btn fh-btn-danger fh-btn-sm"
+        <button class="fh-btn fh-btn-danger fh-btn-sm fh-ad-tasks-del-btn"
                 data-act="delete-chore"
                 data-cid="${c.chore_id}" data-cname="${escAttr(c.name)}"
                 title="Delete chore">${I.trash}</button>
@@ -800,6 +937,8 @@ function _htmlChoreEditorPanel(chore, people, catLabels, card) {
               <div class="fh-ad-tasks-panel-title">Edit chore</div>
               <div class="fh-ad-tasks-panel-sub" title="${escAttr(chore.name)}">${escHTML(chore.name)}</div>
             </div>
+            <button class="fh-btn fh-btn-primary fh-btn-sm" data-act="ok-edit-chore-inline"
+                    style="flex-shrink:0">Save</button>
             <button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="close-chore-panel"
                     style="flex-shrink:0" title="Close panel">✕</button>
           </div>
@@ -807,8 +946,6 @@ function _htmlChoreEditorPanel(chore, people, catLabels, card) {
             ${choreFormFields(chore, true, people, catLabels, tab)}
           </div>
           <div class="fh-ad-tasks-panel-footer">
-            <button class="fh-btn fh-btn-primary" style="flex:1"
-                    data-act="ok-edit-chore-inline">Save changes</button>
             <button class="fh-btn fh-btn-danger fh-btn-sm"
                     data-act="delete-chore"
                     data-cid="${chore.chore_id}" data-cname="${escAttr(chore.name)}">Delete</button>
@@ -1021,6 +1158,11 @@ function _htmlAdHistory(attr, card) {
     const people      = attr.people      || [];
     const firstParent = people.find(p => p.type === "parent");
 
+    const CHORE_TYPES = new Set([
+        "task_completed", "task_approved", "pending_approval", "task_denied",
+        "task_skipped", "task_excused", "task_rejected", "task_marked_complete",
+    ]);
+
     const filterChips = `
       <div class="fh-chips" style="margin-bottom:var(--fh-gap-sm)">
         <div class="fh-chip ${!card._histFilter ? "active" : ""}"
@@ -1037,21 +1179,41 @@ function _htmlAdHistory(attr, card) {
         ? historyLog.filter(e => e.person_id === card._histFilter)
         : historyLog;
 
-    const grouped  = groupHistorySkipped(filtered);
-    const histRows = grouped.map(item => {
+    // Left panel: chore history (tasks, skips, approvals, excuses)
+    const choreEntries = filtered.filter(e => CHORE_TYPES.has(e.type));
+    const grouped = groupHistorySkipped(choreEntries);
+    const choreRows = grouped.map(item => {
         if (item.isGroup) return _renderAdminSkippedGroup(item, firstParent, card);
         return _renderAdminHistRow(item.entry, firstParent);
-    }).join("") || `<div class="fh-empty fh-ad-empty">No history entries yet.</div>`;
+    }).join("") || `<div class="fh-empty fh-ad-empty">No chore history yet.</div>`;
+
+    // Right rail: rewards, points, allowances, subscriptions
+    const rewardEntries = filtered.filter(e => !CHORE_TYPES.has(e.type));
+    const rewardRows = rewardEntries.map(e => _renderAdminHistRow(e, firstParent))
+        .join("") || `<div class="fh-empty fh-ad-empty">No reward history yet.</div>`;
 
     return `
-      <div class="fh-ad-panel">
-        <div class="fh-ad-panel-hdr">
-          <span class="fh-ad-panel-title">History log</span>
-          <span class="fh-ad-panel-sub">last 30 days</span>
+      <div class="fh-ad-history-wrap">
+        <div class="fh-ad-panel fh-ad-history-main">
+          <div class="fh-ad-panel-hdr">
+            <span class="fh-ad-panel-title">Chore history</span>
+            <span class="fh-ad-panel-sub">last 30 days</span>
+          </div>
+          <div class="fh-ad-panel-body">
+            ${filterChips}
+            <div class="fh-hist-scroll">${choreRows}</div>
+          </div>
         </div>
-        <div class="fh-ad-panel-body">
-          ${filterChips}
-          <div class="fh-hist-scroll">${histRows}</div>
+        <div class="fh-ad-history-rail">
+          <div class="fh-ad-tasks-panel-hdr">
+            <div style="flex:1">
+              <div class="fh-ad-tasks-panel-title">Rewards &amp; points</div>
+              <div class="fh-ad-tasks-panel-sub">last 30 days · filtered with left panel</div>
+            </div>
+          </div>
+          <div class="fh-ad-history-rail-body">
+            ${rewardRows}
+          </div>
         </div>
       </div>`;
 }
@@ -1292,7 +1454,10 @@ function _renderAdminSkippedGroup(group, firstParent, card) {
     const expanded = card._expandedSkippedDates.has(group.key);
     const penLabel = group.totalPenalty > 0 ? `−${group.totalPenalty}pts` : "no penalty";
 
-    const subItems = expanded ? group.items.map(e => {
+    // Always render subitems into the DOM — toggled via inline style, not re-render.
+    // This means the Excuse buttons are always present and the scroll position
+    // is never disturbed when the user expands/collapses a group.
+    const subItems = group.items.map(e => {
         const color = e.person_color || DEFAULT_COLOR;
         const pts   = e.points_delta
             ? `<span style="color:var(--fh-overdue);font-weight:700">${e.points_delta}pts</span>`
@@ -1318,7 +1483,7 @@ function _renderAdminSkippedGroup(group, firstParent, card) {
             </div>
             ${actionBtn}
           </div>`;
-    }).join("") : "";
+    }).join("");
 
     return `
       <div class="fh-hist-group">
@@ -1329,6 +1494,6 @@ function _renderAdminSkippedGroup(group, firstParent, card) {
           </div>
           <span class="fh-hist-expand-icon">${expanded ? "▲" : "▼"}</span>
         </div>
-        ${expanded ? `<div class="fh-hist-subitems">${subItems}</div>` : ""}
+        <div class="fh-hist-subitems"${expanded ? "" : ' style="display:none"'}>${subItems}</div>
       </div>`;
 }

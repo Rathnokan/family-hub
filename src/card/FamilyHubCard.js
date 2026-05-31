@@ -8,7 +8,7 @@
  */
 
 import { CSS }                                        from "./css.js";
-import { VERSION, DOMAIN, FH_SENSORS }               from "./constants.js";
+import { VERSION, DOMAIN }                            from "./constants.js";
 import { slug }                                       from "./utils.js";
 import { htmlPersonal }                               from "./modes-personal.js";
 import { htmlAdmin }                                  from "./modes-admin.js";
@@ -49,8 +49,14 @@ export class FamilyHubCard extends HTMLElement {
         this._cfg  = {};
         this._hass = null;
 
-        // Dirty-check: entityId → last_updated timestamp
-        this._lastKeys = {};
+        // v0.7.0 P2: card data comes from a websocket model (family_hub/get_model),
+        // not from fat sensor attributes. The needs_attention sensor exposes a
+        // single data_rev counter that bumps on every store mutation; the card
+        // refetches the model when it changes. _attrs() reads model-first.
+        this._model       = null;
+        this._lastDataRev = undefined;
+        this._pendingRev  = undefined;
+        this._fetching    = false;
 
         // UI state
         this._modal         = null;   // { type, data } — null = closed
@@ -128,12 +134,23 @@ export class FamilyHubCard extends HTMLElement {
         root.addEventListener("click", e => {
             const el = e.target.closest("[data-act]");
             if (!el) return;
+            // <select> elements (e.g. the Chores-tab filter dropdowns) carry a
+            // data-act but are driven by the `change` handler. Dispatching on the
+            // opening click would re-render and snap the dropdown shut instantly.
+            if (el.tagName === "SELECT") return;
             dispatch(el.dataset.act, el, this);
         }, { signal });
 
         // ---- Change handler ------------------------------------------------
         root.addEventListener("change", e => {
             const t = e.target;
+
+            // Chores-tab filter dropdowns (Status / Type / Assignee) — route the
+            // <select> change straight through dispatch (reads el.value).
+            if (["chore-status-filter", "chore-rec-filter", "chore-filter"].includes(t.dataset.act)) {
+                dispatch(t.dataset.act, t, this);
+                return;
+            }
 
             // Inline toggle: show dollar value to kids
             if (t.dataset.act === "toggle-dollar") {
@@ -344,23 +361,20 @@ export class FamilyHubCard extends HTMLElement {
         this._scheduleRetryIfNeeded();
     }
 
-    // Polls until sensor data is present — handles slow websocket delivery on Echo Show 15.
-    // Once people data arrives the dirty-check will re-evaluate and render.
+    // Polls until the model has loaded — handles slow websocket delivery on
+    // Echo Show 15 cold boot. Each tick calls _maybeRender, which fetches the
+    // model once the needs_attention sensor (carrying data_rev) is present.
     _scheduleRetryIfNeeded() {
         if (this._retryTimer) return;
-        const ready = !!(this._hass?.states?.["sensor.family_hub_needs_attention"]?.attributes?.people?.length);
-        if (ready) return;
+        if (this._model) return;
 
         let attempts = 0;
         const retry = () => {
             this._retryTimer = null;
-            if (!this._hass) return;
+            if (!this._hass || this._model) return;
             attempts++;
-            const nowReady = !!(this._hass.states?.["sensor.family_hub_needs_attention"]?.attributes?.people?.length);
-            if (nowReady) {
-                for (const id of FH_SENSORS) delete this._lastKeys[id];
-                this._maybeRender();
-            } else if (attempts < 15) {
+            this._maybeRender();
+            if (!this._model && attempts < 15) {
                 this._retryTimer = setTimeout(retry, 2000);
             }
         };
@@ -378,26 +392,55 @@ export class FamilyHubCard extends HTMLElement {
     _maybeRender() {
         if (!this._hass) return;
         if (this._modal) return;
-        // Freeze sensor-driven re-renders while an inline editor panel is open —
-        // otherwise typed-but-unsaved field values get overwritten on every 30s poll.
+        // Freeze re-renders while an inline editor panel is open — otherwise
+        // typed-but-unsaved field values get overwritten.
         if (this._adminSelectedChoreId) return;
         if (this._adminSelectedItemId) return;
 
-        const states = this._hass.states;
-        let changed  = false;
+        // v0.7.0 P2: card data lives in a websocket model, not sensor attributes.
+        // The needs_attention sensor exposes a single data_rev counter that bumps
+        // on every store mutation; refetch the model when it changes (or on first
+        // load), otherwise there's nothing to do.
+        const rev = this._hass.states["sensor.family_hub_needs_attention"]?.attributes?.data_rev;
+        if (rev === undefined) return;                                  // sensors not ready yet
+        if (this._model !== null && rev === this._lastDataRev) return;  // unchanged
+        this._fetchModel(rev);
+    }
 
-        for (const id of FH_SENSORS) {
-            const ts = states[id]?.last_updated;
-            if (ts !== this._lastKeys[id]) { this._lastKeys[id] = ts; changed = true; }
+    /**
+     * Fetch the full card model over the websocket and re-render. Concurrent
+     * calls are coalesced: a fetch already in flight records the latest rev and
+     * the loop keeps fetching until the loaded model is current.
+     */
+    async _fetchModel(rev) {
+        this._pendingRev = rev;
+        if (this._fetching) return;
+        this._fetching = true;
+        try {
+            while (this._lastDataRev !== this._pendingRev) {
+                const targetRev = this._pendingRev;
+                let model;
+                try {
+                    model = await this._hass.connection.sendMessagePromise({ type: "family_hub/get_model" });
+                } catch (err) {
+                    console.error("Family Hub: get_model failed", err);
+                    return;
+                }
+                this._model = model;
+                // Track the SENSOR rev that triggered this fetch — NOT the model's
+                // own data_rev. The store counter can advance without the sensor
+                // refreshing (e.g. the per-minute notification heartbeat saves),
+                // so the model's data_rev can run ahead of the sensor's. Keying
+                // off the model value would make the dirty-check perpetually true
+                // and re-render on every hass update — which closes open dropdowns.
+                this._lastDataRev = targetRev;
+            }
+        } finally {
+            this._fetching = false;
         }
-
-        for (const p of (states["sensor.family_hub_needs_attention"]?.attributes?.people || [])) {
-            const id = `sensor.family_hub_${slug(p.name)}`;
-            const ts = states[id]?.last_updated;
-            if (ts !== this._lastKeys[id]) { this._lastKeys[id] = ts; changed = true; }
-        }
-
-        if (changed) this._doRender(false);
+        // A modal / inline panel may have opened while we were fetching — respect the freeze.
+        if (this._modal || this._adminSelectedChoreId || this._adminSelectedItemId) return;
+        this._doRender(false);
     }
 
     // ---- Render core -------------------------------------------------------
@@ -418,7 +461,10 @@ export class FamilyHubCard extends HTMLElement {
             const card     = document.createElement("div");
             card.className = "fh-card";
 
-            if (!this._hass) {
+            if (!this._hass || !this._model) {
+                // v0.7.0 P2: all card data lives in the websocket model; show a
+                // loading state until the first fetch resolves (avoids a flash of
+                // partial data now that sensors only carry scalars).
                 card.innerHTML = `<div class="fh-empty">Loading…</div>`;
             } else {
                 // Redirect stale section IDs from older builds
@@ -460,10 +506,10 @@ export class FamilyHubCard extends HTMLElement {
             this.shadowRoot.innerHTML = "";
             this.shadowRoot.appendChild(styleEl);
             this.shadowRoot.appendChild(card);
-            // Force a fresh render attempt in 3s
+            // Force a fresh model fetch + render attempt in 3s
             setTimeout(() => {
                 if (this._hass) {
-                    for (const id of FH_SENSORS) delete this._lastKeys[id];
+                    this._lastDataRev = undefined;   // force _maybeRender to refetch the model
                     this._maybeRender();
                 }
             }, 3000);
@@ -507,7 +553,7 @@ export class FamilyHubCard extends HTMLElement {
     // ---- Sensor data accessors ---------------------------------------------
 
     _states(id) { return this._hass?.states?.[id]; }
-    _attrs(id)  { return this._states(id)?.attributes || {}; }
+    _attrs(id)  { return (this._model && this._model[id]) || this._states(id)?.attributes || {}; }
     _people()   { return this._attrs("sensor.family_hub_needs_attention").people || []; }
 
     _findPerson(nameOrId) {

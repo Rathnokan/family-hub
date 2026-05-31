@@ -115,12 +115,17 @@ export function groupHistorySkipped(entries) {
     const byDate    = new Map();  // skipped_date → entry[]
 
     for (const e of entries) {
-        if (e.type === "task_skipped" && e.skipped_date) {
-            if (!byDate.has(e.skipped_date)) byDate.set(e.skipped_date, []);
-            byDate.get(e.skipped_date).push(e);
-        } else {
-            regular.push({ isGroup: false, entry: e, timestamp: e.timestamp });
+        if (e.type === "task_skipped") {
+            // Fall back to timestamp date if backend didn't tag skipped_date.
+            // Matches what Recent Activity does so the two panels never disagree.
+            const dateKey = e.skipped_date || (e.timestamp || "").slice(0, 10);
+            if (dateKey) {
+                if (!byDate.has(dateKey)) byDate.set(dateKey, []);
+                byDate.get(dateKey).push(e);
+                continue;
+            }
         }
+        regular.push({ isGroup: false, entry: e, timestamp: e.timestamp });
     }
 
     const groups = [];

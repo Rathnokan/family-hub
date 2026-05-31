@@ -39,6 +39,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.event import async_track_time_change
 
 from .const import (
     CARD_JS_FILENAME,
@@ -51,6 +52,7 @@ from .const import (
 from .coordinator import FamilyHubCoordinator
 from .data_store import FamilyHubDataStore
 from .services import async_setup_services
+from .websocket import async_register_websocket_api
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -70,6 +72,11 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     deployed JS file.
     """
     hass.data.setdefault(DOMAIN, {})
+
+    # --- Websocket API (v0.7.0 P2) ---
+    # Registers family_hub/get_model so the card can pull its data model on
+    # demand instead of via fat sensor attributes. Registered once per process.
+    async_register_websocket_api(hass)
 
     # --- Serve www/ as a static HTTP path ---
     # Makes /family_hub/family-hub-card.js accessible to the browser.
@@ -178,6 +185,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # --- Coordinator ---
     coordinator = FamilyHubCoordinator(hass, store)
     await coordinator.async_config_entry_first_refresh()
+
+    # --- Event-driven scheduling (v0.7.0: replaces the old 30 s coordinator poll) ---
+    # The first_refresh above already ran one catch-up tick. From here on:
+    #   • daily tick fires once at local midnight (00:00:10), and
+    #   • a light per-minute heartbeat dispatches due reminders / penalty nudges.
+    # Both unsubscribe automatically on unload/reload via entry.async_on_unload.
+    entry.async_on_unload(
+        async_track_time_change(
+            hass, coordinator.async_daily_rollover, hour=0, minute=0, second=10
+        )
+    )
+    entry.async_on_unload(
+        async_track_time_change(
+            hass, coordinator.async_notification_heartbeat, second=0
+        )
+    )
 
     # --- Dynamic sensor management ------------------------------------------
     # async_add_entities is only available inside async_setup_entry via the
