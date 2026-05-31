@@ -56,12 +56,12 @@ The handoff prompt is part of "Phase Complete" — do not declare a phase done w
 
 | Item | State |
 |---|---|
-| **Live on HA (Samba)** | v0.7.0 **P0+P1+P2 deployed to Samba and live-tested.** NOT committed to git, NOT version-bumped (still 0.6.5 in manifest/constants). |
-| **GitHub / HACS** | Last tag = v0.6.5. v0.7.0 work is Samba-only so far — commit when the whole release is stable. |
+| **Live on HA (Samba)** | v0.7.0 **P0+P1+P2 deployed to Samba and live-tested.** Not version-bumped (still 0.6.5 in manifest/constants). |
+| **GitHub / HACS** | P0–P2 **committed + pushed** to branch **`v0.7.0-refoundation`** (commit `43701f5`). `main` still at v0.6.5 tag. Merge to main + bump version + tag when the whole v0.7.0 release is done. |
 | **manifest.json / hacs.json / constants.js VERSION** | 0.6.5 (bump to 0.7.0 only when shipping the release) |
-| **Phase** | **v0.7.0 "Re-foundation" in progress. P0/P1/P2 DONE + live-tested. Next: P3 (storage migration), then P4 (code/theme splits).** See [ROADMAP.md](ROADMAP.md) → "v0.7.0 — Re-foundation". |
+| **Phase** | **v0.7.0 "Re-foundation" in progress. P0/P1/P2 DONE + live-tested + pushed. Next: P3 (storage migration), then P4 (code/theme splits).** See [ROADMAP.md](ROADMAP.md) → "v0.7.0 — Re-foundation". |
 
-> ⚠️ **Uncommitted v0.7.0 work lives in the local repo + Samba.** Before P3, run `git status` / `git diff` to see everything P0–P2 changed. Consider committing the green P0–P2 state first (with the user's go) so P3 starts from a clean tree.
+> ⚠️ **Work continues on branch `v0.7.0-refoundation`, NOT main.** Next session: `git -C <repo> checkout v0.7.0-refoundation` (or confirm you're on it) before starting P3. The branch has a clean tree as of the P0–P2 commit — a recovery point if the P3 migration goes wrong.
 
 ---
 
@@ -86,7 +86,7 @@ The handoff prompt is part of "Phase Complete" — do not declare a phase done w
 
 ### First moves for the next session — START P3
 
-1. Run the Session Start Checklist. **`git status`/`git diff` to review the uncommitted P0–P2 work** (offer to commit the green state first, with the user's go).
+1. Run the Session Start Checklist. **Confirm you're on branch `v0.7.0-refoundation`** (`git -C <repo> branch --show-current`; checkout if not). P0–P2 are already committed there (`43701f5`) — clean tree to start from.
 2. Read [ROADMAP.md](ROADMAP.md) → "v0.7.0 — Re-foundation" **Phase 3 + the Migration section**, and the locked decisions there (module-oriented stores; assets → `/local`; reserve meals/maintenance seams; reward store NOT migrated). Skim DECISIONS_LOG storage entries.
 3. **P3 safety constraints (critical — user has NO local Python, so you CANNOT dry-run; the only test is live HA):**
    - The original `/config/family_hub_data.json` must be treated as **read-only** during migration — migrate by READING it and WRITING the new HA `Store`s elsewhere (`.storage/`). Never modify the original. This keeps a clean revert path (restore old `data_store.py`, delete new stores).
