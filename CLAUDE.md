@@ -59,7 +59,7 @@ The handoff prompt is part of "Phase Complete" — do not declare a phase done w
 | **Live on HA (Samba)** | v0.7.0 **P0+P1+P2 deployed to Samba and live-tested.** Not version-bumped (still 0.6.5 in manifest/constants). |
 | **GitHub / HACS** | P0–P2 **committed + pushed** to branch **`v0.7.0-refoundation`** (commit `43701f5`). `main` still at v0.6.5 tag. Merge to main + bump version + tag when the whole v0.7.0 release is done. |
 | **manifest.json / hacs.json / constants.js VERSION** | 0.6.5 (bump to 0.7.0 only when shipping the release) |
-| **Phase** | **v0.7.0 "Re-foundation" in progress. P0/P1/P2 DONE + live-tested + pushed. Next: P3 (storage migration), then P4 (code/theme splits).** See [ROADMAP.md](ROADMAP.md) → "v0.7.0 — Re-foundation". |
+| **Phase** | **v0.7.0 "Re-foundation": P0–P3 + inactive-people mgmt + Family-panel fix + services.yaml all DONE, live-tested + pushed (branch `v0.7.0-refoundation`, HEAD `b48e30d`).** Remaining: the css/modals/modes-admin **file splits** (maintainability-only) + ship. See [ROADMAP.md](ROADMAP.md) + handoff below. |
 
 > ⚠️ **Work continues on branch `v0.7.0-refoundation`, NOT main.** Next session: `git -C <repo> checkout v0.7.0-refoundation` (or confirm you're on it) before starting P3. The branch has a clean tree as of the P0–P2 commit — a recovery point if the P3 migration goes wrong.
 
@@ -82,18 +82,23 @@ The handoff prompt is part of "Phase Complete" — do not declare a phase done w
   - **Sensors are now lean scalars** — verified live: `needs_attention` = `data_rev` + counts + slim roster + `rooms_config` + `family_name`.
   - **GOTCHA fixed (see DECISIONS_LOG "Card dirty-check keys off `data_rev`"):** track the SENSOR's data_rev in `_lastDataRev`, never the model's — the heartbeat bumps the store counter without refreshing the sensor, so the model's value runs ahead and caused re-render-on-every-state-change (dropdowns self-closing).
 
-**Not done:** P3 (storage migration) and P4 (code/theme splits).
+**Also done (after P0–P2):**
+- **✅ P3 — module-oriented multi-store + migration** (`data_store.py`/`__init__.py`/`const.py`). Migration verified OK on live data; original `family_hub_data.json` kept read-only + backed up to `.v1.bak.json`; new HA Stores in `.storage/family_hub_{core,chores,rewards,history}`; debounced `async_delay_save`. Commit `8701cd4`.
+- **✅ Inactive-people management** — `async_reactivate_person` + `async_hard_delete_person` (cascade purge, guarded to inactive-only); `reactivate_person` + `hard_delete_person` services; `inactive_people` in the model; admin Family "Inactive members" panel + `mConfirmHardDeletePerson`. Commit `cbc77b4`.
+- **✅ Admin Family-panel layout fix** (action buttons → own row, names no longer truncate) + **`services.yaml`** (all 45 services documented; kills the "Failed to load services.yaml" reboot error). Commit `b48e30d`.
 
-### First moves for the next session — START P3
+**Not done — the remaining P4 work (all non-breaking, lower-risk):**
 
-1. Run the Session Start Checklist. **Confirm you're on branch `v0.7.0-refoundation`** (`git -C <repo> branch --show-current`; checkout if not). P0–P2 are already committed there (`43701f5`) — clean tree to start from.
-2. Read [ROADMAP.md](ROADMAP.md) → "v0.7.0 — Re-foundation" **Phase 3 + the Migration section**, and the locked decisions there (module-oriented stores; assets → `/local`; reserve meals/maintenance seams; reward store NOT migrated). Skim DECISIONS_LOG storage entries.
-3. **P3 safety constraints (critical — user has NO local Python, so you CANNOT dry-run; the only test is live HA):**
-   - The original `/config/family_hub_data.json` must be treated as **read-only** during migration — migrate by READING it and WRITING the new HA `Store`s elsewhere (`.storage/`). Never modify the original. This keeps a clean revert path (restore old `data_store.py`, delete new stores).
-   - Back it up to `family_hub_data.v1.bak.json` anyway. **Verify row counts** (people/chores/task_instances/history/store_items) match the source BEFORE committing to the new stores; on mismatch, abort + fall back to the legacy file.
-   - Keep `self._data`'s in-memory shape IDENTICAL so the ~4,100 lines of business logic in `data_store.py` are untouched — only the load/save plumbing changes. Lowest-risk path.
-   - Stores (decided): `core` (settings+people), `chores` (chores+task_instances), `rewards` (store_items+redemptions+subscriptions+group_reward_proposals), `history`. Use `Store.async_delay_save` (debounce ~2 s). Add a flush on `async_unload_entry`. Assets/upload service + the `data/` code-package split can be deferred (additive / cheap-later).
-4. Then P4 (css/modals/modes-admin splits + theme co-location) + the deferred P0-triage items (admin Family-panel layout fix; author `services.yaml`).
+### First moves for the next session — START P4 file-splits
+1. Run the Session Start Checklist. **Confirm you're on branch `v0.7.0-refoundation`** (`git -C <repo> branch --show-current`). HEAD = `b48e30d`, clean tree.
+2. The remaining P4 = **pure maintainability/token, no user-visible change** (the user-facing P4 items are already done above):
+   - `css.js` (~4,400 lines) → `src/card/css/{index,layout,components,themes,animations}.js` (index re-exports a concatenated string; build imports `index.js`).
+   - `modals.js` (~1,300) → one file per modal.
+   - `modes-admin.js` (~1,200) → `admin/{today,family,tasks,rewards,history,settings}.js`.
+   - Theme co-location: `themes/<key>/{index.js, <key>.css.js, rail.js}` driven by a token/data object.
+   - Do these **one file at a time**: split → `npm run build` → confirm bundle builds + the card still renders → commit. Never leave a half-split (broken import) uncommitted. Each is mechanical and independently shippable.
+3. **Low-priority follow-ups** (additive, defer freely): per-domain dirty-tracking on `async_save` (only write changed stores — minor perf), assets/upload service (`/config/www/family_hub/assets` + `upload_asset` service; reward store is empty so safe), `data/` backend code-package split.
+4. **Ship v0.7.0 when ready:** merge `v0.7.0-refoundation` → `main`, bump VERSION to 0.7.0 (manifest.json + hacs.json + `src/card/constants.js`), `npm run build`, tag `v0.7.0`, write `RELEASE-NOTES-v0.7.0.md`, push. The perf re-foundation + features are already shippable; the file-splits can be a later v0.7.1.
 
 ### Model recommendation
 
