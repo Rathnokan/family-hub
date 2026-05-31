@@ -92,11 +92,11 @@ The handoff prompt is part of "Phase Complete" — do not declare a phase done w
 ### First moves for the next session — START P4 file-splits
 1. Run the Session Start Checklist. **Confirm you're on branch `v0.7.0-refoundation`** (`git -C <repo> branch --show-current`). HEAD = `b48e30d`, clean tree.
 2. The remaining P4 = **pure maintainability/token, no user-visible change** (the user-facing P4 items are already done above):
-   - `css.js` (~4,400 lines) → `src/card/css/{index,layout,components,themes,animations}.js` (index re-exports a concatenated string; build imports `index.js`).
-   - `modals.js` (~1,300) → one file per modal.
-   - `modes-admin.js` (~1,200) → `admin/{today,family,tasks,rewards,history,settings}.js`.
-   - Theme co-location: `themes/<key>/{index.js, <key>.css.js, rail.js}` driven by a token/data object.
-   - Do these **one file at a time**: split → `npm run build` → confirm bundle builds + the card still renders → commit. Never leave a half-split (broken import) uncommitted. Each is mechanical and independently shippable.
+   - ✅ **`css.js` DONE** (commit `55d4351`) — now `css.js` is a barrel; real content in `src/card/css/part1..5.js` (byte-identical line-range slices) + `css/index.js` (concatenates). Technique: a pure string, so PowerShell sliced it byte-identically (verified: Σ slice lengths == original; build clean; classes present in bundle). Zero render change. If re-organizing semantically later, just move CSS between the `part*.js` files.
+   - ⬜ `modals.js` (~1,300) → one file per modal-group, `modals.js` as a barrel.
+   - ⬜ `modes-admin.js` (~1,200) → `admin/{today,family,tasks,rewards,history,settings}.js` + barrel.
+   - ⬜ Theme co-location: `themes/<key>/{index.js, <key>.css.js, rail.js}` driven by a token/data object.
+   - **⚠️ modals.js + modes-admin.js are CODE, not a string — higher risk than css.js.** A missing cross-import (function A in file 1 calls function B now in file 2 but isn't imported) is a **silent runtime ReferenceError that `npm run build` does NOT catch** (esbuild treats the un-imported name as an undefined global). So: map each function's callees first, give every split file the cross-imports it needs, and **live-test each modal/admin section** after splitting — don't trust the build alone. PowerShell can still move the function bodies byte-free; you write the import lines + barrel. One file at a time, commit each.
 3. **Low-priority follow-ups** (additive, defer freely): per-domain dirty-tracking on `async_save` (only write changed stores — minor perf), assets/upload service (`/config/www/family_hub/assets` + `upload_asset` service; reward store is empty so safe), `data/` backend code-package split.
 4. **Ship v0.7.0 when ready:** merge `v0.7.0-refoundation` → `main`, bump VERSION to 0.7.0 (manifest.json + hacs.json + `src/card/constants.js`), `npm run build`, tag `v0.7.0`, write `RELEASE-NOTES-v0.7.0.md`, push. The perf re-foundation + features are already shippable; the file-splits can be a later v0.7.1.
 
