@@ -12,9 +12,11 @@ CONF_STORAGE_PATH = "storage_path"
 DEFAULT_FAMILY_NAME = "Our Family"
 DEFAULT_POINTS_PER_DOLLAR = 10
 
-# Data store filename (lives in HA config dir)
+# Data store filename (legacy single-file path; read-only source for the
+# v0.7.0 P3 one-time migration into the per-domain HA Stores).
 STORAGE_FILE = "family_hub_data.json"
-STORAGE_VERSION = 1
+# Bumped 1→2 for the v0.7.0 module-oriented multi-store layout.
+STORAGE_VERSION = 2
 
 # Person types
 PERSON_TYPE_KID = "kid"

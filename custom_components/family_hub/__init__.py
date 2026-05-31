@@ -283,6 +283,15 @@ async def _async_cleanup_stale_entities(
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry and clean up services."""
+    # v0.7.0 P3: flush any pending debounced store writes before unloading, so a
+    # reload doesn't drop a save that was still inside its debounce window.
+    entry_data = hass.data.get(DOMAIN, {}).get(entry.entry_id)
+    if entry_data and entry_data.get("store"):
+        try:
+            await entry_data["store"].async_flush()
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.warning("Family Hub: store flush on unload failed: %s", err)
+
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     if unload_ok:

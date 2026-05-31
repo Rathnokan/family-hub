@@ -71,6 +71,7 @@ from datetime import date, datetime, timedelta
 from typing import Any
 
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.storage import Store
 
 from .const import (
     ACTIVE_STATUSES,
@@ -176,6 +177,24 @@ def _today_str() -> str:
 
 def _new_id() -> str:
     return str(uuid.uuid4())
+
+
+# ---------------------------------------------------------------------------
+# v0.7.0 P3 — module-oriented multi-store layout
+# ---------------------------------------------------------------------------
+# Each domain persists to its own HA Store (.storage/family_hub_<domain>) with
+# debounced writes, so a chore tap no longer rewrites the whole ~1 MB file.
+# `self._data` keeps the SAME merged shape, so all CRUD/business logic is
+# unchanged. Any top-level key not listed here falls into "core" (so nothing is
+# ever lost, and a future module's collection is forward-compatible). A new
+# module = a new domain here + its own data/<module> package later.
+_STORE_DOMAINS: dict[str, list[str]] = {
+    "core":    ["version", "settings", "people"],
+    "chores":  ["chores", "task_instances"],
+    "rewards": ["store_items", "redemptions", "subscriptions", "group_reward_proposals"],
+    "history": ["history"],
+}
+_SAVE_DELAY_SECONDS = 2.0  # debounce window for async_delay_save
 
 
 def _empty_store(
@@ -420,6 +439,8 @@ class FamilyHubDataStore:
 
     def __init__(self, hass: HomeAssistant, storage_path: str) -> None:
         self._hass = hass
+        # Legacy single-file path — now used ONLY to read/back-up the old file
+        # during the one-time v0.7.0 P3 migration. Never written to after that.
         self._path = storage_path
         self._data: dict[str, Any] = {}
         # Serialises all mutations + saves so concurrent service calls don't race
@@ -429,36 +450,149 @@ class FamilyHubDataStore:
         # websocket model. In-memory only — resets to 0 on reload (the card
         # always fetches on first render regardless).
         self.data_rev = 0
+        # v0.7.0 P3: per-domain HA Stores (debounced writes via async_delay_save).
+        self._stores: dict[str, Store] = {
+            domain: Store(hass, STORAGE_VERSION, f"{DOMAIN}_{domain}")
+            for domain in _STORE_DOMAINS
+        }
 
     # ------------------------------------------------------------------
     # Load / Save
     # ------------------------------------------------------------------
 
     async def async_load(self) -> None:
-        """Load data from disk, migrate records, create fresh store if missing."""
-        def _load() -> dict:
+        """Load data into self._data, then run idempotent record migrations.
+
+        v0.7.0 P3: prefers the per-domain multi-store layout; if no stores exist
+        yet, performs a one-time migration from the legacy single file (which is
+        only ever READ, never modified).
+        """
+        loaded: dict[str, Any] = {}
+        found_any = False
+        for domain, store in self._stores.items():
+            data = await store.async_load()
+            if data is not None:
+                found_any = True
+                loaded[domain] = data
+
+        if found_any:
+            self._data = self._merge_domains(loaded)
+            _LOGGER.info("Family Hub: loaded v2 multi-store layout")
+        else:
+            self._data = await self._async_migrate_from_legacy()
+
+        self._run_record_migrations()
+
+    def _merge_domains(self, loaded: dict[str, dict]) -> dict:
+        """Flatten the per-domain store payloads back into one merged self._data."""
+        merged: dict[str, Any] = {}
+        for data in loaded.values():
+            if isinstance(data, dict):
+                merged.update(data)
+        return merged
+
+    def _domain_slice(self, domain: str) -> dict:
+        """Extract the top-level keys belonging to one domain. 'core' also absorbs
+        any unmapped key, so nothing is ever dropped."""
+        keys = _STORE_DOMAINS.get(domain, [])
+        sliced = {k: self._data[k] for k in keys if k in self._data}
+        if domain == "core":
+            mapped = {k for ks in _STORE_DOMAINS.values() for k in ks}
+            for k, v in self._data.items():
+                if k not in mapped:
+                    sliced[k] = v
+        return sliced
+
+    async def _async_migrate_from_legacy(self) -> dict:
+        """One-time migration: read the legacy single file (READ-ONLY), write the
+        v2 domain stores, verify by re-reading + comparing collection counts, and
+        keep the legacy file as a backup. On a verify mismatch, remove the v2
+        stores so the legacy file is re-read next load. Returns the in-memory data
+        either way (so this session always runs on correct data)."""
+        def _read_legacy():
             if not os.path.exists(self._path):
-                _LOGGER.info("Family Hub: no data file found, creating fresh store at %s", self._path)
-                return _empty_store()
+                return None
             try:
                 with open(self._path, encoding="utf-8") as f:
-                    data = json.load(f)
-                _LOGGER.info("Family Hub: loaded data store from %s", self._path)
-                return data
+                    return json.load(f)
             except (json.JSONDecodeError, OSError) as err:
-                _LOGGER.error("Family Hub: failed to load data store: %s", err)
-                backup_path = self._path + ".corrupt"
-                try:
-                    shutil.copy2(self._path, backup_path)
-                    _LOGGER.error(
-                        "Family Hub: corrupt data file backed up to %s — starting fresh store",
-                        backup_path,
-                    )
-                except OSError as backup_err:
-                    _LOGGER.error("Family Hub: could not back up corrupt file: %s", backup_err)
-                return _empty_store()
+                _LOGGER.error("Family Hub: failed to read legacy data file: %s", err)
+                return "CORRUPT"
 
-        self._data = await self._hass.async_add_executor_job(_load)
+        legacy = await self._hass.async_add_executor_job(_read_legacy)
+
+        if legacy is None:
+            _LOGGER.info("Family Hub: no v2 stores and no legacy file — fresh install")
+            return _empty_store()
+
+        if legacy == "CORRUPT":
+            def _backup_corrupt():
+                try:
+                    shutil.copy2(self._path, self._path + ".corrupt")
+                except OSError:
+                    pass
+            await self._hass.async_add_executor_job(_backup_corrupt)
+            _LOGGER.error("Family Hub: legacy file corrupt — starting fresh store")
+            return _empty_store()
+
+        # --- Real legacy data: migrate to the v2 stores ---
+        _LOGGER.warning("Family Hub: migrating legacy single-file store → v2 multi-store layout")
+        self._data = legacy  # set so _domain_slice() can read it during migration
+
+        # 1. Back up the original (the original itself is NEVER modified).
+        def _backup():
+            bak = (self._path[:-5] if self._path.endswith(".json") else self._path) + ".v1.bak.json"
+            try:
+                shutil.copy2(self._path, bak)
+                _LOGGER.warning("Family Hub: legacy file backed up to %s", bak)
+            except OSError as err:
+                _LOGGER.error("Family Hub: legacy backup failed: %s", err)
+        await self._hass.async_add_executor_job(_backup)
+
+        # Steps 2-3 are wrapped so ANY failure is non-fatal: we remove partial
+        # stores and keep running on the legacy data in memory (the original file
+        # is untouched), and the migration is retried on the next load.
+        try:
+            # 2. Write the domain stores immediately.
+            for domain, store in self._stores.items():
+                await store.async_save(self._domain_slice(domain))
+
+            # 3. Verify: re-read + compare collection counts against the legacy file.
+            verify_loaded = {}
+            for domain, store in self._stores.items():
+                v = await store.async_load()
+                if v is not None:
+                    verify_loaded[domain] = v
+            merged = self._merge_domains(verify_loaded)
+            check_keys = ("people", "chores", "task_instances", "store_items", "history",
+                          "redemptions", "subscriptions", "group_reward_proposals")
+            legacy_counts = {k: len(legacy.get(k, [])) for k in check_keys}
+            merged_counts = {k: len(merged.get(k, [])) for k in check_keys}
+
+            if legacy_counts == merged_counts:
+                _LOGGER.warning(
+                    "Family Hub: migration verified OK %s. Original kept as backup.",
+                    legacy_counts,
+                )
+            else:
+                raise ValueError(
+                    f"verify count mismatch legacy={legacy_counts} v2={merged_counts}"
+                )
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.error(
+                "Family Hub: migration FAILED (%s) — removing partial v2 stores and "
+                "continuing on the legacy file; will retry on next load.", err,
+            )
+            for store in self._stores.values():
+                try:
+                    await store.async_remove()
+                except Exception:  # noqa: BLE001
+                    pass
+
+        return legacy
+
+    def _run_record_migrations(self) -> None:
+        """Idempotent, forward-fill record migrations — safe to run on every load."""
 
         # Ensure settings block has all v0.3.0 keys
         s = self._data.setdefault("settings", {})
@@ -546,19 +680,30 @@ class FamilyHubDataStore:
         self._data.setdefault("subscriptions", [])
 
     async def async_save(self) -> None:
-        """Persist data to disk atomically. Lock acquired here."""
+        """Persist data to the per-domain HA Stores (v0.7.0 P3).
+
+        Writes are DEBOUNCED via async_delay_save, so a burst of rapid mutations
+        (a kid tapping several chores) coalesces into a single write per store
+        instead of rewriting the whole file each time. The data callbacks read
+        self._data at flush time, so they always persist the latest state.
+        """
         # Bump the mutation counter so the card knows the model changed.
         self.data_rev += 1
+        for domain, store in self._stores.items():
+            store.async_delay_save(
+                (lambda d=domain: self._domain_slice(d)), _SAVE_DELAY_SECONDS
+            )
 
-        def _write() -> None:
-            os.makedirs(os.path.dirname(self._path), exist_ok=True)
-            tmp = self._path + ".tmp"
-            with open(tmp, "w", encoding="utf-8") as f:
-                json.dump(self._data, f, indent=2, ensure_ascii=False)
-            os.replace(tmp, self._path)
+    async def async_flush(self) -> None:
+        """Force any pending debounced saves to disk immediately.
 
-        async with self._lock:
-            await self._hass.async_add_executor_job(_write)
+        Called on integration unload/reload so a debounced write in flight is not
+        lost (HA already flushes Store delayed writes on full HA shutdown)."""
+        for domain, store in self._stores.items():
+            try:
+                await store.async_save(self._domain_slice(domain))
+            except Exception as err:  # noqa: BLE001
+                _LOGGER.error("Family Hub: flush of '%s' store failed: %s", domain, err)
 
     # ------------------------------------------------------------------
     # Settings
