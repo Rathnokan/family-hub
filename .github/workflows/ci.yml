@@ -45,4 +45,8 @@ jobs:
         with:
           node-version: "20"
       - run: npm install
+      # esbuild's binary occasionally installs without the +x bit on Linux
+      # runners (works fine on Windows dev machines) — ensure it's executable.
+      - name: Ensure esbuild is executable
+        run: chmod +x node_modules/.bin/esbuild node_modules/esbuild/bin/esbuild node_modules/@esbuild/*/bin/* 2>/dev/null || true
       - run: npm run build
