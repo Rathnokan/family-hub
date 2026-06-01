@@ -1,13 +1,13 @@
 {
   "domain": "family_hub",
   "name": "Family Hub",
-  "version": "0.6.5",
+  "version": "0.7.0",
   "documentation": "https://github.com/Rathnokan/family-hub",
   "issue_tracker": "https://github.com/Rathnokan/family-hub/issues",
   "codeowners": ["@Rathnokan"],
   "requirements": [],
   "dependencies": ["frontend", "http", "websocket_api"],
-  "iot_class": "local_polling",
+  "iot_class": "calculated",
   "config_flow": true,
   "homeassistant": "2025.1.0"
 }
