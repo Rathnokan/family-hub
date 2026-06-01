@@ -31,6 +31,27 @@
 
 ---
 
+## Code organization (v0.7.0 P4)
+
+### `data_store.py` is a thin facade over domain mixins
+- **Decision:** `FamilyHubDataStore` keeps only the persistence core (load/save/migration, the P3 multi-store, settings/rank accessors) and inherits 11 `*_mixin.py` classes — one per domain (card_shaper, tick, streaks_ranks, subscriptions, people, chores, tasks, store_items, group_rewards, redemptions, history_admin). `_store_helpers.py` holds pure module functions. 4,815 → 624 lines in the facade.
+- **Why:** the monolith was the single most-read, most-edited backend file (~50K tokens). Mixins split it by domain with **zero call-site changes** (everything resolves through `self`/MRO), and mixins never import each other (no cycles) so domains evolve independently.
+- **Don't:** Don't make mixins import each other — call sibling methods via `self`. Don't reach for a heavier refactor (function modules taking `store`) — the mixin form keeps `store.async_x()` working everywhere.
+
+### Refactor technique: PowerShell line-extraction + def-count + CI
+- **Decision:** Move code between files with **PowerShell line-range slicing** (`[System.IO.File]::ReadAllLines` → slice → `WriteAllText` UTF-8-no-BOM), never by reproducing the text in tool output. After each split, assert a **def-count check** (`Select-String '^\s*(async def|def) '` across all files == the pre-split total) and push so **CI ruff** catches missing imports.
+- **Why:** zero reproduction = zero typo risk on thousands of lines; the def-count proves no method was lost/duplicated/cut; ruff `F821` is the only thing that catches a "moved it, forgot to import it" break (which `npm run build` / `py_compile` do NOT). This combo caught `_LOGGER`, `_STORE_DOMAINS`, and an off-by-two import boundary — all before deploy.
+- **Don't:** Don't trust `py_compile` alone for cross-module imports (it compiles files in isolation). Don't assume an import block's end line — re-check it (it grew when constants were added, which caused the off-by-two).
+
+### css.js split is byte-identical mechanical slices, not semantic modules
+- **Decision:** `css.js` is a barrel re-exporting `CSS` from `css/index.js`, which concatenates `css/part1..5.js` — mechanical line-range slices, byte-identical to the original string (verified Σ lengths == original).
+- **Why:** the CSS is a pure string with no `${}`/backticks, so slicing is provably safe with **zero live-testing**. A semantic split (layout/components/themes) would need reading + categorizing every rule (expensive + reproduction risk) for marginal extra benefit. Re-organize semantically later by moving CSS between the part files — cheap.
+
+### GitHub Actions CI is the safety net that makes refactors safe
+- **Decision:** `.github/workflows/ci.yml` runs on every push: `python -m compileall custom_components`, `ruff check --select E9,F63,F7,F82` (syntax + **undefined names**, no style nags), and `npm run build`. Required because the user has **no local Python** — the only other test is a live HA reload.
+- **Why:** turns "deploy and pray" into "CI green → deploy." The narrow ruff rule-set catches real bugs (undefined names = the silent-import class) without failing on pre-existing unused imports (F401 deliberately not selected, since the mixins over-import on purpose).
+- **Don't:** Don't widen the ruff select set to style rules (it'll go red on the intentional over-imports). Note ruff is **Python only** — it does NOT guard the JS card splits (`modals.js`/`modes-admin.js`), which is why those remain higher-risk.
+
 ## Card-stub split (permanent)
 
 ### `npm run build` produces TWO files, deploy BOTH

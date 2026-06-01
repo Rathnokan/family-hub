@@ -56,12 +56,12 @@ The handoff prompt is part of "Phase Complete" — do not declare a phase done w
 
 | Item | State |
 |---|---|
-| **Live on HA (Samba)** | v0.7.0 **P0+P1+P2 deployed to Samba and live-tested.** Not version-bumped (still 0.6.5 in manifest/constants). |
-| **GitHub / HACS** | P0–P2 **committed + pushed** to branch **`v0.7.0-refoundation`** (commit `43701f5`). `main` still at v0.6.5 tag. Merge to main + bump version + tag when the whole v0.7.0 release is done. |
+| **Live on HA (Samba)** | v0.7.0 **everything below deployed + live-tested.** Not version-bumped (still 0.6.5 in manifest/constants). |
+| **GitHub / HACS** | All work **committed + pushed** to branch **`v0.7.0-refoundation`** (HEAD `f0e4d53`). `main` still at v0.6.5 tag. **GitHub Actions CI is active + green** (py compile + ruff undefined-names + card build on every push). Merge to main + bump version + tag when ready to ship. |
 | **manifest.json / hacs.json / constants.js VERSION** | 0.6.5 (bump to 0.7.0 only when shipping the release) |
-| **Phase** | **v0.7.0 "Re-foundation": P0–P3 + inactive-people mgmt + Family-panel fix + services.yaml all DONE, live-tested + pushed (branch `v0.7.0-refoundation`, HEAD `b48e30d`).** Remaining: the css/modals/modes-admin **file splits** (maintainability-only) + ship. See [ROADMAP.md](ROADMAP.md) + handoff below. |
+| **Phase** | **v0.7.0 "Re-foundation" essentially complete.** Done + live-tested: P0–P3, inactive-people mgmt, Family-panel fix, services.yaml, **CI safety net**, **css.js split**, and the **full `data_store.py` modularization** (4,815 → 624 lines via 11 mixins). Remaining: optional `modals.js`/`modes-admin.js` card splits + the #3 model/history runtime trim + **ship**. See handoff below. |
 
-> ⚠️ **Work continues on branch `v0.7.0-refoundation`, NOT main.** Next session: `git -C <repo> checkout v0.7.0-refoundation` (or confirm you're on it) before starting P3. The branch has a clean tree as of the P0–P2 commit — a recovery point if the P3 migration goes wrong.
+> ⚠️ **Work is on branch `v0.7.0-refoundation`, NOT main.** Next session: confirm you're on it (`git -C <repo> branch --show-current`). Tree is clean; **every push runs CI** — keep it green before deploying.
 
 ---
 
@@ -83,22 +83,20 @@ The handoff prompt is part of "Phase Complete" — do not declare a phase done w
   - **GOTCHA fixed (see DECISIONS_LOG "Card dirty-check keys off `data_rev`"):** track the SENSOR's data_rev in `_lastDataRev`, never the model's — the heartbeat bumps the store counter without refreshing the sensor, so the model's value runs ahead and caused re-render-on-every-state-change (dropdowns self-closing).
 
 **Also done (after P0–P2):**
-- **✅ P3 — module-oriented multi-store + migration** (`data_store.py`/`__init__.py`/`const.py`). Migration verified OK on live data; original `family_hub_data.json` kept read-only + backed up to `.v1.bak.json`; new HA Stores in `.storage/family_hub_{core,chores,rewards,history}`; debounced `async_delay_save`. Commit `8701cd4`.
-- **✅ Inactive-people management** — `async_reactivate_person` + `async_hard_delete_person` (cascade purge, guarded to inactive-only); `reactivate_person` + `hard_delete_person` services; `inactive_people` in the model; admin Family "Inactive members" panel + `mConfirmHardDeletePerson`. Commit `cbc77b4`.
-- **✅ Admin Family-panel layout fix** (action buttons → own row, names no longer truncate) + **`services.yaml`** (all 45 services documented; kills the "Failed to load services.yaml" reboot error). Commit `b48e30d`.
+- **✅ P3 — multi-store + migration** (`data_store.py`/`__init__.py`/`const.py`). Verified OK on live data; original `family_hub_data.json` kept read-only + backed up to `.v1.bak.json`; HA Stores at `.storage/family_hub_{core,chores,rewards,history}`; debounced `async_delay_save`. Commit `8701cd4`.
+- **✅ Inactive-people management** — `async_reactivate_person` + `async_hard_delete_person` (cascade purge, inactive-only); `reactivate_person`/`hard_delete_person` services; `inactive_people` in the model; admin Family "Inactive members" panel. Commit `cbc77b4`.
+- **✅ Admin Family-panel layout fix** + **`services.yaml`** (all 45 services; kills the reboot error). Commit `b48e30d`.
+- **✅ CI safety net** — `.github/workflows/ci.yml`: `python -m compileall` + `ruff --select E9,F63,F7,F82` (undefined names!) + `npm run build`, on every push. **Caught 4 real load-breaking bugs** during the data_store split before they hit HA. Check runs with `gh run list`/`gh run watch` (run gh from inside the repo, or `gh -R Rathnokan/family-hub`).
+- **✅ `css.js` split** (commit `55d4351`) — barrel re-exporting `CSS` from `css/index.js` (concatenates byte-identical slices `css/part1..5.js`). Zero render change.
+- **✅ `data_store.py` FULLY modularized** (commits up to `f0e4d53`) — **4,815 → 624 lines.** Now a thin facade (persistence core + settings) that mixes in **11 `*_mixin.py`** (card_shaper, tick, streaks_ranks, subscriptions, people, chores, tasks, store_items, group_rewards, redemptions, history_admin) + `_store_helpers.py`. Mixins operate on `self`, never import each other (MRO), no cycles.
 
-**Not done — the remaining P4 work (all non-breaking, lower-risk):**
+> **Split technique (reuse for any future split):** move method/code bodies with **PowerShell line-range extraction** (`[System.IO.File]::ReadAllLines` → slice → write; zero reproduction/typo risk). Verify a **def-count check** (`Select-String '^\s*(async def|def) '` across all files must equal the pre-split total). Give each new file the full import block + `_LOGGER = logging.getLogger(__name__)`. Then push and let **CI ruff catch missing imports** (it flagged `_LOGGER`, `_STORE_DOMAINS`, off-by-two boundaries — all pre-deploy).
 
-### First moves for the next session — START P4 file-splits
-1. Run the Session Start Checklist. **Confirm you're on branch `v0.7.0-refoundation`** (`git -C <repo> branch --show-current`). HEAD = `b48e30d`, clean tree.
-2. The remaining P4 = **pure maintainability/token, no user-visible change** (the user-facing P4 items are already done above):
-   - ✅ **`css.js` DONE** (commit `55d4351`) — now `css.js` is a barrel; real content in `src/card/css/part1..5.js` (byte-identical line-range slices) + `css/index.js` (concatenates). Technique: a pure string, so PowerShell sliced it byte-identically (verified: Σ slice lengths == original; build clean; classes present in bundle). Zero render change. If re-organizing semantically later, just move CSS between the `part*.js` files.
-   - ⬜ `modals.js` (~1,300) → one file per modal-group, `modals.js` as a barrel.
-   - ⬜ `modes-admin.js` (~1,200) → `admin/{today,family,tasks,rewards,history,settings}.js` + barrel.
-   - ⬜ Theme co-location: `themes/<key>/{index.js, <key>.css.js, rail.js}` driven by a token/data object.
-   - **⚠️ modals.js + modes-admin.js are CODE, not a string — higher risk than css.js.** A missing cross-import (function A in file 1 calls function B now in file 2 but isn't imported) is a **silent runtime ReferenceError that `npm run build` does NOT catch** (esbuild treats the un-imported name as an undefined global). So: map each function's callees first, give every split file the cross-imports it needs, and **live-test each modal/admin section** after splitting — don't trust the build alone. PowerShell can still move the function bodies byte-free; you write the import lines + barrel. One file at a time, commit each.
-3. **Low-priority follow-ups** (additive, defer freely): per-domain dirty-tracking on `async_save` (only write changed stores — minor perf), assets/upload service (`/config/www/family_hub/assets` + `upload_asset` service; reward store is empty so safe), `data/` backend code-package split.
-4. **Ship v0.7.0 when ready:** merge `v0.7.0-refoundation` → `main`, bump VERSION to 0.7.0 (manifest.json + hacs.json + `src/card/constants.js`), `npm run build`, tag `v0.7.0`, write `RELEASE-NOTES-v0.7.0.md`, push. The perf re-foundation + features are already shippable; the file-splits can be a later v0.7.1.
+### First moves for the next session — all that's left is OPTIONAL
+1. Confirm you're on `v0.7.0-refoundation`. **Every push runs CI — keep it green before deploying.**
+2. **#3 — model/history runtime trim (the recommended remaining efficiency win):** `build_card_model` still includes the ~977-entry `history_log` on `needs_attention`, so the card refetches it on *every* `data_rev` change even when not viewing history. Split it: `get_model` returns everything **except** history; add a `family_hub/get_history` ws command; card lazily fetches `this._history` only when the admin History view opens.
+3. **Optional card-side splits** (`modals.js`, `modes-admin.js`): ⚠️ CODE — a missing cross-import is a **silent JS ReferenceError that CI's ruff does NOT catch** (ruff is Python-only). Lower value, needs per-modal/section live-testing. **Leave unless specifically wanted.**
+4. **Ship v0.7.0:** merge `v0.7.0-refoundation` → `main`, bump VERSION to 0.7.0 (manifest.json + hacs.json + `src/card/constants.js`), `npm run build`, tag `v0.7.0`, write `RELEASE-NOTES-v0.7.0.md`, push. Already shippable.
 
 ### Model recommendation
 

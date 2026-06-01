@@ -144,7 +144,9 @@ lower token burn while developing.
 
 **Status:** approved 2026-05-30. Breaking release. Voids 3 contracts (below) with a one-time
 backed-up migration. Pushes Home Maintenance to v0.8.0.
-**Progress: ✅ P0, ✅ P1, ✅ P2 shipped to Samba + live-tested (not committed/version-bumped). ⬜ P3 (next), ⬜ P4.**
+**Progress: ✅ P0, ✅ P1, ✅ P2, ✅ P3 done + live-tested + committed (branch `v0.7.0-refoundation`).**
+**Plus: ✅ inactive-people mgmt, ✅ Family-panel fix, ✅ services.yaml, ✅ GitHub Actions CI, ✅ `css.js` split, ✅ `data_store.py` fully modularized (4,815→624 lines, 11 mixins).**
+**Remaining (optional): ⬜ P4 card-side splits (`modals.js`/`modes-admin.js` — low value, leave unless wanted), ⬜ #3 model/history runtime trim, ⬜ ship v0.7.0.**
 
 ### Measured baseline (2026-05-30) — why this is needed
 
@@ -275,12 +277,12 @@ not carved — see Module scope decision). Carving it out later is additive.
    ones on reload; user re-points hand-authored dashboards. Card + backend deploy together via
    Samba in one release, so no partial-state window.
 
-### Phase 4 — Codebase cleanup & theming (the original v0.6.6 refactor, re-scoped)
-- `css.js` split (4,361 lines) → `src/card/css/{index,layout,components,themes,animations}.js`
-  (concat re-export). The minify win already landed in Phase 0.
-- `modals.js` split (1,302 lines) → one file per modal (chore-edit, store-item-edit,
-  person-edit, icon-picker, settings).
-- `modes-admin.js` split (1,134 lines) → `admin/{today,family,tasks,rewards,history,settings}.js`.
+### Phase 4 — Codebase cleanup & theming (re-scoped; mostly done)
+- ✅ **GitHub Actions CI** — `.github/workflows/ci.yml` (py compile + ruff undefined-names + card build). The force-multiplier: caught 4 load-breaking bugs during the data_store split pre-deploy.
+- ✅ **`data_store.py` fully modularized** — 4,815 → 624 lines via 11 `*_mixin.py` + `_store_helpers.py` (mixin pattern, MRO, no cross-imports). The big "fewer tokens to code" win.
+- ✅ **`css.js` split** → `css.js` barrel + `css/index.js` + `css/part1..5.js` (byte-identical slices, not the semantic `{layout,components,…}` originally sketched — mechanical was provably safe + cheap; re-organize semantically later by moving CSS between part files if desired).
+- ⬜ `modals.js` split (1,302 lines) → one file per modal — **optional, low value, CODE (silent-import risk ruff can't catch). Leave unless wanted.**
+- ⬜ `modes-admin.js` split (1,134 lines) → `admin/{today,family,tasks,rewards,history,settings}.js` — **same caveat as modals.js.**
 - **Theme co-location:** `themes/<key>/{index.js, <key>.css.js, rail.js}`, registered in
   `themes/index.js`. Push each theme toward a token/data object (CSS custom props + ranks +
   rail renderer + `rowConfig`) so a **new theme needs zero edits to shared files** — de-risks

@@ -17,7 +17,9 @@ family-hub/
 │  ├─ const.py                           All shared constants (DOMAIN, statuses, service names, chore/recurrence types)
 │  ├─ config_flow.py                     Three-step UI config flow (family name → first parent → kids)
 │  ├─ coordinator.py                     DataUpdateCoordinator: event-driven (no poll) — midnight tick + per-min notify heartbeat + service refresh
-│  ├─ data_store.py                      Single-JSON data layer; all CRUD + tick + migration logic (~3.9 KLOC)
+│  ├─ data_store.py                      Persistence core (~620 LOC) — multi-store load/save/migration; mixes in 11 domain mixins
+│  ├─ *_mixin.py (11) + _store_helpers.py v0.7.0 P4 — data_store split by domain (card_shaper/tick/people/chores/tasks/…)
+│  ├─ card_model.py / websocket.py        v0.7.0 P2 — build_card_model() + family_hub/get_model ws command
 │  ├─ sensor.py                          Per-person sensors + 4 globals; attribute payloads consumed by the card
 │  ├─ services.py                        ~37 HA services that wrap data_store mutations
 │  ├─ strings.json / translations/en.json Config-flow translation strings
@@ -34,7 +36,7 @@ family-hub/
 │     │                                   modal management, drag-drop reorder, AbortController listeners
 │     ├─ constants.js                    VERSION, FH_SENSORS, HISTORY_META, inline SVG icon set (`I`),
 │     │                                   CHORE_TEMPLATES quick-add library
-│     ├─ css.js                          Full stylesheet exported as string; injected into shadow DOM
+│     ├─ css.js                          Barrel — re-exports CSS from css/index.js (split into css/part1..5.js, v0.7.0 P4)
 │     ├─ utils.js                        Pure helpers: escHTML, escAttr, slug, ini, cap, fPts, fUSD, daysLabel, daysLabelColor, opts, weekdayChips, relTime, fmtShortDate, groupHistorySkipped
 │     ├─ bracketed.js                    Corner-frame panel decoration helper
 │     ├─ icons.js                        Tabler-based chore icon library (FH_ICONS), FH_ICON_META, choreIcon()
@@ -169,7 +171,9 @@ family-hub/
 | `const.py` | Single source of truth for: DOMAIN, VERSION, config keys, chore types (`assigned`/`claimable`/`reminder`), recurrence types, claimable subtypes, task statuses, redemption statuses, group-reward proposal statuses, history event types, retention windows (30d history / 60d task instances), sensor + service names, weekday list (0=Monday), card URL constants (`CARD_URL_PATH = "/family_hub"`). |
 | `config_flow.py` | 3-step UI: family name + ppd → first parent → kids (CSV or skip). Storage path defaults to `config/family_hub_data.json`. Single instance only (unique_id = DOMAIN). |
 | `coordinator.py` | Thin `DataUpdateCoordinator` subclass. Owns `.store`. **Event-driven (v0.7.0): `update_interval=None` — no poll.** `async_daily_rollover` (registered via `async_track_time_change` at 00:00:10 in `__init__`) runs the tick once a day; `async_notification_heartbeat` (per-minute) dispatches due reminders/penalty nudges without a tick or sensor rebuild; service calls drive instant `async_refresh()`. Tick date persisted inside data file (`settings.last_tick_date`), so missed days get caught up at startup + across HA downtime. |
-| `data_store.py` | All persistent state lives here. Single JSON file. Methods grouped: load/save + migration; settings; rank ladder; rotation; streaks; people CRUD; chores CRUD; task instances + statuses (complete/approve/deny/claim/excuse/reject/mark-complete); daily tick (`_async_tick_for_date`, `_skip_incomplete_instances`, `_async_apply_daily_penalties`, `_async_expire_tasks`); allowances; success-rate completion streaks; group rewards (propose/respond/approve/decline/chip-in/redeem); redemptions; history (append + trim + enriched `get_history_for_card`); summary + `get_*_for_card` accessors that shape data for the frontend. All mutations are lock-guarded; saves are atomic via `.tmp` + `os.replace`. |
+| `data_store.py` | **v0.7.0 P3/P4: thin facade (~620 lines, was ~4,800).** `FamilyHubDataStore` keeps only the persistence core — `async_load`/`async_save`/`async_flush`, the **multi-store split** (per-domain HA `Store`s at `.storage/family_hub_{core,chores,rewards,history}` with debounced `async_delay_save`), the one-time legacy migration (`_async_migrate_from_legacy`, read-only original + verify-guarded), `_run_record_migrations`, and the settings/rank accessors. Everything else is mixed in from 11 domain mixins (see below). `data_rev` counter bumps on every save (drives the card's websocket-model refetch). |
+| `*_mixin.py` (11) + `_store_helpers.py` | **v0.7.0 P4: `data_store.py` split by domain.** Each mixin is a `class XxxMixin` that `FamilyHubDataStore` inherits; all methods operate on `self` and mixins never import each other (resolved via MRO), so domains evolve independently. Files: `card_shaper_mixin` (`get_*_for_card` accessors), `tick_mixin` (daily-tick engine), `streaks_ranks_mixin`, `subscriptions_mixin`, `people_mixin`, `chores_mixin`, `tasks_mixin` (instances + lifecycle + notifications), `store_items_mixin`, `group_rewards_mixin`, `redemptions_mixin`, `history_admin_mixin` (log + task corrections + force-tick/rebuild). `_store_helpers.py` = pure module helpers (id/timestamp, `_empty_store`, per-record `_migrate_*`, `_STORE_DOMAINS`). |
+| `card_model.py` / `websocket.py` | **v0.7.0 P2.** See the sensor/data-bus rows above — `build_card_model()` + the `family_hub/get_model` websocket command. |
 | `sensor.py` | Entity classes: `FamilyHubPersonSensor` (one per active person, dynamic add/remove) + four globals (`MaintenanceDue`, `MaintenanceOverdue`, `NeedsAttention`, `ClaimableTasks`). **v0.7.0 P2/P3:** each `extra_state_attributes` returns a LEAN scalar payload via `card_model.build_*_scalars` — full card data is NOT here, it's served by the websocket model. State values (person balance, the global counts) are unchanged. `_unrecorded_attributes` keeps the volatile `data_rev` + slim roster out of the recorder. `async_setup_entry` stores `add_person_sensor` / `remove_person_sensor` callables in `hass.data` so `services.py` can register sensors at runtime without an HA restart. (`FamilyHubTodaySensor` placeholder was removed in P0.) |
 | `card_model.py` | **v0.7.0 P2.** Single source of truth for card data. `build_*_scalars(store, …)` → lean sensor payloads; `build_*_payload(store, …)` → full per-domain sections; `build_card_model(store)` → the whole model keyed by entity_id. Both the sensors and the websocket command build here so they can't drift. (Moves under `data/model.py` in P3.) |
 | `websocket.py` | **v0.7.0 P2.** Registers the `family_hub/get_model` websocket command (returns `build_card_model`). Registered once in `async_setup`. Looks the store up from `hass.data[DOMAIN]` at call time. |
@@ -347,7 +351,7 @@ _doRender(force)
 
 ## 7. CSS / theming system
 
-- **All styles in one exported string** (`css.js`). No build-time CSS pipeline.
+- **Styles as an exported string** — `css.js` is now a barrel that re-exports `CSS` from `css/index.js`, which concatenates byte-identical line-range slices `css/part1..5.js` (v0.7.0 P4 split for navigability; same string at runtime). No build-time CSS pipeline.
 - **Design tokens** on `:host`:
   - Colors: `--fh-bg`, `--fh-surface`, `--fh-border`, `--fh-text`, `--fh-text-sec`, `--fh-overdue`, `--fh-warning`, `--fh-success`, `--fh-accent`.
   - Radii / gaps / padding scaled set.
