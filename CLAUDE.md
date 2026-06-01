@@ -56,12 +56,17 @@ The handoff prompt is part of "Phase Complete" — do not declare a phase done w
 
 | Item | State |
 |---|---|
-| **Live on HA (Samba)** | v0.7.0 **everything below deployed + live-tested.** Not version-bumped (still 0.6.5 in manifest/constants). |
-| **GitHub / HACS** | All work **committed + pushed** to branch **`v0.7.0-refoundation`** (HEAD `f0e4d53`). `main` still at v0.6.5 tag. **GitHub Actions CI is active + green** (py compile + ruff undefined-names + card build on every push). Merge to main + bump version + tag when ready to ship. |
-| **manifest.json / hacs.json / constants.js VERSION** | 0.6.5 (bump to 0.7.0 only when shipping the release) |
-| **Phase** | **v0.7.0 "Re-foundation" essentially complete.** Done + live-tested: P0–P3, inactive-people mgmt, Family-panel fix, services.yaml, **CI safety net**, **css.js split**, and the **full `data_store.py` modularization** (4,815 → 624 lines via 11 mixins). Remaining: optional `modals.js`/`modes-admin.js` card splits + the #3 model/history runtime trim + **ship**. See handoff below. |
+| **Live on HA (Samba)** | v0.7.0 deployed + live-tested. |
+| **GitHub / HACS** | **v0.7.0 SHIPPED** — merged to `main` (`37ec694`), **tag `v0.7.0`**, GitHub release published (Latest). Branch `v0.7.0-refoundation` is fully merged (deletable). **GitHub Actions CI active + green** on every push. |
+| **manifest.json / hacs.json / constants.js VERSION** | **0.7.0** (`iot_class` now `calculated`). |
+| **Phase** | **v0.7.0 "Re-foundation" SHIPPED.** Delivered: P0–P3 (perf re-foundation), inactive-people mgmt, Family-panel fix, services.yaml, CI safety net, css.js split, full `data_store.py` modularization (4,815→624 via 11 mixins). **Next work → v0.7.1** (branch from `main`); see the v0.7.1 backlog below. |
 
-> ⚠️ **Work is on branch `v0.7.0-refoundation`, NOT main.** Next session: confirm you're on it (`git -C <repo> branch --show-current`). Tree is clean; **every push runs CI** — keep it green before deploying.
+> **v0.7.0 is on `main` + tagged.** Future work: branch from `main` (e.g. `git checkout main && git checkout -b v0.7.1-xxx`). Every push runs CI — keep it green before deploying.
+>
+> **v0.7.1 backlog (recommended order):**
+> 1. **#3 — model/history runtime trim.** `build_card_model` still ships the ~977-entry `history_log` on `needs_attention`, refetched on every `data_rev` change. ⚠️ **Bigger than it looks:** `history_log` is consumed by the admin History view AND all 6 personal pages (`getWeeklyPts` in the header, the per-person history tab, the store rail's recent purchases). Doing it right = lazy per-view history (`family_hub/get_history` ws command, person-filtered) + an async render path for the weekly-points header. Moderate refactor; test all themes.
+> 2. **Optional card-side splits** (`modals.js`, `modes-admin.js`): CODE — silent-import risk ruff can't catch for JS. Low value; leave unless wanted.
+> 3. Tidy: `ruff --select F401 --fix` to drop the intentional over-imports in the mixins (cosmetic).
 
 ---
 
@@ -207,3 +212,4 @@ Be terse in responses. The user wants to ship features, not read prose.
 | v0.6.3 | Store polish + group rewards: printable chore list, store goal tracking, drag-reorder, reward icons, rate limits, rank-scaled PPD, reward categories, group/shared rewards (chip-in) |
 | v0.6.4 | Bug-fix release — rotation KeyError, corrupt JSON safety, maintenance mode broken import, dataset case bug, celebration overlay scope, force_daily_tick concurrency guard, dispatch dedup. See BUGS.md "Recently fixed". |
 | v0.6.5 | Subscription rewards — recurring store items with lapse/cancel flow, 6 new services, kid subscription rail (all 6 themes), admin type toggle + cancellation queue + family-tab sub management. |
+| v0.7.0 | **"Re-foundation"** — performance + architecture overhaul: event-driven (no 30 s poll), websocket data model + lean sensors (off the state machine/recorder), per-domain multi-store + debounced writes + safe auto-migration, minified bundle. Inactive-member management (reactivate / permanent-delete). GitHub Actions CI. Internal: `data_store.py` 4,815→624 lines via 11 mixins; `css.js` split. |
