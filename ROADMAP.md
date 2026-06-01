@@ -18,19 +18,28 @@
 
 ---
 
-## Active Scope — v0.7.0 "Re-foundation" (breaking: performance + architecture)
+## ✅ v0.7.0 "Re-foundation" SHIPPED (2026-06-01) — Active scope now: v0.7.1
 
-The original v0.6.6 (pure file-split cleanup) was **superseded on 2026-05-30** after a
-full architecture review. It addressed only maintainability/token cost and nothing for
-runtime performance, data management, or theming. v0.7.0 is the broader pass. The
-file-splits live on as **Phase 4** below. See "v0.7.0 — Re-foundation" section for the
-full phase breakdown, the measured baseline, the contracts being deliberately voided,
-and the migration plan.
+**v0.7.0 shipped** — merged to `main`, tag `v0.7.0`, GitHub release published. The full plan,
+measured baseline, voided-contracts list, and migration design are preserved in the
+"v0.7.0 — Re-foundation" section below for reference. (That release deliberately voided 3
+"universal constraints" — single JSON file / sensor-attribute keys / no-wholesale-rewrite —
+via a one-time backed-up migration. **v0.7.1+ are normal additive releases again** — the
+universal constraints below apply normally.)
 
-> ⚠️ This release **intentionally voids** three "universal constraints" below (single
-> JSON file / sensor-attribute keys / no-wholesale-rewrite) — user-approved 2026-05-30,
-> with a one-time backed-up migration. Service names/schemas, the card-stub split, and
-> the web-component invariants are **kept**.
+### Active Scope — v0.7.1 (deferred from v0.7.0; all optional)
+1. **Model/history runtime trim** (the one real remaining efficiency win). `build_card_model`
+   still ships the ~977-entry `history_log` on `needs_attention`, refetched on every `data_rev`
+   change. ⚠️ **Bigger than it looks:** `history_log` feeds the admin History view AND all 6
+   personal pages (`getWeeklyPts` in the header, the per-person history tab, the store-rail
+   recent purchases). Doing it right = lazy per-view fetch (new `family_hub/get_history` ws
+   command, person-filtered) + an async weekly-points header. Test all themes.
+2. **Optional card-side splits** — `modals.js` / `modes-admin.js`. ⚠️ CODE, not a string: a
+   missing cross-import is a silent JS ReferenceError that CI's ruff does NOT catch (ruff is
+   Python-only). Low value; leave unless wanted. (`css.js` + `data_store.py` are already split.)
+3. **Tidy** — `ruff --select F401 --fix` to drop the mixins' intentional over-imports (cosmetic).
+4. **Assets/upload service** — `family_hub.upload_asset` → `/config/www/family_hub/assets/`
+   (icons by path, not base64). Reward store is empty so it's safe; pairs with repopulating rewards.
 
 ---
 
@@ -367,7 +376,8 @@ room work. Leave the current behavior untouched until then.
 | Version | Headline | Notes |
 |---|---|---|
 | **v0.6.5** | Subscription rewards | Roblox / Game Pass / etc. recurring deductions with lapse + cancel flow |
-| **v0.7.0** | **Re-foundation (breaking)** | Performance + architecture: scheduled tick (no 30s poll), websocket model API + lean scalar sensors, JSON multi-store + debounced saves + migration, minified bundle, css/modals/admin splits, theme co-location. Folds in the old v0.6.6 cleanup. |
+| **v0.7.0** | ✅ **Re-foundation (SHIPPED 2026-06-01)** | Event-driven (no 30s poll), websocket model + lean sensors, multi-store + debounced saves + safe migration, minified bundle, inactive-member mgmt, CI, `data_store.py`+`css.js` splits. (modals/admin card splits + theme co-location deferred → v0.7.1.) |
+| **v0.7.1** | Efficiency + cleanup (next) | Model/history runtime trim · optional modals/modes-admin splits · assets/upload service · mixin import tidy. |
 | **v0.7.x** | Group rewards expansion (was v0.6.7) | Group subscriptions, group streak reward, "Propose sharing" UI, v0.6.3 deferred items |
 | **v0.8.0** | Home Maintenance room — full feature | Maintenance room is already live as a read-only drill-down. Adds CRUD (add/edit/delete from the card), scheduling/recurrence, richer tracking. Pairs with carving Maintenance out of the chores system. |
 | **v0.9.0** | Meals room | Weekly menu builder, grocery list, "what's for dinner" on the home strip. Scaffold is live as coming-soon. |

@@ -10,6 +10,21 @@
 
 ---
 
+> ## ⚠️ RE-TRIAGE NEEDED (post-v0.7.0, 2026-06-01)
+> The entries below predate the **v0.7.0 "Re-foundation"** and are **unverified against
+> current code** — v0.7.0 shipped fine and these were never confirmed open. Before acting:
+> - **The "must fix before Phase 5 / v0.6.5 pre-release" labels are obsolete** — v0.6.5 (and
+>   v0.7.0) already shipped. Re-assess actual severity; nothing below blocked a release.
+> - **Backend file:line refs are stale** — `data_store.py` was split into `*_mixin.py`
+>   (e.g. `get_subscriptions_for_person` → `subscriptions_mixin.py`), and `sensor.py`'s
+>   `subs_all`/cost builders moved to `card_model.py` (`build_needs_attention_payload`).
+>   Re-locate via grep before fixing.
+> - **Card-side refs** (`_shared.js`, `dispatch.js`, themes) are mostly still valid (the card
+>   wasn't restructured much), but verify line numbers.
+> - First step on any of these: confirm the bug still reproduces on v0.7.0, then fix + add a CI-friendly note.
+
+---
+
 ## Blocking — v0.6.5 pre-release (must fix before Phase 5 version bump)
 
 ### v0.6.5 #1: Kid's rail shows wrong renewal cost when parent set `dollar_cost_override`
