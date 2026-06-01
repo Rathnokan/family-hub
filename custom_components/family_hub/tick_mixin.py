@@ -124,6 +124,9 @@ from ._store_helpers import (
     _days_until_reset,
 )
 
+_LOGGER = logging.getLogger(__name__)
+
+
 class TickMixin:
     """The daily-tick engine (see module docstring)."""
 
