@@ -19,7 +19,7 @@ export function renderSmartHome(_card) {
                 ${_feat("💧", "Irrigation",        "Run or skip watering zones on demand")}
                 ${_feat("🔒", "Kid-safe Access",   "Only controls approved for the kitchen display are shown")}
             </div>
-            <div class="fh-home-coming-badge">COMING IN v0.9.0</div>
+            <div class="fh-home-coming-badge">COMING SOON</div>
         </div>`;
 }
 

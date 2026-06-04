@@ -715,6 +715,12 @@ export function dispatch(act, el, card) {
                     approval_required: b("m-tappr"),
                 };
                 if (expiry > 0) data.expires_after_days = expiry;
+                // Penalty applies when the task expires unfinished (needs an expiry
+                // window to ever fire — see _async_expire_tasks).
+                if (b("m-tpenalty")) {
+                    data.penalty_enabled = true;
+                    data.penalty_points  = Math.max(1, int("m-tpenalty-pts") || 5);
+                }
                 card._svc("add_task", data);
             }
             card._closeModal();
@@ -1007,12 +1013,10 @@ export function dispatch(act, el, card) {
         // ---- v0.6.5: inline edit — open / cancel ----
         case "admin-edit-subscription-open":
             card._editingSubId = el.dataset.subid;
-            card._dirty = true;
             card._doRender();
             break;
         case "admin-edit-subscription-cancel":
             card._editingSubId = null;
-            card._dirty = true;
             card._doRender();
             break;
 

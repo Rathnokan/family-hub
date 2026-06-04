@@ -202,6 +202,22 @@ class RedemptionsMixin:
         item         = self.get_store_item(redemption.get("store_item_id", ""))
         is_sub_item  = item and item.get("item_type") == ITEM_TYPE_SUBSCRIPTION
 
+        # Re-check affordability at approval time for one-time redemptions.
+        # The balance can drop between request and approval (other approvals,
+        # subscription renewals, penalties). async_deduct_points floors at 0, so
+        # without this guard an approval could hand out a reward for free. Leave
+        # the redemption PENDING so the parent can still award points or decline.
+        # (Subscriptions are handled by async_subscribe below, which does its own
+        # affordability check.)
+        if not is_sub_item and person.get("points_balance", 0) < redemption["points_cost"]:
+            _LOGGER.warning(
+                "Family Hub: approve_redemption — %s can no longer afford '%s' "
+                "(balance=%d cost=%d); leaving request pending",
+                redemption["person_id"], redemption.get("item_name", ""),
+                person.get("points_balance", 0), redemption["points_cost"],
+            )
+            return None
+
         redemption["status"]      = REDEMPTION_APPROVED
         redemption["resolved_at"] = _now_iso()
         redemption["resolved_by"] = approved_by

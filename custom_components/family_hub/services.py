@@ -44,6 +44,7 @@ from .const import (
     CLAIMABLE_SUBTYPE_FCFS,
     CLAIMABLE_SUBTYPE_MULTI,
     DOMAIN,
+    HISTORY_RETENTION_DAYS,
     MULTI_CLAIM_POINTS_FULL,
     MULTI_CLAIM_POINTS_SPLIT,
     PERSON_TYPES,
@@ -52,6 +53,7 @@ from .const import (
     SCOPE_COMMON,
     STORE_SCOPES,
     SUB_PERIODS,
+    TASK_INSTANCE_RETENTION_DAYS,
 )
 from .coordinator import FamilyHubCoordinator
 
@@ -165,6 +167,8 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             description=call.data.get("description", ""),
             approval_required=call.data.get("approval_required", False),
             expires_after_days=call.data.get("expires_after_days"),
+            penalty_enabled=call.data.get("penalty_enabled", False),
+            penalty_points=call.data.get("penalty_points", 0),
             created_by=call.data.get("created_by"),
         )
         await coordinator.async_refresh()
@@ -176,6 +180,8 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
         vol.Optional("points", default=0):           vol.Coerce(int),
         vol.Optional("approval_required", default=False): cv.boolean,
         vol.Optional("expires_after_days"):          vol.All(vol.Coerce(int), vol.Range(min=1)),
+        vol.Optional("penalty_enabled", default=False): cv.boolean,
+        vol.Optional("penalty_points", default=0):   vol.All(vol.Coerce(int), vol.Range(min=0)),
         vol.Optional("created_by"):                  cv.string,
     })
 
@@ -942,8 +948,8 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             f"- Ghost instances removed: {summary.get('ghost_instances_removed', 0)}",
             f"- Orphaned instances removed: {summary.get('orphaned_instances_removed', 0)}",
             f"- Duplicate instances removed: {summary.get('duplicate_instances_removed', 0)}",
-            f"- Old instances pruned (>60d): {summary.get('old_instances_pruned', 0)}",
-            f"- Old history pruned (>30d): {summary.get('old_history_pruned', 0)}",
+            f"- Old instances pruned (>{TASK_INSTANCE_RETENTION_DAYS}d): {summary.get('old_instances_pruned', 0)}",
+            f"- Old history pruned (>{HISTORY_RETENTION_DAYS}d): {summary.get('old_history_pruned', 0)}",
         ]
         await hass.services.async_call(
             "persistent_notification", "create",

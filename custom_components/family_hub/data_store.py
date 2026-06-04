@@ -88,6 +88,7 @@ from .const import (
     MULTI_CLAIM_POINTS_FULL,
     MULTI_CLAIM_POINTS_SPLIT,
     CONF_PENALTIES_PAUSED_GLOBAL,
+    CONF_PENALTIES_PAUSED_PERSON_KEY,
     CONF_SHOW_DOLLAR_VALUE_TO_KIDS,
     DEFAULT_PENALTIES_PAUSED_GLOBAL,
     DEFAULT_PENALTIES_PAUSED_PERSON,
@@ -556,7 +557,11 @@ class FamilyHubDataStore(CardShaperMixin, TickMixin, StreaksRanksMixin, Subscrip
         if self.penalties_paused_global:
             return True
         person = self.get_person(person_id)
-        if person and person.get(CONF_PENALTIES_PAUSED_GLOBAL, DEFAULT_PENALTIES_PAUSED_PERSON):
+        # Read the PER-PERSON flag with the per-person key (not the global key).
+        # Both constants currently equal "penalties_paused", so this is
+        # behaviour-preserving — it just removes the semantic trap that bit us
+        # before (a future rename of either key would otherwise diverge silently).
+        if person and person.get(CONF_PENALTIES_PAUSED_PERSON_KEY, DEFAULT_PENALTIES_PAUSED_PERSON):
             return True
         return False
 

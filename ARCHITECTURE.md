@@ -102,7 +102,7 @@ family-hub/
 │         • processes expirations (one-time + claimable past expires_after)   │
 │         • processes daily penalties, allowances, completion-streak ranks    │
 │         • advances rotations (daily / weekly / per_instance)                │
-│         • trims history (30d) and terminal task_instances (60d)             │
+│         • trims history (30d) and terminal task_instances (30d)             │
 │    2. coordinator.store.async_check_notifications()                         │
 │    3. return store.get_summary()                                            │
 └──────────────────────────────────────────────────────────────────────────────┘
@@ -168,7 +168,7 @@ family-hub/
 | File | Owns |
 |---|---|
 | `__init__.py` | `async_setup` registers `/family_hub` static HTTP path. `async_setup_entry` creates the `FamilyHubDataStore`, the `FamilyHubCoordinator`, registers all services, forwards to the sensor platform, cleans up stale entities, and registers the Lovelace card resource (with mtime-based cache-bust). `async_unload_entry` removes every service whose name appears under the DOMAIN. `async_remove_entry` intentionally preserves the data file. |
-| `const.py` | Single source of truth for: DOMAIN, VERSION, config keys, chore types (`assigned`/`claimable`/`reminder`), recurrence types, claimable subtypes, task statuses, redemption statuses, group-reward proposal statuses, history event types, retention windows (30d history / 60d task instances), sensor + service names, weekday list (0=Monday), card URL constants (`CARD_URL_PATH = "/family_hub"`). |
+| `const.py` | Single source of truth for: DOMAIN, VERSION, config keys, chore types (`assigned`/`claimable`/`reminder`), recurrence types, claimable subtypes, task statuses, redemption statuses, group-reward proposal statuses, history event types, retention windows (30d history / 30d task instances), sensor + service names, weekday list (0=Monday), card URL constants (`CARD_URL_PATH = "/family_hub"`). |
 | `config_flow.py` | 3-step UI: family name + ppd → first parent → kids (CSV or skip). Storage path defaults to `config/family_hub_data.json`. Single instance only (unique_id = DOMAIN). |
 | `coordinator.py` | Thin `DataUpdateCoordinator` subclass. Owns `.store`. **Event-driven (v0.7.0): `update_interval=None` — no poll.** `async_daily_rollover` (registered via `async_track_time_change` at 00:00:10 in `__init__`) runs the tick once a day; `async_notification_heartbeat` (per-minute) dispatches due reminders/penalty nudges without a tick or sensor rebuild; service calls drive instant `async_refresh()`. Tick date persisted inside data file (`settings.last_tick_date`), so missed days get caught up at startup + across HA downtime. |
 | `data_store.py` | **v0.7.0 P3/P4: thin facade (~620 lines, was ~4,800).** `FamilyHubDataStore` keeps only the persistence core — `async_load`/`async_save`/`async_flush`, the **multi-store split** (per-domain HA `Store`s at `.storage/family_hub_{core,chores,rewards,history}` with debounced `async_delay_save`), the one-time legacy migration (`_async_migrate_from_legacy`, read-only original + verify-guarded), `_run_record_migrations`, and the settings/rank accessors. Everything else is mixed in from 11 domain mixins (see below). `data_rev` counter bumps on every save (drives the card's websocket-model refetch). |

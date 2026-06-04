@@ -1,7 +1,9 @@
 """Constants for Family Hub integration."""
 
 DOMAIN = "family_hub"
-VERSION = "0.6.5"
+# Display/reference only. The canonical version lives in manifest.json,
+# hacs.json, and src/card/constants.js — keep this in sync when bumping.
+VERSION = "0.7.1"
 
 # Config entry keys
 CONF_FAMILY_NAME = "family_name"
@@ -266,9 +268,6 @@ SERVICE_APPROVE_CANCEL_SUBSCRIPTION = "approve_cancel_subscription"
 SERVICE_DECLINE_CANCEL_SUBSCRIPTION = "decline_cancel_subscription"
 SERVICE_ADMIN_CANCEL_SUBSCRIPTION   = "admin_cancel_subscription"
 SERVICE_ADMIN_SUBSCRIBE_FOR_PERSON  = "admin_subscribe_for_person"
-
-# Coordinator update interval (seconds)
-UPDATE_INTERVAL = 30
 
 # Weekday constants (0=Monday … 6=Sunday)
 WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]

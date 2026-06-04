@@ -4,17 +4,9 @@
  */
 
 export const DOMAIN        = "family_hub";
-export const VERSION       = "0.7.0";
+export const VERSION       = "0.7.1";
 export const DEFAULT_COLOR = "#7F77DD";
 export const FLASH_MS      = 1400;
-
-// Global sensors tracked for dirty-check
-export const FH_SENSORS = [
-    "sensor.family_hub_needs_attention",
-    "sensor.family_hub_maintenance_due",
-    "sensor.family_hub_maintenance_overdue",
-    "sensor.family_hub_claimable_tasks",
-];
 
 // Weekday display labels (index 0 = Monday, per HA backend)
 export const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -39,6 +31,16 @@ export const HISTORY_META = {
     completion_streak_milestone:   { label: "Success streak",   color: "var(--fh-success)"  },
     subscription_cancel_declined:  { label: "Cancel declined",   color: "var(--fh-warning)"  },
     subscription_updated:          { label: "Sub updated",        color: "var(--fh-text-sec)" },
+    // v0.6.5 subscription lifecycle (renewals/lapses are deductions)
+    subscription_started:          { label: "Subscribed",         color: "var(--fh-accent)"   },
+    subscription_renewed:          { label: "Sub renewal",        color: "var(--fh-text-sec)" },
+    subscription_lapsed:           { label: "Sub lapsed",         color: "var(--fh-warning)"  },
+    subscription_canceled:         { label: "Sub canceled",       color: "var(--fh-text-sec)" },
+    subscription_cancel_requested: { label: "Cancel requested",   color: "var(--fh-warning)"  },
+    // v0.6.3 group rewards
+    group_proposed:                { label: "Group proposed",     color: "var(--fh-text-sec)" },
+    group_chip_in:                 { label: "Chipped in",         color: "var(--fh-accent)"   },
+    group_redeemed:                { label: "Group redeemed",     color: "var(--fh-success)"  },
 };
 
 // Inline SVG icons — no external dependency

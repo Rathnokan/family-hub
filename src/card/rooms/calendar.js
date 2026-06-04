@@ -20,7 +20,7 @@ export function renderCalendar(_card) {
                 ${_feat("👨‍👩‍👧‍👦", "Family View",          "Everyone's events in one scrollable view")}
                 ${_feat("🔗", "Any HA Calendar",      "Connects to Local Calendar, CalDAV, or Google via Home Assistant")}
             </div>
-            <div class="fh-home-coming-badge">COMING IN v0.8.0 · POWERS THE TODAY STRIP</div>
+            <div class="fh-home-coming-badge">COMING SOON · POWERS THE TODAY STRIP</div>
         </div>`;
 }
 

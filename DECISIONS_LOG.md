@@ -25,9 +25,10 @@
 - **Decision:** `async_save` writes to `<path>.tmp` and uses `os.replace` for the swap, inside an `asyncio.Lock`.
 - **Why:** Concurrent service calls would otherwise race; a partial write would leave the JSON corrupt across an HA restart.
 
-### History trimmed at 30 days, terminal task instances at 60 days
-- **Decision:** Each daily tick prunes `history` entries older than `HISTORY_RETENTION_DAYS = 30` and `task_instances` in terminal statuses older than `TASK_INSTANCE_RETENTION_DAYS = 60`.
-- **Why:** Keep the data file size bounded indefinitely. 30 days of activity is enough for the "Recent activity" log; 60 days of completed instances covers any reasonable parent review window.
+### History trimmed at 30 days, terminal task instances at 30 days
+- **Decision:** Each daily tick prunes `history` entries older than `HISTORY_RETENTION_DAYS = 30` and `task_instances` in terminal statuses older than `TASK_INSTANCE_RETENTION_DAYS = 30`.
+- **Why:** Keep the data file size bounded indefinitely. 30 days of activity is enough for the "Recent activity" log and the parent review window.
+- **⚠️ History note (2026-06-02):** this was originally documented as **60 days** for task instances, but the constant in `const.py` is **30**. The v0.7.1 bug-swat made all docs + the `rebuild_data` notification match the actual code value (30). If 60 was the intent, it's a one-line change in `const.py` (`TASK_INSTANCE_RETENTION_DAYS`) — confirm before changing, since it affects how far back the History view and reversible-action buttons reach.
 
 ---
 

@@ -423,13 +423,16 @@ class ChoresMixin:
         description: str = "",
         approval_required: bool = False,
         expires_after_days: int | None = None,
+        penalty_enabled: bool = False,
+        penalty_points: int = 0,
         created_by: str | None = None,
     ) -> dict:
         """
         Create a one-time task. Does not appear in the chore management list.
         Uses chore_type=assigned + recurrence=one_time internally.
         expires_after_days: if set, the pending instance is auto-skipped after
-        this many days (with penalty if penalty_enabled on the chore).
+        this many days (with penalty if penalty_enabled, applied by
+        _async_expire_tasks when the deadline passes).
         """
         return await self.async_add_chore(
             name=name,
@@ -441,6 +444,8 @@ class ChoresMixin:
             description=description,
             category_label="",
             expires_after_days=expires_after_days,
+            penalty_enabled=penalty_enabled,
+            penalty_points=penalty_points,
             created_by=created_by,
         )
 

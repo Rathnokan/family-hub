@@ -152,7 +152,12 @@ class SubscriptionsMixin:
             if not item or not item.get("active", True):
                 continue
 
-            _dollar    = sub.get("dollar_cost_override") or item.get("dollar_value", 0)
+            # Honour a dollar_cost_override of EXACTLY 0 ("free") — `or` would
+            # treat 0 as unset and fall back to the item price, charging the kid
+            # the full amount while the card rail shows 0. Mirror the card-side
+            # logic in get_subscriptions_for_person (is-not-None).
+            _override  = sub.get("dollar_cost_override")
+            _dollar    = _override if _override is not None else item.get("dollar_value", 0)
             cost       = round(_dollar * self.get_rank_ppd(person.get("rank_index", 0)))
             total_owed = cost + sub.get("accumulated_debt", 0)
 
@@ -181,7 +186,13 @@ class SubscriptionsMixin:
                 )
             else:
                 # --- Lapse ---
-                first_lapse = sub["status"] == SUB_STATUS_ACTIVE
+                # Notify on the FIRST missed renewal regardless of current status.
+                # Keying off "status == active" missed cancel_pending subs, whose
+                # debt would then grow silently while awaiting the parent's
+                # decision (if they later declined the cancel, the sub returned to
+                # active carrying invisible debt). missed_renewals==0 means this is
+                # the first miss of the current run.
+                was_first_miss = sub.get("missed_renewals", 0) == 0
                 if sub["status"] != SUB_STATUS_CANCEL_PENDING:
                     sub["status"] = SUB_STATUS_LAPSED
                 sub["missed_renewals"]  = sub.get("missed_renewals", 0) + 1
@@ -200,7 +211,7 @@ class SubscriptionsMixin:
                     sub["id"], person.get("name"),
                     sub["missed_renewals"], sub["accumulated_debt"],
                 )
-                if first_lapse:
+                if was_first_miss:
                     await self._notify_subscription_lapsed(sub, person, item)
 
     async def _notify_subscription_lapsed(

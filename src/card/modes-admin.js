@@ -8,7 +8,7 @@
  * Only the shell layout and section grouping have changed.
  */
 
-import { DEFAULT_COLOR, HISTORY_META } from "./constants.js";
+import { DEFAULT_COLOR, HISTORY_META, VERSION } from "./constants.js";
 import { I } from "./constants.js";
 import { escHTML, escAttr, ini, fPts, fUSD, cap, relTime, groupHistorySkipped } from "./utils.js";
 import { ROOMS } from "./rooms/index.js";
@@ -119,7 +119,7 @@ export function htmlAdmin(card) {
             <div class="fh-ad-brand-icon">FH</div>
             <div>
               <div class="fh-ad-brand-name">${escHTML(famName)}</div>
-              <div class="fh-ad-brand-sub">v0.6.0 · ADMIN</div>
+              <div class="fh-ad-brand-sub">v${VERSION} · ADMIN</div>
             </div>
           </div>
           <nav class="fh-ad-nav">${sidebarItems}</nav>

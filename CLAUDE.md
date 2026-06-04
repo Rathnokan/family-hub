@@ -52,21 +52,23 @@ The handoff prompt is part of "Phase Complete" — do not declare a phase done w
 
 ---
 
-## Current Status — 2026-05-30
+## Current Status — 2026-06-02
 
 | Item | State |
 |---|---|
-| **Live on HA (Samba)** | v0.7.0 deployed + live-tested. |
-| **GitHub / HACS** | **v0.7.0 SHIPPED** — merged to `main` (`37ec694`), **tag `v0.7.0`**, GitHub release published (Latest). Branch `v0.7.0-refoundation` is fully merged (deletable). **GitHub Actions CI active + green** on every push. |
-| **manifest.json / hacs.json / constants.js VERSION** | **0.7.0** (`iot_class` now `calculated`). |
-| **Phase** | **v0.7.0 "Re-foundation" SHIPPED.** Delivered: P0–P3 (perf re-foundation), inactive-people mgmt, Family-panel fix, services.yaml, CI safety net, css.js split, full `data_store.py` modularization (4,815→624 via 11 mixins). **Next work → v0.7.1** (branch from `main`); see the v0.7.1 backlog below. |
+| **Live on HA (Samba)** | v0.7.1 deployed + live-tested. |
+| **GitHub / HACS** | **v0.7.1 SHIPPED** — bug-fix patch on `main`, **tag `v0.7.1`**, GitHub release published (Latest). **GitHub Actions CI green** on every push. (v0.7.0 "Re-foundation" before it: tag `v0.7.0`, commit `37ec694`.) |
+| **manifest.json / hacs.json / constants.js / const.py VERSION** | **0.7.1** (`iot_class` = `calculated`). |
+| **Phase** | **v0.7.1 bug-swat SHIPPED.** Correctness patch off a full-codebase read: redemption overspend guard, $0 sub-override, lapsed-sub "Ready" math, wired Add-Task penalty, cancel-pending lapse notify, inline sub-editor freeze, HISTORY_META gaps, + dead-code/version-drift cleanup. Full list in [BUGS.md](BUGS.md) "Fixed in v0.7.1". **Next work → v0.7.2/v0.7.x** (branch from `main`); see backlog below. |
 
-> **v0.7.0 is on `main` + tagged.** Future work: branch from `main` (e.g. `git checkout main && git checkout -b v0.7.1-xxx`). Every push runs CI — keep it green before deploying.
+> **v0.7.1 is on `main` + tagged.** Future work: branch from `main` (`git checkout main && git checkout -b v0.7.2-xxx`). Every push runs CI — keep it green before deploying.
 >
-> **v0.7.1 backlog (recommended order):**
-> 1. **#3 — model/history runtime trim.** `build_card_model` still ships the ~977-entry `history_log` on `needs_attention`, refetched on every `data_rev` change. ⚠️ **Bigger than it looks:** `history_log` is consumed by the admin History view AND all 6 personal pages (`getWeeklyPts` in the header, the per-person history tab, the store rail's recent purchases). Doing it right = lazy per-view history (`family_hub/get_history` ws command, person-filtered) + an async render path for the weekly-points header. Moderate refactor; test all themes.
-> 2. **Optional card-side splits** (`modals.js`, `modes-admin.js`): CODE — silent-import risk ruff can't catch for JS. Low value; leave unless wanted.
-> 3. Tidy: `ruff --select F401 --fix` to drop the intentional over-imports in the mixins (cosmetic).
+> **v0.7.x backlog (recommended order):**
+> 1. **First-parent attribution** (BUGS.md "Open", top item) — two-parent household logs every admin action as the first parent (Jim). Needs `hass.user.id` → `person.ha_user_id` mapping threaded through the card. Small focused task; **affects this family.**
+> 2. **#3 — model/history runtime trim.** `build_card_model` still ships the ~977-entry `history_log` on `needs_attention`, refetched on every `data_rev` change. ⚠️ **Bigger than it looks:** `history_log` is consumed by the admin History view AND all 6 personal pages (`getWeeklyPts` in the header, the per-person history tab, the store rail's recent purchases). Doing it right = lazy per-view history (`family_hub/get_history` ws command, person-filtered) + an async render path for the weekly-points header. Moderate refactor; test all themes.
+> 3. Smaller deferred items (slug divergence, weekly-window mismatch, notification/history hardening, dedupe) — all catalogued in [BUGS.md](BUGS.md) "Open — deferred".
+> 4. **Decide:** task-instance retention is **30d** in code (docs previously said 60). Confirm 30 or bump `TASK_INSTANCE_RETENTION_DAYS`.
+> 5. **Optional card-side splits** (`modals.js`, `modes-admin.js`): CODE — silent-import risk ruff can't catch for JS. Low value; leave unless wanted.
 
 ---
 

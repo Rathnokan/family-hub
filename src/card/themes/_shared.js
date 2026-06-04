@@ -903,10 +903,13 @@ export function htmlStoreRailContent(subs, balance, historyLog, personId) {
             } else {
                 const n        = sub.days_until_renewal;
                 const renewStr = n <= 0 ? "Renews today" : n === 1 ? "Renews tomorrow" : `Renews in ${n}d`;
-                const ready    = balance >= sub.points_cost;
+                // Recovery from a lapse needs the period cost PLUS any accrued
+                // debt — match htmlRailSubscriptions so "Ready" never lies.
+                const owed     = sub.points_cost + (sub.accumulated_debt || 0);
+                const ready    = balance >= owed;
                 statusLine = ready
                     ? `✓ Ready · ${renewStr}`
-                    : `⚠ Need ${sub.points_cost - balance}pts · ${renewStr}`;
+                    : `⚠ Need ${owed - balance}pts · ${renewStr}`;
             }
 
             const iconHtml = sub.item_icon

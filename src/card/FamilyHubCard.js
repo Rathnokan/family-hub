@@ -397,6 +397,9 @@ export class FamilyHubCard extends HTMLElement {
         // typed-but-unsaved field values get overwritten.
         if (this._adminSelectedChoreId) return;
         if (this._adminSelectedItemId) return;
+        // Inline subscription editor open — a background model refetch would
+        // rebuild .fh-card and wipe the typed cost/date before save.
+        if (this._editingSubId) return;
 
         // v0.7.0 P2: card data lives in a websocket model, not sensor attributes.
         // The needs_attention sensor exposes a single data_rev counter that bumps
@@ -440,7 +443,7 @@ export class FamilyHubCard extends HTMLElement {
             this._fetching = false;
         }
         // A modal / inline panel may have opened while we were fetching — respect the freeze.
-        if (this._modal || this._adminSelectedChoreId || this._adminSelectedItemId) return;
+        if (this._modal || this._adminSelectedChoreId || this._adminSelectedItemId || this._editingSubId) return;
         this._doRender(false);
     }
 

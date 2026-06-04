@@ -19,7 +19,7 @@ export function renderMeals(_card) {
                 ${_feat("🛒", "Grocery List",      "Items needed auto-populate from the week's plan")}
                 ${_feat("👨‍🍳", "Recipes &amp; Notes", "Tap a meal to see the recipe or prep notes")}
             </div>
-            <div class="fh-home-coming-badge">COMING IN v0.7.0</div>
+            <div class="fh-home-coming-badge">COMING SOON</div>
         </div>`;
 }
 
