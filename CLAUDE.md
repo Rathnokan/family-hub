@@ -76,38 +76,16 @@ The handoff prompt is part of "Phase Complete" — do not declare a phase done w
 
 > **Read this section before starting work.** Then run the Session Start Checklist above and pick up wherever the prior session left off.
 
-### Where things stand (v0.7.0 — P0/P1/P2 shipped to Samba, 2026-05-30)
+### Where things stand (2026-06-04)
 
-**Done + live-tested (Samba only, not committed/version-bumped):**
-- **P0 — free wins:** esbuild `--minify` on `build:body` (607→~491 KB); `_unrecorded_attributes` on all sensors (recorder bloat + ">16 KB" warning gone); removed placeholder `FamilyHubTodaySensor`; coordinator isolates `async_check_notifications` failures from `UpdateFailed`.
-- **P1 — scheduled tick (no more 30 s poll):** `coordinator.update_interval=None`. `__init__` registers via `async_track_time_change`: a midnight rollover (`coordinator.async_daily_rollover` → `async_request_refresh`) and a per-minute notification heartbeat (`coordinator.async_notification_heartbeat` → `store.async_check_notifications`). Services still drive instant `async_refresh()`.
-- **P2 — sensor + data-bus redesign (the big one):**
-  - `card_model.py` (NEW) = single source: `build_*_scalars` (lean sensor payloads) + `build_*_payload` (full sections) + `build_card_model(store)` (keyed by entity_id).
-  - `websocket.py` (NEW) = `family_hub/get_model` command, registered in `async_setup`. `manifest.json` gained `websocket_api` dep.
-  - `store.data_rev` counter (bumped in `async_save`), exposed on `needs_attention`.
-  - Card (`FamilyHubCard.js`): `_attrs(id)` reads `this._model` first (fallback to live attrs); `_maybeRender` dirty-checks `needs_attention.data_rev`; `_fetchModel` pulls the websocket model. `FH_SENSORS` import removed (now unused). `_doRender` shows "Loading…" until the model arrives. Direct attr reads in `dispatch.js` (×2) + `print-chore-list.js` repointed through `_attrs`. Removed 3 debug `console.log`s in `dispatch.js`.
-  - **Sensors are now lean scalars** — verified live: `needs_attention` = `data_rev` + counts + slim roster + `rooms_config` + `family_name`.
-  - **GOTCHA fixed (see DECISIONS_LOG "Card dirty-check keys off `data_rev`"):** track the SENSOR's data_rev in `_lastDataRev`, never the model's — the heartbeat bumps the store counter without refreshing the sensor, so the model's value runs ahead and caused re-render-on-every-state-change (dropdowns self-closing).
+- **v0.7.1 shipped** (tag `v0.7.1`, GitHub release) — bug-swat off a full-codebase audit: redemption-overspend guard, $0 sub-override, lapsed-sub "Ready" math, wired Add-Task penalty, cancel-pending lapse notify, inline sub-editor render-freeze, HISTORY_META gaps.
+- **`main` is a few commits ahead of the `v0.7.1` tag** (unreleased — rides the next version bump): post-0.7.1 cleanup (hardening, JS↔Python slug parity, `get_maintenance_tasks` dedup, dead-code removal, `services.yaml` for `add_task`) + the engineer-theme task-truncation fix. **Samba is current.**
+- The whole source was read line-by-line this pass. Full fix list + what's left → [BUGS.md](BUGS.md) ("Fixed in v0.7.1" / "Fixed on `main` since v0.7.1" / "Open — deferred"). Forward scope → [ROADMAP.md](ROADMAP.md).
 
-**Also done (after P0–P2):**
-- **✅ P3 — multi-store + migration** (`data_store.py`/`__init__.py`/`const.py`). Verified OK on live data; original `family_hub_data.json` kept read-only + backed up to `.v1.bak.json`; HA Stores at `.storage/family_hub_{core,chores,rewards,history}`; debounced `async_delay_save`. Commit `8701cd4`.
-- **✅ Inactive-people management** — `async_reactivate_person` + `async_hard_delete_person` (cascade purge, inactive-only); `reactivate_person`/`hard_delete_person` services; `inactive_people` in the model; admin Family "Inactive members" panel. Commit `cbc77b4`.
-- **✅ Admin Family-panel layout fix** + **`services.yaml`** (all 45 services; kills the reboot error). Commit `b48e30d`.
-- **✅ CI safety net** — `.github/workflows/ci.yml`: `python -m compileall` + `ruff --select E9,F63,F7,F82` (undefined names!) + `npm run build`, on every push. **Caught 4 real load-breaking bugs** during the data_store split before they hit HA. Check runs with `gh run list`/`gh run watch` (run gh from inside the repo, or `gh -R Rathnokan/family-hub`).
-- **✅ `css.js` split** (commit `55d4351`) — barrel re-exporting `CSS` from `css/index.js` (concatenates byte-identical slices `css/part1..5.js`). Zero render change.
-- **✅ `data_store.py` FULLY modularized** (commits up to `f0e4d53`) — **4,815 → 624 lines.** Now a thin facade (persistence core + settings) that mixes in **11 `*_mixin.py`** (card_shaper, tick, streaks_ranks, subscriptions, people, chores, tasks, store_items, group_rewards, redemptions, history_admin) + `_store_helpers.py`. Mixins operate on `self`, never import each other (MRO), no cycles.
-
-> **Split technique (reuse for any future split):** move method/code bodies with **PowerShell line-range extraction** (`[System.IO.File]::ReadAllLines` → slice → write; zero reproduction/typo risk). Verify a **def-count check** (`Select-String '^\s*(async def|def) '` across all files must equal the pre-split total). Give each new file the full import block + `_LOGGER = logging.getLogger(__name__)`. Then push and let **CI ruff catch missing imports** (it flagged `_LOGGER`, `_STORE_DOMAINS`, off-by-two boundaries — all pre-deploy).
-
-### First moves for the next session — all that's left is OPTIONAL
-1. Confirm you're on `v0.7.0-refoundation`. **Every push runs CI — keep it green before deploying.**
-2. **#3 — model/history runtime trim (the recommended remaining efficiency win):** `build_card_model` still includes the ~977-entry `history_log` on `needs_attention`, so the card refetches it on *every* `data_rev` change even when not viewing history. Split it: `get_model` returns everything **except** history; add a `family_hub/get_history` ws command; card lazily fetches `this._history` only when the admin History view opens.
-3. **Optional card-side splits** (`modals.js`, `modes-admin.js`): ⚠️ CODE — a missing cross-import is a **silent JS ReferenceError that CI's ruff does NOT catch** (ruff is Python-only). Lower value, needs per-modal/section live-testing. **Leave unless specifically wanted.**
-4. **Ship v0.7.0:** merge `v0.7.0-refoundation` → `main`, bump VERSION to 0.7.0 (manifest.json + hacs.json + `src/card/constants.js`), `npm run build`, tag `v0.7.0`, write `RELEASE-NOTES-v0.7.0.md`, push. Already shippable.
-
-### Model recommendation
-
-**Opus for v0.7.0.** This pass is cross-file and cross-layer (sensor/data-bus redesign, multi-store migration, card data-source repoint) — the kind of cross-file invariant work that warrants Opus. Sonnet 4.6 (High) remains fine for routine feature work and the Phase 4 file-splits.
+### Next session (features)
+1. Branch from `main`: `git checkout main && git checkout -b <feature>`. Every push runs CI — keep it green before deploying.
+2. **Top open bug (not a feature):** first-parent attribution — admin actions log as the first parent in a two-parent household; needs `hass.user.id` → `person.ha_user_id` threaded through the card. See [BUGS.md](BUGS.md) "Open".
+3. **Two decisions parked for the user:** task-instance retention 30 vs 60d; rank weekly-points window (card "since Monday" vs server "trailing 7d").
 
 ### Sonnet system-prompt addendum (paste into the next session)
 
@@ -170,7 +148,7 @@ Be terse in responses. The user wants to ship features, not read prose.
 | Backend source | `custom_components/family_hub/*.py` |
 | Card source (modular) | `src/card/*.js` |
 | Stub bundle | `custom_components/family_hub/www/family-hub-card.js` (~7 KB IIFE) |
-| Body bundle | `custom_components/family_hub/www/family-hub-card-body.js` (~555 KB ESM) |
+| Body bundle | `custom_components/family_hub/www/family-hub-card-body.js` (~495 KB minified ESM) |
 | Build command | `npm run build` (runs `gen-build-id` then `build:stub` then `build:body` via esbuild) |
 | Live HA files | `\\10.0.0.41\config\custom_components\family_hub\` |
 | Data file | `\\10.0.0.41\config\family_hub_data.json` — read-only for Claude |
@@ -215,3 +193,4 @@ Be terse in responses. The user wants to ship features, not read prose.
 | v0.6.4 | Bug-fix release — rotation KeyError, corrupt JSON safety, maintenance mode broken import, dataset case bug, celebration overlay scope, force_daily_tick concurrency guard, dispatch dedup. See BUGS.md "Recently fixed". |
 | v0.6.5 | Subscription rewards — recurring store items with lapse/cancel flow, 6 new services, kid subscription rail (all 6 themes), admin type toggle + cancellation queue + family-tab sub management. |
 | v0.7.0 | **"Re-foundation"** — performance + architecture overhaul: event-driven (no 30 s poll), websocket data model + lean sensors (off the state machine/recorder), per-domain multi-store + debounced writes + safe auto-migration, minified bundle. Inactive-member management (reactivate / permanent-delete). GitHub Actions CI. Internal: `data_store.py` 4,815→624 lines via 11 mixins; `css.js` split. |
+| v0.7.1 | Bug-fix & cleanup — correctness patch off a full-codebase audit (redemption overspend guard, $0 sub-override, lapsed-sub "Ready" math, wired Add-Task penalty, cancel-pending lapse notify, inline sub-editor freeze, history labels) + hardening, slug parity, dedup, dead-code/version-drift removal. |

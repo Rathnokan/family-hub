@@ -82,28 +82,5 @@
 - **old High #4** — decline/update now use `HISTORY_SUBSCRIPTION_CANCEL_DECLINED` / `HISTORY_SUBSCRIPTION_UPDATED` (no longer reuse `POINTS_AWARDED`).
 - **old High #6** — `_advance_renewal_date` clamps `target_day = max(1, min(anchor, max_day))`, so `anchor=0` no longer crashes monthly subs.
 
-### v0.6.5 Phase 3: approve_redemption rejected subscription_anchor + never created subscription
-- Added `vol.Optional("subscription_anchor")` to the schema; `async_approve_redemption` branches on item_type and calls `async_subscribe` for subscription items.
-
-### v0.6.4 post-ship cleanup: Removed dead `src/card/modes-maintenance.js`
-- Phase 2.A switched maintenance routing to `rooms/maintenance.js`; the old module was left importing-nothing. Deleted.
-
-### v0.6.4 Phase 3: Milestone celebration only fired from Mission Control
-- Overlay creation moved to `FamilyHubCard.connectedCallback`; trigger moved to the completion path so it fires from all views.
-
-### v0.6.4 Phase 3: `force_daily_tick` had no concurrent-call guard
-- Added `_tick_running` flag; returns immediately if already running; cleared in `finally`.
-
-### v0.6.4 Phase 2: Maintenance mode silently failed to render
-- `htmlMaintenance` was referenced but never existed; routing now calls `renderMaintenance` from `rooms/maintenance.js`.
-
-### v0.6.4 Phase 2: Maintenance counts treated as arrays
-- `overdue`/`due_this_week`/`due_next_week` are integers; the card now reads them as ints and derives sections by filtering `items` on `days_delta`.
-
-### v0.6.4 Phase 2: Rank thresholds dropped on every person save
-- Emitted `data-pdrop-thr`/`data-pgain-thr` (kebab) to match the `dataset.pdropThr` reads.
-
-### v0.6.4 Phase 1: Rotation pool KeyError (`p["person_id"]` → `p["id"]`)
-### v0.6.4 Phase 1: Corrupt JSON load backs up to `<path>.corrupt` before falling back
-### v0.5.0 migration: ghost task instances with `assigned_to=""` and orphan blank-id people removed on load
-### v0.2.2: Listener leak fixed via AbortController attached once in `connectedCallback`
+### Older (v0.2.2 – v0.6.5)
+Dropped from this tracker to keep it lean — per-bug detail lives in `RELEASE-NOTES-v0.6.*.md` and git history. Durable lessons from those fixes are captured as invariants in [DECISIONS_LOG.md](DECISIONS_LOG.md) (atomic save, ghost-instance rule, AbortController listeners, rotation key, corrupt-JSON backup, etc.).

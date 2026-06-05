@@ -25,7 +25,7 @@ family-hub/
 │  ├─ strings.json / translations/en.json Config-flow translation strings
 │  └─ www/                               Deployed card bundles (served as static path)
 │     ├─ family-hub-card.js              Stub IIFE (~7 KB) — registers wrapper element, lazy-imports body
-│     └─ family-hub-card-body.js         Heavy ESM bundle (~560 KB) — full card implementation
+│     └─ family-hub-card-body.js         Heavy ESM bundle (~495 KB minified) — full card implementation
 │
 ├─ src/                                  Card source — built into www/ by `npm run build`
 │  ├─ main.js                            Stub entry: defines <family-hub-card> + editor wrappers, lazy-loads body
@@ -218,7 +218,7 @@ npm run build
 ```
 
 - **Stub (`family-hub-card.js`)** — ~7 KB. Registers `<family-hub-card>` and `<family-hub-card-editor>` placeholder elements synchronously so Lovelace's card-picker sees them on first paint. Paints `LOADING_HTML` immediately. Lazy-imports the body bundle as `import('/family_hub/family-hub-card-body.js?v=VERSION&b=BUILD_ID')`. The query string busts the browser cache on every release AND every dev build (BUILD_ID is regenerated each `npm run build`).
-- **Body (`family-hub-card-body.js`)** — ~560 KB. The full card implementation. Registers `<family-hub-card-impl>` and `<family-hub-card-editor-impl>` once it resolves. The stub then instantiates one inside its own shadow DOM and forwards buffered `setConfig` / `hass`.
+- **Body (`family-hub-card-body.js`)** — ~495 KB (minified). The full card implementation. Registers `<family-hub-card-impl>` and `<family-hub-card-editor-impl>` once it resolves. The stub then instantiates one inside its own shadow DOM and forwards buffered `setConfig` / `hass`.
 - **Deploy via Samba**: copy both files (and any edited `.py`) to `\\10.0.0.41\config\custom_components\family_hub\`. Never sync `family_hub_data.json` — it's user data.
 - **Reload semantics**:
   - Python only → reload integration (Settings → Devices & Services → Family Hub → Reload). No HA restart.
