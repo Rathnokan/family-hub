@@ -334,7 +334,7 @@ function _workOrders(attr, person, balance, card) {
     return `
         ${htmlDailyProgress(attr)}
         <div class="fh-row-list">
-            ${all.slice(0, 6).map((t, i) => htmlChoreRow(t, engineerRowConfig, person, card, { index: i + 1 })).join("")}
+            ${all.map((t, i) => htmlChoreRow(t, engineerRowConfig, person, card, { index: i + 1 })).join("")}
             ${pendingSection}
         </div>`;
 }

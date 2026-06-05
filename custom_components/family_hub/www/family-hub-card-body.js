@@ -4944,7 +4944,7 @@ var R=(e,t)=>()=>(e&&(t=e(e=0)),t);var Wa=(e,t)=>()=>(t||e((t={exports:{}}).expo
         ${i.map(y=>q(y,Ot,t,s,{index:++g})).join("")}`:"";return`
         ${le(e)}
         <div class="fh-row-list">
-            ${d.slice(0,6).map((y,_)=>q(y,Ot,t,s,{index:_+1})).join("")}
+            ${d.map((y,_)=>q(y,Ot,t,s,{index:_+1})).join("")}
             ${m}
         </div>`}function mo(e,t,a,s){let o=e.store_items||[];if(!o.length)return'<div class="fh-eng-empty">NO REWARDS CONFIGURED &middot; PENDING ADMIN ACTION</div>';let r=s._attrs("sensor.family_hub_needs_attention"),l=(r.redemption_queue||[]).filter(g=>g.person_id===t.person_id),n=new Set(l.map(g=>g.item_id).filter(Boolean)),f=new Set(l.filter(g=>!g.item_id).map(g=>g.item_name)),d=new Set((e.subscriptions||[]).map(g=>g.item_id));return`
         <div class="fh-store-with-rail">

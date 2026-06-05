@@ -40,6 +40,7 @@
 - **Slug whitespace divergence:** JS `slug()` now matches the Python transform (`.replace(/ /g,"_")`).
 - **Dedup:** `sensor.py` imports `get_maintenance_tasks` from `card_model` instead of carrying a byte-identical copy.
 - **Cruft:** deleted the stale tracked `www/family-hub-card.js.bak`.
+- **Engineer theme task truncation:** `_workOrders` capped the list at `slice(0, 6)`, silently hiding the 7th+ due/overdue chore (no other theme does this). Now renders all. — `themes/engineer.js`
 
 ---
 
@@ -56,9 +57,12 @@
 ### Weekly-points window mismatch (report 1.7)
 - Rank bar (`getWeeklyPts`) sums "since last Monday 00:00"; the server (`_async_process_weekly_ranks`) evaluates over the trailing 7 days ending on `rank_eval_weekday`, and includes allowance/bonus deltas. The kid's "+1 rank" prediction can disagree with the actual server decision mid-week. — `themes/_shared.js`, `streaks_ranks_mixin.py`
 
-### Dedupe (cosmetic / maintainability)
+### Dedupe / cosmetics (low value)
 - `get_active_chores_for_card` ≈ `get_all_chores_for_card` (~90% shared row builder) — left alone (outputs differ slightly; needs care to merge safely).
-- Three overlapping subscription-rail renderers in `_shared.js`; `htmlSubscriptionRail` is a dead export (no call sites) — left as-is to avoid editing all six theme imports for marginal benefit.
+- Three overlapping subscription-rail renderers in `_shared.js`; `htmlSubscriptionRail` is a dead export (no call sites, still imported by all 6 themes) — left as-is to avoid editing all six theme imports for marginal benefit.
+- Theme flavor text is hardcoded to its intended person (baker → "Shannon's Kitchen", dinos → "Spencer's Field Log", dbz → "CODENAME KAMEHA"). Harmless while themes stay assigned as designed; would mislabel if someone picked another person's theme. By-design, noted for awareness.
+
+> **Audit note (2026-06-02):** all six theme render files + `icons.js` were read line-by-line this pass (the gap from the original audit). Only the engineer truncation above was a real bug; the rest were clean.
 
 ---
 
