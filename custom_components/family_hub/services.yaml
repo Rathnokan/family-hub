@@ -38,6 +38,61 @@ reject_task:
 mark_task_complete:
   name: Mark task complete
   description: Retroactively mark a skipped instance as done and award points.
+add_task:
+  name: Add one-time task
+  description: >-
+    Create a one-time task (not a recurring chore). Optionally expires after N days,
+    with an optional penalty deducted if it expires unfinished.
+  fields:
+    name:
+      name: Task name
+      required: true
+      selector:
+        text:
+    assigned_to:
+      name: Assign to
+      description: One or more person IDs.
+      selector:
+        text:
+    points:
+      name: Points
+      selector:
+        number:
+          min: 0
+          mode: box
+    description:
+      name: Description
+      selector:
+        text:
+    approval_required:
+      name: Needs approval
+      selector:
+        boolean:
+    expires_after_days:
+      name: Expires after (days)
+      description: Auto-skip the task this many days after creation. Blank = never expires.
+      selector:
+        number:
+          min: 1
+          mode: box
+    penalty_enabled:
+      name: Apply penalty on expiry
+      description: Deduct points if the task expires unfinished (needs an expiry window).
+      selector:
+        boolean:
+    penalty_points:
+      name: Penalty points
+      selector:
+        number:
+          min: 0
+          mode: box
+    created_by:
+      name: Created by
+      selector:
+        text:
+add_one_time_task:
+  name: Add one-time task (alias)
+  description: Backward-compatible alias of add_task — identical fields.
 
 # ---------------------------------------------------------------------------
 # People
@@ -212,7 +267,9 @@ force_daily_tick:
   description: Run the daily tick immediately (generate instances, process penalties/allowances, advance rotations). For testing/admin.
 rebuild_data:
   name: Rebuild data
-  description: Rebuild derived task data from chore definitions. Maintenance/recovery tool.
+  description: >-
+    Cleanup tool — remove orphan people, ghost/orphaned/duplicate task instances,
+    and prune old terminal instances + history. Surfaces a summary notification.
 set_streak:
   name: Set chore streak
   description: Admin-override a per-chore streak count for a person.
