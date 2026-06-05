@@ -57,6 +57,7 @@ from .card_model import (
     build_needs_attention_scalars,
     build_maintenance_due_scalars,
     build_maintenance_overdue_scalars,
+    get_maintenance_tasks,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -208,29 +209,8 @@ class FamilyHubPersonSensor(FamilyHubBaseSensor):
         return build_person_scalars(self.coordinator.store, self._person_id)
 
 
-# ---------------------------------------------------------------------------
-# Maintenance helpers
-# ---------------------------------------------------------------------------
-
-def _get_maintenance_tasks(store, overdue_only: bool = False) -> list[dict]:
-    """Return active maintenance task instances (category_label == Maintenance)."""
-    today            = date.today()
-    due_soon_cutoff  = (today + timedelta(days=MAINTENANCE_DUE_SOON_DAYS)).isoformat()
-    today_str        = today.isoformat()
-    results          = []
-    for task in store.task_instances:
-        if task["status"] not in ACTIVE_STATUSES:
-            continue
-        chore = store.get_chore(task["chore_id"])
-        if not chore or not store._chore_is_maintenance(chore):
-            continue
-        if overdue_only:
-            if task["due_date"] < today_str:
-                results.append(task)
-        else:
-            if task["due_date"] <= due_soon_cutoff:
-                results.append(task)
-    return results
+# Maintenance task selection lives in card_model.get_maintenance_tasks (imported
+# above) so the sensors and the websocket model share one implementation.
 
 
 # ---------------------------------------------------------------------------
@@ -249,7 +229,7 @@ class FamilyHubMaintenanceDueSensor(FamilyHubBaseSensor):
 
     @property
     def native_value(self) -> int:
-        return len(_get_maintenance_tasks(self.coordinator.store))
+        return len(get_maintenance_tasks(self.coordinator.store))
 
     @property
     def extra_state_attributes(self) -> dict:
@@ -274,7 +254,7 @@ class FamilyHubMaintenanceOverdueSensor(FamilyHubBaseSensor):
 
     @property
     def native_value(self) -> int:
-        return len(_get_maintenance_tasks(self.coordinator.store, overdue_only=True))
+        return len(get_maintenance_tasks(self.coordinator.store, overdue_only=True))
 
     @property
     def extra_state_attributes(self) -> dict:
@@ -324,7 +304,7 @@ class FamilyHubNeedsAttentionSensor(FamilyHubBaseSensor):
         return (
             len(store.get_pending_approvals())
             + len(store.get_pending_redemptions())
-            + len(_get_maintenance_tasks(store, overdue_only=True))
+            + len(get_maintenance_tasks(store, overdue_only=True))
             + len(store.get_group_reward_proposals_for_card())
             + len([s for s in store._data.get("subscriptions", []) if s["status"] == SUB_STATUS_CANCEL_PENDING])
         )

@@ -1189,7 +1189,7 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
         DOMAIN, "update_subscription", handle_update_subscription,
         schema=vol.Schema({
             vol.Required("subscription_id"):       cv.string,
-            vol.Optional("period"):                cv.string,
+            vol.Optional("period"):                vol.In(SUB_PERIODS),
             vol.Optional("anchor"):                vol.Coerce(int),
             vol.Optional("dollar_cost_override"):  vol.Any(None, vol.Coerce(float)),
             vol.Optional("next_renewal_date"):     cv.string,
@@ -1231,17 +1231,20 @@ async def _notify_approval(hass: HomeAssistant, instance: dict, store) -> None:
     person_name = person["name"] if person else "Someone"
     chore_name  = chore["name"] if chore else "a task"
 
-    await hass.services.async_call(
-        "persistent_notification", "create",
-        {
-            "message": (
-                f"**{person_name}** completed **{chore_name}** and needs your approval.\n\n"
-                f"Task ID: `{instance['id']}`"
-            ),
-            "title": "Family Hub: approval needed",
-            "notification_id": f"family_hub_approval_{instance['id']}",
-        },
-    )
+    try:
+        await hass.services.async_call(
+            "persistent_notification", "create",
+            {
+                "message": (
+                    f"**{person_name}** completed **{chore_name}** and needs your approval.\n\n"
+                    f"Task ID: `{instance['id']}`"
+                ),
+                "title": "Family Hub: approval needed",
+                "notification_id": f"family_hub_approval_{instance['id']}",
+            },
+        )
+    except Exception as err:  # noqa: BLE001
+        _LOGGER.warning("Family Hub: approval persistent_notification failed: %s", err)
 
     # Push to parents who have a notify_target configured
     push_msg = f"{person_name} finished {chore_name} — open Family Hub to approve!"
@@ -1267,18 +1270,21 @@ async def _notify_redemption(hass: HomeAssistant, redemption: dict, store) -> No
     item_name   = redemption["item_name"]
     pts         = redemption["points_cost"]
 
-    await hass.services.async_call(
-        "persistent_notification", "create",
-        {
-            "message": (
-                f"**{person_name}** wants to redeem "
-                f"**{item_name}** for **{pts} points**.\n\n"
-                f"Redemption ID: `{redemption['id']}`"
-            ),
-            "title": "Family Hub: redemption requested",
-            "notification_id": f"family_hub_redemption_{redemption['id']}",
-        },
-    )
+    try:
+        await hass.services.async_call(
+            "persistent_notification", "create",
+            {
+                "message": (
+                    f"**{person_name}** wants to redeem "
+                    f"**{item_name}** for **{pts} points**.\n\n"
+                    f"Redemption ID: `{redemption['id']}`"
+                ),
+                "title": "Family Hub: redemption requested",
+                "notification_id": f"family_hub_redemption_{redemption['id']}",
+            },
+        )
+    except Exception as err:  # noqa: BLE001
+        _LOGGER.warning("Family Hub: redemption persistent_notification failed: %s", err)
 
     # Push to parents who have a notify_target configured
     push_msg = f"{person_name} wants to redeem {item_name} for {pts} pts — open Family Hub to approve!"

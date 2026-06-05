@@ -137,7 +137,7 @@ class HistoryAdminMixin:
         return self._data.get("history", [])
 
     def get_history(self, person_id: str | None = None, limit: int = 100) -> list[dict]:
-        entries = sorted(self.history, key=lambda e: e["timestamp"], reverse=True)
+        entries = sorted(self.history, key=lambda e: e.get("timestamp", ""), reverse=True)
         if person_id:
             entries = [e for e in entries if e.get("person_id") == person_id]
         return entries[:limit]
@@ -164,7 +164,7 @@ class HistoryAdminMixin:
           "reject"        — approved/self-reported, points can be clawed back
           None            — no further parent action available
         """
-        entries = sorted(self.history, key=lambda e: e["timestamp"], reverse=True)
+        entries = sorted(self.history, key=lambda e: e.get("timestamp", ""), reverse=True)
         if person_id:
             entries = [e for e in entries if e.get("person_id") == person_id]
 

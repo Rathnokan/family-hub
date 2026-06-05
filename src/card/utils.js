@@ -17,8 +17,10 @@ export const fUSD = n => `$${(n || 0).toFixed(2)}`;
 /** Capitalize first letter of a string */
 export const cap  = s => s ? s[0].toUpperCase() + s.slice(1) : "";
 
-/** Convert a display name to a safe sensor slug (lowercase, spaces → underscores) */
-export const slug = s => (s || "").toLowerCase().replace(/\s+/g, "_");
+/** Convert a display name to a safe sensor slug. MUST match the Python transform
+ *  in sensor.py / card_model.person_entity_id — `name.lower().replace(" ", "_")` —
+ *  or the card's per-person model lookups miss. Single-space replace only. */
+export const slug = s => (s || "").toLowerCase().replace(/ /g, "_");
 
 /**
  * Escape all five HTML special characters for safe innerHTML injection.

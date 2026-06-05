@@ -34,6 +34,15 @@
 
 ---
 
+## ✅ Fixed on `main` since v0.7.1 (unreleased — rides the next version bump)
+
+- **Hardening:** both `persistent_notification.create` calls are now guarded (`_notify_approval` / `_notify_redemption`); history sort tolerates a missing `timestamp` (`.get`); `update_subscription` `period` is validated against `SUB_PERIODS`.
+- **Slug whitespace divergence:** JS `slug()` now matches the Python transform (`.replace(/ /g,"_")`).
+- **Dedup:** `sensor.py` imports `get_maintenance_tasks` from `card_model` instead of carrying a byte-identical copy.
+- **Cruft:** deleted the stale tracked `www/family-hub-card.js.bak`.
+
+---
+
 ## Open — deferred (real, but not surgical; fix when next in that area)
 
 ### First-parent attribution (was High #5) — **affects this family (Jim + Shannon)**
@@ -41,21 +50,15 @@
 - **Symptom:** every admin action resolves the actor via `card._people().find(p => p.type === "parent")` → always the *first* parent. In a two-parent household every approval/penalty reversal is logged as Jim regardless of who tapped.
 - **Why deferred:** not a one-liner — needs the acting HA user mapped to a person (`hass.user.id` → `person.ha_user_id`) and threaded through the card. Worth a small focused task.
 
-### Slug divergence: JS `slug()` vs Python `person_entity_id` (report 1.6) — latent
-- JS uses `.replace(/\s+/g,"_")` (collapses runs); Python uses `.replace(" ","_")` (per space). Names with double-spaces/tabs, or two names that slugify the same (HA appends `_2`), produce a card key that misses the websocket model → personal page silently falls back to lean scalar attrs (no task lists). Safe for current single-word names. — `utils.js:21`, `card_model.py:person_entity_id`, `sensor.py`
+### Slug collision (residual of report 1.6) — theoretical
+- The JS/Python *whitespace* divergence is fixed (both single-space now). What remains: if two people's names slugify to the **same** entity_id, HA appends `_2` to the second while `card_model.person_entity_id` returns the un-suffixed key → that person's page would miss the model. Needs the backend to expose each person's real `entity_id` if it ever matters. Not a concern for the current family. — `card_model.py:person_entity_id`
 
 ### Weekly-points window mismatch (report 1.7)
 - Rank bar (`getWeeklyPts`) sums "since last Monday 00:00"; the server (`_async_process_weekly_ranks`) evaluates over the trailing 7 days ending on `rank_eval_weekday`, and includes allowance/bonus deltas. The kid's "+1 rank" prediction can disagree with the actual server decision mid-week. — `themes/_shared.js`, `streaks_ranks_mixin.py`
 
-### Hardening (low likelihood, currently unguarded)
-- `_notify_approval` / `_notify_redemption` call `persistent_notification.create` without try/except (the push loop is guarded; the lapse path is guarded — inconsistent). — `services.py`
-- `get_history` / `get_history_for_card` sort on `e["timestamp"]` (KeyError blanks the whole History view if any entry lacks one). — `history_admin_mixin.py`
-- `update_subscription` service `period` is `cv.string`, not `vol.In(SUB_PERIODS)`. — `services.py`
-
 ### Dedupe (cosmetic / maintainability)
-- `get_maintenance_tasks` exists byte-identical in `card_model.py` and `sensor.py`.
-- `get_active_chores_for_card` ≈ `get_all_chores_for_card` (~90% shared row builder).
-- Three overlapping subscription-rail renderers in `_shared.js`; `htmlSubscriptionRail` is now a dead export (no call sites).
+- `get_active_chores_for_card` ≈ `get_all_chores_for_card` (~90% shared row builder) — left alone (outputs differ slightly; needs care to merge safely).
+- Three overlapping subscription-rail renderers in `_shared.js`; `htmlSubscriptionRail` is a dead export (no call sites) — left as-is to avoid editing all six theme imports for marginal benefit.
 
 ---
 
