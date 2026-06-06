@@ -118,7 +118,12 @@ add_person:
         text:
 update_person:
   name: Update person
-  description: Update a person's settings (name, theme, allowance, rank, active flag, etc.).
+  description: >-
+    Update a person's settings (name, theme, allowance, active flag, etc.). Rank
+    tuning accepts rank_index plus per-rank curves rank_drop_thresholds /
+    rank_gain_thresholds (length-5 lists, indexed by rank) and rank_curve (the
+    remembered generator knobs). Pass null for a curve list to fall back to the
+    legacy scalar / global threshold.
   fields:
     person_id:
       name: Person ID

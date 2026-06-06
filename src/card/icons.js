@@ -534,6 +534,52 @@ export const FH_ICONS = {
 };
 
 // ---------------------------------------------------------------------------
+// Emoji glyphs — keyed identically to FH_ICONS (v0.7.x)
+// ---------------------------------------------------------------------------
+//
+// Kids couldn't read the thin monochrome line icons, so chore/reward icons now
+// render as full-color emoji. Keys match FH_ICONS exactly, so every existing
+// chore/reward keeps working with no data migration — choreIcon() just resolves
+// the key to an emoji instead of an SVG. Any key without an emoji here falls
+// back to the legacy FH_ICONS stroke icon, then to the colored dot.
+//
+// Icons always render alongside the chore name (project rule), so a few emoji
+// intentionally repeat across related concepts — the label disambiguates.
+
+export const FH_EMOJI = {
+    // Self-Care
+    bed: "🛏️", tooth: "🦷", shower: "🚿", hair: "💇", sleep: "😴",
+    laundry: "🧺", folding: "👕", room: "🧹", pack: "🎒", backpack: "🎒",
+    // Pets
+    dog: "🐕", cat: "🐈", pet: "🐾", fish: "🐟",
+    // Kitchen
+    dishes: "🍽️", plate: "🍴", table: "🍽️", cooking: "🍳", meals: "🍲",
+    lunch: "🥪", coffee: "☕", snack: "🍿", bread: "🍞", menu: "📋",
+    // Cleaning
+    trash: "🗑️", broom: "🧹", sweep: "🧹", vacuum: "🧹", mop: "🧽",
+    wipe: "🧽", dusting: "🧹", bucket: "🪣", bathroom: "🚽", windows: "🪟",
+    recycling: "♻️",
+    // Outdoors
+    lawn: "🌿", garden: "🪴", plant: "🌱", leaves: "🍂", snow: "❄️", garage: "🧰",
+    // School
+    homework: "📝", reading: "📖", book: "📚", pencil: "✏️", calculator: "🧮",
+    piano: "🎹", practice: "⏱️",
+    // Health
+    medicine: "💊", water: "💧", exercise: "💪", sport: "⚽", walk: "🚶",
+    // Hobbies
+    art: "🎨", music: "🎵", bike: "🚲", games: "🎮",
+    // Home
+    tools: "🔧", smarthome: "🏠", screen: "📺", car: "🚗", shop: "🛒",
+    phone: "📱", mail: "✉️", errand: "🛍️",
+    // Generic
+    chore: "📋", star: "⭐", check: "✅", timer: "⏲️",
+    // Rewards-specific
+    gift: "🎁", cash: "💵", candy: "🍬", icecream: "🍦", cake: "🎂",
+    party: "🎉", controller: "🎮", trophy: "🏆", movie: "🎬", toy: "🧸",
+    sticker: "🌟",
+};
+
+// ---------------------------------------------------------------------------
 // Ordered metadata for the icon picker grid
 // ---------------------------------------------------------------------------
 
@@ -677,6 +723,15 @@ export function choreIcon(key, fallbackColor, size = "28px") {
     if (typeof key === "string" && key.startsWith("data:image/")) {
         return `<span class="fh-chore-icon" style="width:${size};height:${size};display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">` +
             `<img src="${key}" style="width:100%;height:100%;object-fit:contain;border-radius:4px" alt="">` +
+            `</span>`;
+    }
+    // Emoji glyph — rendered inside an <svg><text> using the same viewBox as the
+    // legacy stroke icons, so every per-context `svg { width:.. }` rule (rows,
+    // kid-large, mission-control, store, picker) sizes it identically. Renders
+    // in full color in the webview's emoji font.
+    if (key && FH_EMOJI[key]) {
+        return `<span class="fh-chore-icon fh-chore-emoji" style="width:${size};height:${size};display:inline-flex;align-items:center;justify-content:center;flex-shrink:0">` +
+            `<svg viewBox="0 0 24 24"><text x="12" y="12" text-anchor="middle" dominant-baseline="central" font-size="22">${FH_EMOJI[key]}</text></svg>` +
             `</span>`;
     }
     if (key && FH_ICONS[key]) {

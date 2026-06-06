@@ -11,9 +11,11 @@
 import { escHTML, escAttr, fPts, fUSD, ini,
          groupHistorySkipped }                            from "../utils.js";
 import { DEFAULT_COLOR, HISTORY_META, WEEKDAY_LABELS }   from "../constants.js";
-import { getEffectiveRank, getWeeklyPts, htmlRankBar, htmlSuccessStreak,
+import { getEffectiveRank, effectiveRankThresholds, getWeeklyPts, getWeeklyPtsLost, getPointsAtRisk,
+         htmlRankBar, htmlSuccessStreak,
          getActiveStreaks,
          computeStreakProgress,
+         groupByCategory,
          htmlChoreRow,
          htmlGoalBanner, htmlRailGoal, htmlGoalToggleBtn,
          storeItemIcon, htmlStoreItemLimit,
@@ -45,10 +47,10 @@ const KID_PALETTE = {
 
 const ENGINEER_RANKS = [
     { minXP: 0,    name: "Drafter"        },
-    { minXP: 150,  name: "Jr. Engineer"   },
-    { minXP: 400,  name: "P.E."           },
-    { minXP: 800,  name: "Sr. Engineer"   },
-    { minXP: 1500, name: "Principal Eng." },
+    { minXP: 100,  name: "Jr. Engineer"   },
+    { minXP: 300,  name: "P.E."           },
+    { minXP: 700,  name: "Sr. Engineer"   },
+    { minXP: 1200, name: "Principal Eng." },
 ];
 
 // ---- Row config (S9 — shared chore-row component) --------------------------
@@ -96,9 +98,10 @@ export const engineerTheme = {
         const naAttr  = card._attrs("sensor.family_hub_needs_attention");
         const balance = parseInt(card._states(eid)?.state || "0");
         const rankIdx = person.rank_index !== undefined ? person.rank_index : 0;
-        const dropThr = person.rank_drop_threshold ?? naAttr.rank_drop_threshold ?? 50;
-        const gainThr = person.rank_gain_threshold ?? naAttr.rank_gain_threshold ?? 75;
-        const weekly  = getWeeklyPts(person.person_id, naAttr.history_log);
+        const { dropThr, gainThr } = effectiveRankThresholds(person, naAttr, rankIdx);
+        const weekly  = getWeeklyPts(person.person_id, naAttr.history_log, naAttr.rank_eval_weekday);
+        const lost    = getWeeklyPtsLost(person.person_id, naAttr.history_log, naAttr.rank_eval_weekday);
+        const atRisk  = getPointsAtRisk(attr);
 
         const tabDefs = [
             { key: "tasks",   label: "WORK ORDERS", sub: "primary"  },
@@ -128,7 +131,7 @@ export const engineerTheme = {
         // Rail only flanks the work-orders tab — store/history get full width.
         const showRail   = activeTab === "tasks";
         const railHTML   = showRail
-            ? _railPanels({ attr, naAttr, person, balance, openCount, weekly, rank,
+            ? _railPanels({ attr, naAttr, person, balance, openCount, weekly, lost, atRisk, rank,
                             rankIdx, dropThr, gainThr, plotDate })
             : "";
 
@@ -180,10 +183,10 @@ export const engineerTheme = {
 
 // ---- Rail panels ------------------------------------------------------------
 
-function _railPanels({ attr, naAttr, person, balance, openCount, weekly, rank,
+function _railPanels({ attr, naAttr, person, balance, openCount, weekly, lost, atRisk, rank,
                        rankIdx, dropThr, gainThr, plotDate }) {
     return `
-        ${_railPanelKPIs(balance, openCount, weekly, attr.show_dollar_value ? attr.dollar_value : null)}
+        ${_railPanelKPIs(balance, openCount, weekly, lost, atRisk, attr.show_dollar_value ? attr.dollar_value : null)}
         ${htmlRailGoal(attr)}
         ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, person, attr)}
         ${_railPanelStreaks(attr, naAttr, person)}
@@ -209,27 +212,27 @@ function _railPanelSubs(attr, balance, personId) {
     return rows ? _railPanel("SUBSCRIPTIONS", rows) : "";
 }
 
-function _railPanelKPIs(balance, openCount, weekly, dollarValue) {
-    const cell = (label, val, unit, sub) => `
+function _railPanelKPIs(balance, openCount, weekly, lost, atRisk, dollarValue) {
+    const cell = (label, val, unit, sub, subClass = "") => `
         <div class="fh-eng-rkpi">
             <div class="fh-eng-rkpi-lbl">${label}</div>
             <div class="fh-eng-rkpi-val-row">
                 <span class="fh-eng-rkpi-val">${escHTML(String(val))}</span>
                 ${unit ? `<span class="fh-eng-rkpi-unit">${unit}</span>` : ""}
             </div>
-            ${sub ? `<div class="fh-rkpi-sub">${escHTML(sub)}</div>` : ""}
+            ${sub ? `<div class="fh-rkpi-sub ${subClass}">${escHTML(sub)}</div>` : ""}
         </div>`;
     const body = `
         <div class="fh-eng-rkpi-row">
             ${cell("BAL",   fPts(balance), "pts", dollarValue != null ? fUSD(dollarValue) : null)}
-            ${cell("OPEN",  openCount,     "wo")}
-            ${cell("WEEK",  `+${weekly}`,  "pts")}
+            ${cell("OPEN",  openCount,     "wo", atRisk > 0 ? `−${atRisk} at risk` : null, "fh-rkpi-sub--loss")}
+            ${cell("WEEK",  `+${weekly}`,  "pts", lost > 0 ? `−${lost} lost` : "0 lost", "fh-rkpi-sub--loss")}
         </div>`;
     return _railPanel("TODAY · KPIS", body, { dense: true });
 }
 
 function _railPanelRank(rankIdx, weekly, dropThr, gainThr, person, attr) {
-    const bar    = htmlRankBar(rankIdx, weekly, dropThr, gainThr, ENGINEER_RANKS, ENG.amber);
+    const bar    = htmlRankBar(rankIdx, weekly, dropThr, gainThr, ENGINEER_RANKS, ENG.amber, person);
     const streak = htmlSuccessStreak(person, ENG.amber);
     const freeze = htmlStreakFreezeChip(attr);
     if (!bar) {
@@ -302,6 +305,7 @@ function _workOrders(attr, person, balance, card) {
     const rawDue     = attr.tasks_due_today_list        || [];
     const rawOverdue = attr.tasks_overdue_list          || [];
     const pending    = attr.tasks_pending_approval_list || [];
+    const catOrder   = card._attrs("sensor.family_hub_needs_attention").category_labels || [];
 
     const collapseByChore = (rows, pickFn) => {
         const seen = new Map();
@@ -314,14 +318,24 @@ function _workOrders(attr, person, balance, card) {
     const overdue = collapseByChore(rawOverdue, (a, b) => (a.days_overdue || 0) > (b.days_overdue || 0));
     const due     = collapseByChore(rawDue.filter(t => t.chore_type !== "reminder"), () => false);
 
+    // Overdue first, then due rows grouped by category in the admin-defined order
+    // (same as every other theme). `_over` is the flag groupByCategory routes on.
     const all = [
-        ...overdue.map(t => ({ ...t, _overdue: true })),
+        ...overdue.map(t => ({ ...t, _over: true })),
         ...due,
     ];
 
     if (!all.length && !pending.length) {
         return `<div class="fh-eng-empty">&#10003; ALL WORK ORDERS COMPLETE &middot; AREA CLEAR</div>`;
     }
+
+    let woIdx = 0;
+    const groupHtml = groupByCategory(all, catOrder).map(group => {
+        const hdr  = `<div class="fh-row-section-hdr">// ${escHTML(group.label.toUpperCase())}</div>`;
+        const rows = group.tasks.map(t =>
+            htmlChoreRow(t, engineerRowConfig, person, card, { index: ++woIdx })).join("");
+        return hdr + rows;
+    }).join("");
 
     // Pending tasks render as their own grouped section under a header. Each
     // pending row is the same shared row — htmlChoreRow detects status and
@@ -334,7 +348,7 @@ function _workOrders(attr, person, balance, card) {
     return `
         ${htmlDailyProgress(attr)}
         <div class="fh-row-list">
-            ${all.map((t, i) => htmlChoreRow(t, engineerRowConfig, person, card, { index: i + 1 })).join("")}
+            ${groupHtml}
             ${pendingSection}
         </div>`;
 }

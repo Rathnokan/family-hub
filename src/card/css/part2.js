@@ -789,9 +789,11 @@ export const CSS_2 = `    color:var(--fh-text-sec); letter-spacing:.04em;
   /* Shared $X.XX subtitle under a rail KPI cell. Inherits color from the
      surrounding cell context; opacity tones it down so it reads as secondary. */
   .fh-rkpi-sub {
-    font-family:var(--fh-font-mono); font-size:.72rem; font-weight:600;
-    letter-spacing:.02em; line-height:1; margin-top:3px; opacity:.7;
+    font-family:var(--fh-font-mono); font-size:.75rem; font-weight:600;
+    letter-spacing:.02em; line-height:1.1; margin-top:3px; opacity:.8;
   }
+  /* Loss/at-risk variant — penalty points lost this week or at risk today. */
+  .fh-rkpi-sub--loss { color:var(--fh-overdue); opacity:.95; }
 
   /* Rail Â· Streak constellation */
   .fh-eng-rstreak { display:flex; flex-direction:column; gap:3px; padding:5px 0; }
@@ -987,5 +989,5 @@ export const CSS_2 = `    color:var(--fh-text-sec); letter-spacing:.04em;
     position:absolute; top:0; left:0; height:100%; border-radius:3px;
     transition:width .4s ease;
   }
-  .fh-rank-bar-drop {
+  .fh-rank-bar-mark {
 `;

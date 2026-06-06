@@ -324,6 +324,9 @@ def build_needs_attention_payload(store) -> dict:
                 "rank_index":          p.get("rank_index", 999 if p.get("type") == "parent" else 0),
                 "rank_drop_threshold": p.get("rank_drop_threshold"),
                 "rank_gain_threshold": p.get("rank_gain_threshold"),
+                "rank_drop_thresholds": p.get("rank_drop_thresholds"),
+                "rank_gain_thresholds": p.get("rank_gain_thresholds"),
+                "rank_curve":           p.get("rank_curve"),
                 "child_mode":          p.get("child_mode", False),
                 "completion_streak":        p.get("completion_streak", 0),
                 "completion_threshold_pct": p.get("completion_threshold_pct", 80),
@@ -370,6 +373,9 @@ def build_needs_attention_payload(store) -> dict:
         "rank_eval_weekday":         store.settings.get("rank_eval_weekday", 0),
         "rank_drop_threshold":       store.settings.get("rank_drop_threshold", 50),
         "rank_gain_threshold":       store.settings.get("rank_gain_threshold", 75),
+        "rank_default_cap":          store.settings.get("rank_default_cap", 100),
+        "rank_default_drop_pct":     store.settings.get("rank_default_drop_pct", 60),
+        "rank_default_gain_pct":     store.settings.get("rank_default_gain_pct", 80),
         "rank_ppd_ladder":           store.rank_ppd_ladder,
 
         # Enriched 30-day history log for admin log/approvals UI

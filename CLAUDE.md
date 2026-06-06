@@ -52,21 +52,21 @@ The handoff prompt is part of "Phase Complete" — do not declare a phase done w
 
 ---
 
-## Current Status — 2026-06-02
+## Current Status — 2026-06-06
 
 | Item | State |
 |---|---|
-| **Live on HA (Samba)** | v0.7.1 deployed + live-tested. |
-| **GitHub / HACS** | **v0.7.1 SHIPPED** — bug-fix patch on `main`, **tag `v0.7.1`**, GitHub release published (Latest). **GitHub Actions CI green** on every push. (v0.7.0 "Re-foundation" before it: tag `v0.7.0`, commit `37ec694`.) |
-| **manifest.json / hacs.json / constants.js / const.py VERSION** | **0.7.1** (`iot_class` = `calculated`). |
-| **Phase** | **v0.7.1 bug-swat SHIPPED.** Correctness patch off a full-codebase read: redemption overspend guard, $0 sub-override, lapsed-sub "Ready" math, wired Add-Task penalty, cancel-pending lapse notify, inline sub-editor freeze, HISTORY_META gaps, + dead-code/version-drift cleanup. Full list in [BUGS.md](BUGS.md) "Fixed in v0.7.1". **Next work → v0.7.2/v0.7.x** (branch from `main`); see backlog below. |
+| **Live on HA (Samba)** | v0.7.2 deployed + live-tested. |
+| **GitHub / HACS** | **v0.7.2 SHIPPED** — "Dynamic Ranks" feature on `main`, **tag `v0.7.2`**, GitHub release published (Latest). **GitHub Actions CI green** on every push. (v0.7.1 bug-swat before it: tag `v0.7.1`; v0.7.0 "Re-foundation": tag `v0.7.0`, commit `37ec694`.) |
+| **manifest.json / hacs.json / constants.js / const.py VERSION** | **0.7.2** (`iot_class` = `calculated`). |
+| **Phase** | **v0.7.2 "Dynamic Ranks" SHIPPED.** Per-kid, per-rank gain/drop curves (percentage-of-capacity bands), all theme ladders standardized to 5 rungs, consolidated **Ranks side-rail drawer** (global + per-kid tabs) with the Edit Person / Edit Settings popups converted to drawers, two-line (drop+gain) capacity-spanned rank bar, and the card weekly-points window aligned to the configured eval weekday. See [DECISIONS_LOG.md](DECISIONS_LOG.md) + [RELEASE-NOTES-v0.7.2.md](RELEASE-NOTES-v0.7.2.md). **Next → v0.7.3/v0.7.x** (branch from `main`). |
 
-> **v0.7.1 is on `main` + tagged.** Future work: branch from `main` (`git checkout main && git checkout -b v0.7.2-xxx`). Every push runs CI — keep it green before deploying.
+> **v0.7.2 is on `main` + tagged.** Future work: branch from `main` (`git checkout main && git checkout -b v0.7.3-xxx`). Every push runs CI — keep it green before deploying.
 >
 > **v0.7.x backlog (recommended order):**
 > 1. **First-parent attribution** (BUGS.md "Open", top item) — two-parent household logs every admin action as the first parent (Jim). Needs `hass.user.id` → `person.ha_user_id` mapping threaded through the card. Small focused task; **affects this family.**
 > 2. **#3 — model/history runtime trim.** `build_card_model` still ships the ~977-entry `history_log` on `needs_attention`, refetched on every `data_rev` change. ⚠️ **Bigger than it looks:** `history_log` is consumed by the admin History view AND all 6 personal pages (`getWeeklyPts` in the header, the per-person history tab, the store rail's recent purchases). Doing it right = lazy per-view history (`family_hub/get_history` ws command, person-filtered) + an async render path for the weekly-points header. Moderate refactor; test all themes.
-> 3. Smaller deferred items (slug divergence, weekly-window mismatch, notification/history hardening, dedupe) — all catalogued in [BUGS.md](BUGS.md) "Open — deferred".
+> 3. Smaller deferred items (slug divergence, notification/history hardening, dedupe) — all catalogued in [BUGS.md](BUGS.md) "Open — deferred". (Weekly-window mismatch fixed in v0.7.2.)
 > 4. **Decide:** task-instance retention is **30d** in code (docs previously said 60). Confirm 30 or bump `TASK_INSTANCE_RETENTION_DAYS`.
 > 5. **Optional card-side splits** (`modals.js`, `modes-admin.js`): CODE — silent-import risk ruff can't catch for JS. Low value; leave unless wanted.
 
@@ -76,11 +76,14 @@ The handoff prompt is part of "Phase Complete" — do not declare a phase done w
 
 > **Read this section before starting work.** Then run the Session Start Checklist above and pick up wherever the prior session left off.
 
-### Where things stand (2026-06-04)
+### Where things stand (2026-06-06)
 
-- **v0.7.1 shipped** (tag `v0.7.1`, GitHub release) — bug-swat off a full-codebase audit: redemption-overspend guard, $0 sub-override, lapsed-sub "Ready" math, wired Add-Task penalty, cancel-pending lapse notify, inline sub-editor render-freeze, HISTORY_META gaps.
-- **`main` is a few commits ahead of the `v0.7.1` tag** (unreleased — rides the next version bump): post-0.7.1 cleanup (hardening, JS↔Python slug parity, `get_maintenance_tasks` dedup, dead-code removal, `services.yaml` for `add_task`) + the engineer-theme task-truncation fix. **Samba is current.**
-- The whole source was read line-by-line this pass. Full fix list + what's left → [BUGS.md](BUGS.md) ("Fixed in v0.7.1" / "Fixed on `main` since v0.7.1" / "Open — deferred"). Forward scope → [ROADMAP.md](ROADMAP.md).
+- **v0.7.2 "Dynamic Ranks" shipped** (tag `v0.7.2`, GitHub release). Three-phase feature:
+  - **Ranks standardized to 5 rungs** across all six themes (aligned minXP `[0,100,300,700,1200]`) so theme swaps preserve rank/economy; migration clamps any kid above index 4.
+  - **Per-kid, per-rank gain/drop curves** as **percentage-of-capacity bands** (`person.rank_gain_thresholds` / `rank_drop_thresholds` absolute arrays + `rank_curve` `{cap, gain_pcts, drop_pcts}` knobs). Eval resolves per-rank via `streaks_ranks_mixin._effective_rank_thresholds` with fallback **array → legacy scalar → global**. Global fallback now `rank_default_cap`/`_drop_pct`/`_gain_pct`.
+  - **Consolidated Ranks drawer** (`mRanksDrawer`) — global + per-kid tabs; Edit Person / Edit Settings converted to the same `.fh-drawer` side-rail (reuses the modal scrim via `_modal.surface==="drawer"`).
+  - **Two-line rank bar** (drop+gain markers on a 0→capacity track) via `htmlRankBar(... person)`; card weekly-points window now anchored to `rank_eval_weekday` (was hardcoded Monday).
+- **Samba is current.** Full feature writeup → [RELEASE-NOTES-v0.7.2.md](RELEASE-NOTES-v0.7.2.md); rationale → [DECISIONS_LOG.md](DECISIONS_LOG.md).
 
 ### Next session (features)
 1. Branch from `main`: `git checkout main && git checkout -b <feature>`. Every push runs CI — keep it green before deploying.
@@ -194,3 +197,4 @@ Be terse in responses. The user wants to ship features, not read prose.
 | v0.6.5 | Subscription rewards — recurring store items with lapse/cancel flow, 6 new services, kid subscription rail (all 6 themes), admin type toggle + cancellation queue + family-tab sub management. |
 | v0.7.0 | **"Re-foundation"** — performance + architecture overhaul: event-driven (no 30 s poll), websocket data model + lean sensors (off the state machine/recorder), per-domain multi-store + debounced writes + safe auto-migration, minified bundle. Inactive-member management (reactivate / permanent-delete). GitHub Actions CI. Internal: `data_store.py` 4,815→624 lines via 11 mixins; `css.js` split. |
 | v0.7.1 | Bug-fix & cleanup — correctness patch off a full-codebase audit (redemption overspend guard, $0 sub-override, lapsed-sub "Ready" math, wired Add-Task penalty, cancel-pending lapse notify, inline sub-editor freeze, history labels) + hardening, slug parity, dedup, dead-code/version-drift removal. |
+| v0.7.2 | **"Dynamic Ranks"** — per-kid, per-rank gain/drop curves as percentage-of-capacity bands (curve editor + per-cell tweak); all theme ladders standardized to 5 rungs (rank survives theme swaps); consolidated **Ranks side-rail drawer** with global + per-kid tabs; Edit Person / Edit Settings converted from popups to drawers; two-line (drop+gain) capacity-spanned rank bar; card weekly-points window aligned to the configured eval weekday. Also: full-color **emoji chore/reward icons** (`FH_EMOJI`, keyed to `FH_ICONS`, legacy SVG fallback). |

@@ -7,7 +7,9 @@
 import { DEFAULT_COLOR, CHORE_TEMPLATES } from "./constants.js";
 import { I } from "./constants.js";
 import { escHTML, escAttr, ini, opts, weekdayChips } from "./utils.js";
-import { FH_ICONS, FH_ICON_META, FH_REWARD_ICON_META, choreIcon } from "./icons.js";
+import { FH_ICON_META, FH_REWARD_ICON_META, choreIcon } from "./icons.js";
+import { getTheme } from "./themes/index.js";
+import { getEffectiveRank } from "./themes/_shared.js";
 
 // ---------------------------------------------------------------------------
 // Shared modal wrapper
@@ -31,6 +33,58 @@ export function mWrap(title, body, okLabel, okAct, okClass = "fh-btn-primary") {
           <button class="fh-btn ${okClass}" data-act="${okAct}">${okLabel}</button>
         </div>
       </div>`;
+}
+
+// ---------------------------------------------------------------------------
+// Shared drawer wrapper (v0.7.2 — right side-rail; same scrim/dispatch as modals)
+// ---------------------------------------------------------------------------
+
+/**
+ * Wrap content in the standard right-drawer shell. Mirrors mWrap's signature so
+ * a modal builder can switch to a drawer by swapping the call. The card tags the
+ * scrim with `.fh-modal-bg--drawer` when `_modal.surface === "drawer"`.
+ */
+export function dWrap(title, body, okLabel, okAct, okClass = "fh-btn-primary") {
+    return `
+      <div class="fh-drawer">
+        <div class="fh-drawer-hdr">
+          <span class="fh-drawer-title">${title}</span>
+          <button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="close-modal" aria-label="Close">✕</button>
+        </div>
+        <div class="fh-drawer-body">${body}</div>
+        <div class="fh-drawer-footer">
+          <button class="fh-btn fh-btn-ghost" data-act="close-modal">Cancel</button>
+          <button class="fh-btn ${okClass}" data-act="${okAct}">${okLabel}</button>
+        </div>
+      </div>`;
+}
+
+// Default per-rank percentage bands (share of weekly capacity). The "formula" is
+// deliberately transparent: threshold points = pct% × capacity. Index 0 is the
+// bottom rung (no fall); index 4 is the top rung (no climb).
+//   gain%: reach this share of capacity in a week ⇒ rank up
+//   drop%: fall below this share ⇒ rank down
+export const DEFAULT_GAIN_PCTS = [50, 60, 75, 95, 0];
+export const DEFAULT_DROP_PCTS = [0, 40, 55, 75, 95];
+
+/**
+ * Convert per-rank percentage bands into absolute length-5 {gain, drop} point
+ * arrays: points = round5(pct% × capacity). This is the whole formula — the
+ * parent edits the percentages directly, no hidden curve math.
+ *
+ * @param {number}   cap       weekly point capacity
+ * @param {number[]} gainPcts  length-5 gain percentages (top rung ignored)
+ * @param {number[]} dropPcts  length-5 drop percentages (bottom rung ignored)
+ */
+export function curveFromPercents(cap, gainPcts, dropPcts) {
+    cap = Math.max(0, +cap || 0);
+    const round5 = v => Math.max(0, Math.round(v / 5) * 5);
+    const gain = [], drop = [];
+    for (let i = 0; i < 5; i++) {
+        gain.push(round5(cap * (+gainPcts[i] || 0) / 100));
+        drop.push(round5(cap * (+dropPcts[i] || 0) / 100));
+    }
+    return { gain, drop };
 }
 
 // ---------------------------------------------------------------------------
@@ -199,7 +253,7 @@ export function iconPickerGrid(selectedKey) {
             <button class="fh-icon-cell${selectedKey === key ? " selected" : ""}"
                     data-act="pick-icon" data-icon="${key}" type="button"
                     title="${label}">
-              <span style="display:inline-flex;width:28px;height:28px;color:var(--fh-text)">${FH_ICONS[key]}</span>
+              ${choreIcon(key, null, "28px")}
               <span class="fh-icon-cell-label">${label}</span>
             </button>`).join("")}
         </div>`).join("");
@@ -237,7 +291,7 @@ export function rewardIconPickerGrid(selectedKey) {
             <button class="fh-icon-cell${selectedKey === key ? " selected" : ""}"
                     data-act="pick-icon" data-icon="${key}" type="button"
                     title="${label}">
-              <span style="display:inline-flex;width:28px;height:28px;color:var(--fh-text)">${FH_ICONS[key]}</span>
+              ${choreIcon(key, null, "28px")}
               <span class="fh-icon-cell-label">${label}</span>
             </button>`).join("")}
         </div>`).join("");
@@ -418,8 +472,8 @@ export function choreFormFields(chore, isEdit, people, catLabels, activeTab = "d
     const iconPane = pane("icon", `
         <input type="hidden" id="m-cicon" value="${escAttr(c.icon || "")}">
         <div class="fh-icon-selected-wrap" id="m-icon-selected">
-          ${c.icon && FH_ICONS[c.icon]
-            ? `<span class="fh-icon-sel-icon" style="display:inline-flex;width:20px;height:20px;color:var(--fh-accent)">${FH_ICONS[c.icon]}</span>
+          ${c.icon
+            ? `<span class="fh-icon-sel-icon" style="display:inline-flex;width:20px;height:20px;color:var(--fh-accent)">${choreIcon(c.icon, null, "20px")}</span>
                <span class="fh-icon-sel-lbl">${escHTML(selLabel)}</span>`
             : `<span class="fh-icon-sel-none">No icon selected — pick one below</span>`}
         </div>
@@ -894,7 +948,7 @@ export function mEditPerson(d) {
         ${body}
       </div>`;
 
-    return mWrap(`Edit — ${d.pname}`,
+    return dWrap(`Edit — ${d.pname}`,
         `${section("Identity", "name, codename, avatar color", `
            <div class="fh-field">
              <label class="fh-label">Name *</label>
@@ -1012,27 +1066,7 @@ export function mEditPerson(d) {
            </div>
         `)}
 
-        ${section("Rank", "weekly evaluation overrides", `
-           <div class="fh-row">
-             <div class="fh-field">
-               <label class="fh-label">Rank index (admin override)</label>
-               <input class="fh-input" id="m-prankidx" type="number" min="0"
-                      value="${d.rankIdx !== undefined ? d.rankIdx : 0}">
-             </div>
-             <div class="fh-field">
-               <label class="fh-label">Drop threshold (pts/wk, blank = global)</label>
-               <input class="fh-input" id="m-pdropThr" type="number" min="0"
-                      value="${d.dropThr !== "" ? d.dropThr : ""}"
-                      placeholder="Global default">
-             </div>
-           </div>
-           <div class="fh-field">
-             <label class="fh-label">Gain threshold (pts/wk, blank = global)</label>
-             <input class="fh-input" id="m-pgainThr" type="number" min="0"
-                    value="${d.gainThr !== "" ? d.gainThr : ""}"
-                    placeholder="Global default">
-           </div>
-        `)}
+        <div class="fh-field-help">Rank tuning has moved to <strong>Settings → Ranks</strong>.</div>
 
         <input type="hidden" id="m-pid" value="${d.pid}">`,
         "Save", "ok-edit-person");
@@ -1117,12 +1151,7 @@ export function mEditStreaks(pid, pname, chores, personStreaks) {
 // ---------------------------------------------------------------------------
 
 export function mEditSettings(d) {
-    const WEEKDAY_NAMES = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
-    const wdayOpts = WEEKDAY_NAMES.map((n, i) =>
-        `<option value="${i}" ${d.rankWeekday == i ? "selected" : ""}>${n}</option>`
-    ).join("");
-
-    return mWrap("Edit settings",
+    return dWrap("Edit settings",
         `<div class="fh-field">
          <label class="fh-label">Family name</label>
          <input class="fh-input" id="m-fname" type="text"
@@ -1137,24 +1166,149 @@ export function mEditSettings(d) {
          <input class="fh-input" id="m-alert-time" type="number" min="-1" max="2359"
                 placeholder="800" value="${d.penaltyAlertTime !== undefined ? d.penaltyAlertTime : 800}">
        </div>
-       <div class="fh-section-title" style="margin-top:var(--fh-gap-sm)">Rank evaluation</div>
-       <div class="fh-field">
-         <label class="fh-label">Evaluate ranks on</label>
-         <select class="fh-select" id="m-rank-weekday">${wdayOpts}</select>
-       </div>
-       <div class="fh-row">
-         <div class="fh-field">
-           <label class="fh-label">Drop below (pts/wk)</label>
-           <input class="fh-input" id="m-rank-drop" type="number" min="0"
-                  value="${d.rankDrop !== undefined ? d.rankDrop : 50}">
-         </div>
-         <div class="fh-field">
-           <label class="fh-label">Gain at or above (pts/wk)</label>
-           <input class="fh-input" id="m-rank-gain" type="number" min="0"
-                  value="${d.rankGain !== undefined ? d.rankGain : 75}">
-         </div>
-       </div>`,
+       <div class="fh-field-help">Rank evaluation &amp; reward-per-rank settings now live in the <strong>Ranks</strong> panel.</div>`,
         "Save", "ok-edit-settings");
+}
+
+// ---------------------------------------------------------------------------
+// Ranks drawer (v0.7.2 — consolidated: global eval + ¢/pt ladder + per-kid curves)
+// ---------------------------------------------------------------------------
+
+export function mRanksDrawer(card) {
+    const naAttr = card._attrs("sensor.family_hub_needs_attention");
+    const kids   = (naAttr.people || []).filter(p => p.type === "kid");
+    const active = card._ranksTab || "global";
+    const WEEKDAY_NAMES = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+
+    const tabBar = `
+      <div class="fh-drawer-tabs">
+        <button class="fh-drawer-tab ${active === "global" ? "active" : ""}"
+                data-act="ranks-tab" data-tab="global">Global</button>
+        ${kids.map(p => `
+          <button class="fh-drawer-tab ${active === p.person_id ? "active" : ""}"
+                  data-act="ranks-tab" data-tab="${escAttr(p.person_id)}">${escHTML(p.name)}</button>`).join("")}
+      </div>`;
+
+    // ---- Global tab: eval weekday, default band (%), ¢/pt ladder ------------
+    if (active === "global") {
+        const evalWday = naAttr.rank_eval_weekday ?? 0;
+        const gCap     = naAttr.rank_default_cap ?? 100;
+        const gDropPct = naAttr.rank_default_drop_pct ?? 60;
+        const gGainPct = naAttr.rank_default_gain_pct ?? 80;
+        const ladder   = naAttr.rank_ppd_ladder || [3.0, 3.5, 4.0, 4.5, 5.0];
+        const wdayOpts = WEEKDAY_NAMES.map((n, i) =>
+            `<option value="${i}" ${evalWday == i ? "selected" : ""}>${n}</option>`).join("");
+        const ladderRows = ladder.map((cpt, i) => `
+          <div class="fh-row" style="gap:6px;align-items:center">
+            <span style="font-size:.8rem;color:var(--fh-text-sec);width:54px;flex-shrink:0">Rank ${i}</span>
+            <input class="fh-input fh-ad-rank-ladder-input" type="number"
+                   min="0.1" max="100" step="0.1" data-rank-idx="${i}"
+                   value="${cpt}" style="flex:1">
+            <span style="font-size:.8rem;color:var(--fh-text-sec)">¢/pt</span>
+          </div>`).join("");
+        const body = `
+          ${tabBar}
+          <div class="fh-field">
+            <label class="fh-label">Evaluate ranks on</label>
+            <select class="fh-select" id="m-rank-weekday">${wdayOpts}</select>
+          </div>
+          <div class="fh-field">
+            <label class="fh-label">Default weekly capacity (pts)</label>
+            <input class="fh-input" id="m-rank-cap" type="number" min="0" value="${gCap}">
+          </div>
+          <div class="fh-row">
+            <div class="fh-field">
+              <label class="fh-label">Default drop &lt; %</label>
+              <input class="fh-input" id="m-rank-drop" type="number" min="0" max="100" value="${gDropPct}">
+            </div>
+            <div class="fh-field">
+              <label class="fh-label">Default gain ≥ %</label>
+              <input class="fh-input" id="m-rank-gain" type="number" min="0" max="100" value="${gGainPct}">
+            </div>
+          </div>
+          <div class="fh-field-help">Fallback for any kid without their own per-rank curve (% of the default capacity).</div>
+          <div class="fh-divider"></div>
+          <div class="fh-field">
+            <label class="fh-label">Reward value per rank (¢/point)</label>
+            <div class="fh-field-help" style="margin-bottom:6px">
+              Higher rank → more cents per point → fewer points to redeem rewards.
+            </div>
+            ${ladderRows}
+          </div>`;
+        return dWrap("Ranks", body, "Save", "save-ranks-global");
+    }
+
+    // ---- Per-kid tab: rank override + percentage-band editor ---------------
+    const p = kids.find(x => x.person_id === active);
+    if (!p) { card._ranksTab = "global"; return mRanksDrawer(card); }
+
+    const ranks    = getTheme(p.theme_key || "classic").ranks;
+    const rankIdx  = p.rank_index ?? 0;
+    const curve    = p.rank_curve || {};
+    const cap      = curve.cap ?? 100;
+    const gainPcts = (Array.isArray(curve.gain_pcts) && curve.gain_pcts.length === 5)
+        ? curve.gain_pcts : DEFAULT_GAIN_PCTS.slice();
+    const dropPcts = (Array.isArray(curve.drop_pcts) && curve.drop_pcts.length === 5)
+        ? curve.drop_pcts : DEFAULT_DROP_PCTS.slice();
+    const preview  = curveFromPercents(cap, gainPcts, dropPcts);
+
+    const gridRows = ranks.map((r, i) => {
+        const isTop = i === ranks.length - 1;
+        const isBot = i === 0;
+        return `
+          <div class="fh-rank-grid-row">
+            <span class="fh-rank-grid-name">${i === rankIdx ? "▶ " : ""}${escHTML(r.name)}</span>
+            <span class="fh-rank-grid-cell">
+              <input class="fh-input" id="m-drop-pct-${i}" type="number" min="0" max="100"
+                     value="${isBot ? "" : dropPcts[i]}" ${isBot ? "disabled placeholder='—'" : ""}>
+              <span class="fh-rank-grid-pts" id="m-drop-pts-${i}">${isBot ? "—" : preview.drop[i]}</span>
+            </span>
+            <span class="fh-rank-grid-cell">
+              <input class="fh-input" id="m-gain-pct-${i}" type="number" min="0" max="100"
+                     value="${isTop ? "" : gainPcts[i]}" ${isTop ? "disabled placeholder='—'" : ""}>
+              <span class="fh-rank-grid-pts" id="m-gain-pts-${i}">${isTop ? "—" : preview.gain[i]}</span>
+            </span>
+          </div>`;
+    }).join("");
+
+    const body = `
+      ${tabBar}
+      <div class="fh-field-help">
+        Theme <strong>${escHTML(p.theme_key || "classic")}</strong> · currently
+        <strong>${escHTML(getEffectiveRank(rankIdx, ranks).name)}</strong>
+      </div>
+      <div class="fh-row">
+        <div class="fh-field">
+          <label class="fh-label">Weekly capacity (pts)</label>
+          <input class="fh-input" id="m-curve-cap" type="number" min="0" value="${cap}">
+        </div>
+        <div class="fh-field">
+          <label class="fh-label">Rank index (override, 0–4)</label>
+          <input class="fh-input" id="m-rank-idx" type="number" min="0" max="4" value="${rankIdx}">
+        </div>
+      </div>
+      <div class="fh-field-help">
+        Each band is a % of weekly capacity — threshold points = % × capacity.
+        Edit the percentages; the grey number is the resulting points.
+      </div>
+
+      <div class="fh-modal-section">
+        <div class="fh-modal-section-hdr"><span class="fh-modal-section-lbl">Per-rank bands</span></div>
+        <div class="fh-rank-grid-row" style="margin-bottom:4px">
+          <span class="fh-rank-grid-hdr">Rank</span>
+          <span class="fh-rank-grid-hdr">Drop &lt; %</span>
+          <span class="fh-rank-grid-hdr">Gain ≥ %</span>
+        </div>
+        <div class="fh-rank-grid">${gridRows}</div>
+        <button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="ranks-preview"
+                style="margin-top:8px">↻ Recompute points</button>
+        <div class="fh-field-help" style="margin-top:6px">
+          ▶ marks the current rank. Bottom rung can't fall; top rung can't climb.
+        </div>
+      </div>
+
+      <input type="hidden" id="m-rank-pid" value="${escAttr(p.person_id)}">`;
+    return dWrap(`Ranks — ${escHTML(p.name)}`, body, "Save", "save-ranks-kid");
 }
 
 // ---------------------------------------------------------------------------

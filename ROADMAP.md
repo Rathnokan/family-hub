@@ -21,11 +21,10 @@
 
 ---
 
-## Current status (2026-06-04)
+## Current status (2026-06-06)
 
-- **v0.7.1 shipped** (tag `v0.7.1`, release published). Bug-swat off a full-codebase audit — see [BUGS.md](BUGS.md) "Fixed in v0.7.1".
-- **`main` is a few commits ahead of the tag** (unreleased, rides the next bump): post-0.7.1 cleanup (hardening, JS/Python slug parity, dedup, dead-code removal, `services.yaml` for `add_task`) + the engineer-theme task-truncation fix.
-- **Next:** a feature (user-directed) or the top open bug. Branch from `main`.
+- **v0.7.2 "Dynamic Ranks" shipped** (tag `v0.7.2`, release published). Per-kid per-rank percentage-band curves, 5-rung ladder standardization, consolidated Ranks side-rail drawer (+ Person/Settings editors converted to drawers), two-line rank bar, weekly-window alignment. See [RELEASE-NOTES-v0.7.2.md](RELEASE-NOTES-v0.7.2.md) + [DECISIONS_LOG.md](DECISIONS_LOG.md) "Ranks".
+- **Next:** a feature (user-directed) or the top open bug (first-parent attribution). Branch from `main`.
 
 ---
 
@@ -36,7 +35,7 @@
 
 ### Open decisions (user's call — parked)
 - **Task-instance retention:** `TASK_INSTANCE_RETENTION_DAYS = 30` in code (docs once said 60). Confirm 30 or bump it (affects how far back History + reversible-action buttons reach).
-- **Weekly-points window:** the rank bar predicts using "since last Monday"; the server evaluates rank over "trailing 7 days ending on `rank_eval_weekday`". Pick the canonical window if the mismatch matters.
+- ~~**Weekly-points window**~~ — resolved in v0.7.2: both card and server anchor to `rank_eval_weekday`.
 
 ### Deferred efficiency / cleanup (carried from v0.7.0; all optional)
 1. **Model/history runtime trim** — `build_card_model` still ships the ~977-entry `history_log` on `needs_attention`, refetched on every `data_rev` change. Bigger than it looks: `history_log` feeds the admin History view AND all 6 personal pages (`getWeeklyPts` header, per-person history tab, store-rail recent purchases). Right fix = lazy per-view fetch (new `family_hub/get_history` ws command, person-filtered) + async weekly-points header. Test all themes.

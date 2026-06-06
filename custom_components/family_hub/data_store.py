@@ -381,8 +381,19 @@ class FamilyHubDataStore(CardShaperMixin, TickMixin, StreaksRanksMixin, Subscrip
             # v0.6.0 S5: rank mechanic — parents get 999 (always max), kids start at 0
             if "rank_index" not in person:
                 person["rank_index"] = 999 if person.get("type") == "parent" else 0
-            person.setdefault("rank_drop_threshold", None)  # None = use global setting
-            person.setdefault("rank_gain_threshold", None)  # None = use global setting
+            # v0.7.2: all theme ladders standardized to 5 rungs (indices 0-4).
+            # Clamp kids who sat above index 4 on the old 6/7-rung ladders down to
+            # the top rung. Parents keep the 999 "always max" sentinel.
+            if person.get("type") != "parent":
+                person["rank_index"] = max(0, min(int(person.get("rank_index", 0)), 4))
+            person.setdefault("rank_drop_threshold", None)  # legacy scalar (None = use global)
+            person.setdefault("rank_gain_threshold", None)  # legacy scalar (None = use global)
+            # v0.7.2: per-rank threshold curves — length-5 arrays indexed by rank.
+            # None = fall back to the legacy scalar, then the global setting.
+            # rank_curve remembers the generator knobs so the editor can repopulate.
+            person.setdefault("rank_drop_thresholds", None)
+            person.setdefault("rank_gain_thresholds", None)
+            person.setdefault("rank_curve", None)
             # v0.6.0 S6: large-button mode for pre-readers
             person.setdefault("child_mode", False)
             # v0.6.1: success-rate person streak — bonus for consecutive days at threshold%
@@ -401,8 +412,13 @@ class FamilyHubDataStore(CardShaperMixin, TickMixin, StreaksRanksMixin, Subscrip
 
         # v0.6.0 S5: rank evaluation settings
         s.setdefault("rank_eval_weekday",   0)   # 0 = Monday
-        s.setdefault("rank_drop_threshold", 50)
+        s.setdefault("rank_drop_threshold", 50)  # absolute fallback (pts) for kids w/o a curve
         s.setdefault("rank_gain_threshold", 75)
+        # v0.7.2: global default band as percentages of a default capacity. These
+        # pre-fill the Global tab and derive the absolute fallback thresholds above.
+        s.setdefault("rank_default_cap",      100)
+        s.setdefault("rank_default_drop_pct", 60)
+        s.setdefault("rank_default_gain_pct", 80)
 
         # v0.5.0: remove people records with blank id (orphans from early development).
         _before = len(self._data["people"])
@@ -580,6 +596,9 @@ class FamilyHubDataStore(CardShaperMixin, TickMixin, StreaksRanksMixin, Subscrip
         rank_drop_threshold: int | None = None,
         rank_gain_threshold: int | None = None,
         rank_ppd_ladder: list[float] | None = None,
+        rank_default_cap: int | None = None,
+        rank_default_drop_pct: int | None = None,
+        rank_default_gain_pct: int | None = None,
     ) -> None:
         s = self._data["settings"]
         if family_name is not None:
@@ -608,6 +627,12 @@ class FamilyHubDataStore(CardShaperMixin, TickMixin, StreaksRanksMixin, Subscrip
             s["rank_gain_threshold"] = rank_gain_threshold
         if rank_ppd_ladder is not None:
             s["rank_ppd_ladder"] = [float(v) for v in rank_ppd_ladder]
+        if rank_default_cap is not None:
+            s["rank_default_cap"] = rank_default_cap
+        if rank_default_drop_pct is not None:
+            s["rank_default_drop_pct"] = rank_default_drop_pct
+        if rank_default_gain_pct is not None:
+            s["rank_default_gain_pct"] = rank_default_gain_pct
         await self.async_save()
 
     # ------------------------------------------------------------------

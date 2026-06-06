@@ -13,7 +13,8 @@
 import { escHTML, escAttr, fPts, fUSD, ini, relTime,
          groupHistorySkipped }                            from "../utils.js";
 import { HISTORY_META }                                   from "../constants.js";
-import { getEffectiveRank, getWeeklyPts, htmlRankBar, htmlSuccessStreak,
+import { getEffectiveRank, effectiveRankThresholds, getWeeklyPts, getWeeklyPtsLost, getPointsAtRisk,
+         htmlRankBar, htmlSuccessStreak,
          groupByCategory, getActiveStreaks,
          computeStreakProgress, htmlChoreRow,
          htmlGoalBanner, htmlRailGoal, htmlGoalToggleBtn,
@@ -66,8 +67,7 @@ const BAKER_RANKS = [
     { minXP: 100,  name: "Line Cook"     },
     { minXP: 300,  name: "Pastry Chef"   },
     { minXP: 700,  name: "Sous Chef"     },
-    { minXP: 1400, name: "Head Chef"     },
-    { minXP: 2500, name: "Master Baker"  },
+    { minXP: 1200, name: "Head Chef"     },
 ];
 
 // ---- Theme export -----------------------------------------------------------
@@ -94,9 +94,10 @@ export const bakerTheme = {
         const naAttr     = card._attrs("sensor.family_hub_needs_attention");
         const balance    = parseInt(card._states(eid)?.state || "0");
         const rankIdx    = person.rank_index !== undefined ? person.rank_index : 0;
-        const dropThr    = person.rank_drop_threshold ?? naAttr.rank_drop_threshold ?? 50;
-        const gainThr    = person.rank_gain_threshold ?? naAttr.rank_gain_threshold ?? 75;
-        const weekly     = getWeeklyPts(person.person_id, naAttr.history_log);
+        const { dropThr, gainThr } = effectiveRankThresholds(person, naAttr, rankIdx);
+        const weekly     = getWeeklyPts(person.person_id, naAttr.history_log, naAttr.rank_eval_weekday);
+        const lost       = getWeeklyPtsLost(person.person_id, naAttr.history_log, naAttr.rank_eval_weekday);
+        const atRisk     = getPointsAtRisk(attr);
         const rank       = getEffectiveRank(rankIdx, BAKER_RANKS);
 
         const now    = new Date();
@@ -124,7 +125,7 @@ export const bakerTheme = {
 
         const showRail = activeTab === "tasks";
         const railHTML = showRail
-            ? _railPanels({ attr, naAttr, person, balance, weekly, openCount,
+            ? _railPanels({ attr, naAttr, person, balance, weekly, lost, atRisk, openCount,
                             rankIdx, dropThr, gainThr, rank })
             : "";
 
@@ -153,10 +154,10 @@ export const bakerTheme = {
 
 // ---- Rail panels ------------------------------------------------------------
 
-function _railPanels({ attr, naAttr, person, balance, weekly, openCount,
+function _railPanels({ attr, naAttr, person, balance, weekly, lost, atRisk, openCount,
                        rankIdx, dropThr, gainThr, rank }) {
     return `
-        ${_railPanelKPIs(balance, weekly, openCount, attr.show_dollar_value ? attr.dollar_value : null)}
+        ${_railPanelKPIs(balance, weekly, lost, atRisk, openCount, attr.show_dollar_value ? attr.dollar_value : null)}
         ${htmlRailGoal(attr)}
         ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, person, attr)}
         ${_railPanelStreaks(attr, naAttr, person)}
@@ -177,27 +178,27 @@ function _railPanelSubs(attr, balance, personId) {
     return rows ? _railPanel("SUBSCRIPTIONS", rows) : "";
 }
 
-function _railPanelKPIs(balance, weekly, openCount, dollarValue) {
-    const cell = (label, val, unit, sub) => `
+function _railPanelKPIs(balance, weekly, lost, atRisk, openCount, dollarValue) {
+    const cell = (label, val, unit, sub, subClass = "") => `
         <div class="fh-bk-rkpi">
             <div class="fh-bk-rkpi-lbl">${label}</div>
             <div class="fh-bk-rkpi-val-row">
                 <span class="fh-bk-rkpi-val">${escHTML(String(val))}</span>
                 ${unit ? `<span class="fh-bk-rkpi-unit">${unit}</span>` : ""}
             </div>
-            ${sub ? `<div class="fh-rkpi-sub">${escHTML(sub)}</div>` : ""}
+            ${sub ? `<div class="fh-rkpi-sub ${subClass}">${escHTML(sub)}</div>` : ""}
         </div>`;
     const body = `
         <div class="fh-bk-rkpi-row">
             ${cell("balance",   fPts(balance), "pts", dollarValue != null ? fUSD(dollarValue) : null)}
-            ${cell("this week", `+${weekly}`,  "pts")}
-            ${cell("on prep",   openCount,     "items")}
+            ${cell("this week", `+${weekly}`,  "pts", lost > 0 ? `−${lost} lost` : "0 lost", "fh-rkpi-sub--loss")}
+            ${cell("on prep",   openCount,     "items", atRisk > 0 ? `−${atRisk} at risk` : null, "fh-rkpi-sub--loss")}
         </div>`;
     return _railPanel("the pantry today", body);
 }
 
 function _railPanelRank(rankIdx, weekly, dropThr, gainThr, person, attr) {
-    const bar    = htmlRankBar(rankIdx, weekly, dropThr, gainThr, BAKER_RANKS, BK.terra);
+    const bar    = htmlRankBar(rankIdx, weekly, dropThr, gainThr, BAKER_RANKS, BK.terra, person);
     const streak = htmlSuccessStreak(person, BK.terra);
     const freeze = htmlStreakFreezeChip(attr);
     if (!bar) {

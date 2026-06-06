@@ -252,6 +252,13 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             vol.Optional("rank_index"):          vol.All(vol.Coerce(int), vol.Range(min=0)),
             vol.Optional("rank_drop_threshold"): vol.Any(None, vol.All(vol.Coerce(int), vol.Range(min=0))),
             vol.Optional("rank_gain_threshold"): vol.Any(None, vol.All(vol.Coerce(int), vol.Range(min=0))),
+            # v0.7.2: per-rank threshold curves (length-5 arrays) + generator knobs.
+            # None clears the curve and falls back to the legacy scalar / global.
+            vol.Optional("rank_drop_thresholds"): vol.Any(None, [vol.All(vol.Coerce(int), vol.Range(min=0))]),
+            vol.Optional("rank_gain_thresholds"): vol.Any(None, [vol.All(vol.Coerce(int), vol.Range(min=0))]),
+            # Remembered generator knobs (e.g. {cap, gain_pcts, drop_pcts}). Stored
+            # as-is for the editor; eval/render use the absolute *_thresholds arrays.
+            vol.Optional("rank_curve"): vol.Any(None, dict),
             # v0.6.0 S6: large-button mode
             vol.Optional("child_mode"):          cv.boolean,
             # v0.6.1: success-rate person streak (knobs only — streak count is admin-overridden via set_completion_streak)
@@ -826,6 +833,9 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             rank_drop_threshold=call.data.get("rank_drop_threshold"),
             rank_gain_threshold=call.data.get("rank_gain_threshold"),
             rank_ppd_ladder=list(ladder_raw) if ladder_raw is not None else None,
+            rank_default_cap=call.data.get("rank_default_cap"),
+            rank_default_drop_pct=call.data.get("rank_default_drop_pct"),
+            rank_default_gain_pct=call.data.get("rank_default_gain_pct"),
         )
         await coordinator.async_refresh()
 
@@ -845,6 +855,9 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             vol.Optional("rank_drop_threshold"):        vol.All(vol.Coerce(int), vol.Range(min=0)),
             vol.Optional("rank_gain_threshold"):        vol.All(vol.Coerce(int), vol.Range(min=0)),
             vol.Optional("rank_ppd_ladder"):            [vol.Coerce(float)],
+            vol.Optional("rank_default_cap"):           vol.All(vol.Coerce(int), vol.Range(min=0)),
+            vol.Optional("rank_default_drop_pct"):      vol.All(vol.Coerce(int), vol.Range(min=0, max=100)),
+            vol.Optional("rank_default_gain_pct"):      vol.All(vol.Coerce(int), vol.Range(min=0, max=100)),
         }),
     )
 

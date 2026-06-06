@@ -165,6 +165,10 @@ class PeopleMixin:
             "rank_index": 999 if person_type == "parent" else 0,
             "rank_drop_threshold": None,
             "rank_gain_threshold": None,
+            # v0.7.2: per-rank threshold curves (length-5 arrays) + remembered knobs
+            "rank_drop_thresholds": None,
+            "rank_gain_thresholds": None,
+            "rank_curve": None,
             "child_mode": False,
             # v0.6.1: success-rate person streak
             "completion_streak":          0,
@@ -201,6 +205,8 @@ class PeopleMixin:
             "code", "theme_key",
             # v0.6.0 S5: rank
             "rank_index", "rank_drop_threshold", "rank_gain_threshold",
+            # v0.7.2: per-rank threshold curves + remembered generator knobs
+            "rank_drop_thresholds", "rank_gain_thresholds", "rank_curve",
             # v0.6.0 S6: large-button mode
             "child_mode",
             # v0.6.1: success-rate person streak (admin-configurable knobs)

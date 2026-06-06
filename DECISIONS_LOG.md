@@ -8,6 +8,32 @@
 
 ---
 
+## Ranks (v0.7.2 "Dynamic Ranks")
+
+### All theme ladders are exactly 5 rungs
+- **Decision:** Every theme's rank ladder is 5 entries with identical minXP breakpoints `[0, 100, 300, 700, 1200]`; only the names differ. `rank_index` (0–4) is stored on the person, not the theme.
+- **Why:** Themes are swappable and rank must follow. With uneven ladders (old: 5/6/7) a swap silently changed a kid's standing AND their reward economics (the ¢/pt ladder is keyed by rank index). Uniform height makes index N mean the same thing everywhere, so a swap is purely cosmetic. Fairness across *kids* is handled by per-kid capacity (below); fairness across *themes* by uniform indexing.
+- **Trap:** Kids on the old 6/7-rung ladders could sit at index 5–6. `data_store` ensure-defaults clamps any non-parent `rank_index` into `[0,4]` on load; promotion in `_async_process_weekly_ranks` caps at 4. Parents keep the 999 "always max" sentinel.
+- **Don't:** Don't add a theme with a different rung count without revisiting the per-rank arrays + PPD ladder length.
+
+### Per-rank thresholds are percentage-of-capacity bands, per kid
+- **Decision:** Each kid has length-5 `rank_gain_thresholds` / `rank_drop_thresholds` (absolute points, the source of truth for eval + the bar) plus `rank_curve = {cap, gain_pcts, drop_pcts}` (the editor's knobs). The "formula" is deliberately flat: `points = round5(pct% × capacity)`. Capacity is the per-kid fairness lever (Jackson's capacity < Spencer's → same % = fewer points).
+- **Why:** The parent thinks in "more than X% of a good week ⇒ rank up." An earlier exponent-based generator (climb/fall/sweet knobs) was opaque and hard to balance; direct per-rank % bands are transparent and fully hand-editable. Default bands: gain `[50,60,75,95,—]`, drop `[—,40,55,75,95]`.
+- **Eval resolution order** (`streaks_ranks_mixin._effective_rank_thresholds`, mirrored client-side by `effectiveRankThresholds` in `themes/_shared.js`): per-rank array at the clamped index → legacy scalar `rank_drop_threshold`/`rank_gain_threshold` → global default. Legacy scalars are **kept**, so kids configured under the old model keep working until given a curve. Global fallback is itself `rank_default_cap`/`_drop_pct`/`_gain_pct` (drop 60% / gain 80% of cap 100 → 60/80 pts).
+- **Don't:** Don't make eval recompute from `rank_curve` — it reads the absolute `*_thresholds` arrays. The editor recomputes and writes both on save.
+
+### Admin uses a reusable right-side drawer, not popups, for settings-type editors
+- **Decision:** New `.fh-drawer` shell + `.fh-modal-bg--drawer` modifier reuse the existing modal pipeline (`_modal = {type, data, surface:"drawer"}` → `_buildModal` tags the scrim → `dWrap()` renders a full-height right rail). The consolidated **Ranks** editor lives here (global + per-kid tabs), and Edit Person / Edit Settings were converted from `mWrap` popups to `dWrap` drawers.
+- **Why:** Rank config was scattered across the Edit Settings popup, the Settings-tab inline ¢/pt ladder, and the Edit Person popup. One drawer consolidates it; the user wants settings-type UI to move off centered popups generally.
+- **Don't:** Don't fork a second overlay system — drawers and modals share the scrim, dispatch, and close path. Switch a builder to a drawer by swapping `mWrap`→`dWrap` and tagging the descriptor `surface:"drawer"`.
+
+### Rank bar shows two lines on a capacity-spanned track; weekly window follows eval weekday
+- **Decision:** `htmlRankBar(... person)` spans the track `0 → person.rank_curve.cap` (fallback `gain×1.2`) and draws two markers — orange drop, green gain — suppressing the drop line at the bottom rung and the gain line at the top. `getWeeklyPts`/`getWeeklyPtsLost` take an `evalWeekday` arg and anchor the week to the most recent configured eval weekday (was hardcoded to Monday).
+- **Why:** The old single-tick bar maxed the track at the gain value, hiding the gain marker at the right edge and reading like a global scale. And the hardcoded-Monday window diverged from the server's eval window whenever `rank_eval_weekday ≠ Monday`.
+- **Don't:** Don't hardcode the week start again — pass `naAttr.rank_eval_weekday` from the call site.
+
+---
+
 ## Storage & data shape
 
 ### One JSON file, never touched by code updates

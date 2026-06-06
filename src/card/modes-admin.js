@@ -485,9 +485,6 @@ function _htmlAdFamily(people, attr, card) {
                         data-pnotify="${escAttr(p.notify_target || "")}"
                         data-pcode="${escAttr(p.code || "")}"
                         data-ptheme="${escAttr(p.theme_key || "classic")}"
-                        data-prankidx="${p.rank_index !== undefined ? p.rank_index : 0}"
-                        data-pdrop-thr="${p.rank_drop_threshold !== null && p.rank_drop_threshold !== undefined ? p.rank_drop_threshold : ""}"
-                        data-pgain-thr="${p.rank_gain_threshold !== null && p.rank_gain_threshold !== undefined ? p.rank_gain_threshold : ""}"
                         data-pchildmode="${p.child_mode === true}"
                         data-pcompletionthreshold="${p.completion_threshold_pct ?? 80}"
                         data-pcompletionmilestone="${p.completion_milestone ?? 7}"
@@ -502,6 +499,8 @@ function _htmlAdFamily(people, attr, card) {
                 <span class="fh-penalty-pause-label ${penClass}">${penLabel}</span>
                 <button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="open-edit-streaks"
                         data-pid="${p.person_id}" data-pname="${escAttr(p.name)}">🔥 Streaks</button>
+                <button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="open-ranks"
+                        data-pid="${p.person_id}">🏅 Ranks</button>
                 <label class="fh-toggle" style="width:36px;height:20px"
                        title="${penPaused ? "Resume" : "Pause"} penalties &amp; streaks">
                   <input type="checkbox" data-act="toggle-person-penalty"
@@ -1262,9 +1261,6 @@ function _htmlAdSettings(attr, people, card) {
     const catLabels        = attr.category_labels           || [];
     const penaltyAlertTime = attr.penalty_alert_time !== undefined ? attr.penalty_alert_time : 800;
     const rankEvalWeekday  = attr.rank_eval_weekday         !== undefined ? attr.rank_eval_weekday : 0;
-    const rankDropThr      = attr.rank_drop_threshold       !== undefined ? attr.rank_drop_threshold : 50;
-    const rankGainThr      = attr.rank_gain_threshold       !== undefined ? attr.rank_gain_threshold : 75;
-    const rankPpdLadder    = attr.rank_ppd_ladder           || [3.0, 3.5, 4.0, 4.5, 5.0];
     const roomsCfg         = attr.rooms_config              || {};
     const weatherEntity    = attr.weather_entity            || "";
     const calendarEntities = attr.today_calendar_entities   || [];
@@ -1280,17 +1276,6 @@ function _htmlAdSettings(attr, people, card) {
         <span>${escHTML(l)}</span>
         <button class="fh-cat-chip-del" data-act="remove-cat-label"
                 data-label="${escAttr(l)}" title="Remove">×</button>
-      </div>`).join("");
-
-    // Rank PPD ladder — one input per rung, stored as ¢/pt
-    const ladderInputs = rankPpdLadder.map((cpt, idx) => `
-      <div class="fh-row" style="gap:6px;align-items:center;margin-bottom:4px">
-        <span style="font-size:.8rem;color:var(--fh-text-sec);width:50px;flex-shrink:0">Rank ${idx}</span>
-        <input class="fh-input fh-ad-rank-ladder-input" type="number"
-               min="0.1" max="100" step="0.1"
-               data-rank-idx="${idx}"
-               value="${cpt}" style="flex:1">
-        <span style="font-size:.8rem;color:var(--fh-text-sec)">¢/pt</span>
       </div>`).join("");
 
     // ---- Hub Layout panel content (S9 P3) -------------------------------
@@ -1336,30 +1321,20 @@ function _htmlAdSettings(attr, people, card) {
               </div>
               <button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="open-edit-settings"
                       data-fname="${escAttr(famName)}" data-ppd="${ppdollar}"
-                      data-palerttime="${penaltyAlertTime}"
-                      data-rankweekday="${rankEvalWeekday}"
-                      data-rankdrop="${rankDropThr}"
-                      data-rankgain="${rankGainThr}">
+                      data-palerttime="${penaltyAlertTime}">
                 ${I.settings} Edit
               </button>
             </div>
             <div class="fh-point-row">
               <div style="flex:1;min-width:0">
-                <div style="font-size:.9rem;font-weight:600">Rank evaluation</div>
+                <div style="font-size:.9rem;font-weight:600">Ranks</div>
                 <div style="font-size:.75rem;color:var(--fh-text-sec)">
-                  Every ${WEEKDAY_NAMES[rankEvalWeekday]} · Drop &lt;${rankDropThr}pts · Gain ≥${rankGainThr}pts
+                  Per-kid curves · reward ¢/pt ladder · evaluated every ${WEEKDAY_NAMES[rankEvalWeekday]}
                 </div>
               </div>
-            </div>
-            <div class="fh-divider"></div>
-            <div class="fh-field">
-              <label class="fh-label">Reward value per rank (¢/point)</label>
-              <div class="fh-field-help" style="margin-bottom:8px">
-                Higher rank → more cents per point → fewer points needed to redeem rewards.
-              </div>
-              ${ladderInputs}
-              <button class="fh-btn fh-btn-primary fh-btn-sm" data-act="save-rank-ppd-ladder"
-                      style="margin-top:8px">Save ladder</button>
+              <button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="open-ranks">
+                ${I.settings} Manage
+              </button>
             </div>
             <div class="fh-divider"></div>
             <div>

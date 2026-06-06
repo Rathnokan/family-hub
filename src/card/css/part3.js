@@ -1,7 +1,8 @@
-export const CSS_3 = `    position:absolute; top:-3px; width:2px; height:12px;
-    background:var(--fh-rb-drop, rgba(255,255,255,.5)); border-radius:1px;
-    transform:translateX(-50%);
+export const CSS_3 = `    position:absolute; top:-4px; width:2px; height:14px;
+    border-radius:1px; transform:translateX(-50%);
   }
+  .fh-rank-bar-mark--drop { background:var(--fh-rb-drop, #E07A4C); }
+  .fh-rank-bar-mark--gain { background:var(--fh-rb-gain, #5BB87A); }
   .fh-rank-bar-status {
     font-size:.75rem; color:var(--fh-rb-status, rgba(255,255,255,.55));
     white-space:nowrap; flex-shrink:0; font-weight:700;

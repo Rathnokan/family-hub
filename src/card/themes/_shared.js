@@ -45,30 +45,116 @@ export function getNextRankByIndex(rankIndex, ranks) {
     return ranks[nextIdx];
 }
 
+/**
+ * Resolve the weekly-point {dropThr, gainThr} for a person at their current rank.
+ *
+ * Mirrors the backend resolution order
+ * (streaks_ranks_mixin._effective_rank_thresholds):
+ *   1. per-rank array value at the clamped rank index
+ *   2. legacy per-person scalar override
+ *   3. global setting (carried on the needs_attention attrs)
+ *   4. hard default (50 drop / 75 gain)
+ *
+ * @param {object} person   person record from needs_attention.people
+ * @param {object} naAttr   needs_attention attributes (global fallback)
+ * @param {number} rankIdx  current rank index
+ */
+export function effectiveRankThresholds(person, naAttr, rankIdx) {
+    const pick = (arr, scalar, globalVal, dflt) => {
+        if (Array.isArray(arr) && arr.length) {
+            const j = Math.min(Math.max(0, rankIdx | 0), arr.length - 1);
+            const v = arr[j];
+            if (v !== null && v !== undefined) return v;
+        }
+        if (scalar !== null && scalar !== undefined) return scalar;
+        if (globalVal !== null && globalVal !== undefined) return globalVal;
+        return dflt;
+    };
+    return {
+        dropThr: pick(person?.rank_drop_thresholds, person?.rank_drop_threshold, naAttr?.rank_drop_threshold, 50),
+        gainThr: pick(person?.rank_gain_thresholds, person?.rank_gain_threshold, naAttr?.rank_gain_threshold, 75),
+    };
+}
+
 // ---------------------------------------------------------------------------
 // Weekly points helper
 // ---------------------------------------------------------------------------
 
 /**
- * Sum positive points_delta for a person from the most recent Monday 00:00
- * local time through now.  Uses the history_log already present in the
- * needs_attention sensor — no extra fetch needed.
+ * Start-of-week Date (local 00:00) for the rank window — the most recent
+ * occurrence of the configured evaluation weekday. `evalWeekday` uses the
+ * server's convention (0 = Mon … 6 = Sun) and defaults to Monday. This mirrors
+ * the backend's trailing-week window so the bar's "this week" lines up with what
+ * the weekly rank evaluation will actually judge.
  */
-export function getWeeklyPts(personId, historyLog) {
+function rankWeekStart(evalWeekday = 0) {
     const now = new Date();
-    const dow = now.getDay();                        // 0=Sun, 1=Mon … 6=Sat
-    const daysSinceMon = dow === 0 ? 6 : dow - 1;  // days since last Monday
-    const monday = new Date(now);
-    monday.setHours(0, 0, 0, 0);
-    monday.setDate(monday.getDate() - daysSinceMon);
+    const dow = now.getDay();                  // 0=Sun … 6=Sat
+    const jsAnchor  = (evalWeekday + 1) % 7;    // server 0=Mon → js 1=Mon
+    const daysSince = (dow - jsAnchor + 7) % 7;
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() - daysSince);
+    return start;
+}
 
+/**
+ * Sum positive points_delta for a person from the start of the current rank week
+ * (the most recent eval weekday, 00:00 local) through now. Uses the history_log
+ * already present in the needs_attention sensor — no extra fetch needed.
+ */
+export function getWeeklyPts(personId, historyLog, evalWeekday = 0) {
+    const start = rankWeekStart(evalWeekday);
     return (historyLog || [])
         .filter(e =>
             e.person_id === personId &&
             (e.points_delta || 0) > 0 &&
-            new Date(e.timestamp) >= monday
+            new Date(e.timestamp) >= start
         )
         .reduce((sum, e) => sum + (e.points_delta || 0), 0);
+}
+
+/**
+ * Sum points LOST to skipped/missed-chore penalties for a person from the start
+ * of the current rank week through now. Counterpart to getWeeklyPts.
+ *
+ * Only `task_skipped` deductions count — these are the end-of-cycle, daily, and
+ * expiry penalties the tick applies when a chore isn't completed. Spending on
+ * rewards/subscriptions is deliberate, not "lost", so it is excluded.
+ *
+ * Returns a positive number (the magnitude of the deductions).
+ */
+export function getWeeklyPtsLost(personId, historyLog, evalWeekday = 0) {
+    const start = rankWeekStart(evalWeekday);
+    return (historyLog || [])
+        .filter(e =>
+            e.person_id === personId &&
+            e.type === "task_skipped" &&
+            (e.points_delta || 0) < 0 &&
+            new Date(e.timestamp) >= start
+        )
+        .reduce((sum, e) => sum + Math.abs(e.points_delta || 0), 0);
+}
+
+/**
+ * Sum the penalty points at risk today — i.e. the points that will be deducted
+ * if today's still-pending chores aren't completed before they reset.
+ *
+ * Counts each pending, non-reminder due-today task that has a penalty
+ * configured. Mirrors the per-instance counting of the "chores due" KPI it sits
+ * beside (no chore-id dedupe). Returns 0 when nothing is at risk.
+ *
+ * @param {object} attr  Personal sensor attributes (family_hub_[name]).
+ */
+export function getPointsAtRisk(attr) {
+    return (attr?.tasks_due_today_list || [])
+        .filter(t =>
+            t.status === "pending" &&
+            t.chore_type !== "reminder" &&
+            t.penalty_enabled &&
+            (t.penalty_points || 0) > 0
+        )
+        .reduce((sum, t) => sum + (t.penalty_points || 0), 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -78,30 +164,37 @@ export function getWeeklyPts(personId, historyLog) {
 /**
  * Render a weekly rank progress bar row.
  *
- *   [Rank name] [===|---] [N pts · holds / +1 rank / −1 rank]
+ *   [Rank name] [==●==|====] [N pts · holds / +1 rank / −1 rank]
  *
- * The track spans 0 → gainThreshold (100%).
- * A tick mark at dropThreshold shows the danger-zone boundary.
- * Fill color:
- *   - red   when pts < dropThreshold
- *   - amber when dropThreshold ≤ pts < gainThreshold
- *   - theme accent when pts ≥ gainThreshold
+ * The track spans 0 → weekly capacity (person.rank_curve.cap) when known, so the
+ * two threshold markers sit at meaningful positions inside the bar; otherwise it
+ * falls back to a little past the gain line. Two vertical lines are drawn:
+ *   - drop line (orange) — fall below it ⇒ −1 rank   (hidden at the bottom rung)
+ *   - gain line (green)  — reach it     ⇒ +1 rank   (hidden at the top rung)
+ * Fill color reflects the current standing (red below drop, amber holding,
+ * theme accent at/above gain).
  *
  * Parents (rank_index ≥ 999) skip the bar entirely.
  */
-export function htmlRankBar(rankIndex, weeklyPts, dropThr, gainThr, ranks, color) {
+export function htmlRankBar(rankIndex, weeklyPts, dropThr, gainThr, ranks, color, person) {
     if (rankIndex >= 999) return "";   // parent — always max, no bar needed
 
-    const current  = getEffectiveRank(rankIndex, ranks);
-    const barMax   = Math.max(gainThr, 1);
-    const fillPct  = Math.min(100, Math.round(weeklyPts / barMax * 100));
-    const dropPct  = Math.min(99, Math.round(dropThr / barMax * 100));
+    const current = getEffectiveRank(rankIndex, ranks);
+    const isTop   = rankIndex >= ranks.length - 1;
+    const isBot   = rankIndex <= 0;
+
+    const cap     = person?.rank_curve?.cap;
+    const barMax  = Math.max(cap || Math.round(gainThr * 1.2), gainThr, 1);
+    const pctOf   = v => Math.min(100, Math.max(0, Math.round(v / barMax * 100)));
+    const fillPct = pctOf(weeklyPts);
+    const dropPct = pctOf(dropThr);
+    const gainPct = pctOf(gainThr);
 
     let fillColor, statusText;
-    if (weeklyPts >= gainThr) {
+    if (!isTop && weeklyPts >= gainThr) {
         fillColor  = color;
         statusText = `${weeklyPts}pts · +1 rank`;
-    } else if (weeklyPts < dropThr) {
+    } else if (!isBot && weeklyPts < dropThr) {
         fillColor  = "#E07A4C";
         statusText = `${weeklyPts}pts · −1 rank`;
     } else {
@@ -109,12 +202,18 @@ export function htmlRankBar(rankIndex, weeklyPts, dropThr, gainThr, ranks, color
         statusText = `${weeklyPts}pts · holds`;
     }
 
+    const dropLine = isBot ? "" :
+        `<span class="fh-rank-bar-mark fh-rank-bar-mark--drop" style="left:${dropPct}%" title="Drop below ${dropThr}"></span>`;
+    const gainLine = isTop ? "" :
+        `<span class="fh-rank-bar-mark fh-rank-bar-mark--gain" style="left:${gainPct}%" title="Rank up at ${gainThr}"></span>`;
+
     return `
         <div class="fh-rank-bar-row">
             <span class="fh-rank-bar-label" style="color:${color}">${escHTML(current.name)}</span>
             <span class="fh-rank-bar-track">
                 <span class="fh-rank-bar-fill" style="width:${fillPct}%;background:${fillColor}"></span>
-                <span class="fh-rank-bar-drop" style="left:${dropPct}%"></span>
+                ${dropLine}
+                ${gainLine}
             </span>
             <span class="fh-rank-bar-status">${escHTML(statusText)}</span>
         </div>`;

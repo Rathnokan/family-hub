@@ -7,11 +7,11 @@ export const CSS_5 = `  .fh-row-lead {
 
   /* Icon column */
   .fh-row-icon {
-    width:36px; height:36px; flex-shrink:0;
+    width:63px; height:63px; flex-shrink:0;
     display:flex; align-items:center; justify-content:center;
     position:relative;
   }
-  .fh-row-icon svg { width:20px; height:20px; }
+  .fh-row-icon svg { width:35px; height:35px; }
 
   /* Body column â€” takes remaining horizontal space */
   .fh-row-body {
@@ -902,8 +902,8 @@ export const CSS_5 = `  .fh-row-lead {
       padding:10px 10px 10px;
     }
     .fh-row-lead  { grid-area:lead; }
-    .fh-row-icon  { grid-area:icon; width:40px; height:40px; }
-    .fh-row-icon svg { width:24px; height:24px; }
+    .fh-row-icon  { grid-area:icon; width:70px; height:70px; }
+    .fh-row-icon svg { width:42px; height:42px; }
     .fh-row-body  { grid-area:body; }
     .fh-row-chips { grid-area:chips;
       flex-direction:row; flex-wrap:wrap;

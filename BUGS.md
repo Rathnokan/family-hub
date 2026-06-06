@@ -34,7 +34,13 @@
 
 ---
 
-## ✅ Fixed on `main` since v0.7.1 (unreleased — rides the next version bump)
+## ✅ Fixed in v0.7.2
+
+- **Weekly-points window mismatch (report 1.7):** `getWeeklyPts`/`getWeeklyPtsLost` now take an `evalWeekday` arg and anchor the week to the most recent configured `rank_eval_weekday` (was hardcoded "since last Monday"), matching the server's trailing-week eval window. All six themes pass `naAttr.rank_eval_weekday`. — `themes/_shared.js`
+- **Dead code:** removed the orphaned `save-rank-ppd-ladder` dispatch handler (the inline Settings-tab ladder it served moved into the Ranks drawer's Global tab). — `src/card/dispatch.js`
+- (Shipped together with the v0.7.2 "Dynamic Ranks" feature — see RELEASE-NOTES-v0.7.2.md.)
+
+### Also rode v0.7.2 (was "Fixed on `main` since v0.7.1")
 
 - **Hardening:** both `persistent_notification.create` calls are now guarded (`_notify_approval` / `_notify_redemption`); history sort tolerates a missing `timestamp` (`.get`); `update_subscription` `period` is validated against `SUB_PERIODS`.
 - **Slug whitespace divergence:** JS `slug()` now matches the Python transform (`.replace(/ /g,"_")`).
@@ -54,8 +60,8 @@
 ### Slug collision (residual of report 1.6) — theoretical
 - The JS/Python *whitespace* divergence is fixed (both single-space now). What remains: if two people's names slugify to the **same** entity_id, HA appends `_2` to the second while `card_model.person_entity_id` returns the un-suffixed key → that person's page would miss the model. Needs the backend to expose each person's real `entity_id` if it ever matters. Not a concern for the current family. — `card_model.py:person_entity_id`
 
-### Weekly-points window mismatch (report 1.7)
-- Rank bar (`getWeeklyPts`) sums "since last Monday 00:00"; the server (`_async_process_weekly_ranks`) evaluates over the trailing 7 days ending on `rank_eval_weekday`, and includes allowance/bonus deltas. The kid's "+1 rank" prediction can disagree with the actual server decision mid-week. — `themes/_shared.js`, `streaks_ranks_mixin.py`
+### Weekly-points window: residual (allowance/bonus deltas)
+- The Monday-vs-eval-weekday window divergence is fixed in v0.7.2. One smaller difference remains: the server eval sums **all** positive `points_delta` (including allowance/bonus), while the card bar's `getWeeklyPts` also sums positive deltas — these now use the same window, but if the bar and eval are ever desired to scope to chore-earned points only, that's a separate, deliberate change. Not currently a problem. — `themes/_shared.js`, `streaks_ranks_mixin.py`
 
 ### Dedupe / cosmetics (low value)
 - `get_active_chores_for_card` ≈ `get_all_chores_for_card` (~90% shared row builder) — left alone (outputs differ slightly; needs care to merge safely).

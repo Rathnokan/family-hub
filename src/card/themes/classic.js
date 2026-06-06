@@ -11,7 +11,8 @@
 import { DEFAULT_COLOR, FLASH_MS, HISTORY_META, WEEKDAY_LABELS } from "../constants.js";
 import { I } from "../constants.js";
 import { escHTML, escAttr, ini, fPts, fUSD, cap, relTime, groupHistorySkipped } from "../utils.js";
-import { getEffectiveRank, getWeeklyPts, htmlRankBar, htmlSuccessStreak,
+import { getEffectiveRank, effectiveRankThresholds, getWeeklyPts, getWeeklyPtsLost, getPointsAtRisk,
+         htmlRankBar, htmlSuccessStreak,
          getActiveStreaks, computeStreakProgress,
          htmlChoreRow, htmlAddReminderCTA,
          htmlGoalBanner, htmlGoalToggleBtn, storeItemIcon,
@@ -23,11 +24,9 @@ import { getEffectiveRank, getWeeklyPts, htmlRankBar, htmlSuccessStreak,
 const CLASSIC_RANKS = [
     { minXP: 0,    name: "Level 1" },
     { minXP: 100,  name: "Level 2" },
-    { minXP: 250,  name: "Level 3" },
-    { minXP: 500,  name: "Level 4" },
-    { minXP: 1000, name: "Level 5" },
-    { minXP: 2000, name: "Level 6" },
-    { minXP: 3500, name: "Level 7" },
+    { minXP: 300,  name: "Level 3" },
+    { minXP: 700,  name: "Level 4" },
+    { minXP: 1200, name: "Level 5" },
 ];
 
 const KID_PALETTE = {
@@ -60,9 +59,10 @@ export const classicTheme = {
         const balance  = parseInt(card._states(eid)?.state || "0");
         const color    = person.avatar_color || DEFAULT_COLOR;
         const rankIdx  = person.rank_index !== undefined ? person.rank_index : 0;
-        const dropThr  = person.rank_drop_threshold ?? naAttr.rank_drop_threshold ?? 50;
-        const gainThr  = person.rank_gain_threshold ?? naAttr.rank_gain_threshold ?? 75;
-        const weekly   = getWeeklyPts(person.person_id, naAttr.history_log);
+        const { dropThr, gainThr } = effectiveRankThresholds(person, naAttr, rankIdx);
+        const weekly   = getWeeklyPts(person.person_id, naAttr.history_log, naAttr.rank_eval_weekday);
+        const lost     = getWeeklyPtsLost(person.person_id, naAttr.history_log, naAttr.rank_eval_weekday);
+        const atRisk   = getPointsAtRisk(attr);
 
         const tabBar = [
             { key: "tasks",   label: "Tasks"   },
@@ -82,7 +82,7 @@ export const classicTheme = {
 
         const showRail = card._tab === "tasks";
         const railHTML = showRail
-            ? _railPanels({ attr, naAttr, person, balance, weekly, openCount,
+            ? _railPanels({ attr, naAttr, person, balance, weekly, lost, atRisk, openCount,
                             pendingCount, rankIdx, dropThr, gainThr, color })
             : "";
 
@@ -113,10 +113,10 @@ export const classicTheme = {
 // Rail panels
 // ---------------------------------------------------------------------------
 
-function _railPanels({ attr, naAttr, person, balance, weekly, openCount,
+function _railPanels({ attr, naAttr, person, balance, weekly, lost, atRisk, openCount,
                        pendingCount, rankIdx, dropThr, gainThr, color }) {
     return `
-        ${_railPanelKPIs(balance, weekly, openCount, pendingCount)}
+        ${_railPanelKPIs(balance, weekly, lost, atRisk, openCount, pendingCount)}
         ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, color, person, attr)}
         ${_railPanelStreaks(attr, naAttr, person, color)}
         ${_railPanelSubs(attr, balance, person.person_id)}
@@ -136,27 +136,28 @@ function _railPanelSubs(attr, balance, personId) {
     return rows ? _railPanel("SUBSCRIPTIONS", rows) : "";
 }
 
-function _railPanelKPIs(balance, weekly, openCount, pendingCount) {
-    const cell = (label, val, unit) => `
+function _railPanelKPIs(balance, weekly, lost, atRisk, openCount, pendingCount) {
+    const cell = (label, val, unit, sub, subClass = "") => `
         <div class="fh-classic-rkpi">
             <div class="fh-classic-rkpi-lbl">${label}</div>
             <div class="fh-classic-rkpi-val-row">
                 <span class="fh-classic-rkpi-val">${escHTML(String(val))}</span>
                 ${unit ? `<span class="fh-classic-rkpi-unit">${unit}</span>` : ""}
             </div>
+            ${sub ? `<div class="fh-rkpi-sub ${subClass}">${escHTML(sub)}</div>` : ""}
         </div>`;
     const body = `
         <div class="fh-classic-rkpi-row">
             ${cell("BALANCE",  fPts(balance), "pts")}
-            ${cell("WEEK",     `+${weekly}`,  "pts")}
-            ${cell("OPEN",     openCount,     "")}
+            ${cell("WEEK",     `+${weekly}`,  "pts", lost > 0 ? `−${lost} lost` : "0 lost", "fh-rkpi-sub--loss")}
+            ${cell("OPEN",     openCount,     "", atRisk > 0 ? `−${atRisk} at risk` : null, "fh-rkpi-sub--loss")}
             ${cell("PENDING",  pendingCount,  "")}
         </div>`;
     return _railPanel("OVERVIEW", body);
 }
 
 function _railPanelRank(rankIdx, weekly, dropThr, gainThr, color, person, attr) {
-    const bar    = htmlRankBar(rankIdx, weekly, dropThr, gainThr, CLASSIC_RANKS, color);
+    const bar    = htmlRankBar(rankIdx, weekly, dropThr, gainThr, CLASSIC_RANKS, color, person);
     const streak = htmlSuccessStreak(person, color);
     const freeze = htmlStreakFreezeChip(attr);
     if (!bar) {

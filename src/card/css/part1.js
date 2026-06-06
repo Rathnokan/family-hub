@@ -608,6 +608,50 @@ export const CSS_1 = `
   .fh-checkbox-row { display:flex; align-items:center; gap:8px; }
   .fh-checkbox-row input[type=checkbox] { width:17px; height:17px; cursor:pointer; }
 
+  /* Drawer (right side-rail) — reuses the .fh-modal-bg scrim, anchored right.
+     Used for the Ranks editor and the Person / Settings editors (v0.7.2). */
+  .fh-modal-bg--drawer { align-items:stretch; justify-content:flex-end; padding:0; }
+  .fh-drawer {
+    background:var(--fh-bg);
+    width:100%; max-width:460px; height:100%;
+    display:flex; flex-direction:column;
+    box-shadow:-8px 0 32px rgba(0,0,0,.45);
+    animation:fh-drawer-in .18s ease-out;
+  }
+  @keyframes fh-drawer-in { from { transform:translateX(100%); } to { transform:translateX(0); } }
+  .fh-drawer-hdr {
+    flex:0 0 auto; display:flex; align-items:center; justify-content:space-between;
+    gap:var(--fh-gap-sm); padding:var(--fh-pad);
+    border-bottom:1px solid var(--fh-border); background:var(--fh-bg);
+  }
+  .fh-drawer-title  { font-size:1.1rem; font-weight:700; }
+  .fh-drawer-body {
+    flex:1 1 auto; overflow-y:auto; padding:var(--fh-pad);
+    display:flex; flex-direction:column; gap:var(--fh-gap);
+  }
+  .fh-drawer-footer {
+    flex:0 0 auto; display:flex; gap:var(--fh-gap-sm); justify-content:flex-end;
+    padding:var(--fh-pad); border-top:1px solid var(--fh-border); background:var(--fh-bg);
+  }
+  .fh-drawer-tabs { display:flex; gap:4px; flex-wrap:wrap; margin-bottom:var(--fh-gap-sm); }
+  .fh-drawer-tab {
+    flex:1 1 auto; min-width:64px; padding:8px 10px; cursor:pointer;
+    font-size:.8rem; font-weight:600; text-align:center;
+    color:var(--fh-text-sec); background:transparent;
+    border:1px solid var(--fh-border); border-radius:var(--fh-radius);
+  }
+  .fh-drawer-tab.active { color:var(--fh-text); background:var(--fh-border); }
+  /* Per-rank band grid (drawer) */
+  .fh-rank-grid { display:flex; flex-direction:column; gap:6px; }
+  .fh-rank-grid-row {
+    display:grid; grid-template-columns:1fr 100px 100px; gap:8px; align-items:center;
+  }
+  .fh-rank-grid-row .fh-rank-grid-name { font-size:.8rem; color:var(--fh-text-sec); }
+  .fh-rank-grid-hdr { font-size:.72rem; color:var(--fh-text-sec); font-weight:600; text-transform:uppercase; letter-spacing:.05em; }
+  .fh-rank-grid-cell { display:flex; align-items:center; gap:5px; }
+  .fh-rank-grid-cell .fh-input { width:54px; padding:6px 4px; text-align:center; }
+  .fh-rank-grid-pts { font-size:var(--fh-text-xs); color:var(--fh-text-sec); min-width:30px; text-align:right; }
+
   /* Claim picker — card grid of tappable person tiles (v0.6.1).
      Replaces the previous <select> dropdown for Echo Show touch input. */
   .fh-claim-grid {
@@ -680,6 +724,10 @@ export const CSS_1 = `
     line-height:1.2; max-width:64px; overflow:hidden;
     text-overflow:ellipsis; white-space:nowrap;
   }
+  /* Icon-picker glyph sizing — cells/preview now render via choreIcon()
+     (emoji-in-svg or line svg); size the svg deterministically in both. */
+  .fh-icon-cell svg     { width:28px; height:28px; }
+  .fh-icon-sel-icon svg { width:20px; height:20px; }
 
   /* Icon tab: selected-icon preview bar */
   .fh-icon-selected-wrap {

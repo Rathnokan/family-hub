@@ -301,21 +301,49 @@ class StreaksRanksMixin:
         await self.async_save()
         return True
 
+    def _effective_rank_thresholds(self, person: dict, idx: int) -> tuple[int, int]:
+        """Resolve the (drop, gain) weekly-point thresholds for a person at rank `idx`.
+
+        Resolution order, independently for drop and gain:
+          1. Per-rank array (`rank_drop_thresholds` / `rank_gain_thresholds`),
+             clamped into bounds so a rank_index past the array length resolves
+             to the top rung (mirrors `get_rank_cents_per_pt`).
+          2. Legacy scalar override (`rank_drop_threshold` / `rank_gain_threshold`).
+          3. Global setting.
+        Keeping the scalar + global fallbacks means kids configured under the old
+        model keep evaluating correctly until they're given a per-rank curve.
+        """
+        s = self._data["settings"]
+        global_drop = s.get("rank_drop_threshold", 50)
+        global_gain = s.get("rank_gain_threshold", 75)
+
+        def _resolve(arr_key: str, scalar_key: str, global_val: int) -> int:
+            arr = person.get(arr_key)
+            if isinstance(arr, list) and arr:
+                j = max(0, min(int(idx), len(arr) - 1))
+                return int(arr[j])
+            scalar = person.get(scalar_key)
+            if scalar is not None:
+                return int(scalar)
+            return int(global_val)
+
+        drop = _resolve("rank_drop_thresholds", "rank_drop_threshold", global_drop)
+        gain = _resolve("rank_gain_thresholds", "rank_gain_threshold", global_gain)
+        return drop, gain
+
     async def _async_process_weekly_ranks(self, tick_date: date) -> None:
         """
         Evaluate last week's point performance and adjust rank_index.
         Fires only on the configured rank_eval_weekday (default Monday = 0).
         Parents are always max rank — skipped.
         Each person moves at most ±1 rank per evaluation cycle.
+        Thresholds are resolved per-rank per-person via _effective_rank_thresholds.
         """
         s = self._data["settings"]
         eval_weekday = s.get("rank_eval_weekday", 0)  # 0 = Monday
 
         if tick_date.weekday() != eval_weekday:
             return
-
-        global_drop = s.get("rank_drop_threshold", 50)
-        global_gain = s.get("rank_gain_threshold", 75)
 
         # Week we're evaluating: the 7 days ending (exclusive) on tick_date
         week_end   = tick_date.isoformat()
@@ -325,16 +353,8 @@ class StreaksRanksMixin:
             if person.get("type") == "parent":
                 continue
 
-            drop_thr = (
-                person["rank_drop_threshold"]
-                if person.get("rank_drop_threshold") is not None
-                else global_drop
-            )
-            gain_thr = (
-                person["rank_gain_threshold"]
-                if person.get("rank_gain_threshold") is not None
-                else global_gain
-            )
+            current_idx = person.get("rank_index", 0)
+            drop_thr, gain_thr = self._effective_rank_thresholds(person, current_idx)
 
             weekly_pts = sum(
                 e.get("points_delta", 0)
@@ -346,10 +366,8 @@ class StreaksRanksMixin:
                 )
             )
 
-            current_idx = person.get("rank_index", 0)
-
             if weekly_pts >= gain_thr:
-                new_idx = current_idx + 1  # frontend clamps to theme ladder length
+                new_idx = min(4, current_idx + 1)  # all theme ladders are 5 rungs (0-4)
             elif weekly_pts < drop_thr:
                 new_idx = max(0, current_idx - 1)
             else:

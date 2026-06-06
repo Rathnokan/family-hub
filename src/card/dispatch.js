@@ -5,7 +5,7 @@
  */
 
 import { FLASH_MS, CHORE_TEMPLATES } from "./constants.js";
-import { rotationPoolEditor } from "./modals.js";
+import { rotationPoolEditor, curveFromPercents } from "./modals.js";
 import { openPrintableChoreList } from "./print-chore-list.js";
 
 /**
@@ -185,17 +185,83 @@ export function dispatch(act, el, card) {
             break;
         }
 
-        case "save-rank-ppd-ladder": {
+        // ---- Ranks drawer (v0.7.2) -----------------------------------------
+        case "open-ranks":
+            card._ranksTab = el.dataset.pid || "global";
+            card._modal = { type: "ranks", surface: "drawer", data: {} };
+            card._doRender(true);
+            break;
+
+        case "ranks-tab":
+            card._ranksTab = el.dataset.tab || "global";
+            card._doRender(true);
+            break;
+
+        case "ranks-preview": {
+            // Recompute the resulting points (pts = % × capacity) in place, no re-render.
+            const cap = Math.max(0, parseInt(v("m-curve-cap") || "0"));
+            const gainPcts = [], dropPcts = [];
+            for (let i = 0; i < 5; i++) {
+                gainPcts.push(Math.max(0, parseFloat(v(`m-gain-pct-${i}`)) || 0));
+                dropPcts.push(Math.max(0, parseFloat(v(`m-drop-pct-${i}`)) || 0));
+            }
+            const { gain, drop } = curveFromPercents(cap, gainPcts, dropPcts);
+            for (let i = 0; i < 5; i++) {
+                const gi = sr.getElementById(`m-gain-pct-${i}`);
+                const di = sr.getElementById(`m-drop-pct-${i}`);
+                const ge = sr.getElementById(`m-gain-pts-${i}`);
+                const de = sr.getElementById(`m-drop-pts-${i}`);
+                if (ge && gi && !gi.disabled) ge.textContent = gain[i];
+                if (de && di && !di.disabled) de.textContent = drop[i];
+            }
+            break;
+        }
+
+        case "save-ranks-global": {
             const inputs = sr.querySelectorAll(".fh-ad-rank-ladder-input");
             const ladder = [];
-            let valid = true;
+            let ladderOk = true;
             inputs.forEach(inp => {
                 const val = parseFloat(inp.value);
-                if (isNaN(val) || val <= 0) { valid = false; return; }
+                if (isNaN(val) || val <= 0) { ladderOk = false; return; }
                 ladder.push(val);
             });
-            if (!valid || !ladder.length) break;
-            card._svc("update_settings", { rank_ppd_ladder: ladder });
+            const cap     = Math.max(0, parseInt(v("m-rank-cap")  || "100"));
+            const dropPct = Math.max(0, parseInt(v("m-rank-drop") || "60"));
+            const gainPct = Math.max(0, parseInt(v("m-rank-gain") || "80"));
+            const payload = {
+                rank_eval_weekday:     parseInt(v("m-rank-weekday") || "0"),
+                rank_default_cap:      cap,
+                rank_default_drop_pct: dropPct,
+                rank_default_gain_pct: gainPct,
+                // derive the absolute fallback thresholds eval uses
+                rank_drop_threshold:   Math.round(cap * dropPct / 100 / 5) * 5,
+                rank_gain_threshold:   Math.round(cap * gainPct / 100 / 5) * 5,
+            };
+            if (ladderOk && ladder.length) payload.rank_ppd_ladder = ladder;
+            card._svc("update_settings", payload);
+            card._closeModal();
+            break;
+        }
+
+        case "save-ranks-kid": {
+            const pid = v("m-rank-pid");
+            if (!pid) break;
+            const cap = Math.max(0, parseInt(v("m-curve-cap") || "0"));
+            const gainPcts = [], dropPcts = [];
+            for (let i = 0; i < 5; i++) {
+                gainPcts.push(Math.max(0, parseFloat(v(`m-gain-pct-${i}`)) || 0));
+                dropPcts.push(Math.max(0, parseFloat(v(`m-drop-pct-${i}`)) || 0));
+            }
+            const { gain, drop } = curveFromPercents(cap, gainPcts, dropPcts);
+            card._svc("update_person", {
+                person_id:            pid,
+                rank_index:           Math.max(0, Math.min(4, parseInt(v("m-rank-idx") || "0"))),
+                rank_gain_thresholds: gain,
+                rank_drop_thresholds: drop,
+                rank_curve: { cap, gain_pcts: gainPcts, drop_pcts: dropPcts },
+            });
+            card._closeModal();
             break;
         }
 
@@ -594,6 +660,7 @@ export function dispatch(act, el, card) {
         case "open-edit-person":
             card._modal = {
                 type: "edit-person",
+                surface: "drawer",
                 data: {
                     pid:            el.dataset.pid,
                     pname:          el.dataset.pname,
@@ -606,9 +673,6 @@ export function dispatch(act, el, card) {
                     notifyTarget:   el.dataset.pnotify               || "",
                     code:           el.dataset.pcode                 || "",
                     theme:          el.dataset.ptheme                || "classic",
-                    rankIdx:        parseInt(el.dataset.prankidx     || "0"),
-                    dropThr:        el.dataset.pdropThr              || "",
-                    gainThr:        el.dataset.pgainThr              || "",
                     childMode:      el.dataset.pchildmode === "true",
                     // v0.6.1: success-rate streak knobs (set via Edit Person modal)
                     completionThreshold:   parseInt(el.dataset.pcompletionthreshold ?? "80"),
@@ -630,7 +694,7 @@ export function dispatch(act, el, card) {
             card._doRender(true);
             break;
         case "open-edit-settings":
-            card._modal = { type: "edit-settings", data: {
+            card._modal = { type: "edit-settings", surface: "drawer", data: {
                 fname:          el.dataset.fname,
                 ppd:            el.dataset.ppd,
                 penaltyAlertTime: parseInt(el.dataset.palerttime  ?? "800"),
@@ -812,8 +876,6 @@ export function dispatch(act, el, card) {
         case "ok-edit-person": {
             const name = v("m-pname").trim();
             if (!name) break;
-            const dropThrStr = v("m-pdropThr").trim();
-            const gainThrStr = v("m-pgainThr").trim();
             card._svc("update_person", {
                 person_id:              v("m-pid"),
                 name,
@@ -826,9 +888,6 @@ export function dispatch(act, el, card) {
                 notify_target:          v("m-pnotify").trim(),
                 code:                   v("m-pcode").trim().toUpperCase(),
                 theme_key:              v("m-ptheme"),
-                rank_index:             parseInt(v("m-prankidx") || "0"),
-                rank_drop_threshold:    dropThrStr !== "" ? parseInt(dropThrStr) : null,
-                rank_gain_threshold:    gainThrStr !== "" ? parseInt(gainThrStr) : null,
                 child_mode:             b("m-pchildmode"),
                 // v0.6.1: success-rate person streak knobs
                 completion_threshold_pct: Math.max(1, Math.min(100, int("m-completion-threshold") || 80)),
@@ -864,9 +923,6 @@ export function dispatch(act, el, card) {
                 family_name:          fname,
                 points_per_dollar:    ppd,
                 penalty_alert_time:   isNaN(alertTime) ? 800 : alertTime,
-                rank_eval_weekday:    parseInt(v("m-rank-weekday")  || "0"),
-                rank_drop_threshold:  parseInt(v("m-rank-drop")     || "50"),
-                rank_gain_threshold:  parseInt(v("m-rank-gain")     || "75"),
             });
             card._closeModal();
             break;

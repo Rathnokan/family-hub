@@ -17,7 +17,8 @@
 import { escHTML, escAttr, fPts, fUSD, ini, relTime,
          groupHistorySkipped }                            from "../utils.js";
 import { HISTORY_META }                                   from "../constants.js";
-import { getEffectiveRank, getWeeklyPts, htmlRankBar, htmlSuccessStreak,
+import { getEffectiveRank, effectiveRankThresholds, getWeeklyPts, getWeeklyPtsLost, getPointsAtRisk,
+         htmlRankBar, htmlSuccessStreak,
          groupByCategory, getActiveStreaks,
          computeStreakProgress, htmlChoreRow,
          htmlGoalBanner, htmlRailGoal, htmlGoalToggleBtn,
@@ -65,13 +66,11 @@ const dbzRowConfig = {
 // ---- Rank ladder ------------------------------------------------------------
 
 const DBZ_RANKS = [
-    { minXP: 0,    name: "Saibaman"       },
-    { minXP: 100,  name: "Saiyan Trainee" },
-    { minXP: 250,  name: "Saiyan"         },
-    { minXP: 500,  name: "Super Saiyan"   },
-    { minXP: 1000, name: "SSJ2"           },
-    { minXP: 2000, name: "SSJ3"           },
-    { minXP: 4000, name: "SSJ Blue"       },
+    { minXP: 0,    name: "Saibaman"     },
+    { minXP: 100,  name: "Saiyan"       },
+    { minXP: 300,  name: "Super Saiyan" },
+    { minXP: 700,  name: "SSJ2"         },
+    { minXP: 1200, name: "SSJ Blue"     },
 ];
 
 // ---- Theme export -----------------------------------------------------------
@@ -98,9 +97,10 @@ export const dbzTheme = {
         const naAttr     = card._attrs("sensor.family_hub_needs_attention");
         const balance    = parseInt(card._states(eid)?.state || "0");
         const rankIdx    = person.rank_index !== undefined ? person.rank_index : 0;
-        const dropThr    = person.rank_drop_threshold ?? naAttr.rank_drop_threshold ?? 50;
-        const gainThr    = person.rank_gain_threshold ?? naAttr.rank_gain_threshold ?? 75;
-        const weekly     = getWeeklyPts(person.person_id, naAttr.history_log);
+        const { dropThr, gainThr } = effectiveRankThresholds(person, naAttr, rankIdx);
+        const weekly     = getWeeklyPts(person.person_id, naAttr.history_log, naAttr.rank_eval_weekday);
+        const lost       = getWeeklyPtsLost(person.person_id, naAttr.history_log, naAttr.rank_eval_weekday);
+        const atRisk     = getPointsAtRisk(attr);
         const rank       = getEffectiveRank(rankIdx, DBZ_RANKS);
 
         const tabDefs = [
@@ -126,7 +126,7 @@ export const dbzTheme = {
 
         const showRail = activeTab === "tasks";
         const railHTML = showRail
-            ? _railPanels({ attr, naAttr, person, balance, weekly, openCount,
+            ? _railPanels({ attr, naAttr, person, balance, weekly, lost, atRisk, openCount,
                             rankIdx, dropThr, gainThr, nextItem, fillPct })
             : "";
 
@@ -150,6 +150,9 @@ export const dbzTheme = {
                 <div class="fh-dbz-mission-strip">
                     <span class="fh-dbz-strip-label">ACTIVE MISSIONS:</span>
                     <span class="fh-dbz-strip-count">${openCount}</span>
+                    ${atRisk > 0 ? `
+                    <span class="fh-dbz-strip-label">· AT RISK:</span>
+                    <span class="fh-dbz-strip-count" style="color:#FF5A4A">−${atRisk}⚡</span>` : ""}
                 </div>
 
                 <div class="fh-dbz-tabs">${tabBar}</div>
@@ -174,10 +177,10 @@ export const dbzTheme = {
 
 // ---- Rail panels ------------------------------------------------------------
 
-function _railPanels({ attr, naAttr, person, balance, weekly, openCount,
+function _railPanels({ attr, naAttr, person, balance, weekly, lost, atRisk, openCount,
                        rankIdx, dropThr, gainThr, nextItem, fillPct }) {
     return `
-        ${_railPanelKPIs(balance, weekly, openCount, attr.show_dollar_value ? attr.dollar_value : null)}
+        ${_railPanelKPIs(balance, weekly, lost, atRisk, openCount, attr.show_dollar_value ? attr.dollar_value : null)}
         ${htmlRailGoal(attr)}
         ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, person, attr)}
         ${_railPanelStreaks(attr, naAttr, person)}
@@ -198,27 +201,27 @@ function _railPanelSubs(attr, balance, personId) {
     return rows ? _railPanel("SUBSCRIPTIONS", rows) : "";
 }
 
-function _railPanelKPIs(balance, weekly, openCount, dollarValue) {
-    const cell = (label, val, unit, sub) => `
+function _railPanelKPIs(balance, weekly, lost, atRisk, openCount, dollarValue) {
+    const cell = (label, val, unit, sub, subClass = "") => `
         <div class="fh-dbz-rkpi">
             <div class="fh-dbz-rkpi-lbl">${label}</div>
             <div class="fh-dbz-rkpi-val-row">
                 <span class="fh-dbz-rkpi-val">${escHTML(String(val))}</span>
                 ${unit ? `<span class="fh-dbz-rkpi-unit">${unit}</span>` : ""}
             </div>
-            ${sub ? `<div class="fh-rkpi-sub">${escHTML(sub)}</div>` : ""}
+            ${sub ? `<div class="fh-rkpi-sub ${subClass}">${escHTML(sub)}</div>` : ""}
         </div>`;
     const body = `
         <div class="fh-dbz-rkpi-row">
             ${cell("POWER",  fPts(balance), "⚡", dollarValue != null ? fUSD(dollarValue) : null)}
-            ${cell("WEEK",   `+${weekly}`,  "⚡")}
-            ${cell("OPEN",   openCount,     "")}
+            ${cell("WEEK",   `+${weekly}`,  "⚡", lost > 0 ? `−${lost} lost` : "0 lost", "fh-rkpi-sub--loss")}
+            ${cell("OPEN",   openCount,     "", atRisk > 0 ? `−${atRisk} at risk` : null, "fh-rkpi-sub--loss")}
         </div>`;
     return _railPanel("POWER LEVEL", body);
 }
 
 function _railPanelRank(rankIdx, weekly, dropThr, gainThr, person, attr) {
-    const bar    = htmlRankBar(rankIdx, weekly, dropThr, gainThr, DBZ_RANKS, DBZ.orange);
+    const bar    = htmlRankBar(rankIdx, weekly, dropThr, gainThr, DBZ_RANKS, DBZ.orange, person);
     const streak = htmlSuccessStreak(person, DBZ.orange);
     const freeze = htmlStreakFreezeChip(attr);
     if (!bar) {

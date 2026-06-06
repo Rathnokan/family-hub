@@ -27,6 +27,7 @@ import {
     mAddPerson,
     mEditPerson,
     mEditSettings,
+    mRanksDrawer,
     mClaim,
     mAddReminder,
     mConfirmRemovePerson,
@@ -611,7 +612,7 @@ export class FamilyHubCard extends HTMLElement {
      */
     _buildModal() {
         const bg     = document.createElement("div");
-        bg.className = "fh-modal-bg";
+        bg.className = "fh-modal-bg" + (this._modal?.surface === "drawer" ? " fh-modal-bg--drawer" : "");
         bg.innerHTML = this._modalHTML();
         bg.addEventListener("click", e => {
             if (e.target === bg) this._closeModal();
@@ -637,6 +638,7 @@ export class FamilyHubCard extends HTMLElement {
             case "add-person":          return mAddPerson();
             case "edit-person":         return mEditPerson(data);
             case "edit-settings":       return mEditSettings(data);
+            case "ranks":               return mRanksDrawer(this);
             case "claim":               return mClaim(this._modal, people);
             case "add-reminder":        return mAddReminder(this._modal, people);
             case "confirm-remove-person": return mConfirmRemovePerson(data);
