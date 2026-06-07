@@ -4,7 +4,7 @@
  */
 
 export const DOMAIN        = "family_hub";
-export const VERSION       = "0.7.2";
+export const VERSION       = "0.7.3";
 export const DEFAULT_COLOR = "#7F77DD";
 export const FLASH_MS      = 1400;
 
@@ -21,6 +21,7 @@ export const HISTORY_META = {
     task_excused:         { label: "Excused",            color: "var(--fh-accent)"   },
     task_rejected:        { label: "Rejected",           color: "var(--fh-overdue)"  },
     task_marked_complete: { label: "Marked done",        color: "var(--fh-success)"  },
+    task_late_claimed:    { label: "Claimed late",       color: "var(--fh-warning)"  },
     points_awarded:       { label: "Points",             color: "var(--fh-accent)"   },
     redemption_requested: { label: "Redeem request",     color: "var(--fh-warning)"  },
     redemption_approved:  { label: "Redeem approved",    color: "var(--fh-success)"  },

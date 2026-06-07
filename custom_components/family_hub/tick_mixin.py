@@ -122,6 +122,7 @@ from ._store_helpers import (
     _migrate_task_instance,
     _advance_renewal_date,
     _days_until_reset,
+    _monthly_days,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -404,7 +405,7 @@ class TickMixin:
             cadence = chore.get("rotation_cadence", "")
             if cadence == "daily":
                 await self._maybe_advance_rotation(chore, tick_date)
-            elif cadence == "weekly" and tick_date.weekday() == 0:
+            elif cadence == "weekly" and tick_date.weekday() == chore.get("rotation_switch_weekday", 0):
                 await self._maybe_advance_rotation(chore, tick_date)
 
         for chore in self.get_active_chores():
@@ -662,7 +663,7 @@ class TickMixin:
             return (check_date - created).days % n == 0
 
         if r_type == RECURRENCE_MONTHLY_ON_DATE:
-            return check_date.day == rec.get("day_of_month", 1)
+            return check_date.day in _monthly_days(rec)
 
         return False
 

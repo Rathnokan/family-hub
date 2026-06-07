@@ -12,7 +12,7 @@ import { escHTML, escAttr, fPts, fUSD, ini,
          groupHistorySkipped }                            from "../utils.js";
 import { DEFAULT_COLOR, HISTORY_META, WEEKDAY_LABELS }   from "../constants.js";
 import { getEffectiveRank, effectiveRankThresholds, getWeeklyPts, getWeeklyPtsLost, getPointsAtRisk,
-         htmlRankBar, htmlSuccessStreak,
+         htmlRankBar, htmlSuccessStreak, htmlLateClaimBtn, htmlRotationRail,
          getActiveStreaks,
          computeStreakProgress,
          groupByCategory,
@@ -190,6 +190,7 @@ function _railPanels({ attr, naAttr, person, balance, openCount, weekly, lost, a
         ${htmlRailGoal(attr)}
         ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, person, attr)}
         ${_railPanelStreaks(attr, naAttr, person)}
+        ${(() => { const b = htmlRotationRail(person, naAttr, ENG.amber); return b ? _railPanel("ROTATION · POOL", b) : ""; })()}
         ${_railPanelSubs(attr, balance, person.person_id)}
         ${_railPanelSheet(person, rank, plotDate)}`;
 }
@@ -481,5 +482,6 @@ function _engSkippedGroup(group, card) {
                 ${e.points_delta
                     ? `<div class="fh-eng-hist-pts" style="color:${ENG.red}">${e.points_delta}pts</div>`
                     : ""}
+                ${htmlLateClaimBtn(e)}
             </div>`).join("") : ""}`;
 }

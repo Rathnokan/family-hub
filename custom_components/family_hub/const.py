@@ -3,7 +3,7 @@
 DOMAIN = "family_hub"
 # Display/reference only. The canonical version lives in manifest.json,
 # hacs.json, and src/card/constants.js — keep this in sync when bumping.
-VERSION = "0.7.2"
+VERSION = "0.7.3"
 
 # Config entry keys
 CONF_FAMILY_NAME = "family_name"
@@ -188,6 +188,7 @@ HISTORY_TASK_SKIPPED          = "task_skipped"
 HISTORY_TASK_EXCUSED          = "task_excused"          # Penalty reversed — kid was excused
 HISTORY_TASK_REJECTED         = "task_rejected"         # Points clawed back after approval
 HISTORY_TASK_MARKED_COMPLETE  = "task_marked_complete"  # Parent retroactively marked done
+HISTORY_TASK_LATE_CLAIMED     = "task_late_claimed"     # Kid claimed a skipped chore late; awaiting approval
 HISTORY_POINTS_AWARDED        = "points_awarded"
 HISTORY_REDEMPTION_REQUESTED  = "redemption_requested"
 HISTORY_REDEMPTION_APPROVED   = "redemption_approved"

@@ -25,13 +25,25 @@ claim_task:
   description: Claim a task from the claimable/bonus pool.
 approve_task:
   name: Approve task
-  description: Parent approval of a completed task; awards its points.
+  description: >-
+    Parent approval of a completed task; awards its points. Optional
+    credit_fraction (0-1] grants partial credit (e.g. 0.5 = 50% of the points).
+    For a late make-up claim, approval also refunds the original skip penalty.
 deny_task:
   name: Deny task
   description: Parent denial of a completed task; returns it to pending.
+claim_late_task:
+  name: Claim late task
+  description: >-
+    Kid claims a previously-skipped chore late. Moves it into the approval queue
+    (always requires parent approval, partial-eligible); on approval the skip
+    penalty is refunded and the (partial) points awarded.
 excuse_task:
   name: Excuse task
   description: Excuse a skipped task and reverse its penalty (sick day, etc.).
+excuse_day:
+  name: Excuse day
+  description: Excuse every still-skipped chore for one person on a given day (ISO date) in one action.
 reject_task:
   name: Reject task
   description: Claw back points on an approved or self-reported task.

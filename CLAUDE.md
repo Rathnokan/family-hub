@@ -52,23 +52,23 @@ The handoff prompt is part of "Phase Complete" — do not declare a phase done w
 
 ---
 
-## Current Status — 2026-06-06
+## Current Status — 2026-06-08
 
 | Item | State |
 |---|---|
-| **Live on HA (Samba)** | v0.7.2 deployed + live-tested. |
-| **GitHub / HACS** | **v0.7.2 SHIPPED** — "Dynamic Ranks" feature on `main`, **tag `v0.7.2`**, GitHub release published (Latest). **GitHub Actions CI green** on every push. (v0.7.1 bug-swat before it: tag `v0.7.1`; v0.7.0 "Re-foundation": tag `v0.7.0`, commit `37ec694`.) |
-| **manifest.json / hacs.json / constants.js / const.py VERSION** | **0.7.2** (`iot_class` = `calculated`). |
-| **Phase** | **v0.7.2 "Dynamic Ranks" SHIPPED.** Per-kid, per-rank gain/drop curves (percentage-of-capacity bands), all theme ladders standardized to 5 rungs, consolidated **Ranks side-rail drawer** (global + per-kid tabs) with the Edit Person / Edit Settings popups converted to drawers, two-line (drop+gain) capacity-spanned rank bar, and the card weekly-points window aligned to the configured eval weekday. See [DECISIONS_LOG.md](DECISIONS_LOG.md) + [RELEASE-NOTES-v0.7.2.md](RELEASE-NOTES-v0.7.2.md). **Next → v0.7.3/v0.7.x** (branch from `main`). |
+| **Live on HA (Samba)** | v0.7.3 deployed + live-tested. |
+| **GitHub / HACS** | **v0.7.3 SHIPPED** — "Chores: make-up, partial credit & a cleaner editor" on `main`, **tag `v0.7.3`**, GitHub release published (Latest). **GitHub Actions CI green** on every push. (v0.7.2 "Dynamic Ranks" before it: tag `v0.7.2`; v0.7.1 bug-swat: tag `v0.7.1`; v0.7.0 "Re-foundation": tag `v0.7.0`.) |
+| **manifest.json / hacs.json / constants.js / const.py VERSION** | **0.7.3** (`iot_class` = `calculated`). |
+| **Phase** | **v0.7.3 SHIPPED.** Partial credit (Approve/Partial/Deny 25/50/75), late make-up claims (kid claims a skipped chore → approval queue → penalty refund + partial-eligible), excuse-day, due/reset labels, per-chore weekly rotation switch day, rotation rail (Current/Up Next below streaks), chore editor rebuilt as a 3-tab side-rail drawer (collapsible icon, multiline desc, monthly multi-day), one-time + Add Task quick flow removed, person delete → red trash, and **admin actor logging** (logged-in HA user on admin actions). See [RELEASE-NOTES-v0.7.3.md](RELEASE-NOTES-v0.7.3.md). **Next → v0.7.4/v0.8.0** (branch from `main`). |
 
-> **v0.7.2 is on `main` + tagged.** Future work: branch from `main` (`git checkout main && git checkout -b v0.7.3-xxx`). Every push runs CI — keep it green before deploying.
+> **v0.7.3 is on `main` + tagged.** Future work: branch from `main` (`git checkout main && git checkout -b v0.7.4-xxx`). Every push runs CI — keep it green before deploying.
 >
-> **v0.7.x backlog (recommended order):**
-> 1. **First-parent attribution** (BUGS.md "Open", top item) — two-parent household logs every admin action as the first parent (Jim). Needs `hass.user.id` → `person.ha_user_id` mapping threaded through the card. Small focused task; **affects this family.**
-> 2. **#3 — model/history runtime trim.** `build_card_model` still ships the ~977-entry `history_log` on `needs_attention`, refetched on every `data_rev` change. ⚠️ **Bigger than it looks:** `history_log` is consumed by the admin History view AND all 6 personal pages (`getWeeklyPts` in the header, the per-person history tab, the store rail's recent purchases). Doing it right = lazy per-view history (`family_hub/get_history` ws command, person-filtered) + an async render path for the weekly-points header. Moderate refactor; test all themes.
-> 3. Smaller deferred items (slug divergence, notification/history hardening, dedupe) — all catalogued in [BUGS.md](BUGS.md) "Open — deferred". (Weekly-window mismatch fixed in v0.7.2.)
-> 4. **Decide:** task-instance retention is **30d** in code (docs previously said 60). Confirm 30 or bump `TASK_INSTANCE_RETENTION_DAYS`.
-> 5. **Optional card-side splits** (`modals.js`, `modes-admin.js`): CODE — silent-import risk ruff can't catch for JS. Low value; leave unless wanted.
+> **Backlog (recommended order):**
+> 1. **Repurpose the chore detail side-panel** — the desktop master-detail right panel is now a placeholder ("Tap a chore to edit it in the side panel"); editing opens the drawer. Fill the panel with useful data (parked for a future cycle).
+> 2. **model/history runtime trim.** `build_card_model` still ships the ~1000-entry `history_log` on `needs_attention`, refetched on every `data_rev` change. ⚠️ **Bigger than it looks:** consumed by the admin History view AND all 6 personal pages (`getWeeklyPts` header, per-person history tab, store rail's recent purchases). Doing it right = lazy per-view history (`family_hub/get_history` ws command, person-filtered) + async weekly-points header. Moderate refactor; test all themes.
+> 3. **v0.8.0 Home Maintenance room CRUD** — split Maintenance out of the chores `category_label` special-case into its own module (roadmap).
+> 4. Smaller deferred items (slug divergence, notification/history hardening, dedupe) — [BUGS.md](BUGS.md) "Open — deferred".
+> 5. **Done & shipped:** first-parent attribution → resolved as admin actor logging (v0.7.3); task-instance retention confirmed 30d; weekly-window mismatch fixed (v0.7.2).
 
 ---
 
@@ -76,19 +76,24 @@ The handoff prompt is part of "Phase Complete" — do not declare a phase done w
 
 > **Read this section before starting work.** Then run the Session Start Checklist above and pick up wherever the prior session left off.
 
-### Where things stand (2026-06-06)
+### Where things stand (2026-06-08)
 
-- **v0.7.2 "Dynamic Ranks" shipped** (tag `v0.7.2`, GitHub release). Three-phase feature:
-  - **Ranks standardized to 5 rungs** across all six themes (aligned minXP `[0,100,300,700,1200]`) so theme swaps preserve rank/economy; migration clamps any kid above index 4.
-  - **Per-kid, per-rank gain/drop curves** as **percentage-of-capacity bands** (`person.rank_gain_thresholds` / `rank_drop_thresholds` absolute arrays + `rank_curve` `{cap, gain_pcts, drop_pcts}` knobs). Eval resolves per-rank via `streaks_ranks_mixin._effective_rank_thresholds` with fallback **array → legacy scalar → global**. Global fallback now `rank_default_cap`/`_drop_pct`/`_gain_pct`.
-  - **Consolidated Ranks drawer** (`mRanksDrawer`) — global + per-kid tabs; Edit Person / Edit Settings converted to the same `.fh-drawer` side-rail (reuses the modal scrim via `_modal.surface==="drawer"`).
-  - **Two-line rank bar** (drop+gain markers on a 0→capacity track) via `htmlRankBar(... person)`; card weekly-points window now anchored to `rank_eval_weekday` (was hardcoded Monday).
-- **Samba is current.** Full feature writeup → [RELEASE-NOTES-v0.7.2.md](RELEASE-NOTES-v0.7.2.md); rationale → [DECISIONS_LOG.md](DECISIONS_LOG.md).
+- **v0.7.3 shipped** (tag `v0.7.3`, GitHub release). Chores batch:
+  - **Partial credit** — `async_approve_task(... credit_fraction)`; approval queue is Approve / Partial(25/50/75) / Deny (`mPartialCredit`, `open-partial`/`do-partial`). Keeps streaks + success-rate.
+  - **Late make-up claims** — `async_claim_late_task` (skip → `STATUS_PENDING_APPROVAL`, `late_claim`); approval refunds `penalty_applied`. Kid History → Skipped → Claim (`htmlLateClaimBtn`, `instance_status==="skipped"`).
+  - **Excuse-day** — `async_excuse_day(person, day)`; History skipped-group "Excuse day".
+  - **Due/reset labels** — `_dueLabel` in `htmlChoreRow` (uses `days_until_reset`/`recurrence_type`).
+  - **Rotation** — per-chore `rotation_switch_weekday` (weekly cadence flip day); `getRotationStatus`/`htmlRotationRail` Current/Up Next, below streaks. Cadence reduced to per-instance + weekly.
+  - **Chore editor → drawer** — `mChoreForm` uses `dWrap`; both the row-click and edit button open it (`surface:"drawer"`); the desktop inline panel is now a placeholder. `choreFormFields` reorganized to **3 tabs** (Details w/ collapsible icon + multiline desc + reminder; Schedule w/ who → recurrence → rotation; Points & Rewards). **One-time + the Add Task quick flow removed.**
+  - **Monthly multi-day** — `recurrence.days_of_month` list (legacy `day_of_month` fallback) via `_store_helpers._monthly_days`; tick + reset updated.
+  - **Admin actor logging** — `_append_history` carries `actor` from `store.acting_as(name)`; `services._resolve_actor(hass, call)` wraps the admin handlers; History shows "· by …".
+  - Person delete → red trash (`.fh-ad-person-del`, lower-right).
+- **Samba is current.** Full writeup → [RELEASE-NOTES-v0.7.3.md](RELEASE-NOTES-v0.7.3.md).
 
 ### Next session (features)
 1. Branch from `main`: `git checkout main && git checkout -b <feature>`. Every push runs CI — keep it green before deploying.
-2. **Top open bug (not a feature):** first-parent attribution — admin actions log as the first parent in a two-parent household; needs `hass.user.id` → `person.ha_user_id` threaded through the card. See [BUGS.md](BUGS.md) "Open".
-3. **Two decisions parked for the user:** task-instance retention 30 vs 60d; rank weekly-points window (card "since Monday" vs server "trailing 7d").
+2. **Repurpose the chore detail side-panel** (`_htmlChoreEditorPanel` in `modes-admin.js` — now a placeholder) with useful data.
+3. **Perf:** history/model runtime trim (lazy per-view history). Then **v0.8.0 Home Maintenance** module.
 
 ### Sonnet system-prompt addendum (paste into the next session)
 
@@ -198,3 +203,4 @@ Be terse in responses. The user wants to ship features, not read prose.
 | v0.7.0 | **"Re-foundation"** — performance + architecture overhaul: event-driven (no 30 s poll), websocket data model + lean sensors (off the state machine/recorder), per-domain multi-store + debounced writes + safe auto-migration, minified bundle. Inactive-member management (reactivate / permanent-delete). GitHub Actions CI. Internal: `data_store.py` 4,815→624 lines via 11 mixins; `css.js` split. |
 | v0.7.1 | Bug-fix & cleanup — correctness patch off a full-codebase audit (redemption overspend guard, $0 sub-override, lapsed-sub "Ready" math, wired Add-Task penalty, cancel-pending lapse notify, inline sub-editor freeze, history labels) + hardening, slug parity, dedup, dead-code/version-drift removal. |
 | v0.7.2 | **"Dynamic Ranks"** — per-kid, per-rank gain/drop curves as percentage-of-capacity bands (curve editor + per-cell tweak); all theme ladders standardized to 5 rungs (rank survives theme swaps); consolidated **Ranks side-rail drawer** with global + per-kid tabs; Edit Person / Edit Settings converted from popups to drawers; two-line (drop+gain) capacity-spanned rank bar; card weekly-points window aligned to the configured eval weekday. Also: full-color **emoji chore/reward icons** (`FH_EMOJI`, keyed to `FH_ICONS`, legacy SVG fallback). |
+| v0.7.3 | **Chores: make-up, partial credit & a cleaner editor** — partial credit (Approve/Partial/Deny 25/50/75, keeps streaks); late make-up claims (kid claims a skipped chore → approval queue → skip-penalty refund + partial-eligible); excuse-day; due/reset labels on rows; per-chore weekly **rotation switch day** + rotation rail (Current / Up Next, below streaks); chore editor rebuilt as a **3-tab side-rail drawer** (collapsible icon, multiline description, **monthly multi-day** `days_of_month`); **one-time + the Add Task quick flow removed**; person delete → red trash (lower-right); **admin actor logging** (`acting_as` → history `actor`, shows "· by …"). |

@@ -14,7 +14,7 @@ import { escHTML, escAttr, fPts, fUSD, ini, relTime,
          groupHistorySkipped }                            from "../utils.js";
 import { HISTORY_META }                                   from "../constants.js";
 import { getEffectiveRank, effectiveRankThresholds, getWeeklyPts, getWeeklyPtsLost, getPointsAtRisk,
-         htmlRankBar, htmlSuccessStreak,
+         htmlRankBar, htmlSuccessStreak, htmlLateClaimBtn, htmlRotationRail,
          groupByCategory, getActiveStreaks,
          computeStreakProgress, htmlChoreRow,
          htmlGoalBanner, htmlRailGoal, htmlGoalToggleBtn,
@@ -174,6 +174,7 @@ function _railPanels({ attr, naAttr, person, balance, weekly, lost, atRisk, open
         ${htmlRailGoal(attr)}
         ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, person, attr)}
         ${_railPanelStreaks(attr, naAttr, person)}
+        ${(() => { const b = htmlRotationRail(person, naAttr, HP.emerald); return b ? _railPanel("ROTATION", b) : ""; })()}
         ${_railPanelSubs(attr, balance, person.person_id)}
         ${_railPanelOwlPost(person, naAttr)}`;
 }
@@ -436,5 +437,6 @@ function _hpSkippedGroup(group, card) {
                 <div class="fh-hp-log-type" style="color:${HP.mute}">Item</div>
                 <div class="fh-hp-log-name">${escHTML(e.chore_name || "")}</div>
                 ${e.points_delta ? `<span style="color:${HP.red};font-weight:700">${e.points_delta}pts</span>` : ""}
+                ${htmlLateClaimBtn(e)}
             </div>`).join("") : ""}`;
 }

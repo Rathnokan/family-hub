@@ -495,6 +495,29 @@ export const CSS_1 = `
     background:color-mix(in srgb, var(--chip-color, var(--fh-accent)) 12%, transparent);
     font-size:.86rem;
   }
+  /* v0.7.3: Current / Up Next section headers in the rotation order list */
+  .fh-rot-section-hdr {
+    font-size:var(--fh-text-xs); font-weight:800; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--fh-text-sec); margin:4px 2px 0;
+  }
+  .fh-rot-item--current {
+    border-width:2px;
+    background:color-mix(in srgb, var(--chip-color, var(--fh-accent)) 22%, transparent);
+  }
+  /* v0.7.3: collapsible Icon editor at the top of the Details tab */
+  .fh-icon-details {
+    border:1px solid var(--fh-border); border-radius:var(--fh-radius-sm);
+    padding:6px 10px; margin-bottom:var(--fh-gap-sm); background:var(--fh-surface);
+  }
+  .fh-icon-summary {
+    display:flex; align-items:center; gap:10px; cursor:pointer; list-style:none;
+    font-weight:700; font-size:.9rem;
+  }
+  .fh-icon-summary::-webkit-details-marker { display:none; }
+  .fh-icon-summary::before { content:"▸"; color:var(--fh-text-sec); transition:transform .15s; }
+  .fh-icon-details[open] .fh-icon-summary::before { transform:rotate(90deg); }
+  .fh-icon-summary-title { color:var(--fh-text-sec); }
+  .fh-icon-details .fh-icon-search { margin-top:8px; }
   .fh-rot-num {
     flex-shrink:0;
     min-width:22px; height:22px; padding:0 6px;

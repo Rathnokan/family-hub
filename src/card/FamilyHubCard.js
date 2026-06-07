@@ -20,7 +20,7 @@ import { getTheme }                                   from "./themes/index.js";
 import { dispatch, handleIconFileSelection }          from "./dispatch.js";
 import {
     mPointAdjust,
-    mAddTask,
+    mPartialCredit,
     mChoreForm,
     mAddStoreItem,
     mEditStoreItem,
@@ -630,7 +630,7 @@ export class FamilyHubCard extends HTMLElement {
         switch (type) {
             case "award":
             case "deduct":              return mPointAdjust(this._modal);
-            case "add-task":            return mAddTask(people);
+            case "partial-credit":      return mPartialCredit(this._modal);
             case "add-chore":           return mChoreForm(null, false, people, catLabels, this._choreFormTab);
             case "edit-chore":          return mChoreForm(data.chore, true, people, catLabels, this._choreFormTab);
             case "add-store-item":      return mAddStoreItem(people, catLabels);
@@ -672,22 +672,6 @@ export class FamilyHubCard extends HTMLElement {
         const show = id => { const el = sr.getElementById(id); if (el) el.style.display = ""; };
         const hide = id => { const el = sr.getElementById(id); if (el) el.style.display = "none"; };
 
-        // Add task modal: show sections by task type
-        const taskTypeEl = sr.getElementById("m-tasktype");
-        if (taskTypeEl) {
-            const tt = taskTypeEl.value;
-            if (tt === "assigned")  { show("m-task-assigned-section");  hide("m-task-claimable-section"); hide("m-task-reminder-section"); }
-            if (tt === "claimable") { hide("m-task-assigned-section");  show("m-task-claimable-section"); hide("m-task-reminder-section"); }
-            if (tt === "reminder")  { hide("m-task-assigned-section");  hide("m-task-claimable-section"); show("m-task-reminder-section"); }
-        }
-
-        // Add task: penalty points field inside assigned section
-        const taskPenEl  = sr.getElementById("m-tpenalty");
-        const taskPenSec = sr.getElementById("m-task-penalty-section");
-        if (taskPenEl && taskPenSec) {
-            taskPenSec.style.display = taskPenEl.checked ? "" : "none";
-        }
-
         // Chore form: recurrence conditional fields
         const recEl = sr.getElementById("m-crec");
         if (recEl) {
@@ -704,8 +688,8 @@ export class FamilyHubCard extends HTMLElement {
             if (rec === "weekly")           show("m-weekdays-section");
             if (rec === "monthly_on_date")  show("m-dom-section");
 
-            const isClaimOrOneTime = rec === "one_time" || ctype === "claimable";
-            if (isClaimOrOneTime) show("m-chore-expiry-section");
+            // Expiry applies to claimable bonus chores (one-time is retired).
+            if (ctype === "claimable") show("m-chore-expiry-section");
         }
 
         // Chore form: claimable subtype section
@@ -757,6 +741,12 @@ export class FamilyHubCard extends HTMLElement {
         }
         if (rotCfg && rotEnabled) {
             rotCfg.style.display = rotEnabled.checked ? "" : "none";
+        }
+        // v0.7.3: per-chore weekly rotation switch day — only for "weekly" cadence.
+        const cadEl    = sr.getElementById("m-crot-cadence");
+        const switchWrap = sr.getElementById("m-crot-switch-day-wrap");
+        if (cadEl && switchWrap) {
+            switchWrap.style.display = (cadEl.value === "weekly") ? "" : "none";
         }
     }
 }

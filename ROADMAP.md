@@ -21,20 +21,21 @@
 
 ---
 
-## Current status (2026-06-06)
+## Current status (2026-06-08)
 
-- **v0.7.2 "Dynamic Ranks" shipped** (tag `v0.7.2`, release published). Per-kid per-rank percentage-band curves, 5-rung ladder standardization, consolidated Ranks side-rail drawer (+ Person/Settings editors converted to drawers), two-line rank bar, weekly-window alignment. See [RELEASE-NOTES-v0.7.2.md](RELEASE-NOTES-v0.7.2.md) + [DECISIONS_LOG.md](DECISIONS_LOG.md) "Ranks".
-- **Next:** a feature (user-directed) or the top open bug (first-parent attribution). Branch from `main`.
+- **v0.7.3 shipped** (tag `v0.7.3`, release published). Chores batch: partial credit, late make-up claims, excuse-day, due/reset labels, per-chore rotation switch day + Current/Up Next rail, chore editor rebuilt as a 3-tab side-rail drawer (monthly multi-day; one-time + Add Task removed), admin actor logging, person-delete trash. See [RELEASE-NOTES-v0.7.3.md](RELEASE-NOTES-v0.7.3.md). (v0.7.2 "Dynamic Ranks" before it.)
+- **Next:** repurpose the chore detail side-panel, or the history/model perf trim, then v0.8.0 Home Maintenance. Branch from `main`.
 
 ---
 
 ## Next up
 
-### Open bug worth doing first (small, not a feature)
-- **First-parent attribution.** Every admin action resolves the actor as `people.find(type==="parent")` → the *first* parent, so in a two-parent household everything logs as Jim. Needs the acting HA user mapped to a person (`hass.user.id` → `person.ha_user_id`) and threaded through the card's `_svc` calls + the admin/history action buttons. See [BUGS.md](BUGS.md) "Open — deferred".
+### Picked up next
+- **Repurpose the chore detail side-panel.** The desktop master-detail right panel (`_htmlChoreEditorPanel`) is a placeholder now that editing opens the drawer — fill it with useful data.
+- **Resolved:** ~~first-parent attribution~~ — shipped as **admin actor logging** (v0.7.3): `store.acting_as()` tags history `actor` with the logged-in HA user.
 
 ### Open decisions (user's call — parked)
-- **Task-instance retention:** `TASK_INSTANCE_RETENTION_DAYS = 30` in code (docs once said 60). Confirm 30 or bump it (affects how far back History + reversible-action buttons reach).
+- ~~**Task-instance retention**~~ — resolved 2026-06-06: **30 days confirmed** (`TASK_INSTANCE_RETENTION_DAYS = 30`). No need for a longer window right now.
 - ~~**Weekly-points window**~~ — resolved in v0.7.2: both card and server anchor to `rank_eval_weekday`.
 
 ### Deferred efficiency / cleanup (carried from v0.7.0; all optional)

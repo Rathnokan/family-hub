@@ -52,10 +52,8 @@
 
 ## Open — deferred (real, but not surgical; fix when next in that area)
 
-### First-parent attribution (was High #5) — **affects this family (Jim + Shannon)**
-- **Files:** `src/card/dispatch.js` (approve/deny/excuse/reject/redemption/subscription cases), `src/card/modes-admin.js` (history-row Excuse/Reject/Mark-done buttons).
-- **Symptom:** every admin action resolves the actor via `card._people().find(p => p.type === "parent")` → always the *first* parent. In a two-parent household every approval/penalty reversal is logged as Jim regardless of who tapped.
-- **Why deferred:** not a one-liner — needs the acting HA user mapped to a person (`hass.user.id` → `person.ha_user_id`) and threaded through the card. Worth a small focused task.
+### ~~First-parent attribution~~ — **RESOLVED in v0.7.3 (admin actor logging)**
+- Instead of mapping the acting HA user to a *person*, v0.7.3 records the **logged-in HA user name** directly: `store.acting_as(await _resolve_actor(hass, call))` wraps the admin handlers, `_append_history` stamps an `actor` field, and the History rows show "· by &lt;name&gt;". Parents are treated as one unit per the user's call; mostly reads "Administrator". See `history_admin_mixin.py` (`acting_as`/`_append_history`) + `services.py` (`_resolve_actor`).
 
 ### Slug collision (residual of report 1.6) — theoretical
 - The JS/Python *whitespace* divergence is fixed (both single-space now). What remains: if two people's names slugify to the **same** entity_id, HA appends `_2` to the second while `card_model.person_entity_id` returns the un-suffixed key → that person's page would miss the model. Needs the backend to expose each person's real `entity_id` if it ever matters. Not a concern for the current family. — `card_model.py:person_entity_id`

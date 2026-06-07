@@ -66,6 +66,29 @@ export const CSS_5 = `  .fh-row-lead {
     display:inline-flex; align-items:baseline; gap:3px;
     white-space:nowrap; line-height:1;
   }
+  /* v0.7.3: stack the points medal + due/reset label. The col owns the row/grid
+     slot so the due line always sits UNDER the medal regardless of how a theme
+     styles .fh-row-pts (e.g. HP renders it as a circular seal). */
+  .fh-row-pts-col {
+    display:flex; flex-direction:column; align-items:center; gap:3px; flex-shrink:0;
+  }
+  .fh-row-due {
+    font-family:var(--fh-font-body); font-size:var(--fh-text-xs); font-weight:600;
+    color:var(--fh-text-sec); white-space:nowrap; text-align:center;
+  }
+
+  /* v0.7.3: rotation rail — condensed Current / Up Next groups (theme-neutral) */
+  .fh-rot-group { margin-bottom:8px; }
+  .fh-rot-group:last-child { margin-bottom:0; }
+  .fh-rot-group-hdr {
+    font-size:var(--fh-text-xs); font-weight:800; letter-spacing:.06em;
+    text-transform:uppercase; margin-bottom:3px;
+  }
+  .fh-rot-line {
+    display:flex; align-items:baseline; justify-content:space-between; gap:8px; padding:2px 0;
+  }
+  .fh-rot-line-chore { font-size:var(--fh-text-sm); font-weight:700; }
+  .fh-rot-line-when  { font-size:var(--fh-text-xs); color:var(--fh-text-sec); white-space:nowrap; }
   .fh-row-pts-sep {
     opacity:.45; font-weight:600; font-size:.85em;
   }
@@ -910,7 +933,8 @@ export const CSS_5 = `  .fh-row-lead {
       justify-content:flex-start; align-items:center;
       gap:4px; row-gap:4px;
     }
-    .fh-row-pts   { grid-area:pts; min-width:0; }
+    .fh-row-pts-col { grid-area:pts; min-width:0; }
+    .fh-row-pts   { min-width:0; }
     .fh-row-btn   { grid-area:btn; width:100%; min-height:48px; }
 
     /* Auto-truncate descriptions instead of expand-toggle (no JS). */

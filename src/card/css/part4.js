@@ -450,8 +450,19 @@ export const CSS_4 = `    text-shadow:2px 2px 0 rgba(255,255,255,.3), 4px 4px 0 
   }
   .fh-ad-person-card {
     background: #1A2538; border: 1px solid #2A3852;
-    border-radius: 10px; overflow: hidden;
+    border-radius: 10px; overflow: hidden; position: relative;
   }
+  /* v0.7.3: person delete — red trash, lower-right corner of the card */
+  .fh-ad-person-del {
+    position: absolute; right: 10px; bottom: 8px;
+    width: 30px; height: 30px; padding: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: transparent; border: none; cursor: pointer;
+    color: var(--fh-overdue, #ff453a); opacity: .65; border-radius: 6px;
+    transition: opacity .15s, background .15s;
+  }
+  .fh-ad-person-del:hover { opacity: 1; background: rgba(255,69,58,.14); }
+  .fh-ad-person-del svg { width: 18px; height: 18px; fill: currentColor; }
   .fh-ad-person-top {
     display: flex; align-items: center; gap: 12px;
     padding: 14px 14px 6px;
@@ -790,12 +801,9 @@ export const CSS_4 = `    text-shadow:2px 2px 0 rgba(255,255,255,.3), 4px 4px 0 
     background: rgba(91,141,239,.07) !important;
   }
 
-  /* ---- Hide mobile-only edit + delete buttons at ≥1280px (row click opens the
-         inline panel, which has its own Save in the header + Delete in the footer).
-         Below 1280px these stay so the modal-based flow keeps edit/delete. ---- */
+  /* v0.7.3: editing opens the right-side drawer (row click or the edit button),
+     so the per-row edit + delete buttons stay visible at every width. */
   @media (min-width: 1280px) {
-    .fh-ad-tasks-edit-btn,
-    .fh-ad-tasks-del-btn { display: none !important; }
     .fh-ad-tasks-list-panel .fh-task-row { cursor: pointer; }
     .fh-ad-tasks-list-panel .fh-task-row:not(.fh-task-row--selected):hover {
       background: rgba(255,255,255,.025);

@@ -12,7 +12,7 @@ import { DEFAULT_COLOR, FLASH_MS, HISTORY_META, WEEKDAY_LABELS } from "../consta
 import { I } from "../constants.js";
 import { escHTML, escAttr, ini, fPts, fUSD, cap, relTime, groupHistorySkipped } from "../utils.js";
 import { getEffectiveRank, effectiveRankThresholds, getWeeklyPts, getWeeklyPtsLost, getPointsAtRisk,
-         htmlRankBar, htmlSuccessStreak,
+         htmlRankBar, htmlSuccessStreak, htmlLateClaimBtn, htmlRotationRail,
          getActiveStreaks, computeStreakProgress,
          htmlChoreRow, htmlAddReminderCTA,
          htmlGoalBanner, htmlGoalToggleBtn, storeItemIcon,
@@ -119,6 +119,7 @@ function _railPanels({ attr, naAttr, person, balance, weekly, lost, atRisk, open
         ${_railPanelKPIs(balance, weekly, lost, atRisk, openCount, pendingCount)}
         ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, color, person, attr)}
         ${_railPanelStreaks(attr, naAttr, person, color)}
+        ${(() => { const b = htmlRotationRail(person, naAttr, color); return b ? _railPanel("ROTATION", b) : ""; })()}
         ${_railPanelSubs(attr, balance, person.person_id)}
         ${_railPanelRecent(person, naAttr, color)}`;
 }
@@ -443,6 +444,7 @@ function _skippedGroup(group, card) {
                     <div class="fh-hist-name">${escHTML(e.chore_name || "")}</div>
                     <div class="fh-hist-meta">${pts}</div>
                 </div>
+                ${htmlLateClaimBtn(e)}
             </div>`;
     }).join("");
 

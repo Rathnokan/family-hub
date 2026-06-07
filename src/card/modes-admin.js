@@ -313,6 +313,9 @@ function _htmlAdToday(approvals, redemptions, groupProposals, cancelSubs, attr) 
                   <div class="fh-ad-queue-meta">${escHTML(q.person_name || "")} · ${isAppr ? "+" : "−"}${fPts(pts)}${isAppr && q.due_date ? ` · for ${escHTML(_fmtDueDay(q.due_date))}` : ""}</div>
                 </div>
                 <button class="fh-btn fh-btn-success fh-btn-sm" data-act="${isAppr ? "approve-task" : "approve-redemption"}" data-${isAppr ? "tid" : "rid"}="${isAppr ? q.task_id : q.redemption_id}">${I.check}</button>
+                ${isAppr ? `<button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="open-partial"
+                        data-tid="${q.task_id}" data-name="${escAttr(name)}" data-pts="${pts}"
+                        title="Partial credit" style="font-weight:800;font-size:1rem">½</button>` : ""}
                 <button class="fh-btn fh-btn-danger  fh-btn-sm" data-act="${isAppr ? "deny-task" : "decline-redemption"}" data-${isAppr ? "tid" : "rid"}="${isAppr ? q.task_id : q.redemption_id}">${I.close}</button>
               </div>`;
         }).join("")
@@ -490,9 +493,6 @@ function _htmlAdFamily(people, attr, card) {
                         data-pcompletionmilestone="${p.completion_milestone ?? 7}"
                         data-pcompletionbonus="${p.completion_bonus_points ?? 50}"
                         title="Edit person">${I.edit}</button>
-                <button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="open-confirm-remove-person"
-                        data-pid="${p.person_id}" data-pname="${escAttr(p.name)}"
-                        title="Remove person">${I.remove}</button>
             </div>
             ${isKid ? `
               <div class="fh-ad-person-foot">
@@ -508,6 +508,9 @@ function _htmlAdFamily(people, attr, card) {
                   <span class="fh-toggle-slider"></span>
                 </label>
               </div>` : ""}
+            <button class="fh-ad-person-del" data-act="open-confirm-remove-person"
+                    data-pid="${p.person_id}" data-pname="${escAttr(p.name)}"
+                    title="Remove ${escAttr(p.name)}">${I.trash}</button>
           </div>`;
     }).join("") || `<div class="fh-empty fh-ad-empty">No people found.</div>`;
 
@@ -678,11 +681,6 @@ function _htmlAdFamily(people, attr, card) {
                   <input type="checkbox" data-act="toggle-global-penalty" ${globalPause ? "" : "checked"}>
                   <span class="fh-toggle-slider"></span>
                 </label>
-              </div>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
-                <button class="fh-btn fh-btn-primary fh-btn-sm" data-act="open-add-task">
-                  ${I.plus} Assign one-time task
-                </button>
               </div>
             </div>
           </div>
@@ -984,8 +982,8 @@ function _htmlChoreEditorPanel(chore, people, catLabels, card) {
           </div>`
         : `
           <div class="fh-ad-tasks-panel-empty">
-            <div class="fh-ad-tasks-panel-empty-icon">↖</div>
-            <div class="fh-ad-tasks-panel-empty-text">Select a chore to edit</div>
+            <div class="fh-ad-tasks-panel-empty-icon">✎</div>
+            <div class="fh-ad-tasks-panel-empty-text">Tap a chore to edit it in the side panel.</div>
           </div>`;
 
     return `<div class="fh-ad-tasks-panel">${inner}</div>`;
@@ -1451,6 +1449,7 @@ function _renderAdminHistRow(e, firstParent) {
           <div class="fh-hist-name">${escHTML(e.chore_name || e.note || "")}</div>
           <div class="fh-hist-meta">
             ${e.person_name ? escHTML(e.person_name) + " · " : ""}${relTime(e.timestamp)}
+            ${e.actor ? ` · by ${escHTML(e.actor)}` : ""}
             ${ptsDelta}
           </div>
         </div>
@@ -1500,6 +1499,12 @@ function _renderAdminSkippedGroup(group, firstParent, card) {
             <div class="fh-hist-label" style="color:var(--fh-warning)">Skipped chores</div>
             <div class="fh-hist-name">${escHTML(group.dateDisplay)} · ${penLabel}</div>
           </div>
+          ${(firstParent && card._histFilter && group.items.some(e => e.reversible === "excuse")) ? `
+            <button class="fh-btn fh-btn-warning fh-btn-sm" data-act="excuse-day"
+                    data-pid="${escAttr(card._histFilter)}" data-day="${escAttr(group.date)}"
+                    title="Excuse every skipped chore this day">
+              ${I.excuse} Excuse day
+            </button>` : ""}
           <span class="fh-hist-expand-icon">${expanded ? "▲" : "▼"}</span>
         </div>
         <div class="fh-hist-subitems"${expanded ? "" : ' style="display:none"'}>${subItems}</div>

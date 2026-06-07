@@ -79,12 +79,6 @@ export function dispatch(act, el, card) {
 
         // ---- Admin chore table (S9 P3 item 5) --------------------------------
 
-        // Select a chore row → open inline editor panel at ≥1280px
-        case "select-chore-row":
-            card._adminSelectedChoreId = el.dataset.cid || null;
-            card._doRender(true);
-            break;
-
         // Close inline editor panel (✕ button or after save)
         case "close-chore-panel":
             card._adminSelectedChoreId = null;
@@ -362,6 +356,24 @@ export function dispatch(act, el, card) {
             card._svc("deny_task", { task_id: el.dataset.tid, denied_by: parent?.person_id || "" });
             break;
         }
+        case "open-partial":
+            card._modal = { type: "partial-credit", data: {
+                tid:  el.dataset.tid,
+                name: el.dataset.name || "",
+                pts:  el.dataset.pts || "0",
+            } };
+            card._doRender(true);
+            break;
+        case "do-partial": {
+            const parent = card._people().find(p => p.type === "parent");
+            card._svc("approve_task", {
+                task_id:         el.dataset.tid,
+                approved_by:     parent?.person_id || "",
+                credit_fraction: parseFloat(el.dataset.frac || "1"),
+            });
+            card._closeModal();
+            break;
+        }
         case "approve-redemption": {
             const parent = card._people().find(p => p.type === "parent");
             card._svc("approve_redemption", { redemption_id: el.dataset.rid, approved_by: parent?.person_id || "" });
@@ -393,6 +405,23 @@ export function dispatch(act, el, card) {
                 instance_id: el.dataset.iid,
                 rejected_by: el.dataset.rejectedBy,
                 reason: "",
+            });
+            break;
+        case "excuse-day": {
+            const parent = card._people().find(p => p.type === "parent");
+            card._svc("excuse_day", {
+                person_id:  el.dataset.pid,
+                day:        el.dataset.day,
+                excused_by: parent?.person_id || "",
+            });
+            break;
+        }
+
+        // ---- Kid late make-up claim (v0.7.3) -------------------------------
+        case "claim-late":
+            card._svc("claim_late_task", {
+                task_id:   el.dataset.iid,
+                person_id: el.dataset.pid,
             });
             break;
 
@@ -616,24 +645,21 @@ export function dispatch(act, el, card) {
             card._modal = { type: "deduct", data: { pid: el.dataset.pid, pname: el.dataset.pname } };
             card._doRender(true);
             break;
-        case "open-add-task":
-            card._modal = { type: "add-task", data: {} };
-            card._doRender(true);
-            break;
         case "open-add-chore":
-            // Close inline panel first — modal and panel share m-* element IDs
             card._adminSelectedChoreId = null;
-            card._modal = { type: "add-chore", data: {} };
+            card._modal = { type: "add-chore", surface: "drawer", data: {} };
             card._doRender(true);
             break;
+        // v0.7.3: editing a chore opens the drawer (both the row body click and the
+        // edit button route here); the chore-list stays as the rail.
+        case "select-chore-row":
         case "open-edit-chore": {
             const naAttr = card._attrs("sensor.family_hub_needs_attention");
             const chores = naAttr.all_chores || naAttr.active_chores || [];
             const chore  = chores.find(c => c.chore_id === el.dataset.cid);
             if (!chore) break;
-            // Close inline panel first — modal and panel share m-* element IDs
             card._adminSelectedChoreId = null;
-            card._modal = { type: "edit-chore", data: { chore } };
+            card._modal = { type: "edit-chore", surface: "drawer", data: { chore } };
             card._doRender(true);
             break;
         }
@@ -735,58 +761,6 @@ export function dispatch(act, el, card) {
             if (atype === "dollars") data.dollar_amount = amount;
             else data.points = Math.round(amount);
             card._svc(amode === "award" ? "award_bonus_points" : "deduct_points", data);
-            card._closeModal();
-            break;
-        }
-
-        case "ok-add-task": {
-            const taskType = v("m-tasktype") || "assigned";
-            const name     = v("m-tname").trim();
-            if (!name) break;
-
-            if (taskType === "reminder") {
-                card._svc("add_chore", {
-                    name,
-                    description:       v("m-tdesc").trim() || undefined,
-                    chore_type:        "reminder",
-                    assigned_to:       [v("m-trperson")].filter(Boolean),
-                    recurrence_type:   v("m-trrec"),
-                    approval_required: false,
-                    points:            0,
-                    category_label:    "",
-                });
-            } else if (taskType === "claimable") {
-                const cpts    = parseInt(v("m-tcpts") || "20");
-                const cexpiry = parseInt(v("m-tcexpiry") || "7");
-                card._svc("add_chore", {
-                    name,
-                    description:        v("m-tdesc").trim() || undefined,
-                    chore_type:         "claimable",
-                    points:             cpts,
-                    approval_required:  false,
-                    recurrence_type:    "one_time",
-                    expires_after_days: cexpiry,
-                    category_label:     "Bonus",
-                });
-            } else {
-                const assigned = _selectedPersonIds("m-tp-person", sr);
-                const expiry   = parseInt(v("m-texpiry") || "0");
-                const data = {
-                    name,
-                    description:       v("m-tdesc").trim() || undefined,
-                    assigned_to:       assigned,
-                    points:            int("m-tpts"),
-                    approval_required: b("m-tappr"),
-                };
-                if (expiry > 0) data.expires_after_days = expiry;
-                // Penalty applies when the task expires unfinished (needs an expiry
-                // window to ever fire — see _async_expire_tasks).
-                if (b("m-tpenalty")) {
-                    data.penalty_enabled = true;
-                    data.penalty_points  = Math.max(1, int("m-tpenalty-pts") || 5);
-                }
-                card._svc("add_task", data);
-            }
             card._closeModal();
             break;
         }
@@ -1153,6 +1127,11 @@ function _buildChorePayload(v, b, int, sr, isEdit) {
     const assigned  = _selectedPersonIds("m-assign-person", sr);
     const weekdays  = Array.from(sr.querySelectorAll(".m-wd-day:checked")).map(cb => parseInt(cb.value));
     const dayFilter = Array.from(sr.querySelectorAll(".m-df-day:checked")).map(cb => parseInt(cb.value));
+    // v0.7.3: monthly multi-day — parse the comma list (e.g. "1, 15") into 1-31 ints.
+    const domDaysRaw = (v("m-dom-days") || "")
+        .split(",").map(s => parseInt(s.trim()))
+        .filter(n => Number.isFinite(n) && n >= 1 && n <= 31);
+    const domDays = domDaysRaw.length ? [...new Set(domDaysRaw)].sort((a, b) => a - b) : [1];
     const iconVal   = _normalizeIcon(v("m-cicon"));
     const data = {
         name,
@@ -1194,6 +1173,7 @@ function _buildChorePayload(v, b, int, sr, isEdit) {
         const pool    = rotOn && poolStr ? poolStr.split(",").filter(Boolean) : [];
         data.rotation_pool    = pool;
         data.rotation_cadence = (rotOn && pool.length) ? (v("m-crot-cadence") || "per_instance") : "";
+        data.rotation_switch_weekday = parseInt(v("m-crot-switch-day") || "0") || 0;
     } else {
         data.rotation_pool    = [];
         data.rotation_cadence = "";
@@ -1208,15 +1188,17 @@ function _buildChorePayload(v, b, int, sr, isEdit) {
             weekdays,
             day_filter: dayFilter,
             ...(recType === "monthly_on_date"
-                    ? { day_of_month: Math.max(1, Math.min(31, int("m-dom"))) }
+                    ? { days_of_month: domDays, day_of_month: domDays[0] }
                     : {}),
         };
     } else {
         data.recurrence_type = recType;
         if (weekdays.length)  data.weekdays   = weekdays;
         if (dayFilter.length) data.day_filter = dayFilter;
-        if (recType === "monthly_on_date")
-            data.day_of_month = Math.max(1, Math.min(31, int("m-dom")));
+        if (recType === "monthly_on_date") {
+            data.days_of_month = domDays;
+            data.day_of_month  = domDays[0];
+        }
     }
     return data;
 }

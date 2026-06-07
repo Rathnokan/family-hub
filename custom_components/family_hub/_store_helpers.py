@@ -245,6 +245,7 @@ def _migrate_chore(chore: dict) -> dict:
     # on the configured cadence; advance logic lives in coordinator.py.
     chore.setdefault("rotation_pool", [])
     chore.setdefault("rotation_cadence", "")     # "" when rotation_pool is empty
+    chore.setdefault("rotation_switch_weekday", 0)  # v0.7.3: weekly-cadence flip day (0=Mon)
     chore.setdefault("rotation_index", 0)
     chore.setdefault("rotation_last_advanced", "")  # iso date string of last advance
 
@@ -330,6 +331,19 @@ def _advance_renewal_date(period: str, anchor: int, current_iso: str) -> str:
     return date(target_year, target_month, target_day).isoformat()
 
 
+def _monthly_days(rec: dict) -> list[int]:
+    """v0.7.3: effective day(s)-of-month for a monthly chore. Prefers the new
+    `days_of_month` list (e.g. [1, 15]); falls back to the legacy single
+    `day_of_month`. Returns a clean, sorted, deduped list in 1-31."""
+    days = rec.get("days_of_month")
+    if isinstance(days, list) and days:
+        out = sorted({int(d) for d in days if isinstance(d, (int, float)) and 1 <= int(d) <= 31})
+        if out:
+            return out
+    dom = rec.get("day_of_month")
+    return [int(dom)] if dom else [1]
+
+
 def _days_until_reset(chore: dict, today: date) -> int:
     """
     Days until this recurring chore will next be replaced by a fresh instance.
@@ -359,20 +373,20 @@ def _days_until_reset(chore: dict, today: date) -> int:
             return n
 
     if r_type == RECURRENCE_MONTHLY_ON_DATE:
-        dom = rec.get("day_of_month", 1)
-        try:
-            this_month = today.replace(day=dom)
-            if this_month > today:
-                return (this_month - today).days
-        except ValueError:
-            pass
-        try:
-            if today.month == 12:
-                nxt = today.replace(year=today.year + 1, month=1, day=dom)
-            else:
-                nxt = today.replace(month=today.month + 1, day=dom)
-            return (nxt - today).days
-        except ValueError:
-            return 28
+        # Soonest future configured day-of-month, across this month + next month.
+        nm_year  = today.year + (1 if today.month == 12 else 0)
+        nm_month = 1 if today.month == 12 else today.month + 1
+        best = None
+        for dom in _monthly_days(rec):
+            for (yr, mo) in ((today.year, today.month), (nm_year, nm_month)):
+                try:
+                    cand = date(yr, mo, dom)
+                except ValueError:
+                    continue
+                if cand > today:
+                    delta = (cand - today).days
+                    if best is None or delta < best:
+                        best = delta
+        return best if best is not None else 28
 
     return 7

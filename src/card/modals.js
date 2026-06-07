@@ -119,107 +119,32 @@ export function mPointAdjust(m) {
 }
 
 // ---------------------------------------------------------------------------
-// Add task (one-time, claimable, or reminder)
+// Partial credit picker (v0.7.3) — "You tried, but didn't finish"
 // ---------------------------------------------------------------------------
 
-/**
- * Add task modal — three task types selectable at top:
- *   Assigned   — person checkboxes, points, approval toggle, optional expiry + penalty
- *   Claimable  — points + required expiry field, auto-category "Bonus"
- *   Reminder   — person select + recurrence only, routes to add_chore
- */
-export function mAddTask(people) {
-    return mWrap("Add task",
-        `<!-- Task type selector -->
-       <div class="fh-field">
-         <label class="fh-label">Task type</label>
-         <select class="fh-select" id="m-tasktype">
-           <option value="assigned">Assigned — give to specific people</option>
-           <option value="claimable">Claimable — first come first served bonus</option>
-           <option value="reminder">Reminder — no points, just a nudge</option>
-         </select>
-       </div>
-
-       <!-- Name (all types) -->
-       <div class="fh-field">
-         <label class="fh-label">Task name *</label>
-         <input class="fh-input" id="m-tname" type="text" autofocus>
-       </div>
-       <div class="fh-field">
-         <label class="fh-label">Description (optional)</label>
-         <input class="fh-input" id="m-tdesc" type="text" placeholder="More detail…">
-       </div>
-
-       <!-- Assigned section -->
-       <div id="m-task-assigned-section">
-         <div class="fh-field">
-           <label class="fh-label">Assign to (select all that apply)</label>
-           ${multiPersonCheckboxes(people, [], "m-tp-person")}
-         </div>
-         <div class="fh-row">
-           <div class="fh-field">
-             <label class="fh-label">Points</label>
-             <input class="fh-input" id="m-tpts" type="number" min="0" value="10">
-           </div>
-           <div class="fh-field" style="justify-content:flex-end">
-             <div class="fh-checkbox-row" style="margin-top:auto;padding-bottom:9px">
-               <input type="checkbox" id="m-tappr">
-               <label for="m-tappr" style="font-size:.85rem">Needs approval</label>
-             </div>
-           </div>
-         </div>
-         <div class="fh-field">
-           <label class="fh-label">Expires after (days, optional)</label>
-           <input class="fh-input" id="m-texpiry" type="number" min="1"
-                  placeholder="Leave blank = no expiry">
-         </div>
-         <div class="fh-checkbox-row">
-           <input type="checkbox" id="m-tpenalty">
-           <label for="m-tpenalty" style="font-size:.88rem">Apply penalty if not completed before expiry</label>
-         </div>
-         <div id="m-task-penalty-section" class="fh-field" style="display:none">
-           <label class="fh-label">Penalty points</label>
-           <input class="fh-input" id="m-tpenalty-pts" type="number" min="1" value="5">
-         </div>
-       </div>
-
-       <!-- Claimable section -->
-       <div id="m-task-claimable-section" style="display:none">
-         <div class="fh-row">
-           <div class="fh-field">
-             <label class="fh-label">Points reward</label>
-             <input class="fh-input" id="m-tcpts" type="number" min="0" value="20">
-           </div>
-           <div class="fh-field">
-             <label class="fh-label">Expires after (days) *</label>
-             <input class="fh-input" id="m-tcexpiry" type="number" min="1" value="7">
-           </div>
-         </div>
-       </div>
-
-       <!-- Reminder section -->
-       <div id="m-task-reminder-section" style="display:none">
-         <div class="fh-row">
-           <div class="fh-field">
-             <label class="fh-label">Who?</label>
-             <select class="fh-select" id="m-trperson">
-               ${people.map(p => `<option value="${p.person_id}">${escHTML(p.name)}</option>`).join("")}
-             </select>
-           </div>
-           <div class="fh-field">
-             <label class="fh-label">Recurrence</label>
-             <select class="fh-select" id="m-trrec">
-               ${opts([
-                   { value: "daily",           label: "Daily" },
-                   { value: "weekly",          label: "Weekly" },
-                   { value: "every_n_days",    label: "Every N days" },
-                   { value: "monthly_on_date", label: "Monthly" },
-               ], "daily")}
-             </select>
-           </div>
-         </div>
-       </div>`,
-        "Add task", "ok-add-task");
+export function mPartialCredit(m) {
+    const pts = parseInt(m.data.pts || "0");
+    const buttons = [25, 50, 75].map(p => {
+        const award = Math.round(pts * p / 100);
+        return `
+          <button class="fh-btn fh-btn-primary" data-act="do-partial"
+                  data-tid="${escAttr(m.data.tid)}" data-frac="${p / 100}"
+                  style="flex:1;flex-direction:column;gap:2px;padding:12px 6px">
+            <span style="font-size:1.1rem;font-weight:800">${p}%</span>
+            <span style="font-size:.78rem;opacity:.85">${award} pts</span>
+          </button>`;
+    }).join("");
+    return `
+      <div class="fh-modal">
+        <div class="fh-modal-title">Partial credit — ${escHTML(m.data.name)}</div>
+        <p style="font-size:.85rem;color:var(--fh-text-sec);margin:0;line-height:1.5">
+          "You tried, but didn't finish." Award part of the ${pts} points and approve.
+        </p>
+        <div class="fh-row" style="gap:8px;margin-top:4px">${buttons}</div>
+        <div class="fh-modal-footer">
+          <button class="fh-btn fh-btn-ghost" data-act="close-modal">Cancel</button>
+        </div>
+      </div>`;
 }
 
 // ---------------------------------------------------------------------------
@@ -354,13 +279,18 @@ export function choreFormFields(chore, isEdit, people, catLabels, activeTab = "d
     const selMeta  = FH_ICON_META.find(m => m.key === c.icon);
     const selLabel = selMeta ? selMeta.label : (c.icon || "");
 
-    // ---- Tab strip ----------------------------------------------------------
+    // v0.7.3: monthly multi-day (days_of_month list; legacy single day_of_month fallback)
+    const monthDays = (Array.isArray(rec.days_of_month) && rec.days_of_month.length)
+        ? rec.days_of_month
+        : (rec.day_of_month ? [rec.day_of_month] : [1]);
+    // One-time is retired — legacy one-time chores edit as Daily.
+    const recSel = recType === "one_time" ? "daily" : recType;
+
+    // ---- Tab strip (v0.7.3: 3 logical tabs) ---------------------------------
     const tabs = [
         { key: "details",   label: "Details"          },
-        { key: "icon",      label: "Icon"             },
         { key: "schedule",  label: "Schedule"         },
         { key: "rewards",   label: "Points & Rewards" },
-        { key: "reminders", label: "Reminders"        },
     ];
     const tabStrip = `
       <div class="fh-chore-tabs">
@@ -390,7 +320,22 @@ export function choreFormFields(chore, isEdit, people, catLabels, activeTab = "d
           ${items.map(t => `<option value="${escAttr(t.key)}">${escHTML(t.name)}</option>`).join("")}
         </optgroup>`).join("");
 
-    // ---- Details pane: name / desc / icon / type+category / assignees ------
+    // ---- Icon search handler (used by the collapsible Icon editor in Details) -
+    const iconSearchHandler =
+        `((el)=>{` +
+            `const q=el.value.toLowerCase().trim(),` +
+            `p=el.closest('.fh-chore-tab-pane');` +
+            `p.querySelectorAll('.fh-icon-picker-cat-hdr').forEach(h=>{` +
+                `const g=h.nextElementSibling;let n=0;` +
+                `g.querySelectorAll('.fh-icon-cell').forEach(b=>{` +
+                    `const m=!q||(b.title+' '+b.dataset.icon).toLowerCase().includes(q);` +
+                    `b.style.display=m?'':'none';if(m)n++;` +
+                `});` +
+                `h.style.display=n?'':'none';g.style.display=n?'':'none';` +
+            `});` +
+        `})(this)`;
+
+    // ---- Details pane: icon (collapsible, top) / name / desc / type+cat / reminder ----
     const detailsPane = pane("details", `
         ${!isEdit ? `
         <div class="fh-field fh-tpl-picker-field">
@@ -404,15 +349,26 @@ export function choreFormFields(chore, isEdit, people, catLabels, activeTab = "d
                     data-act="pick-template">Apply</button>
           </div>
         </div>` : ""}
-        <div class="fh-field">
-          <label class="fh-label">Chore name *</label>
-          <input class="fh-input" id="m-cname" type="text"
-                 value="${escAttr(c.name || "")}" autofocus>
+        <div class="fh-row">
+          <div class="fh-field" style="flex:3">
+            <label class="fh-label">Chore name *</label>
+            <input class="fh-input" id="m-cname" type="text"
+                   value="${escAttr(c.name || "")}" autofocus>
+          </div>
+          ${isEdit ? `
+          <div class="fh-field" style="flex:1">
+            <label class="fh-label">Active</label>
+            <label class="fh-toggle" style="margin-top:8px" title="Uncheck to pause — no new tasks generate">
+              <input type="checkbox" id="m-cactive" ${c.active !== false ? "checked" : ""}>
+              <span class="fh-toggle-slider"></span>
+            </label>
+          </div>` : ""}
         </div>
         <div class="fh-field">
           <label class="fh-label">Description (optional)</label>
-          <input class="fh-input" id="m-cdesc" type="text"
-                 value="${escAttr(c.description || "")}" placeholder="More detail…">
+          <textarea class="fh-input" id="m-cdesc" rows="3"
+                    style="min-height:64px;resize:vertical;line-height:1.4"
+                    placeholder="More detail…">${escHTML(c.description || "")}</textarea>
         </div>
         <div class="fh-row">
           <div class="fh-field">
@@ -435,85 +391,76 @@ export function choreFormFields(chore, isEdit, people, catLabels, activeTab = "d
             </select>
           </div>
         </div>
-        ${isEdit ? `
+        <details class="fh-icon-details" open>
+          <summary class="fh-icon-summary">
+            <span class="fh-icon-summary-title">Icon</span>
+            <span class="fh-icon-selected-wrap" id="m-icon-selected">
+              ${c.icon
+                ? `<span class="fh-icon-sel-icon" style="display:inline-flex;width:20px;height:20px;color:var(--fh-accent)">${choreIcon(c.icon, null, "20px")}</span> <span class="fh-icon-sel-lbl">${escHTML(selLabel)}</span>`
+                : `<span class="fh-icon-sel-none">Tap to choose</span>`}
+            </span>
+          </summary>
+          <input type="hidden" id="m-cicon" value="${escAttr(c.icon || "")}">
+          <input class="fh-input fh-icon-search" id="m-icon-search" type="search"
+                 placeholder="Search icons…" autocomplete="off"
+                 oninput="${iconSearchHandler}">
+          <div class="fh-icon-tab-grid">${iconGridHtml}</div>
+        </details>
+        <div class="fh-divider"></div>
+        <div class="fh-form-group-lbl">Reminder</div>
         <div class="fh-field">
-          <label class="fh-label">Active</label>
-          <label class="fh-toggle" style="margin-top:10px">
-            <input type="checkbox" id="m-cactive" ${c.active !== false ? "checked" : ""}>
-            <span class="fh-toggle-slider"></span>
-          </label>
-          <div class="fh-field-help">Uncheck to pause this chore — no new tasks will be generated.</div>
-        </div>` : ""}
+          <label class="fh-label">Reminder time (-1 = off)</label>
+          <input class="fh-input" id="m-reminder-time" type="number" min="-1" max="2359"
+                 placeholder="-1 (off)"
+                 value="${c.reminder_time !== undefined ? c.reminder_time : -1}">
+          <div class="fh-field-help">
+            HHMM — e.g. 1900 for 7:00 PM. One push per task instance when the time
+            is reached and it's still pending.
+          </div>
+        </div>
+    `);
+
+    // ---- Schedule pane: who → recurrence → rotation -------------------------
+    const schedulePane = pane("schedule", `
+        <div class="fh-form-group-lbl">Who's doing it</div>
         <div class="fh-field">
-          <label class="fh-label">Assign to</label>
           <div class="fh-checkbox-row" style="margin-bottom:4px">
             <input type="checkbox" id="m-everyone">
             <label for="m-everyone" style="font-size:.85rem;font-weight:600;cursor:pointer">Everyone</label>
           </div>
           ${multiPersonCheckboxes(people, assigned, "m-assign-person")}
         </div>
-    `);
 
-    // ---- Icon pane: search + grouped picker grid ----------------------------
-    const iconSearchHandler =
-        `((el)=>{` +
-            `const q=el.value.toLowerCase().trim(),` +
-            `p=el.closest('.fh-chore-tab-pane');` +
-            `p.querySelectorAll('.fh-icon-picker-cat-hdr').forEach(h=>{` +
-                `const g=h.nextElementSibling;let n=0;` +
-                `g.querySelectorAll('.fh-icon-cell').forEach(b=>{` +
-                    `const m=!q||(b.title+' '+b.dataset.icon).toLowerCase().includes(q);` +
-                    `b.style.display=m?'':'none';if(m)n++;` +
-                `});` +
-                `h.style.display=n?'':'none';g.style.display=n?'':'none';` +
-            `});` +
-        `})(this)`;
-
-    const iconPane = pane("icon", `
-        <input type="hidden" id="m-cicon" value="${escAttr(c.icon || "")}">
-        <div class="fh-icon-selected-wrap" id="m-icon-selected">
-          ${c.icon
-            ? `<span class="fh-icon-sel-icon" style="display:inline-flex;width:20px;height:20px;color:var(--fh-accent)">${choreIcon(c.icon, null, "20px")}</span>
-               <span class="fh-icon-sel-lbl">${escHTML(selLabel)}</span>`
-            : `<span class="fh-icon-sel-none">No icon selected — pick one below</span>`}
-        </div>
-        <input class="fh-input fh-icon-search" id="m-icon-search" type="search"
-               placeholder="Search icons…" autocomplete="off"
-               oninput="${iconSearchHandler}">
-        <div class="fh-icon-tab-grid">
-          ${iconGridHtml}
-        </div>
-    `);
-
-    // ---- Schedule pane: recurrence / days / expiry / claimable ------------
-    const schedulePane = pane("schedule", `
+        <div class="fh-divider"></div>
+        <div class="fh-form-group-lbl">Recurrence</div>
         <div class="fh-field">
-          <label class="fh-label">Recurrence</label>
           <select class="fh-select" id="m-crec">
             ${opts([
                 { value: "daily",           label: "Daily" },
                 { value: "weekly",          label: "Weekly" },
                 { value: "monthly_on_date", label: "Monthly" },
-                { value: "one_time",        label: "One-time" },
-            ], recType)}
+            ], recSel)}
           </select>
         </div>
         <div id="m-dayfilter-section" class="fh-field" style="display:none">
-          <label class="fh-label">Restrict to days (leave empty = every day)</label>
+          <label class="fh-label">Fires on (leave empty = every day)</label>
           <div class="fh-weekday-row">
             ${weekdayChips(rec.day_filter || [], "m-df-day")}
           </div>
+          <div class="fh-field-help">Active that day only — if not done that day it's marked skipped.</div>
         </div>
         <div id="m-weekdays-section" class="fh-field" style="display:none">
-          <label class="fh-label">Day(s) of week</label>
+          <label class="fh-label">Reset day(s)</label>
           <div class="fh-weekday-row">
             ${weekdayChips(rec.weekdays || [], "m-wd-day")}
           </div>
+          <div class="fh-field-help">Stays active until the next reset day, then it's skipped and a fresh one appears.</div>
         </div>
         <div id="m-dom-section" class="fh-field" style="display:none">
-          <label class="fh-label">Day of month (1–31)</label>
-          <input class="fh-input" id="m-dom" type="number" min="1" max="31"
-                 value="${rec.day_of_month || 1}">
+          <label class="fh-label">Day(s) of month</label>
+          <input class="fh-input" id="m-dom-days" type="text"
+                 placeholder="e.g. 1, 15" value="${escAttr(monthDays.join(', '))}">
+          <div class="fh-field-help">One or more days 1–31, comma-separated — fires on each (e.g. the 1st and 15th).</div>
         </div>
         <div id="m-chore-expiry-section" class="fh-field" style="display:none">
           <label class="fh-label">Expires after (days)</label>
@@ -553,7 +500,7 @@ export function choreFormFields(chore, isEdit, people, catLabels, activeTab = "d
             <label for="m-crot-enabled" style="font-size:.88rem">Cycle this chore through a pool of people</label>
           </div>
           <div id="m-rotation-config" class="fh-field" style="display:none">
-            <label class="fh-label">Pool (top of list takes the next instance)</label>
+            <label class="fh-label">Order — top is Current, the rest are Up Next</label>
             <input type="hidden" id="m-crot-pool-order" value="${escAttr((c.rotation_pool || []).join(","))}">
             <div id="m-crot-pool-widget" class="fh-rot-pool">
               ${rotationPoolEditor(people, c.rotation_pool || [])}
@@ -561,16 +508,26 @@ export function choreFormFields(chore, isEdit, people, catLabels, activeTab = "d
             <label class="fh-label" style="margin-top:6px">Cadence</label>
             <select class="fh-select" id="m-crot-cadence">
               ${opts([
-                  { value: "daily",        label: "Daily (advance every day)" },
-                  { value: "weekly",       label: "Weekly (advance on Mondays)" },
-                  { value: "per_instance", label: "Per instance (advance when chore generates)" },
+                  { value: "per_instance", label: "Per instance (advance each time it regenerates)" },
+                  { value: "weekly",       label: "Weekly (a kid holds it all week, flips on the switch day)" },
               ], c.rotation_cadence || "per_instance")}
             </select>
+            <div id="m-crot-switch-day-wrap" class="fh-field" style="margin-top:6px;${c.rotation_cadence === "weekly" ? "" : "display:none"}">
+              <label class="fh-label">Switch day</label>
+              <select class="fh-select" id="m-crot-switch-day">
+                ${opts([
+                    { value: "0", label: "Monday" },    { value: "1", label: "Tuesday" },
+                    { value: "2", label: "Wednesday" }, { value: "3", label: "Thursday" },
+                    { value: "4", label: "Friday" },    { value: "5", label: "Saturday" },
+                    { value: "6", label: "Sunday" },
+                ], String(c.rotation_switch_weekday ?? 0))}
+              </select>
+            </div>
             <div class="fh-field-help">
-              Reorder with ↑/↓ to control whose turn is next. Pair a "daily" chore with
-              "weekly" cadence to give each kid a week-long shift; pair daily+daily to
-              cycle every day. The &quot;Assign to&quot; selection above is overridden while
-              rotation is on, and inactive people are skipped automatically.
+              Use ↑/↓ to set the order — the top person is Current; saving makes them
+              the active holder, and the next firing advances to who's Up Next. The
+              "Who's doing it" selection above is overridden while rotation is on, and
+              inactive people are skipped automatically.
             </div>
           </div>
         </div>
@@ -624,29 +581,13 @@ export function choreFormFields(chore, isEdit, people, catLabels, activeTab = "d
         </div>
     `);
 
-    // ---- Reminders pane -----------------------------------------------------
-    const remindersPane = pane("reminders", `
-        <div class="fh-field">
-          <label class="fh-label">Reminder time (-1 = off)</label>
-          <input class="fh-input" id="m-reminder-time" type="number" min="-1" max="2359"
-                 placeholder="-1 (off)"
-                 value="${c.reminder_time !== undefined ? c.reminder_time : -1}">
-          <div class="fh-field-help">
-            HHMM format — e.g. 1900 for 7:00 PM. Sends a push notification once per task instance
-            when local time reaches this value and the task is still pending.
-          </div>
-        </div>
-    `);
-
     return `
         ${isEdit ? `<input type="hidden" id="m-cid" value="${c.chore_id}">` : ""}
         ${tabStrip}
         <div class="fh-chore-tab-panes">
           ${detailsPane}
-          ${iconPane}
           ${schedulePane}
           ${rewardsPane}
-          ${remindersPane}
         </div>`;
 }
 
@@ -662,7 +603,7 @@ export function mChoreForm(chore, isEdit, people, catLabels, activeTab = "detail
     const c     = chore || {};
     const title = isEdit ? `Edit — ${c.name}` : "Add chore";
     const okAct = isEdit ? "ok-edit-chore" : "ok-add-chore";
-    return mWrap(title, choreFormFields(chore, isEdit, people, catLabels, activeTab),
+    return dWrap(title, choreFormFields(chore, isEdit, people, catLabels, activeTab),
         isEdit ? "Save changes" : "Add chore", okAct);
 }
 
@@ -1436,9 +1377,12 @@ export function rotationPoolEditor(people, orderedIds) {
             const color  = p.avatar_color || DEFAULT_COLOR;
             const upDis  = i === 0 ? "disabled" : "";
             const dnDis  = i === ordered.length - 1 ? "disabled" : "";
-            return `
-              <div class="fh-rot-item" data-pid="${escAttr(p.person_id)}" style="--chip-color:${color}">
-                <span class="fh-rot-num">${i + 1}</span>
+            // v0.7.3: Current / Up Next section headers so it's obvious whose turn it is.
+            const header = i === 0
+                ? `<div class="fh-rot-section-hdr">Current</div>`
+                : (i === 1 ? `<div class="fh-rot-section-hdr">Up Next</div>` : "");
+            return `${header}
+              <div class="fh-rot-item${i === 0 ? " fh-rot-item--current" : ""}" data-pid="${escAttr(p.person_id)}" style="--chip-color:${color}">
                 <span class="fh-avatar" style="background:${color};width:22px;height:22px;font-size:.7rem">${ini(p.name)}</span>
                 <span class="fh-rot-name">${escHTML(p.name)}</span>
                 <button type="button" class="fh-rot-ctrl" data-act="rot-pool-up"

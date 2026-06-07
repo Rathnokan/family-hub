@@ -14,6 +14,25 @@
 import { choreIcon } from "../icons.js";
 import { escHTML, escAttr, relTime } from "../utils.js";
 
+/**
+ * v0.7.3: late make-up "Claim" button for a skipped history entry on a kid's
+ * personal History tab. Only renders when the entry is a still-claimable skip
+ * (the referenced instance is still STATUS_SKIPPED — not already excused or
+ * claimed). Claiming routes to claim_late_task: it always needs parent approval
+ * and is partial-eligible. Returns "" otherwise so themes can drop it in
+ * unconditionally.
+ */
+export function htmlLateClaimBtn(entry) {
+    if (!entry || entry.type !== "task_skipped") return "";
+    if (entry.instance_status !== "skipped") return "";
+    if (!entry.reference_id || !entry.person_id) return "";
+    return `<button class="fh-btn fh-btn-ghost fh-btn-sm fh-late-claim"
+                    data-act="claim-late"
+                    data-iid="${escAttr(entry.reference_id)}"
+                    data-pid="${escAttr(entry.person_id)}"
+                    title="Claim this late — a parent has to approve it">Claim</button>`;
+}
+
 // v0.6.3: small wrapper that renders the store-item icon only when one is set.
 // Themes call this rather than choreIcon directly so unset items don't get a
 // fallback dot mixed into the store list.
@@ -217,6 +236,86 @@ export function htmlRankBar(rankIndex, weeklyPts, dropThr, gainThr, ranks, color
             </span>
             <span class="fh-rank-bar-status">${escHTML(statusText)}</span>
         </div>`;
+}
+
+// ---------------------------------------------------------------------------
+// Rotation status (v0.7.3) — "whose week is it" for rotating chores
+// ---------------------------------------------------------------------------
+
+/**
+ * For each rotating chore the kid is in the pool for, return whose turn it is
+ * now, who's next, and when it switches. Computed from naAttr.active_chores
+ * (rotation_pool / rotation_cadence / assigned_to) + naAttr.people — no fetch.
+ */
+export function getRotationStatus(person, naAttr) {
+    const pid = person?.person_id;
+    if (!pid) return [];
+    const people   = naAttr?.people || [];
+    const nameOf   = id => people.find(p => p.person_id === id)?.name || "—";
+    const isActive = id => { const p = people.find(x => x.person_id === id); return p && p.active !== false; };
+    const out = [];
+    for (const c of (naAttr?.active_chores || [])) {
+        const pool = c.rotation_pool || [];
+        if (!pool.includes(pid)) continue;
+        const activeIds = pool.filter(isActive);
+        if (!activeIds.length) continue;
+        const current = (c.assigned_to && c.assigned_to[0]) || activeIds[0];
+        const ci      = activeIds.indexOf(current);
+        const nextId  = activeIds[((ci + 1) % activeIds.length + activeIds.length) % activeIds.length];
+        const cad     = c.rotation_cadence || "";
+        // When this chore next switches hands, as a friendly date label.
+        let switchWhen = "";
+        if (cad === "weekly") {
+            const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+            const sw = c.rotation_switch_weekday ?? 0;       // server 0=Mon
+            const jsTarget = (sw + 1) % 7;                   // → JS 0=Sun..6=Sat
+            const now = new Date(); now.setHours(0, 0, 0, 0);
+            let delta = (jsTarget - now.getDay() + 7) % 7;
+            if (delta === 0) delta = 7;                      // next occurrence, not today
+            const d = new Date(now); d.setDate(d.getDate() + delta);
+            switchWhen = `${WD[d.getDay()]} ${d.getMonth() + 1}/${d.getDate()}`;
+        } else if (cad === "per_instance") {
+            switchWhen = "next time";
+        } else if (cad === "daily") {
+            switchWhen = "tomorrow";
+        }
+        out.push({
+            chore:       c.name,
+            mine:        current === pid,
+            youNext:     nextId === pid && current !== pid,
+            currentName: nameOf(current),
+            nextName:    nameOf(nextId),
+            switchWhen,
+        });
+    }
+    return out;
+}
+
+/**
+ * Theme-neutral rotation rail body, split into two condensed labelled groups:
+ *   Current        — chores the kid holds right now
+ *   Up Next (date) — chores rotating to the kid next, with the switch date
+ * Returns "" when neither group has anything, so a theme can drop it in
+ * conditionally.
+ */
+export function htmlRotationRail(person, naAttr, accent) {
+    const rows = getRotationStatus(person, naAttr);
+    const current = rows.filter(r => r.mine);
+    const upNext  = rows.filter(r => r.youNext);
+    if (!current.length && !upNext.length) return "";
+    const tone = accent || "var(--fh-accent)";
+
+    const group = (label, items, withWhen) => items.length ? `
+        <div class="fh-rot-group">
+          <div class="fh-rot-group-hdr" style="color:${tone}">${escHTML(label)}</div>
+          ${items.map(r => `
+            <div class="fh-rot-line">
+              <span class="fh-rot-line-chore">${escHTML(r.chore)}</span>
+              ${withWhen && r.switchWhen ? `<span class="fh-rot-line-when">${escHTML(r.switchWhen)}</span>` : ""}
+            </div>`).join("")}
+        </div>` : "";
+
+    return group("Current", current, false) + group("Up Next", upNext, true);
 }
 
 // ---------------------------------------------------------------------------
@@ -486,6 +585,43 @@ export function groupByCategory(tasks, catOrder) {
  *     iconColor?:      (t, isOverdue) => "#F2EBD6",
  *   }
  */
+/**
+ * v0.7.3: friendly "when is this due / when does it reset" label for a chore row.
+ *
+ * Recurring non-daily chores that are still in-play (their backend row carries
+ * recurrence_type + days_until_reset) show the NEXT reset/occurrence day so a
+ * weekly reads "Wednesday" and a twice-weekly reads "Thursday" instead of a bare
+ * "Today" (or nothing). Everything else (daily, one-time, a chore on its actual
+ * due day) is relative to due_date: Today / Tomorrow / weekday / short date.
+ */
+function _dueLabel(t) {
+    if (!t) return "";
+    const WD = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+
+    // In-play recurring chore → show when it next resets / comes due.
+    const rt  = t.recurrence_type;
+    const dur = Number(t.days_until_reset);
+    if (rt && rt !== "one_time" && rt !== "daily" && Number.isFinite(dur) && dur > 0) {
+        const target = new Date(today); target.setDate(target.getDate() + dur);
+        if (dur === 1) return "Tomorrow";
+        if (dur <= 6) return WD[target.getDay()];
+        if (dur === 7) return `Next ${WD[target.getDay()].slice(0, 3)}`;
+        return `${target.getMonth() + 1}/${target.getDate()}`;
+    }
+
+    // Otherwise relative to the due date (daily / one-time / weekly on its due day).
+    if (!t.due_date) return "";
+    const due = new Date(t.due_date + "T00:00:00");
+    if (isNaN(due.getTime())) return "";
+    const days = Math.round((due - today) / 86400000);
+    if (days < 0)  return "";
+    if (days === 0) return "Today";
+    if (days === 1) return "Tomorrow";
+    if (days <= 6)  return WD[due.getDay()];
+    return `${due.getMonth() + 1}/${due.getDate()}`;
+}
+
 export function htmlChoreRow(t, cfg, person, card, opts = {}) {
     const idx         = opts.index;
     const isSubmitted = !!(card && card._pendingSubmit && card._pendingSubmit.has(t.task_id))
@@ -564,22 +700,25 @@ export function htmlChoreRow(t, cfg, person, card, opts = {}) {
 
     // Points medal. Dual display when both reward + penalty are configured so
     // kids see "+15 / −5" at a glance instead of burying the penalty in copy.
-    let ptsHtml;
+    let ptsClass = "fh-row-pts", ptsInner = "";
     if (isReminder) {
-        ptsHtml = `<div class="fh-row-pts"></div>`;
+        ptsInner = "";
     } else if (pts && hasPenalty) {
-        ptsHtml = `<div class="fh-row-pts fh-row-pts--dual">`
-                +   `<span class="fh-row-pts-pos">+${pts}</span>`
-                +   `<span class="fh-row-pts-sep">/</span>`
-                +   `<span class="fh-row-pts-neg">−${t.penalty_points}</span>`
-                + `</div>`;
+        ptsClass += " fh-row-pts--dual";
+        ptsInner = `<span class="fh-row-pts-pos">+${pts}</span>`
+                 + `<span class="fh-row-pts-sep">/</span>`
+                 + `<span class="fh-row-pts-neg">−${t.penalty_points}</span>`;
     } else if (pts) {
-        ptsHtml = `<div class="fh-row-pts">+${pts}</div>`;
+        ptsInner = `+${pts}`;
     } else if (hasPenalty) {
-        ptsHtml = `<div class="fh-row-pts"><span class="fh-row-pts-neg">−${t.penalty_points}</span></div>`;
-    } else {
-        ptsHtml = `<div class="fh-row-pts"></div>`;
+        ptsInner = `<span class="fh-row-pts-neg">−${t.penalty_points}</span>`;
     }
+    // v0.7.3: due/reset label sits in a column UNDER the points medal —
+    // "Today / Tomorrow / Wednesday". Wrapped so it never lands inside a themed
+    // medal (e.g. HP's circular seal).
+    const dueText = (!isReminder && !isSubmitted) ? _dueLabel(t) : "";
+    const dueHtml = dueText ? `<div class="fh-row-due">${escHTML(dueText)}</div>` : "";
+    const ptsHtml = `<div class="fh-row-pts-col"><div class="${ptsClass}">${ptsInner}</div>${dueHtml}</div>`;
 
     // Optional extra data-* attrs on the action button (e.g. Mission Control's
     // streak/milestone/name for celebration trigger).

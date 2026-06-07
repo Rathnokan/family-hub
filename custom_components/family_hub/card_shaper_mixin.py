@@ -545,6 +545,7 @@ class CardShaperMixin:
                 "streak_bonus_points":    c.get("streak_bonus_points", 0),
                 "rotation_pool":          c.get("rotation_pool", []),
                 "rotation_cadence":       c.get("rotation_cadence", ""),
+                "rotation_switch_weekday": c.get("rotation_switch_weekday", 0),
                 "rotation_index":         c.get("rotation_index", 0),
             })
         return sorted(result, key=lambda x: (x["sort_order"], x["name"]))

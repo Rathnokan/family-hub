@@ -34,6 +34,27 @@
 
 ---
 
+## Chores (v0.7.3)
+
+### Editing is a side-rail drawer; the chore-list rail stays
+- **Decision:** Chore add/edit opens the `dWrap` drawer (`mChoreForm`, `surface:"drawer"`) from both the row click and the edit button. The desktop master-detail inline editor (`_htmlChoreEditorPanel`) is retired to a placeholder; the chore-list panel remains as the rail.
+- **Why:** `choreFormFields` is shared by the modal and the inline panel, so one reorg (5 tabs → **Details / Schedule / Points & Rewards**) lands in both; the drawer matches the Ranks/Person editors the user prefers. The right panel is reserved for "different data, a future cycle."
+- **Don't:** Don't reintroduce a second edit surface — route all chore edits through the drawer.
+
+### One-time chores + the Add Task quick flow are removed
+- **Decision:** Dropped the `one_time` recurrence option and deleted `mAddTask` + `add-task`/`ok-add-task`. One-offs use **Award bonus points**. `RECURRENCE_ONE_TIME` and existing one-time records stay in the backend (legacy, just not creatable; legacy one-time chores edit as Daily).
+- **Why:** Setting up a one-time *chore* was heavier than the value; bonus points + a note covers it.
+
+### Monthly recurrence is multi-day
+- **Decision:** `recurrence.days_of_month: [int]` (e.g. `[1, 15]`); legacy single `day_of_month` is the fallback via `_store_helpers._monthly_days`. The editor takes a comma list; tick due-check and `_days_until_reset` use the soonest configured day.
+
+### Admin actor logging via a transient store field
+- **Decision:** `store.acting_as(name)` (async context manager) sets `self._current_actor`; `_append_history` stamps `actor` on every entry written inside the block, reset in `finally`. Service handlers wrap the mutation with `acting_as(await _resolve_actor(hass, call))` (HA user name, fallback "Admin").
+- **Why:** One choke point, no per-method signature churn. Parents are one unit — record the **HA login name**, not a person mapping. The `finally` reset prevents the tick / kid actions from inheriting a stale actor.
+- **Don't:** Don't thread `actor` through individual store methods; use `acting_as`.
+
+---
+
 ## Storage & data shape
 
 ### One JSON file, never touched by code updates

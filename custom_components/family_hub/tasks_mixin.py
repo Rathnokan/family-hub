@@ -57,6 +57,7 @@ from .const import (
     HISTORY_TASK_COMPLETED,
     HISTORY_TASK_DENIED,
     HISTORY_TASK_EXCUSED,
+    HISTORY_TASK_LATE_CLAIMED,
     HISTORY_TASK_MARKED_COMPLETE,
     HISTORY_TASK_REJECTED,
     HISTORY_TASK_SKIPPED,
@@ -239,7 +240,9 @@ class TasksMixin:
         await self.async_save()
         return instance
 
-    async def async_approve_task(self, instance_id: str, approved_by: str) -> dict | None:
+    async def async_approve_task(
+        self, instance_id: str, approved_by: str, credit_fraction: float = 1.0
+    ) -> dict | None:
         instance = self.get_task_instance(instance_id)
         if not instance or instance["status"] != STATUS_PENDING_APPROVAL:
             return None
@@ -247,28 +250,99 @@ class TasksMixin:
         if not chore:
             return None
 
-        points = chore.get("points", 0)
-        instance["status"]        = STATUS_APPROVED
-        instance["approved_at"]   = _now_iso()
-        instance["approved_by"]   = approved_by
-        instance["points_awarded"] = points
+        # v0.7.3 partial credit: clamp the fraction to (0, 1] and award a rounded
+        # share of the chore's points. Status stays APPROVED so streaks + the daily
+        # success-rate count it as done.
+        frac = 1.0 if credit_fraction is None else max(0.0, min(1.0, float(credit_fraction)))
+        is_partial = frac < 1.0
+        pct        = int(round(frac * 100))
+        points     = int(round(chore.get("points", 0) * frac))
+
+        instance["status"]          = STATUS_APPROVED
+        instance["approved_at"]     = _now_iso()
+        instance["approved_by"]     = approved_by
+        instance["points_awarded"]  = points
+        instance["credit_fraction"] = frac
 
         completed_by = instance.get("completed_by")
+
+        # v0.7.3 late make-up: if this was a late-claimed skip, refund the original
+        # skip penalty in full (the credit % only scales the earned points, per
+        # design) before awarding the (partial) points.
+        is_late = bool(instance.get("late_claim"))
+        penalty = instance.get("penalty_applied", 0)
+        if is_late and penalty > 0 and completed_by:
+            person = self.get_person(completed_by)
+            if person:
+                person["points_balance"] = person.get("points_balance", 0) + penalty
+                self._append_history(
+                    event_type=HISTORY_TASK_EXCUSED,
+                    person_id=completed_by,
+                    reference_id=instance_id,
+                    points_delta=penalty,
+                    balance_after=person["points_balance"],
+                    note=f'"{chore["name"]}" late make-up — skip penalty reversed',
+                    chore_name=chore["name"],
+                )
+                instance["penalty_applied"] = 0
+
+        note = f'"{chore["name"]}" approved'
+        if is_partial:
+            note += f" ({pct}% partial)"
+        if is_late:
+            note += " — late make-up"
         self._append_history(
             event_type=HISTORY_TASK_APPROVED,
             person_id=completed_by,
             reference_id=instance_id,
-            note=f'"{chore["name"]}" approved',
+            note=note,
             chore_name=chore["name"],
         )
         if points > 0 and completed_by:
+            award_note = f'Points for "{chore["name"]}"'
+            if is_partial:
+                award_note += f" ({pct}%)"
             await self.async_award_points(
-                completed_by, points, instance_id, f'Points for "{chore["name"]}"'
+                completed_by, points, instance_id, award_note
             )
         if completed_by and not self.is_penalty_paused_for(completed_by):
             await self._increment_streak(completed_by, chore["id"], chore, date.today())
         # Approved & terminal — park one-time chores so they don't vanish.
         self._park_one_time_if_done(chore)
+        await self.async_save()
+        return instance
+
+    async def async_claim_late_task(self, instance_id: str, person_id: str) -> dict | None:
+        """
+        v0.7.3: a kid claims a previously-skipped chore late ("forgot to check it
+        off"). Moves the skipped instance into the approval queue — late claims
+        ALWAYS require parent approval, regardless of the chore's approval_required,
+        and are partial-eligible. On approval the skip penalty is refunded and the
+        (possibly partial) points awarded (see async_approve_task).
+        """
+        instance = self.get_task_instance(instance_id)
+        if not instance or instance["status"] != STATUS_SKIPPED:
+            _LOGGER.warning("Family Hub: claim_late_task — %s not found or not skipped", instance_id)
+            return None
+        owner = instance.get("assigned_to") or instance.get("completed_by")
+        if owner and owner != person_id:
+            _LOGGER.warning("Family Hub: claim_late_task — %s does not own instance %s", person_id, instance_id)
+            return None
+        chore = self.get_chore(instance["chore_id"])
+        chore_name = chore["name"] if chore else "unknown"
+
+        instance["status"]       = STATUS_PENDING_APPROVAL
+        instance["completed_by"] = person_id
+        instance["completed_at"] = _now_iso()
+        instance["late_claim"]   = True
+
+        self._append_history(
+            event_type=HISTORY_TASK_LATE_CLAIMED,
+            person_id=person_id,
+            reference_id=instance_id,
+            note=f'"{chore_name}" claimed late — awaiting approval',
+            chore_name=chore_name,
+        )
         await self.async_save()
         return instance
 

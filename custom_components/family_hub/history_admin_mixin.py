@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import calendar
+import contextlib
 import json
 import logging
 import math
@@ -248,6 +249,7 @@ class HistoryAdminMixin:
                     "note":            e.get("note", ""),
                     "reversible":      reversible,
                     "instance_status": inst_status,
+                    "actor":           e.get("actor", ""),
                 }
 
                 # skipped_date lets the frontend group all skipped chores from
@@ -280,6 +282,7 @@ class HistoryAdminMixin:
                     "note":            e.get("note", ""),
                     "reversible":      None,
                     "instance_status": None,
+                    "actor":           e.get("actor", ""),
                 }
                 # Skipped entries still need skipped_date so the frontend can
                 # roll them into the per-day collapsible group.
@@ -309,7 +312,22 @@ class HistoryAdminMixin:
             "timestamp":    _now_iso(),
             "note":         note,
             "chore_name":   chore_name,  # v0.4.0: populated for task events
+            # v0.7.3: logged-in HA user for admin actions (set via acting_as()).
+            # Empty for kid-initiated actions and the system/daily tick.
+            "actor":        getattr(self, "_current_actor", "") or "",
         })
+
+    @contextlib.asynccontextmanager
+    async def acting_as(self, name: str):
+        """v0.7.3: tag every history entry written inside this block with `name`
+        (the logged-in HA user). Restores the previous actor on exit so non-admin
+        paths (tick, kid completions) never inherit a stale actor."""
+        prev = getattr(self, "_current_actor", "")
+        self._current_actor = name or ""
+        try:
+            yield
+        finally:
+            self._current_actor = prev
 
     # ------------------------------------------------------------------
     # v0.4.0 — Admin correction services
@@ -363,6 +381,32 @@ class HistoryAdminMixin:
 
         await self.async_save()
         return instance
+
+    async def async_excuse_day(
+        self, person_id: str, day: str, excused_by: str, reason: str = ""
+    ) -> int:
+        """
+        v0.7.3: excuse every still-skipped chore for one person on a given day —
+        the one-tap counterpart to per-chore Excuse, matching the History tab's
+        per-person-per-day skipped group. `day` is an ISO date (the skip date,
+        which equals the instance's approved_at date set at skip time). Reuses
+        async_excuse_task per instance so the refund/history logic stays in one
+        place. Returns the number of instances excused.
+        """
+        def _skip_day(t: dict) -> str:
+            return (t.get("approved_at") or t.get("due_date") or "")[:10]
+
+        targets = [
+            t["id"] for t in self.task_instances
+            if t.get("status") == STATUS_SKIPPED
+            and (t.get("assigned_to") == person_id or t.get("completed_by") == person_id)
+            and _skip_day(t) == day
+        ]
+        count = 0
+        for iid in targets:
+            if await self.async_excuse_task(iid, excused_by, reason or "Excused for the day"):
+                count += 1
+        return count
 
     async def async_reject_task(
         self, instance_id: str, rejected_by: str, reason: str = ""

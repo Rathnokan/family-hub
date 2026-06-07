@@ -170,6 +170,7 @@ class ChoresMixin:
         reminder_time: int = -1,
         rotation_pool: list[str] | None = None,
         rotation_cadence: str = "",
+        rotation_switch_weekday: int = 0,
         icon: str | None = None,
         created_by: str | None = None,
     ) -> dict:
@@ -210,6 +211,7 @@ class ChoresMixin:
             "reminder_time":           reminder_time,
             "rotation_pool":           list(rotation_pool or []),
             "rotation_cadence":        rotation_cadence or "",
+            "rotation_switch_weekday": int(rotation_switch_weekday or 0),  # 0=Mon, weekly cadence flip day
             "rotation_index":          0,
             "rotation_last_advanced":  "",
             "recurrence": rec,
@@ -271,6 +273,7 @@ class ChoresMixin:
             "expires_after_days", "claimable_subtype", "max_claimants",
             "multi_claim_points_mode", "streak_milestone", "streak_bonus_points",
             "reminder_time", "rotation_pool", "rotation_cadence",
+            "rotation_switch_weekday",
             "recurrence", "active", "weekdays", "day_filter", "interval",
         }
         old_assigned = list(chore.get("assigned_to", []))

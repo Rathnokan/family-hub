@@ -121,7 +121,12 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
     # ------------------------------------------------------------------
 
     async def handle_approve_task(call: ServiceCall) -> None:
-        result = await store.async_approve_task(call.data["task_id"], call.data["approved_by"])
+        async with store.acting_as(await _resolve_actor(hass, call)):
+            result = await store.async_approve_task(
+                call.data["task_id"],
+                call.data["approved_by"],
+                call.data.get("credit_fraction", 1.0),
+            )
         if result:
             await coordinator.async_refresh()
 
@@ -130,13 +135,31 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
         schema=vol.Schema({
             vol.Required("task_id"):     cv.string,
             vol.Required("approved_by"): cv.string,
+            # v0.7.3 partial credit: fraction of the chore's points to award (0-1].
+            vol.Optional("credit_fraction"): vol.All(vol.Coerce(float), vol.Range(min=0, max=1)),
+        }),
+    )
+
+    async def handle_claim_late_task(call: ServiceCall) -> None:
+        result = await store.async_claim_late_task(
+            call.data["task_id"], call.data["person_id"]
+        )
+        if result:
+            await coordinator.async_refresh()
+
+    hass.services.async_register(
+        DOMAIN, "claim_late_task", handle_claim_late_task,
+        schema=vol.Schema({
+            vol.Required("task_id"):   cv.string,
+            vol.Required("person_id"): cv.string,
         }),
     )
 
     async def handle_deny_task(call: ServiceCall) -> None:
-        result = await store.async_deny_task(
-            call.data["task_id"], call.data["denied_by"], call.data.get("reason", "")
-        )
+        async with store.acting_as(await _resolve_actor(hass, call)):
+            result = await store.async_deny_task(
+                call.data["task_id"], call.data["denied_by"], call.data.get("reason", "")
+            )
         if result:
             await coordinator.async_refresh()
 
@@ -340,7 +363,7 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             assigned = list(assigned_raw)
 
         rec_cfg = {}
-        for key in ("weekdays", "day_filter", "interval", "day_of_month"):
+        for key in ("weekdays", "day_filter", "interval", "day_of_month", "days_of_month"):
             if key in call.data:
                 rec_cfg[key] = call.data[key]
 
@@ -367,6 +390,7 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             reminder_time=call.data.get("reminder_time", -1),
             rotation_pool=call.data.get("rotation_pool", []),
             rotation_cadence=call.data.get("rotation_cadence", ""),
+            rotation_switch_weekday=call.data.get("rotation_switch_weekday", 0),
             icon=call.data.get("icon"),
             created_by=call.data.get("created_by"),
         )
@@ -387,6 +411,7 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             vol.Optional("day_filter", default=[]):            [vol.All(vol.Coerce(int), vol.Range(min=0, max=6))],
             vol.Optional("interval", default=1):               vol.All(vol.Coerce(int), vol.Range(min=1)),
             vol.Optional("day_of_month"):                      vol.All(vol.Coerce(int), vol.Range(min=1, max=31)),
+            vol.Optional("days_of_month"):                     [vol.All(vol.Coerce(int), vol.Range(min=1, max=31))],
             vol.Optional("sort_order"):                        vol.Coerce(int),
             vol.Optional("penalty_enabled", default=False):    cv.boolean,
             vol.Optional("penalty_points", default=0):         vol.Coerce(int),
@@ -402,6 +427,7 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             vol.Optional("reminder_time", default=-1):         vol.Any(-1, vol.All(vol.Coerce(int), vol.Range(min=0, max=2359))),
             vol.Optional("rotation_pool", default=[]):         [cv.string],
             vol.Optional("rotation_cadence", default=""):      vol.Any("", vol.In(ROTATION_CADENCES)),
+            vol.Optional("rotation_switch_weekday", default=0): vol.All(vol.Coerce(int), vol.Range(min=0, max=6)),
             vol.Optional("icon"):                              cv.string,
             vol.Optional("created_by"):                        cv.string,
         }),
@@ -452,6 +478,7 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             vol.Optional("day_filter"):                      [vol.All(vol.Coerce(int), vol.Range(min=0, max=6))],
             vol.Optional("interval"):                        vol.All(vol.Coerce(int), vol.Range(min=1)),
             vol.Optional("day_of_month"):                    vol.All(vol.Coerce(int), vol.Range(min=1, max=31)),
+            vol.Optional("days_of_month"):                   [vol.All(vol.Coerce(int), vol.Range(min=1, max=31))],
             vol.Optional("recurrence"):                      dict,
             vol.Optional("active"):                          cv.boolean,
             vol.Optional("icon"):                            cv.string,
@@ -460,6 +487,7 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             vol.Optional("reminder_time"):                   vol.Any(-1, None, vol.All(vol.Coerce(int), vol.Range(min=0, max=2359))),
             vol.Optional("rotation_pool"):                   [cv.string],
             vol.Optional("rotation_cadence"):                vol.Any("", vol.In(ROTATION_CADENCES)),
+            vol.Optional("rotation_switch_weekday"):         vol.All(vol.Coerce(int), vol.Range(min=0, max=6)),
         }),
     )
 
@@ -734,11 +762,12 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
     )
 
     async def handle_approve_redemption(call: ServiceCall) -> None:
-        result = await store.async_approve_redemption(
-            call.data["redemption_id"],
-            call.data["approved_by"],
-            subscription_anchor=call.data.get("subscription_anchor"),
-        )
+        async with store.acting_as(await _resolve_actor(hass, call)):
+            result = await store.async_approve_redemption(
+                call.data["redemption_id"],
+                call.data["approved_by"],
+                subscription_anchor=call.data.get("subscription_anchor"),
+            )
         if result:
             await coordinator.async_refresh()
 
@@ -752,11 +781,12 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
     )
 
     async def handle_decline_redemption(call: ServiceCall) -> None:
-        result = await store.async_decline_redemption(
-            call.data["redemption_id"],
-            call.data["declined_by"],
-            call.data.get("reason", ""),
-        )
+        async with store.acting_as(await _resolve_actor(hass, call)):
+            result = await store.async_decline_redemption(
+                call.data["redemption_id"],
+                call.data["declined_by"],
+                call.data.get("reason", ""),
+            )
         if result:
             await coordinator.async_refresh()
 
@@ -774,12 +804,13 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
     # ------------------------------------------------------------------
 
     async def handle_award_bonus_points(call: ServiceCall) -> None:
-        await store.async_award_bonus_points(
-            person_id=call.data["person_id"],
-            points=call.data.get("points", 0),
-            reason=call.data.get("reason", ""),
-            dollar_amount=call.data.get("dollar_amount"),
-        )
+        async with store.acting_as(await _resolve_actor(hass, call)):
+            await store.async_award_bonus_points(
+                person_id=call.data["person_id"],
+                points=call.data.get("points", 0),
+                reason=call.data.get("reason", ""),
+                dollar_amount=call.data.get("dollar_amount"),
+            )
         await coordinator.async_refresh()
 
     hass.services.async_register(
@@ -793,12 +824,13 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
     )
 
     async def handle_deduct_points(call: ServiceCall) -> None:
-        await store.async_admin_deduct_points(
-            person_id=call.data["person_id"],
-            points=call.data.get("points", 0),
-            reason=call.data.get("reason", ""),
-            dollar_amount=call.data.get("dollar_amount"),
-        )
+        async with store.acting_as(await _resolve_actor(hass, call)):
+            await store.async_admin_deduct_points(
+                person_id=call.data["person_id"],
+                points=call.data.get("points", 0),
+                reason=call.data.get("reason", ""),
+                dollar_amount=call.data.get("dollar_amount"),
+            )
         await coordinator.async_refresh()
 
     hass.services.async_register(
@@ -867,11 +899,12 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
 
     async def handle_excuse_task(call: ServiceCall) -> None:
         """Reverse penalty on a skipped task — kid was sick, at a sleepover, etc."""
-        result = await store.async_excuse_task(
-            call.data["instance_id"],
-            call.data["excused_by"],
-            call.data.get("reason", ""),
-        )
+        async with store.acting_as(await _resolve_actor(hass, call)):
+            result = await store.async_excuse_task(
+                call.data["instance_id"],
+                call.data["excused_by"],
+                call.data.get("reason", ""),
+            )
         if result:
             await coordinator.async_refresh()
         else:
@@ -886,13 +919,39 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
         }),
     )
 
+    async def handle_excuse_day(call: ServiceCall) -> None:
+        """Excuse every still-skipped chore for one person on one day."""
+        async with store.acting_as(await _resolve_actor(hass, call)):
+            count = await store.async_excuse_day(
+                call.data["person_id"],
+                call.data["day"],
+                call.data["excused_by"],
+                call.data.get("reason", ""),
+            )
+        if count:
+            await coordinator.async_refresh()
+        else:
+            _LOGGER.info("Family Hub: excuse_day — nothing to excuse for %s on %s",
+                         call.data["person_id"], call.data["day"])
+
+    hass.services.async_register(
+        DOMAIN, "excuse_day", handle_excuse_day,
+        schema=vol.Schema({
+            vol.Required("person_id"):              cv.string,
+            vol.Required("day"):                    cv.string,
+            vol.Required("excused_by"):             cv.string,
+            vol.Optional("reason", default=""):     cv.string,
+        }),
+    )
+
     async def handle_reject_task(call: ServiceCall) -> None:
         """Claw back points on an already-approved task."""
-        result = await store.async_reject_task(
-            call.data["instance_id"],
-            call.data["rejected_by"],
-            call.data.get("reason", ""),
-        )
+        async with store.acting_as(await _resolve_actor(hass, call)):
+            result = await store.async_reject_task(
+                call.data["instance_id"],
+                call.data["rejected_by"],
+                call.data.get("reason", ""),
+            )
         if result:
             await coordinator.async_refresh()
         else:
@@ -909,11 +968,12 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
 
     async def handle_mark_task_complete(call: ServiceCall) -> None:
         """Retroactively mark a skipped task as done and award points."""
-        result = await store.async_mark_task_complete(
-            call.data["instance_id"],
-            call.data["marked_by"],
-            call.data.get("reason", ""),
-        )
+        async with store.acting_as(await _resolve_actor(hass, call)):
+            result = await store.async_mark_task_complete(
+                call.data["instance_id"],
+                call.data["marked_by"],
+                call.data.get("reason", ""),
+            )
         if result:
             await coordinator.async_refresh()
         else:
@@ -1233,8 +1293,23 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
 
 
 # ------------------------------------------------------------------
-# Internal notification helpers
+# Internal helpers
 # ------------------------------------------------------------------
+
+async def _resolve_actor(hass: HomeAssistant, call: ServiceCall) -> str:
+    """v0.7.3: the logged-in HA user's name for an admin action (audit trail).
+    Falls back to 'Admin' for system/automation calls; never raises."""
+    uid = getattr(call.context, "user_id", None)
+    if not uid:
+        return "Admin"
+    try:
+        user = await hass.auth.async_get_user(uid)
+        if user and user.name:
+            return user.name
+    except Exception:  # noqa: BLE001
+        pass
+    return "Admin"
+
 
 async def _notify_approval(hass: HomeAssistant, instance: dict, store) -> None:
     if instance.get("status") != "pending_approval":
