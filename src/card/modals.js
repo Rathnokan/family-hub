@@ -352,8 +352,10 @@ export function choreFormFields(chore, isEdit, people, catLabels, activeTab = "d
         <div class="fh-row">
           <div class="fh-field" style="flex:3">
             <label class="fh-label">Chore name *</label>
+            <!-- No autofocus: the editor drawer animates in from off-screen, and
+                 autofocus' scroll-into-view yanked the page to the top on open. -->
             <input class="fh-input" id="m-cname" type="text"
-                   value="${escAttr(c.name || "")}" autofocus>
+                   value="${escAttr(c.name || "")}">
           </div>
           ${isEdit ? `
           <div class="fh-field" style="flex:1">
@@ -419,6 +421,21 @@ export function choreFormFields(chore, isEdit, people, catLabels, activeTab = "d
           </div>
         </div>
     `);
+
+    // Rotation pool must render CURRENT-first ("top is Current"). The backend
+    // advances rotations by bumping rotation_index + assigned_to WITHOUT
+    // reordering rotation_pool, so the stored order drifts out of sync with who
+    // actually holds the chore. Rotate the pool so the live holder (assigned_to[0],
+    // falling back to rotation_index) leads — otherwise the editor mislabels the
+    // current holder and reordering can't reliably switch it. Saving this
+    // current-first order lets the backend snap current to the top correctly.
+    const _rotPoolRaw = c.rotation_pool || [];
+    let _rotCur = (c.assigned_to && c.assigned_to[0]) || _rotPoolRaw[c.rotation_index || 0] || _rotPoolRaw[0];
+    let _rotCi  = _rotPoolRaw.indexOf(_rotCur);
+    if (_rotCi < 0) _rotCi = 0;
+    const rotPoolOrdered = _rotPoolRaw.length
+        ? _rotPoolRaw.slice(_rotCi).concat(_rotPoolRaw.slice(0, _rotCi))
+        : [];
 
     // ---- Schedule pane: who → recurrence → rotation -------------------------
     const schedulePane = pane("schedule", `
@@ -501,9 +518,9 @@ export function choreFormFields(chore, isEdit, people, catLabels, activeTab = "d
           </div>
           <div id="m-rotation-config" class="fh-field" style="display:none">
             <label class="fh-label">Order — top is Current, the rest are Up Next</label>
-            <input type="hidden" id="m-crot-pool-order" value="${escAttr((c.rotation_pool || []).join(","))}">
+            <input type="hidden" id="m-crot-pool-order" value="${escAttr(rotPoolOrdered.join(","))}">
             <div id="m-crot-pool-widget" class="fh-rot-pool">
-              ${rotationPoolEditor(people, c.rotation_pool || [])}
+              ${rotationPoolEditor(people, rotPoolOrdered)}
             </div>
             <label class="fh-label" style="margin-top:6px">Cadence</label>
             <select class="fh-select" id="m-crot-cadence">
@@ -559,10 +576,16 @@ export function choreFormFields(chore, isEdit, people, catLabels, activeTab = "d
                  value="${c.penalty_points || 5}">
         </div>
         <div id="m-daily-threshold-section" class="fh-field" style="display:none">
-          <label class="fh-label">Daily penalty after (days, optional)</label>
+          <label class="fh-label">Penalty grace (optional)</label>
           <input class="fh-input" id="m-daily-threshold" type="number" min="1"
-                 placeholder="e.g. 3 — start deducting after 3 days"
+                 placeholder="e.g. 3"
                  value="${c.daily_penalty_after_days || ""}">
+          <div class="fh-field-help">
+            Daily chores: how many skips are allowed before the penalty starts — e.g. 3 means
+            the first 2 misses are free, then every skip costs the penalty until it's done
+            (resets when completed). Weekly/monthly chores: starts deducting the penalty each
+            extra day it sits unfinished past this many days.
+          </div>
         </div>
 
         <div class="fh-divider"></div>

@@ -147,10 +147,21 @@ export class FamilyHubCard extends HTMLElement {
         root.addEventListener("change", e => {
             const t = e.target;
 
-            // Chores-tab filter dropdowns (Status / Type / Assignee) — route the
-            // <select> change straight through dispatch (reads el.value).
-            if (["chore-status-filter", "chore-rec-filter", "chore-filter"].includes(t.dataset.act)) {
+            // Chores-tab filter dropdowns (Status / Type / Assignee) + the
+            // earning-rail what-if selects (rank / completion % / streak %) —
+            // route the <select> change straight through dispatch (reads el.value).
+            if ([
+                "chore-status-filter", "chore-rec-filter", "chore-filter",
+                "stats-rank", "stats-completion", "stats-streak-pct",
+            ].includes(t.dataset.act)) {
                 dispatch(t.dataset.act, t, this);
+                return;
+            }
+
+            // Earning rail: include-streak-bonus toggle (session view-state only).
+            if (t.dataset.act === "toggle-stats-streaks") {
+                this._statsIncludeStreaks = t.checked;
+                this._doRender(true);
                 return;
             }
 

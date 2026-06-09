@@ -556,17 +556,23 @@ export const CSS_4 = `    text-shadow:2px 2px 0 rgba(255,255,255,.3), 4px 4px 0 
      down the page: selecting a chore near the bottom shows the editor in
      view at the top of the viewport instead of forcing a scroll back up.
      Header/footer stay pinned; the form body scrolls internally when tall. */
-  .fh-ad-tasks-panel { display: none; }
+  /* Repurposed as the earning-power stats rail — now useful on mobile too, so
+     it stays visible (stacked below the list) and only goes sticky at ≥1280px. */
+  .fh-ad-tasks-panel {
+    display: flex; flex-direction: column;
+    background: #1A2538;
+    border: 1px solid #2A3852;
+    border-radius: 12px;
+    overflow: hidden;
+  }
   @media (min-width: 1280px) {
     .fh-ad-tasks-panel {
-      display: flex; flex-direction: column;
       width: 480px; flex-shrink: 0;
-      background: #1A2538;
-      border: 1px solid #2A3852;
-      border-radius: 12px;
-      overflow: hidden;
       position: sticky; top: 0;
-      max-height: calc(92vh - 96px);
+      /* Keep the rail no taller than the visible scroll area (.fh-ad-body =
+         shell 92vh − topbar − padding) so its own body scrolls INTERNALLY and
+         you can reach its bottom without scrolling the left list to the end. */
+      max-height: calc(92vh - 150px);
     }
   }
   .fh-ad-tasks-panel-hdr {
@@ -607,6 +613,98 @@ export const CSS_4 = `    text-shadow:2px 2px 0 rgba(255,255,255,.3), 4px 4px 0 
     font-size: var(--fh-text-xs); font-weight: 700; letter-spacing: .1em;
     text-transform: uppercase;
   }
+
+  /* ---- Earning & Balance rail (Tasks side panel) ---- */
+  .fh-es-rail { display: flex; flex-direction: column; gap: 14px; }
+
+  /* What-if controls row */
+  .fh-es-controls {
+    display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center;
+    padding-bottom: 12px; border-bottom: 1px solid #2A3852;
+  }
+  .fh-es-ctl {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: var(--fh-text-sm); color: #A6B3CC;
+  }
+  .fh-es-ctl .fh-select {
+    background: #202D45; border: 1px solid #3A4B6B; color: #ECEFF6;
+    border-radius: 6px; padding: 3px 6px; font-size: var(--fh-text-sm);
+  }
+  .fh-es-ctl-chk input { width: 16px; height: 16px; cursor: pointer; }
+
+  .fh-es-kid {
+    background: #202D45; border: 1px solid #2A3852;
+    border-radius: 10px; padding: 10px 12px;
+  }
+  .fh-es-kid-hdr { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .fh-es-kid-name {
+    font-family: 'Manrope', sans-serif; font-weight: 700;
+    font-size: var(--fh-text-base); color: #ECEFF6;
+    flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .fh-es-kid-count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--fh-text-xs); color: #6F7E9C; flex-shrink: 0;
+  }
+  /* Week headline (allowance is discussed weekly, so it leads) */
+  .fh-es-week { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+  .fh-es-week-usd {
+    font-family: 'Bricolage Grotesque', sans-serif; font-weight: 800;
+    font-size: var(--fh-text-xl); color: #7FBF9B; line-height: 1;
+  }
+  .fh-es-week-lbl { font-size: var(--fh-text-sm); color: #6F7E9C; margin-left: -3px; }
+  .fh-es-week-pts { font-family: 'JetBrains Mono', monospace; font-size: var(--fh-text-xs); color: #A6B3CC; }
+  .fh-es-week-this {
+    font-family: 'JetBrains Mono', monospace; font-size: var(--fh-text-xs);
+    color: #6F7E9C; margin-left: auto;
+  }
+  /* Weekly range bar (volatility) */
+  .fh-es-rng-track {
+    position: relative; height: 10px; background: #1A2538;
+    border: 1px solid #2A3852; border-radius: 6px; margin-top: 7px;
+  }
+  /* Month — secondary line under the week headline */
+  .fh-es-month-sub { font-size: var(--fh-text-sm); color: #6F7E9C; margin-top: 6px; }
+  .fh-es-rng-span {
+    position: absolute; top: 0; bottom: 0; border-radius: 6px; opacity: .5;
+  }
+  .fh-es-rng-dot {
+    position: absolute; top: 50%; width: 9px; height: 9px; border-radius: 50%;
+    transform: translate(-50%, -50%); border: 2px solid #ECEFF6;
+  }
+  .fh-es-allow { font-size: var(--fh-text-sm); color: #A6B3CC; margin-top: 7px; }
+  .fh-es-allow b { color: #7FBF9B; }
+
+  .fh-es-section { border-top: 1px solid #2A3852; padding-top: 12px; }
+  .fh-es-section-hdr {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--fh-text-xs); font-weight: 700; letter-spacing: .1em;
+    color: #6F7E9C; text-transform: uppercase; margin-bottom: 8px;
+  }
+  .fh-es-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .fh-es-bar-name {
+    font-size: var(--fh-text-sm); color: #A6B3CC;
+    width: 64px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .fh-es-bar-track { flex: 1; height: 10px; background: #1A2538; border-radius: 6px; overflow: hidden; }
+  .fh-es-bar-fill  { height: 100%; border-radius: 6px; min-width: 2px; }
+  .fh-es-bar-val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: var(--fh-text-xs); color: #ECEFF6;
+    width: 52px; text-align: right; flex-shrink: 0;
+  }
+  .fh-es-tot-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    gap: 10px; padding: 4px 0; font-size: var(--fh-text-sm);
+  }
+  .fh-es-tot-row > span:first-child { color: #6F7E9C; }
+  .fh-es-tot-row > span:last-child  { color: #ECEFF6; font-weight: 600; }
+  /* Dynamic swing tip */
+  .fh-es-tip {
+    background: #1F2B16; border: 1px solid #3A5226; border-radius: 8px;
+    padding: 9px 11px; font-size: var(--fh-text-sm); color: #C7D6B4; line-height: 1.4;
+  }
+  .fh-es-tip b { color: #E6F0D8; }
 
   /* ---- Rewards section — same grid/panel structure as Tasks ---- */
   .fh-ad-rewards-wrap {

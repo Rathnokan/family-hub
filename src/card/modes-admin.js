@@ -12,7 +12,7 @@ import { DEFAULT_COLOR, HISTORY_META, VERSION } from "./constants.js";
 import { I } from "./constants.js";
 import { escHTML, escAttr, ini, fPts, fUSD, cap, relTime, groupHistorySkipped } from "./utils.js";
 import { ROOMS } from "./rooms/index.js";
-import { choreFormFields, storeItemFormFields } from "./modals.js";
+import { storeItemFormFields } from "./modals.js";
 import { choreIcon } from "./icons.js";
 
 // Format a chore instance due_date ("YYYY-MM-DD") as a short local-day label
@@ -854,10 +854,10 @@ function _htmlAdTasks(chores, people, catLabels, card) {
         }).join("");
     }
 
-    // Inline editor panel — only rendered when a chore is selected
-    // (never simultaneously with a chore modal — see open-add/edit-chore in dispatch.js)
-    const selectedChore = selectedId ? chores.find(c => c.chore_id === selectedId) : null;
-    const panelHtml     = _htmlChoreEditorPanel(selectedChore, people, catLabels, card);
+    // Right rail: per-kid earning-power statistics. (Repurposed from the old
+    // inline chore editor — editing now happens in the slide-in drawer, so this
+    // column is free for at-a-glance earning/fairness data.) See _htmlChoreStatsRail.
+    const panelHtml     = _htmlChoreStatsRail(card);
 
     return `
       <div class="fh-ad-tasks-wrap">
@@ -880,6 +880,28 @@ function _htmlAdTasks(chores, people, catLabels, card) {
 }
 
 /**
+ * Avatar dots for a chore row. For rotating chores, renders the active pool in
+ * rotation order — current holder highlighted, next-up marked, the rest dimmed,
+ * preceded by a ↻ glyph — so it reads differently from a plain multi-assignee
+ * chore. Returns null when the chore doesn't rotate (caller falls back to the
+ * standard overlapping dots).
+ */
+function _choreRotationDots(c, people) {
+    const info = _choreRotationInfo(c, people);
+    if (!info) return null;
+    const dot = (id, cls) => {
+        const p     = people.find(x => x.person_id === id);
+        const name  = p?.name || "?";
+        const color = p?.avatar_color || DEFAULT_COLOR;
+        return `<div class="fh-avatar ${cls}" title="${escAttr(name)}" style="background:${color};width:26px;height:26px;font-size:var(--fh-text-xs)">${ini(name)}</div>`;
+    };
+    const dots = info.orderedIds.map((id, i) =>
+        dot(id, i === 0 ? "fh-avatar--current" : (i === 1 ? "fh-avatar--next" : "fh-avatar--dim"))
+    ).join("");
+    return `<span class="fh-rot-glyph" title="Rotates between kids">↻</span><div class="fh-avatars fh-avatars--rot">${dots}</div>`;
+}
+
+/**
  * Render a single chore row inside the sortable/collapsible table.
  * Clicking the row body (data-act="select-chore-row") opens the inline panel at ≥1280px.
  * The edit + delete buttons (fh-ad-tasks-edit-btn / fh-ad-tasks-del-btn) are CSS-hidden
@@ -890,11 +912,16 @@ function _htmlChoreTableRow(c, people, card, selectedId) {
     const assignedPeople = (c.assigned_to || [])
         .map(id => people.find(p => p.person_id === id))
         .filter(Boolean);
-    const avatarHtml = assignedPeople.length
-        ? `<div class="fh-avatars">${assignedPeople.map(p =>
-            `<div class="fh-avatar" style="background:${p.avatar_color || DEFAULT_COLOR};width:26px;height:26px;font-size:var(--fh-text-xs)">${ini(p.name)}</div>`
-          ).join("")}</div>`
-        : "";
+    // Rotating chores render the pool in rotation order (current → next → …);
+    // everything else uses the standard overlapping assignee dots.
+    const rotDots    = _choreRotationDots(c, people);
+    const avatarHtml = rotDots != null
+        ? rotDots
+        : (assignedPeople.length
+            ? `<div class="fh-avatars">${assignedPeople.map(p =>
+                `<div class="fh-avatar" style="background:${p.avatar_color || DEFAULT_COLOR};width:26px;height:26px;font-size:var(--fh-text-xs)">${ini(p.name)}</div>`
+              ).join("")}</div>`
+            : "");
     const descExp    = card._expandedDescs.has(c.chore_id);
     const rowColor   = assignedPeople[0]?.avatar_color || DEFAULT_COLOR;
     const recType    = c.recurrence?.type || "daily";
@@ -953,40 +980,342 @@ function _htmlChoreTableRow(c, people, card, selectedId) {
       </div>`;
 }
 
+// ---------------------------------------------------------------------------
+// Earning-power statistics rail (Tasks section right column)
+//
+// Pure frontend math over active_chores + people. No backend involvement — all
+// the inputs already ship on sensor.family_hub_needs_attention. The rail shows,
+// per kid, how many points (and $) the active chore list makes available per
+// day / week / 4-wk month, so a parent editing a chore sees the earning impact
+// immediately. "Bonus" = claimable chores, excluded from the per-kid base and
+// summarised separately. Reminders carry no points and fall out naturally.
+// ---------------------------------------------------------------------------
+
+// Average times per week a chore comes due, from its recurrence. Monthly chores
+// are amortised into a weekly rate (×12/52); one-time/unknown contribute 0.
+function _choreOccPerWeek(c) {
+    const r = c.recurrence || {};
+    switch (r.type || "daily") {
+        case "daily":           return (r.day_filter || []).length || 7;
+        case "weekly":          return (r.weekdays   || []).length || 1;
+        case "every_n_days":  { const n = r.interval || 1; return n > 0 ? 7 / n : 0; }
+        case "every_n_weeks": { const n = r.interval || 1; return n > 0 ? 1 / n : 0; }
+        case "monthly_on_date": {
+            const dom = (r.days_of_month && r.days_of_month.length) ? r.days_of_month.length : 1;
+            return dom * 12 / 52;
+        }
+        default:                return 0;   // one_time / unknown
+    }
+}
+
+// Rotation snapshot for a single chore: ordered active pool starting at the
+// current holder, plus who's next. Returns null when the chore doesn't rotate.
+// Mirrors the per-person logic in themes/_shared.js getRotationStatus.
+function _choreRotationInfo(c, people) {
+    const pool = c.rotation_pool || [];
+    if (!pool.length || !c.rotation_cadence) return null;
+    const isActive  = id => { const p = people.find(x => x.person_id === id); return p && p.active !== false; };
+    const activeIds = pool.filter(isActive);
+    if (!activeIds.length) return null;
+    const current = (c.assigned_to && c.assigned_to[0]) || activeIds[0];
+    let ci = activeIds.indexOf(current);
+    if (ci < 0) ci = 0;
+    const orderedIds = activeIds.slice(ci).concat(activeIds.slice(0, ci));
+    return {
+        activeIds,
+        orderedIds,
+        currentId:     orderedIds[0],
+        nextId:        activeIds.length > 1 ? orderedIds[1] : null,
+        cadence:       c.rotation_cadence,
+        switchWeekday: c.rotation_switch_weekday ?? 0,
+    };
+}
+
+function _gcd(a, b) { a = Math.round(a); b = Math.round(b); while (b) { [a, b] = [b, a % b]; } return a || 1; }
+function _lcm(a, b) { return Math.abs(a * b) / _gcd(a, b); }
+
+// Effective weekly points a chore is worth under the current what-if knobs:
+// base points scaled by expected-completion %, plus (optionally) an amortised
+// streak bonus = bonus_points/milestone per occurrence × streak-achievement %.
+function _choreEffPPW(c, cfg) {
+    const occ = _choreOccPerWeek(c);
+    if (occ <= 0) return 0;
+    let v = occ * (c.points || 0) * cfg.comp;
+    if (cfg.includeStreaks && c.streak_milestone > 0 && c.streak_bonus_points > 0) {
+        v += occ * (c.streak_bonus_points / c.streak_milestone) * cfg.streakPct;
+    }
+    return v;
+}
+
+// Per-kid earning power from the assigned (non-bonus) active chores, as a what-if
+// model. Non-rotating + per-instance/daily rotations form a STABLE weekly base
+// (per-instance/daily split evenly across the pool — they hand off within a week).
+// WEEKLY-cadence rotations swing whole-week between kids, so they're simulated
+// over the rotation cycle to produce each kid's min / max / this-week totals.
+// Money is rank-scaled per kid (cfg.rankOverride forces a rank for everyone).
+function _computeEarning(chores, people, cfg) {
+    const kids = people.filter(p => p.type === "kid" && p.active !== false);
+    const ids  = kids.map(k => k.person_id);
+
+    const base = {}, count = {};
+    ids.forEach(id => { base[id] = 0; count[id] = 0; });
+    const weeklyRot = [];   // swinging chores: { eff, ordered:[ids from current], name }
+
+    for (const c of chores) {
+        const eff = _choreEffPPW(c, cfg);
+        if (eff <= 0) continue;
+        const rot = _choreRotationInfo(c, people);
+        if (rot && rot.cadence === "weekly") {
+            weeklyRot.push({ eff, ordered: rot.orderedIds, name: c.name });
+            rot.activeIds.forEach(id => { if (count[id] != null) count[id] += 1; });
+        } else if (rot) {
+            const share = eff / rot.activeIds.length;   // per-instance/daily: even, stable
+            rot.activeIds.forEach(id => { if (base[id] != null) { base[id] += share; count[id] += 1; } });
+        } else {
+            for (const pid of (c.assigned_to || [])) {
+                if (base[pid] != null) { base[pid] += eff; count[pid] += 1; }
+            }
+        }
+    }
+
+    // weekAvg = stable base + each weekly-rot chore's fair share (long-run)
+    const weekAvg = {}; ids.forEach(id => weekAvg[id] = base[id]);
+    for (const wr of weeklyRot) {
+        const share = wr.eff / wr.ordered.length;
+        wr.ordered.forEach(id => { if (weekAvg[id] != null) weekAvg[id] += share; });
+    }
+
+    // Simulate the weekly-rotation cycle for min/max; week 0 = this week.
+    let L = 1;
+    for (const wr of weeklyRot) L = _lcm(L, wr.ordered.length);
+    L = Math.max(1, Math.min(L, 12));
+    const weekMin = {}, weekMax = {}, weekThis = {};
+    ids.forEach(id => { weekMin[id] = base[id]; weekMax[id] = base[id]; weekThis[id] = base[id]; });
+    for (let w = 0; w < L; w++) {
+        const wk = {}; ids.forEach(id => wk[id] = base[id]);
+        for (const wr of weeklyRot) {
+            const holder = wr.ordered[w % wr.ordered.length];
+            if (wk[holder] != null) wk[holder] += wr.eff;
+        }
+        ids.forEach(id => {
+            if (w === 0) { weekThis[id] = wk[id]; weekMin[id] = wk[id]; weekMax[id] = wk[id]; }
+            else { if (wk[id] < weekMin[id]) weekMin[id] = wk[id]; if (wk[id] > weekMax[id]) weekMax[id] = wk[id]; }
+        });
+    }
+
+    // Allowance (stable) → weekly + monthly points
+    const allowWk = {}, allowMo = {};
+    kids.forEach(k => {
+        const ap = k.allowance_points || 0;
+        const s  = k.allowance_schedule || "weekly";
+        if (s === "biweekly")    { allowWk[k.person_id] = ap / 2; allowMo[k.person_id] = ap * 2; }
+        else if (s === "monthly"){ allowWk[k.person_id] = ap / 4; allowMo[k.person_id] = ap;     }
+        else                     { allowWk[k.person_id] = ap;     allowMo[k.person_id] = ap * 4; }
+    });
+
+    // Rank-scaled money. rankOverride (0-based) forces a rank for all kids.
+    const ladder = cfg.ladder;
+    const centsOf = p => {
+        const idx = cfg.rankOverride != null ? cfg.rankOverride : (p.rank_index || 0);
+        if (ladder && ladder.length) return ladder[Math.max(0, Math.min(idx, ladder.length - 1))];
+        return cfg.ppd > 0 ? 100 / cfg.ppd : 0;
+    };
+    const usd = (p, pts) => pts * centsOf(p) / 100;
+
+    const rows = kids.map(k => {
+        const id = k.person_id;
+        const mo = weekAvg[id] * 4;
+        return {
+            person:        k,
+            chores:        count[id],
+            month:         mo,
+            monthUSD:      usd(k, mo),
+            weekAvg:       weekAvg[id],  weekAvgUSD:  usd(k, weekAvg[id]),
+            weekMin:       weekMin[id],
+            weekMax:       weekMax[id],
+            weekThis:      weekThis[id], weekThisUSD: usd(k, weekThis[id]),
+            swingUSD:      usd(k, weekMax[id] - weekMin[id]),
+            allowMo:       allowMo[id],  allowMoUSD:  usd(k, allowMo[id]),
+            allowWkUSD:    usd(k, allowWk[id]),
+            takeHomeMoUSD: usd(k, mo + allowMo[id]),
+            takeHomeWkUSD: usd(k, weekAvg[id] + allowWk[id]),
+        };
+    });
+
+    return {
+        rows,
+        famWeek:      rows.reduce((s, r) => s + r.weekAvg,    0),
+        famMonth:     rows.reduce((s, r) => s + r.month,      0),
+        famWeekUSD:   rows.reduce((s, r) => s + r.weekAvgUSD, 0),
+        famMonthUSD:  rows.reduce((s, r) => s + r.monthUSD,   0),
+        maxWeekMax:   Math.max(1, ...rows.map(r => r.weekMax)),
+        maxMonth:     Math.max(1, ...rows.map(r => r.month)),
+        weeklyRotChores: weeklyRot.map(w => w.name),
+        centsOfRank:  i => (ladder && ladder.length) ? ladder[Math.max(0, Math.min(i, ladder.length - 1))] : (cfg.ppd > 0 ? 100 / cfg.ppd : 0),
+    };
+}
+
 /**
- * Inline editor side panel for the Tasks section (≥1280px only, CSS-hidden on mobile).
- * Shows chore form fields when a chore is selected; placeholder when none selected.
- * Uses the same m-* element IDs as the chore modal — never simultaneously in the DOM.
+ * Right-rail "Earning & Balance" what-if tool for the Tasks section. Reads
+ * active_chores + people + rank_ppd_ladder off the needs_attention model and
+ * applies the session what-if knobs (rank override, completion %, streaks).
  */
-function _htmlChoreEditorPanel(chore, people, catLabels, card) {
-    const tab = (card && card._choreFormTab) || "details";
-    const inner = chore
-        ? `
-          <div class="fh-ad-tasks-panel-hdr">
-            <div style="flex:1;min-width:0">
-              <div class="fh-ad-tasks-panel-title">Edit chore</div>
-              <div class="fh-ad-tasks-panel-sub" title="${escAttr(chore.name)}">${escHTML(chore.name)}</div>
-            </div>
-            <button class="fh-btn fh-btn-primary fh-btn-sm" data-act="ok-edit-chore-inline"
-                    style="flex-shrink:0">Save</button>
-            <button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="close-chore-panel"
-                    style="flex-shrink:0" title="Close panel">✕</button>
-          </div>
-          <div class="fh-ad-tasks-panel-body">
-            ${choreFormFields(chore, true, people, catLabels, tab)}
-          </div>
-          <div class="fh-ad-tasks-panel-footer">
-            <button class="fh-btn fh-btn-danger fh-btn-sm"
-                    data-act="delete-chore"
-                    data-cid="${chore.chore_id}" data-cname="${escAttr(chore.name)}">Delete</button>
-          </div>`
-        : `
+function _htmlChoreStatsRail(card) {
+    const attr   = card._attrs("sensor.family_hub_needs_attention");
+    const people = attr.people || [];
+    const active = attr.active_chores || [];
+    const ppd    = attr.points_per_dollar || 0;
+    const ladder = (attr.rank_ppd_ladder && attr.rank_ppd_ladder.length)
+        ? attr.rank_ppd_ladder : [3, 3.5, 4, 4.5, 5];
+
+    // What-if controls (session view-state; defaults when unset)
+    const compPct   = card._statsCompletionPct ?? 100;
+    const incStreak = !!card._statsIncludeStreaks;
+    const streakPct = card._statsStreakPct ?? 50;
+    const rankOv    = (card._statsRankOverride == null || card._statsRankOverride === "")
+        ? null : Number(card._statsRankOverride);
+
+    const cfg = {
+        comp: compPct / 100, includeStreaks: incStreak, streakPct: streakPct / 100,
+        rankOverride: rankOv, ladder, ppd,
+    };
+
+    const assigned   = active.filter(c => c.chore_type === "assigned");
+    const claimables = active.filter(c => c.chore_type === "claimable");
+    const earn       = _computeEarning(assigned, people, cfg);
+    const rPts       = n => fPts(Math.round(n || 0));
+
+    // ---- Controls row ----
+    const rankOpts = [`<option value="" ${rankOv == null ? "selected" : ""}>Current</option>`]
+        .concat(ladder.map((c, i) => `<option value="${i}" ${rankOv === i ? "selected" : ""}>Rank ${i + 1}</option>`))
+        .join("");
+    const compOpts = [100, 95, 90, 85, 80, 75, 70, 60, 50]
+        .map(v => `<option value="${v}" ${compPct === v ? "selected" : ""}>${v}%</option>`).join("");
+    const streakOpts = [100, 75, 50, 25]
+        .map(v => `<option value="${v}" ${streakPct === v ? "selected" : ""}>${v}%</option>`).join("");
+    const controls = `
+      <div class="fh-es-controls">
+        <label class="fh-es-ctl">Rank <select class="fh-select" data-act="stats-rank">${rankOpts}</select></label>
+        <label class="fh-es-ctl">Done <select class="fh-select" data-act="stats-completion">${compOpts}</select></label>
+        <label class="fh-es-ctl fh-es-ctl-chk"><input type="checkbox" data-act="toggle-stats-streaks" ${incStreak ? "checked" : ""}> Streaks</label>
+        ${incStreak ? `<label class="fh-es-ctl">Streak <select class="fh-select" data-act="stats-streak-pct">${streakOpts}</select></label>` : ""}
+      </div>`;
+
+    // Subheader = active assumptions
+    const assume = [`${assigned.length} chore${assigned.length === 1 ? "" : "s"}`, `${compPct}% done`];
+    if (incStreak)     assume.push(`streaks ${streakPct}%`);
+    if (rankOv != null) assume.push(`at Rank ${rankOv + 1}`);
+
+    let body;
+    if (!earn.rows.length) {
+        body = `
           <div class="fh-ad-tasks-panel-empty">
-            <div class="fh-ad-tasks-panel-empty-icon">✎</div>
-            <div class="fh-ad-tasks-panel-empty-text">Tap a chore to edit it in the side panel.</div>
+            <div class="fh-ad-tasks-panel-empty-icon">📊</div>
+            <div class="fh-ad-tasks-panel-empty-text">No kids to report on yet.</div>
+          </div>`;
+    } else {
+        // 1. Per-kid cards — Month headline + Week range bar (with "this week" dot)
+        const scale = earn.maxWeekMax || 1;
+        const kidCards = earn.rows.map(r => {
+            const color = r.person.avatar_color || DEFAULT_COLOR;
+            const span  = Math.max(0, r.weekMax - r.weekMin);
+            const hasSwing = span > 0.5;
+            const left  = Math.max(0, Math.min(100, r.weekMin  / scale * 100));
+            const width = Math.max(0, Math.min(100, span       / scale * 100));
+            const dot   = Math.max(0, Math.min(100, r.weekThis / scale * 100));
+            const weekThisNote = hasSwing
+                ? `<span class="fh-es-week-this">this wk ${fUSD(r.weekThisUSD)}</span>` : "";
+            const allowance = r.allowMo > 0
+                ? `<div class="fh-es-allow">+${fUSD(r.allowWkUSD)}/wk allowance → <b>${fUSD(r.takeHomeWkUSD)}</b>/wk take-home</div>`
+                : "";
+            return `
+              <div class="fh-es-kid">
+                <div class="fh-es-kid-hdr">
+                  <div class="fh-avatar" style="background:${color};width:26px;height:26px;font-size:var(--fh-text-xs)">${ini(r.person.name)}</div>
+                  <span class="fh-es-kid-name">${escHTML(r.person.name)}</span>
+                  <span class="fh-es-kid-count">${r.chores} chore${r.chores === 1 ? "" : "s"}</span>
+                </div>
+                <div class="fh-es-week">
+                  <span class="fh-es-week-usd">${fUSD(r.weekAvgUSD)}</span><span class="fh-es-week-lbl">/wk</span>
+                  <span class="fh-es-week-pts">${rPts(r.weekAvg)} pts</span>
+                  ${weekThisNote}
+                </div>
+                <div class="fh-es-rng-track">
+                  <div class="fh-es-rng-span" style="left:${left}%;width:${width}%;background:${color}"></div>
+                  <div class="fh-es-rng-dot" style="left:${dot}%;background:${color}"></div>
+                </div>
+                <div class="fh-es-month-sub">${rPts(r.month)} pts · ${fUSD(r.monthUSD)} / month</div>
+                ${allowance}
+              </div>`;
+        }).join("");
+
+        // 2. Monthly balance — the stable fairness picture
+        const fairness = `
+          <div class="fh-es-section">
+            <div class="fh-es-section-hdr">Monthly balance</div>
+            ${earn.rows.map(r => {
+                const pct = Math.round(r.month / earn.maxMonth * 100);
+                return `
+                  <div class="fh-es-bar-row">
+                    <span class="fh-es-bar-name">${escHTML(r.person.name)}</span>
+                    <div class="fh-es-bar-track"><div class="fh-es-bar-fill" style="width:${pct}%;background:${r.person.avatar_color || DEFAULT_COLOR}"></div></div>
+                    <span class="fh-es-bar-val">${fUSD(r.monthUSD)}</span>
+                  </div>`;
+            }).join("")}
           </div>`;
 
-    return `<div class="fh-ad-tasks-panel">${inner}</div>`;
+        // 3. Family payout
+        const totals = `
+          <div class="fh-es-section">
+            <div class="fh-es-section-hdr">Family payout</div>
+            <div class="fh-es-tot-row"><span>Per week</span><span>${rPts(earn.famWeek)} pts · ${fUSD(earn.famWeekUSD)}</span></div>
+            <div class="fh-es-tot-row"><span>Per month</span><span>${rPts(earn.famMonth)} pts · ${fUSD(earn.famMonthUSD)}</span></div>
+          </div>`;
+
+        // 4. Bonus pool — claimable chores, up for grabs (not per-kid)
+        let bonus = "";
+        if (claimables.length) {
+            const bWeek = claimables.reduce((s, c) => s + _choreEffPPW(c, cfg), 0);
+            const cents = earn.centsOfRank(rankOv != null ? rankOv : (earn.rows[0]?.person.rank_index || 0));
+            const bUSD  = pts => pts * cents / 100;
+            bonus = `
+              <div class="fh-es-section">
+                <div class="fh-es-section-hdr">Bonus pool · up for grabs</div>
+                <div class="fh-es-tot-row"><span>Per week</span><span>${rPts(bWeek)} pts · ${fUSD(bUSD(bWeek))}</span></div>
+                <div class="fh-es-tot-row"><span>Per month</span><span>${rPts(bWeek * 4)} pts · ${fUSD(bUSD(bWeek * 4))}</span></div>
+              </div>`;
+        }
+
+        // 5. Swing tip — fully derived from the live config every render
+        let tip = "";
+        const swingers = earn.rows.filter(r => r.swingUSD >= 1);
+        if (swingers.length && earn.weeklyRotChores.length) {
+            const who = swingers.map(r => r.person.name).join(" & ");
+            const maxSwing = Math.max(...swingers.map(r => r.swingUSD));
+            const names = earn.weeklyRotChores;
+            const nameStr = names.length <= 3 ? names.join(", ") : `${names.slice(0, 3).join(", ")} +${names.length - 3} more`;
+            tip = `
+              <div class="fh-es-tip">
+                <b>Weekly pay varies up to ${fUSD(maxSwing)}</b> week-to-week for ${escHTML(who)} (anti-phased) from ${names.length} weekly rotation${names.length === 1 ? "" : "s"} — ${escHTML(nameStr)}. Switch those to per-instance rotation to even the weeks out.
+              </div>`;
+        }
+
+        body = `<div class="fh-es-rail">${kidCards}${fairness}${totals}${bonus}${tip}</div>`;
+    }
+
+    return `
+      <div class="fh-ad-tasks-panel">
+        <div class="fh-ad-tasks-panel-hdr">
+          <div style="flex:1;min-width:0">
+            <div class="fh-ad-tasks-panel-title">Earning &amp; Balance</div>
+            <div class="fh-ad-tasks-panel-sub">${escHTML(assume.join(" · "))}</div>
+          </div>
+        </div>
+        <div class="fh-ad-tasks-panel-body">
+          ${controls}
+          ${body}
+        </div>
+      </div>`;
 }
 
 // ---------------------------------------------------------------------------

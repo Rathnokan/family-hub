@@ -262,6 +262,14 @@ export const CSS_1 = `
   .fh-avatars { display:flex; margin-right:2px; }
   .fh-avatars .fh-avatar + .fh-avatar { margin-left:-8px; }
 
+  /* Rotation dots — spaced (not overlapped) so current/next/dim read clearly */
+  .fh-avatars--rot { gap:3px; }
+  .fh-avatars--rot .fh-avatar + .fh-avatar { margin-left:0; }
+  .fh-avatar--current { box-shadow:0 0 0 2px #ECEFF6; }     /* who has it now */
+  .fh-avatar--next    { box-shadow:0 0 0 1.5px #6F7E9C; }   /* up next */
+  .fh-avatar--dim     { opacity:.4; }                       /* later in the pool */
+  .fh-rot-glyph       { color:#6F7E9C; font-size:var(--fh-text-sm); margin-right:3px; flex-shrink:0; align-self:center; }
+
   /* Person header (personal mode) */
   .fh-person-header {
     display:flex; align-items:flex-start; gap:var(--fh-gap);

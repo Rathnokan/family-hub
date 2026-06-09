@@ -56,19 +56,18 @@ The handoff prompt is part of "Phase Complete" — do not declare a phase done w
 
 | Item | State |
 |---|---|
-| **Live on HA (Samba)** | v0.7.3 deployed + live-tested. |
-| **GitHub / HACS** | **v0.7.3 SHIPPED** — "Chores: make-up, partial credit & a cleaner editor" on `main`, **tag `v0.7.3`**, GitHub release published (Latest). **GitHub Actions CI green** on every push. (v0.7.2 "Dynamic Ranks" before it: tag `v0.7.2`; v0.7.1 bug-swat: tag `v0.7.1`; v0.7.0 "Re-foundation": tag `v0.7.0`.) |
-| **manifest.json / hacs.json / constants.js / const.py VERSION** | **0.7.3** (`iot_class` = `calculated`). |
-| **Phase** | **v0.7.3 SHIPPED.** Partial credit (Approve/Partial/Deny 25/50/75), late make-up claims (kid claims a skipped chore → approval queue → penalty refund + partial-eligible), excuse-day, due/reset labels, per-chore weekly rotation switch day, rotation rail (Current/Up Next below streaks), chore editor rebuilt as a 3-tab side-rail drawer (collapsible icon, multiline desc, monthly multi-day), one-time + Add Task quick flow removed, person delete → red trash, and **admin actor logging** (logged-in HA user on admin actions). See [RELEASE-NOTES-v0.7.3.md](RELEASE-NOTES-v0.7.3.md). **Next → v0.7.4/v0.8.0** (branch from `main`). |
+| **Live on HA (Samba)** | v0.7.5 deployed. |
+| **GitHub / HACS** | **v0.7.5 SHIPPED** — "Chores: balance tools & polish" on `main`, **tag `v0.7.5`**, GitHub release published (Latest). **GitHub Actions CI green** on every push. (Prior tags: `v0.7.3` make-up/partial-credit, `v0.7.2` Dynamic Ranks, `v0.7.1` bug-swat, `v0.7.0` Re-foundation. v0.7.4 skipped.) |
+| **manifest.json / hacs.json / constants.js / const.py VERSION** | **0.7.5** (`iot_class` = `calculated`). |
+| **Phase** | **v0.7.5 SHIPPED — Chores module wrapped.** Admin "Earning & Balance" what-if rail (rank-scaled $, completion %, streak %, weekly range + dynamic swing tip), in-list rotation dots, rotation-editor current-holder fix, daily-penalty **grace** (consecutive-skip allowance on daily chores), rebuilt printable chore list (kids-only, Everyone + rotation schedule, penalties, $ at Rank 3), edit-scroll fix, rank-accurate money, dead-code cleanup. See [RELEASE-NOTES-v0.7.5.md](RELEASE-NOTES-v0.7.5.md). **Chores tabled — next module: v0.8.0 Home Maintenance (branch from `main`).** |
 
-> **v0.7.3 is on `main` + tagged.** Future work: branch from `main` (`git checkout main && git checkout -b v0.7.4-xxx`). Every push runs CI — keep it green before deploying.
+> **v0.7.5 is on `main` + tagged.** Future work: branch from `main`. Every push runs CI — keep it green before deploying.
 >
 > **Backlog (recommended order):**
-> 1. **Repurpose the chore detail side-panel** — the desktop master-detail right panel is now a placeholder ("Tap a chore to edit it in the side panel"); editing opens the drawer. Fill the panel with useful data (parked for a future cycle).
-> 2. **model/history runtime trim.** `build_card_model` still ships the ~1000-entry `history_log` on `needs_attention`, refetched on every `data_rev` change. ⚠️ **Bigger than it looks:** consumed by the admin History view AND all 6 personal pages (`getWeeklyPts` header, per-person history tab, store rail's recent purchases). Doing it right = lazy per-view history (`family_hub/get_history` ws command, person-filtered) + async weekly-points header. Moderate refactor; test all themes.
-> 3. **v0.8.0 Home Maintenance room CRUD** — split Maintenance out of the chores `category_label` special-case into its own module (roadmap).
-> 4. Smaller deferred items (slug divergence, notification/history hardening, dedupe) — [BUGS.md](BUGS.md) "Open — deferred".
-> 5. **Done & shipped:** first-parent attribution → resolved as admin actor logging (v0.7.3); task-instance retention confirmed 30d; weekly-window mismatch fixed (v0.7.2).
+> 1. **v0.8.0 Home Maintenance room CRUD** — split Maintenance out of the chores `category_label` special-case into its own module (roadmap). This is the next module.
+> 2. **model/history runtime trim (LOW — not currently a problem).** The card model caps `history_log` at **150 collapsed rows** (`get_history_for_card(limit=150)`) shipped over websocket (off the state machine since v0.7.0) — confirmed fine at family scale. Residual cost is only that `build_card_model` walks the full history to build those 150 rows each `data_rev`; revisit only if history grows huge. (Lazy per-view `family_hub/get_history` ws command stays the eventual fix.)
+> 3. Smaller deferred items (slug divergence, dedupe, theme flavor text) — [BUGS.md](BUGS.md) "Open — deferred". All low-value/intentional.
+> 4. **Done & shipped:** chore side-panel repurposed → Earning & Balance rail (v0.7.5); first-parent attribution → admin actor logging (v0.7.3); task-instance retention confirmed 30d; weekly-window mismatch fixed (v0.7.2).
 
 ---
 
@@ -78,22 +77,19 @@ The handoff prompt is part of "Phase Complete" — do not declare a phase done w
 
 ### Where things stand (2026-06-08)
 
-- **v0.7.3 shipped** (tag `v0.7.3`, GitHub release). Chores batch:
-  - **Partial credit** — `async_approve_task(... credit_fraction)`; approval queue is Approve / Partial(25/50/75) / Deny (`mPartialCredit`, `open-partial`/`do-partial`). Keeps streaks + success-rate.
-  - **Late make-up claims** — `async_claim_late_task` (skip → `STATUS_PENDING_APPROVAL`, `late_claim`); approval refunds `penalty_applied`. Kid History → Skipped → Claim (`htmlLateClaimBtn`, `instance_status==="skipped"`).
-  - **Excuse-day** — `async_excuse_day(person, day)`; History skipped-group "Excuse day".
-  - **Due/reset labels** — `_dueLabel` in `htmlChoreRow` (uses `days_until_reset`/`recurrence_type`).
-  - **Rotation** — per-chore `rotation_switch_weekday` (weekly cadence flip day); `getRotationStatus`/`htmlRotationRail` Current/Up Next, below streaks. Cadence reduced to per-instance + weekly.
-  - **Chore editor → drawer** — `mChoreForm` uses `dWrap`; both the row-click and edit button open it (`surface:"drawer"`); the desktop inline panel is now a placeholder. `choreFormFields` reorganized to **3 tabs** (Details w/ collapsible icon + multiline desc + reminder; Schedule w/ who → recurrence → rotation; Points & Rewards). **One-time + the Add Task quick flow removed.**
-  - **Monthly multi-day** — `recurrence.days_of_month` list (legacy `day_of_month` fallback) via `_store_helpers._monthly_days`; tick + reset updated.
-  - **Admin actor logging** — `_append_history` carries `actor` from `store.acting_as(name)`; `services._resolve_actor(hass, call)` wraps the admin handlers; History shows "· by …".
-  - Person delete → red trash (`.fh-ad-person-del`, lower-right).
-- **Samba is current.** Full writeup → [RELEASE-NOTES-v0.7.3.md](RELEASE-NOTES-v0.7.3.md).
+- **v0.7.5 shipped** (tag `v0.7.5`, GitHub release) — closes out the Chores module.
+  - **Admin "Earning & Balance" rail** (`_htmlChoreStatsRail` + `_computeEarning` in `modes-admin.js`): per-kid weekly `$` headline + month + min–max range bar w/ "this week" dot; what-if controls (rank override / completion % / include-streaks + streak %) wired via `dispatch.js` (`stats-rank`/`stats-completion`/`stats-streak-pct` + `toggle-stats-streaks`) and the `FamilyHubCard.js` change-handler whitelist; monthly fairness bars, family payout, bonus pool, dynamic swing tip. Money is **rank-scaled** per kid (`rank_ppd_ladder`), not global ppd.
+  - **In-list rotation dots** (`_choreRotationDots`) + **rotation-editor fix**: the editor renders the pool **current-first** (`rotPoolOrdered` in `modals.js`) so the live holder shows as Current and switching works (backend already snaps current to the new pool[0] active member when the pool order changes — `async_update_chore`).
+  - **Daily-penalty grace**: on DAILY chores `daily_penalty_after_days` = consecutive-skip allowance (first N−1 free, then penalize every skip, reset on completion, pause transparent). `tick_mixin._skip_incomplete_instances` gates the skip penalty via `streaks_ranks_mixin._bump_skip_streak` (stored as `streaks[chore_id].skips`); reset in `_increment_streak`. Weekly/monthly keep the original escalating-within-window meaning.
+  - **Printable chore list rebuilt** (`print-chore-list.js`): kids-only, Everyone section, per-kid weekly totals, rotation schedule table, penalty points shown, `$` standardised at Rank 3.
+  - **Fixes/cleanup**: edit no longer scrolls to top (dropped `autofocus` on chore name, `modals.js`), rail scrolls independently (`css/part4.js` max-height), removed dead `_rotationSwitchLabel` + orphaned `ok-edit-chore-inline`/`close-chore-panel` dispatch cases.
+- **History payload confirmed fine** — `get_history_for_card` caps at **150 collapsed rows** over websocket; stale "~1000-entry" doc note corrected. No change needed.
+- **Samba is current.** Full writeup → [RELEASE-NOTES-v0.7.5.md](RELEASE-NOTES-v0.7.5.md).
 
 ### Next session (features)
 1. Branch from `main`: `git checkout main && git checkout -b <feature>`. Every push runs CI — keep it green before deploying.
-2. **Repurpose the chore detail side-panel** (`_htmlChoreEditorPanel` in `modes-admin.js` — now a placeholder) with useful data.
-3. **Perf:** history/model runtime trim (lazy per-view history). Then **v0.8.0 Home Maintenance** module.
+2. **Chores is tabled.** Next module: **v0.8.0 Home Maintenance** room CRUD — split Maintenance out of the chores `category_label` special-case into its own module.
+3. Optional chores polish if you return: Rewards-side stats rail (parity with the chores rail), persist the rail's what-if controls across refresh, "advance rotation now" quick action.
 
 ### Sonnet system-prompt addendum (paste into the next session)
 
@@ -204,3 +200,4 @@ Be terse in responses. The user wants to ship features, not read prose.
 | v0.7.1 | Bug-fix & cleanup — correctness patch off a full-codebase audit (redemption overspend guard, $0 sub-override, lapsed-sub "Ready" math, wired Add-Task penalty, cancel-pending lapse notify, inline sub-editor freeze, history labels) + hardening, slug parity, dedup, dead-code/version-drift removal. |
 | v0.7.2 | **"Dynamic Ranks"** — per-kid, per-rank gain/drop curves as percentage-of-capacity bands (curve editor + per-cell tweak); all theme ladders standardized to 5 rungs (rank survives theme swaps); consolidated **Ranks side-rail drawer** with global + per-kid tabs; Edit Person / Edit Settings converted from popups to drawers; two-line (drop+gain) capacity-spanned rank bar; card weekly-points window aligned to the configured eval weekday. Also: full-color **emoji chore/reward icons** (`FH_EMOJI`, keyed to `FH_ICONS`, legacy SVG fallback). |
 | v0.7.3 | **Chores: make-up, partial credit & a cleaner editor** — partial credit (Approve/Partial/Deny 25/50/75, keeps streaks); late make-up claims (kid claims a skipped chore → approval queue → skip-penalty refund + partial-eligible); excuse-day; due/reset labels on rows; per-chore weekly **rotation switch day** + rotation rail (Current / Up Next, below streaks); chore editor rebuilt as a **3-tab side-rail drawer** (collapsible icon, multiline description, **monthly multi-day** `days_of_month`); **one-time + the Add Task quick flow removed**; person delete → red trash (lower-right); **admin actor logging** (`acting_as` → history `actor`, shows "· by …"). |
+| v0.7.5 | **Chores: balance tools & polish** — admin "Earning & Balance" what-if rail (rank-scaled `$`, completion %, streak %, weekly range + dynamic swing tip); in-list rotation dots; **rotation-editor current-holder fix** (pool rendered current-first); **daily-penalty grace** (`daily_penalty_after_days` = consecutive-skip allowance on daily chores); rebuilt **printable chore list** (kids-only, Everyone + rotation schedule, penalty points, `$` at Rank 3); edit-scroll fix; rank-accurate money; dead-code cleanup. (v0.7.4 skipped.) |

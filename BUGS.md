@@ -50,6 +50,14 @@
 
 ---
 
+## ✅ Fixed in v0.7.5 (deployed Samba + main/tag)
+
+- **Rotation editor showed the wrong "current" holder and couldn't switch turns.** The backend advances rotations by bumping `rotation_index`/`assigned_to` without reordering `rotation_pool`, so the editor's pool widget (top = "Current") showed a stale holder after any rotation and reordering couldn't reliably switch it. The editor now renders the pool **current-first** (`rotPoolOrdered`); saving snaps the active holder to the top via the existing `async_update_chore` reset-on-pool-change. — `modals.js`
+- **Editing a chore scrolled the page to the top.** Dropped `autofocus` on the chore-name input — the editor drawer animates in from off-screen and autofocus' scroll-into-view yanked the page up. — `modals.js`
+- **Cleanup:** removed dead `_rotationSwitchLabel` (`modes-admin.js`) and the orphaned `ok-edit-chore-inline` / `close-chore-panel` dispatch cases (retired inline-editor panel). Corrected the stale history-payload note (see Known trade-offs — it's 150 rows, not ~977).
+
+---
+
 ## Open — deferred (real, but not surgical; fix when next in that area)
 
 ### ~~First-parent attribution~~ — **RESOLVED in v0.7.3 (admin actor logging)**
@@ -72,7 +80,7 @@
 
 ## Known trade-offs (intentional — do NOT "fix" without a reason)
 
-- **`build_card_model` runs synchronously on the event loop** and still ships the ~977-entry `history_log` on every `data_rev` change. Tracked as the v0.7.1 perf backlog item #3 (lazy per-view history via a `family_hub/get_history` ws command). Don't double-handle here.
+- **`build_card_model` runs synchronously on the event loop.** The `history_log` it ships is **capped at 150 collapsed rows** (`get_history_for_card(limit=150)`) over websocket (off the state machine since v0.7.0) — **confirmed NOT a problem at family scale (v0.7.5 check).** Residual: the builder still *walks* the full history to produce those 150 rows each `data_rev`. Eventual fix = lazy per-view `family_hub/get_history` ws command; don't double-handle here.
 - **Mixins over-import the full `const` block on purpose** — CI's ruff deliberately doesn't select `F401`, so this won't go red. Cosmetic token cost only.
 - **`dispatch.js` is one ~90-case switch** with a couple of inconsistent person→entity_id slug approaches. Low-value refactor; splitting it is a silent-import risk ruff (Python-only) can't catch. Leave unless specifically wanted.
 

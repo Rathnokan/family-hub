@@ -230,6 +230,21 @@ class StreaksRanksMixin:
         if chore_id in streaks and streaks[chore_id].get("count", 0) > 0:
             streaks[chore_id]["count"] = 0
 
+    def _bump_skip_streak(self, person_id: str, chore_id: str) -> int:
+        """
+        Increment and return the consecutive-skip ('reverse streak') counter for a
+        person+chore. Powers the daily-chore grace penalty: on a DAILY chore,
+        `daily_penalty_after_days` is the number of consecutive skips allowed before
+        the penalty starts. Reset to 0 on completion (see _increment_streak).
+        """
+        person = self.get_person(person_id)
+        if not person:
+            return 0
+        streaks = person.setdefault("streaks", {})
+        entry = streaks.setdefault(chore_id, {"count": 0, "last_completed": None})
+        entry["skips"] = entry.get("skips", 0) + 1
+        return entry["skips"]
+
     async def _increment_streak(
         self, person_id: str, chore_id: str, chore: dict, today: date
     ) -> None:
@@ -245,6 +260,7 @@ class StreaksRanksMixin:
         entry = streaks.setdefault(chore_id, {"count": 0, "last_completed": None})
         entry["count"] = entry.get("count", 0) + 1
         entry["last_completed"] = today.isoformat()
+        entry["skips"] = 0   # completing resets the consecutive-skip grace counter
         new_count = entry["count"]
 
         milestone = chore.get("streak_milestone", 0)

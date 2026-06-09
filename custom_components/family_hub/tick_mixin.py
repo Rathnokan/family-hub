@@ -531,7 +531,8 @@ class TickMixin:
             if chore.get("penalty_enabled") and chore.get("penalty_points", 0) > 0:
                 if pid:
                     if self.is_penalty_paused_for(pid):
-                        # Penalties paused — skip silently, no deduction
+                        # Penalties paused — skip silently, no deduction, and the
+                        # grace counter does not advance (pause is transparent).
                         _LOGGER.debug(
                             "Family Hub: penalty suppressed for %s (paused) — chore %s",
                             pid, chore["name"],
@@ -547,20 +548,45 @@ class TickMixin:
                             chore_name=chore["name"],
                         )
                     else:
-                        penalty = chore["penalty_points"]
-                        instance["penalty_applied"] = penalty
-                        person = self.get_person(pid)
-                        if person:
-                            person["points_balance"] = max(0, person.get("points_balance", 0) - penalty)
-                            self._append_history(
-                                event_type=HISTORY_TASK_SKIPPED,
-                                person_id=pid,
-                                reference_id=instance["id"],
-                                points_delta=-penalty,
-                                balance_after=person["points_balance"],
-                                note=f'"{chore["name"]}" not completed — {penalty}pt penalty applied',
-                                chore_name=chore["name"],
-                            )
+                        # Daily-chore "grace then penalize": on a DAILY chore,
+                        # daily_penalty_after_days = the number of consecutive skips
+                        # allowed before the penalty starts. The first (N-1) misses
+                        # are free; skip N and every consecutive skip after costs the
+                        # penalty, until a completion resets the counter. Longer-window
+                        # chores (weekly/monthly/every-N) keep the normal skip penalty
+                        # here — their escalation lives in _async_apply_daily_penalties.
+                        is_daily = chore.get("recurrence", {}).get("type", RECURRENCE_DAILY) == RECURRENCE_DAILY
+                        grace_n  = chore.get("daily_penalty_after_days")
+                        charge   = True
+                        if is_daily and grace_n:
+                            skip_no = self._bump_skip_streak(pid, chore["id"])
+                            if skip_no < grace_n:
+                                charge = False
+                                person = self.get_person(pid)
+                                self._append_history(
+                                    event_type=HISTORY_TASK_SKIPPED,
+                                    person_id=pid,
+                                    reference_id=instance["id"],
+                                    points_delta=0,
+                                    balance_after=person.get("points_balance", 0) if person else 0,
+                                    note=f'"{chore["name"]}" not completed — skip {skip_no} of {grace_n} (penalty-free)',
+                                    chore_name=chore["name"],
+                                )
+                        if charge:
+                            penalty = chore["penalty_points"]
+                            instance["penalty_applied"] = penalty
+                            person = self.get_person(pid)
+                            if person:
+                                person["points_balance"] = max(0, person.get("points_balance", 0) - penalty)
+                                self._append_history(
+                                    event_type=HISTORY_TASK_SKIPPED,
+                                    person_id=pid,
+                                    reference_id=instance["id"],
+                                    points_delta=-penalty,
+                                    balance_after=person["points_balance"],
+                                    note=f'"{chore["name"]}" not completed — {penalty}pt penalty applied',
+                                    chore_name=chore["name"],
+                                )
 
             # Break streak on skip — unless the pause flag is active.
             # When paused, skipped days are transparent: streak is preserved

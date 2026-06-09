@@ -77,14 +77,23 @@ export function dispatch(act, el, card) {
             card._doRender(true);
             break;
 
-        // ---- Admin chore table (S9 P3 item 5) --------------------------------
-
-        // Close inline editor panel (✕ button or after save)
-        case "close-chore-panel":
-            card._adminSelectedChoreId = null;
-            card._choreFormTab = "details";
+        // Earning-rail what-if selects (fired via the delegated `change` handler).
+        case "stats-rank":
+            card._statsRankOverride = el.value;          // "" = Current, else "0".."N"
             card._doRender(true);
             break;
+
+        case "stats-completion":
+            card._statsCompletionPct = Number(el.value) || 100;
+            card._doRender(true);
+            break;
+
+        case "stats-streak-pct":
+            card._statsStreakPct = Number(el.value) || 50;
+            card._doRender(true);
+            break;
+
+        // ---- Admin chore table (S9 P3 item 5) --------------------------------
 
         // Chore form tab switch (modal + inline panel) — CSS-only swap to preserve
         // user input on inactive panes. NO _doRender call: panes are all already in DOM.
@@ -775,16 +784,6 @@ export function dispatch(act, el, card) {
             break;
         }
 
-        // Inline panel save — same logic as ok-edit-chore but closes panel instead of modal
-        case "ok-edit-chore-inline": {
-            const data = _buildChorePayload(v, b, int, sr, true);
-            if (!data) break;
-            card._svc("update_chore", data);
-            card._adminSelectedChoreId = null;
-            card._choreFormTab = "details";
-            card._doRender(true);
-            break;
-        }
 
         case "set-streak": {
             const cid   = el.dataset.cid;
