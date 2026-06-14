@@ -168,6 +168,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     store = FamilyHubDataStore(hass, storage_path)
     await store.async_load()
 
+    # v0.7.6: repair task instances stranded by an earlier chore-type switch
+    # (e.g. ASSIGNED → CLAIMABLE "Bonus"). Runs once per load; no-op when clean.
+    repaired = await store._reconcile_chore_instance_types()
+    if repaired:
+        await store.async_save()
+        _LOGGER.info("Family Hub: reconciled instance types for %d chore(s)", repaired)
+
     await store.async_update_settings(
         family_name=family_name,
         points_per_dollar=points_per_dollar,

@@ -169,6 +169,10 @@ class PeopleMixin:
             "rank_drop_thresholds": None,
             "rank_gain_thresholds": None,
             "rank_curve": None,
+            # v0.7.6: when True the weekly auto-evaluation leaves this person's
+            # rank alone (manual promote/demote stays pinned). False = the manual
+            # rank is just a starting point and weekly eval resumes.
+            "rank_locked": False,
             "child_mode": False,
             # v0.6.1: success-rate person streak
             "completion_streak":          0,
@@ -207,6 +211,8 @@ class PeopleMixin:
             "rank_index", "rank_drop_threshold", "rank_gain_threshold",
             # v0.7.2: per-rank threshold curves + remembered generator knobs
             "rank_drop_thresholds", "rank_gain_thresholds", "rank_curve",
+            # v0.7.6: lock rank against the weekly auto-evaluation
+            "rank_locked",
             # v0.6.0 S6: large-button mode
             "child_mode",
             # v0.6.1: success-rate person streak (admin-configurable knobs)

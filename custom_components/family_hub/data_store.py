@@ -599,6 +599,7 @@ class FamilyHubDataStore(CardShaperMixin, TickMixin, StreaksRanksMixin, Subscrip
         rank_default_cap: int | None = None,
         rank_default_drop_pct: int | None = None,
         rank_default_gain_pct: int | None = None,
+        rank_dynamic_capacity: bool | None = None,
     ) -> None:
         s = self._data["settings"]
         if family_name is not None:
@@ -633,6 +634,8 @@ class FamilyHubDataStore(CardShaperMixin, TickMixin, StreaksRanksMixin, Subscrip
             s["rank_default_drop_pct"] = rank_default_drop_pct
         if rank_default_gain_pct is not None:
             s["rank_default_gain_pct"] = rank_default_gain_pct
+        if rank_dynamic_capacity is not None:
+            s["rank_dynamic_capacity"] = rank_dynamic_capacity
         await self.async_save()
 
     # ------------------------------------------------------------------

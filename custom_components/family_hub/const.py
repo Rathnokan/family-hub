@@ -3,7 +3,7 @@
 DOMAIN = "family_hub"
 # Display/reference only. The canonical version lives in manifest.json,
 # hacs.json, and src/card/constants.js — keep this in sync when bumping.
-VERSION = "0.7.5"
+VERSION = "0.7.6"
 
 # Config entry keys
 CONF_FAMILY_NAME = "family_name"

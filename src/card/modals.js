@@ -653,6 +653,12 @@ export function storeItemFormFields(item, isEdit, people, catLabels) {
     // v0.6.5 subscription fields
     const isSubscription = item?.item_type           === "subscription";
     const subPeriod      = item?.subscription_period || "monthly";
+    // v0.7.6 reward gates
+    const reqPct         = item?.require_daily_pct    ?? 0;
+    const minRank        = item?.min_rank_index       ?? 0;
+    const rankOpts       = [0, 1, 2, 3, 4].map(i =>
+        `<option value="${i}" ${minRank === i ? "selected" : ""}>${i === 0 ? "No requirement" : (i === 4 ? "Rank 5 (max)" : `Rank ${i + 1}+`)}</option>`
+    ).join("");
 
     const catOptions = catLabels.map(l =>
         `<option value="${escAttr(l)}" ${catLabel === l ? "selected" : ""}>${escHTML(l)}</option>`
@@ -836,6 +842,23 @@ export function storeItemFormFields(item, isEdit, people, catLabels) {
             <option value="week"  ${period === "week"  ? "selected" : ""}>Week</option>
             <option value="month" ${period === "month" ? "selected" : ""}>Month</option>
           </select>
+        </div>
+      </div>
+      <!-- v0.7.6: reward gates — chore-completion % + minimum rank -->
+      <div class="fh-field" style="border-top:1px solid var(--fh-border);padding-top:10px;margin-top:4px">
+        <label class="fh-label">Reward requirements (optional)</label>
+        <div class="fh-field-help">Lock this reward until the child meets these. Leave at 0 / "No requirement" to disable.</div>
+      </div>
+      <div class="fh-row">
+        <div class="fh-field">
+          <label class="fh-label">Min daily chores done % (0 = off)</label>
+          <input class="fh-input" id="m-sreqpct" type="number"
+                 min="0" max="100" step="5" value="${reqPct}" placeholder="e.g. 80">
+          <div class="fh-field-help">Counts only that day's daily chores (approved). Any weekly chore due that day must also be done.</div>
+        </div>
+        <div class="fh-field">
+          <label class="fh-label">Minimum rank</label>
+          <select class="fh-select" id="m-sminrank">${rankOpts}</select>
         </div>
       </div>
       ${rewardIconPickerSection(icon)}`;
@@ -1159,6 +1182,7 @@ export function mRanksDrawer(card) {
         const gCap     = naAttr.rank_default_cap ?? 100;
         const gDropPct = naAttr.rank_default_drop_pct ?? 60;
         const gGainPct = naAttr.rank_default_gain_pct ?? 80;
+        const gDynamic = naAttr.rank_dynamic_capacity !== false;   // dynamic is the default
         const ladder   = naAttr.rank_ppd_ladder || [3.0, 3.5, 4.0, 4.5, 5.0];
         const wdayOpts = WEEKDAY_NAMES.map((n, i) =>
             `<option value="${i}" ${evalWday == i ? "selected" : ""}>${n}</option>`).join("");
@@ -1176,9 +1200,10 @@ export function mRanksDrawer(card) {
             <label class="fh-label">Evaluate ranks on</label>
             <select class="fh-select" id="m-rank-weekday">${wdayOpts}</select>
           </div>
-          <div class="fh-field">
-            <label class="fh-label">Default weekly capacity (pts)</label>
-            <input class="fh-input" id="m-rank-cap" type="number" min="0" value="${gCap}">
+          <div class="fh-field-help" style="margin:-2px 0 8px">
+            Ranks move on this day each week, measured against each kid's
+            <strong>weekly assigned chore points</strong> (rotations included; no bonus
+            chores or streak bonuses) — so the bar always fits what they were actually given.
           </div>
           <div class="fh-row">
             <div class="fh-field">
@@ -1190,7 +1215,7 @@ export function mRanksDrawer(card) {
               <input class="fh-input" id="m-rank-gain" type="number" min="0" max="100" value="${gGainPct}">
             </div>
           </div>
-          <div class="fh-field-help">Fallback for any kid without their own per-rank curve (% of the default capacity).</div>
+          <div class="fh-field-help">Default bands for any kid without their own per-rank curve (% of their weekly assigned points).</div>
           <div class="fh-divider"></div>
           <div class="fh-field">
             <label class="fh-label">Reward value per rank (¢/point)</label>
@@ -1209,12 +1234,15 @@ export function mRanksDrawer(card) {
     const ranks    = getTheme(p.theme_key || "classic").ranks;
     const rankIdx  = p.rank_index ?? 0;
     const curve    = p.rank_curve || {};
-    const cap      = curve.cap ?? 100;
+    const cap         = curve.cap ?? 100;
+    const dyn         = naAttr.rank_dynamic_capacity !== false;   // dynamic is the default
+    const assignedPpw = p.assigned_ppw ?? 0;
+    const effCap      = dyn ? assignedPpw : cap;   // dynamic basis = this kid's assigned pts/week
     const gainPcts = (Array.isArray(curve.gain_pcts) && curve.gain_pcts.length === 5)
         ? curve.gain_pcts : DEFAULT_GAIN_PCTS.slice();
     const dropPcts = (Array.isArray(curve.drop_pcts) && curve.drop_pcts.length === 5)
         ? curve.drop_pcts : DEFAULT_DROP_PCTS.slice();
-    const preview  = curveFromPercents(cap, gainPcts, dropPcts);
+    const preview  = curveFromPercents(effCap, gainPcts, dropPcts);
 
     const gridRows = ranks.map((r, i) => {
         const isTop = i === ranks.length - 1;
@@ -1241,19 +1269,32 @@ export function mRanksDrawer(card) {
         Theme <strong>${escHTML(p.theme_key || "classic")}</strong> · currently
         <strong>${escHTML(getEffectiveRank(rankIdx, ranks).name)}</strong>
       </div>
-      <div class="fh-row">
-        <div class="fh-field">
-          <label class="fh-label">Weekly capacity (pts)</label>
-          <input class="fh-input" id="m-curve-cap" type="number" min="0" value="${cap}">
-        </div>
-        <div class="fh-field">
-          <label class="fh-label">Rank index (override, 0–4)</label>
-          <input class="fh-input" id="m-rank-idx" type="number" min="0" max="4" value="${rankIdx}">
+      <div class="fh-field">
+        <label class="fh-label">Set current rank (0–4)</label>
+        <input class="fh-input" id="m-rank-idx" type="number" min="0" max="4" value="${rankIdx}">
+      </div>
+      <input type="hidden" id="m-curve-cap" value="${effCap}">
+      <div class="fh-field">
+        <label class="fh-label" style="display:flex;align-items:center;gap:10px;cursor:pointer">
+          <label class="fh-toggle">
+            <input type="checkbox" id="m-rank-lock" ${p.rank_locked ? "checked" : ""}>
+            <span class="fh-toggle-slider"></span>
+          </label>
+          Lock this rank (pause weekly auto-evaluation)
+        </label>
+        <div class="fh-field-help">
+          Off: setting the rank is a one-time promote/demote — the weekly evaluation
+          can still move them after. On: their rank stays pinned here until you unlock it.
         </div>
       </div>
       <div class="fh-field-help">
-        Each band is a % of weekly capacity — threshold points = % × capacity.
-        Edit the percentages; the grey number is the resulting points.
+        Bands are a % of ${escHTML(p.name)}'s directly-assigned chores —
+        about <strong>${effCap} pts this week</strong> (rotations included; no bonus
+        chores or streak bonuses). The point ranges below scale from that and recompute
+        every week.
+      </div>
+      <div class="fh-rank-summary" style="font-size:var(--fh-text-sm);margin:6px 0 2px;padding:8px 10px;border:1px solid var(--fh-border);border-radius:8px;background:var(--fh-surface)">
+        Now: <strong>${escHTML(getEffectiveRank(rankIdx, ranks).name)}</strong>${dyn && effCap <= 0 ? " · no assigned chores — rank won't move" : `${rankIdx < ranks.length - 1 ? ` · ranks up at <strong>≥ ${preview.gain[rankIdx]} pts/wk</strong>` : " · top rank"}${rankIdx > 0 ? ` · drops below <strong>${preview.drop[rankIdx]} pts/wk</strong>` : " · can't drop"}`}
       </div>
 
       <div class="fh-modal-section">

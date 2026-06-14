@@ -229,17 +229,13 @@ export function dispatch(act, el, card) {
                 if (isNaN(val) || val <= 0) { ladderOk = false; return; }
                 ladder.push(val);
             });
-            const cap     = Math.max(0, parseInt(v("m-rank-cap")  || "100"));
             const dropPct = Math.max(0, parseInt(v("m-rank-drop") || "60"));
             const gainPct = Math.max(0, parseInt(v("m-rank-gain") || "80"));
             const payload = {
                 rank_eval_weekday:     parseInt(v("m-rank-weekday") || "0"),
-                rank_default_cap:      cap,
+                rank_dynamic_capacity: true,   // capacity is always the week's assigned points
                 rank_default_drop_pct: dropPct,
                 rank_default_gain_pct: gainPct,
-                // derive the absolute fallback thresholds eval uses
-                rank_drop_threshold:   Math.round(cap * dropPct / 100 / 5) * 5,
-                rank_gain_threshold:   Math.round(cap * gainPct / 100 / 5) * 5,
             };
             if (ladderOk && ladder.length) payload.rank_ppd_ladder = ladder;
             card._svc("update_settings", payload);
@@ -260,6 +256,7 @@ export function dispatch(act, el, card) {
             card._svc("update_person", {
                 person_id:            pid,
                 rank_index:           Math.max(0, Math.min(4, parseInt(v("m-rank-idx") || "0"))),
+                rank_locked:          b("m-rank-lock"),
                 rank_gain_thresholds: gain,
                 rank_drop_thresholds: drop,
                 rank_curve: { cap, gain_pcts: gainPcts, drop_pcts: dropPcts },
@@ -435,9 +432,21 @@ export function dispatch(act, el, card) {
             break;
 
         // ---- Store redemption request --------------------------------------
-        case "redeem":
-            card._svc("request_redemption", { person_id: el.dataset.pid, item_id: el.dataset.iid });
+        case "redeem": {
+            // v0.7.6: guard against locked rewards (chore-% / min-rank gates).
+            // The theme buttons already render a locked badge instead of a tap
+            // target, but this catches any stale click before hitting the service.
+            const rPid = el.dataset.pid, rIid = el.dataset.iid;
+            const rPerson = (card._attrs("sensor.family_hub_needs_attention").people || []).find(p => p.id === rPid);
+            const rKey = rPerson ? `sensor.family_hub_${rPerson.name.toLowerCase().replace(/ /g, "_")}` : null;
+            const rItem = rKey ? (card._attrs(rKey).store_items || []).find(i => i.item_id === rIid) : null;
+            if (rItem && rItem.locked) {
+                alert(rItem.lock_reason || "This reward is locked until you finish your chores.");
+                break;
+            }
+            card._svc("request_redemption", { person_id: rPid, item_id: rIid });
             break;
+        }
 
         // Subscriptions go through data-act="redeem" → approve-subscription-redemption (not "subscribe").
 
@@ -1263,6 +1272,10 @@ function _buildStoreItemPayload(v, sr, isEdit, wasGroupReward) {
     if (isSub) {
         data.subscription_period = v("m-ssperiod") || "monthly";
     }
+
+    // v0.7.6: reward gates (0 / 0 = off)
+    data.require_daily_pct = Math.max(0, Math.min(100, parseInt(v("m-sreqpct") || "0") || 0));
+    data.min_rank_index    = Math.max(0, Math.min(4, parseInt(v("m-sminrank") || "0") || 0));
 
     return data;
 }

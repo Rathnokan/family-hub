@@ -20,7 +20,7 @@ import { getEffectiveRank, effectiveRankThresholds, getWeeklyPts, getWeeklyPtsLo
          htmlGoalBanner, htmlRailGoal, htmlGoalToggleBtn,
          storeItemIcon, htmlStoreItemLimit,
          htmlStreakFreezeChip, htmlDailyProgress,
-         htmlGroupContributorBars, htmlChipInBtn, htmlGroupProposalBanner,
+         htmlGroupContributorBars, htmlChipInBtn, htmlGroupProposalBanner, htmlRewardLockBadge, htmlBonusBoard,
          htmlSubscriptionRail, htmlRailSubscriptions, htmlStoreRailContent } from "./_shared.js";
 
 // ---- Palette ----------------------------------------------------------------
@@ -132,7 +132,7 @@ export const engineerTheme = {
         const showRail   = activeTab === "tasks";
         const railHTML   = showRail
             ? _railPanels({ attr, naAttr, person, balance, openCount, weekly, lost, atRisk, rank,
-                            rankIdx, dropThr, gainThr, plotDate })
+                            rankIdx, dropThr, gainThr, plotDate, card })
             : "";
 
         return `
@@ -184,12 +184,13 @@ export const engineerTheme = {
 // ---- Rail panels ------------------------------------------------------------
 
 function _railPanels({ attr, naAttr, person, balance, openCount, weekly, lost, atRisk, rank,
-                       rankIdx, dropThr, gainThr, plotDate }) {
+                       rankIdx, dropThr, gainThr, plotDate, card }) {
     return `
         ${_railPanelKPIs(balance, openCount, weekly, lost, atRisk, attr.show_dollar_value ? attr.dollar_value : null)}
         ${htmlRailGoal(attr)}
         ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, person, attr)}
         ${_railPanelStreaks(attr, naAttr, person)}
+        ${(() => { const b = htmlBonusBoard(card._attrs("sensor.family_hub_claimable_tasks").tasks || [], person.person_id, { bare: true }); return b ? _railPanel("BONUS · OPEN OPS", b) : ""; })()}
         ${(() => { const b = htmlRotationRail(person, naAttr, ENG.amber); return b ? _railPanel("ROTATION · POOL", b) : ""; })()}
         ${_railPanelSubs(attr, balance, person.person_id)}
         ${_railPanelSheet(person, rank, plotDate)}`;
@@ -402,6 +403,8 @@ function _rewards(attr, person, balance, card) {
                     ${htmlGoalToggleBtn(item, attr, person.person_id)}
                     ${isGroup
                         ? htmlChipInBtn(item, person.person_id, balance)
+                        : (item.locked && !requested && !(isSubscription && isSubscribed))
+                        ? htmlRewardLockBadge(item)
                         : isSubscription
                         ? isSubscribed
                             ? `<div class="fh-eng-status" style="color:${ENG.amber}">&#10003; SUBSCRIBED</div>`

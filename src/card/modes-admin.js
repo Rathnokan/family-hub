@@ -659,9 +659,9 @@ function _htmlAdFamily(people, attr, card) {
       </div>`;
 
     return `
-      <div style="display:flex;gap:16px;align-items:flex-start">
+      <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
 
-        <div style="flex:1;min-width:0">
+        <div style="flex:1 1 540px;min-width:0">
           <div class="fh-ad-family-grid">${cards}</div>
           <div class="fh-ad-panel" style="margin-top:4px">
             <div class="fh-ad-panel-hdr">
@@ -687,7 +687,7 @@ function _htmlAdFamily(people, attr, card) {
           ${inactivePanel}
         </div>
 
-        <div class="fh-ad-tasks-panel" style="flex-shrink:0">
+        <div class="fh-ad-tasks-panel" style="flex:1 1 420px;min-width:360px;max-width:460px">
           <div class="fh-ad-tasks-panel-hdr">
             <div style="flex:1">
               <div class="fh-ad-tasks-panel-title">Active Subscriptions</div>
@@ -1067,10 +1067,14 @@ function _computeEarning(chores, people, cfg) {
         const rot = _choreRotationInfo(c, people);
         if (rot && rot.cadence === "weekly") {
             weeklyRot.push({ eff, ordered: rot.orderedIds, name: c.name });
-            rot.activeIds.forEach(id => { if (count[id] != null) count[id] += 1; });
+            // Count rotations under the CURRENT holder only, so the per-kid chore
+            // count matches the chore table's Assignee filter (which keys off
+            // assigned_to). Earnings are still spread across the pool below.
+            if (count[rot.currentId] != null) count[rot.currentId] += 1;
         } else if (rot) {
             const share = eff / rot.activeIds.length;   // per-instance/daily: even, stable
-            rot.activeIds.forEach(id => { if (base[id] != null) { base[id] += share; count[id] += 1; } });
+            rot.activeIds.forEach(id => { if (base[id] != null) base[id] += share; });
+            if (count[rot.currentId] != null) count[rot.currentId] += 1;
         } else {
             for (const pid of (c.assigned_to || [])) {
                 if (base[pid] != null) { base[pid] += eff; count[pid] += 1; }
@@ -1234,6 +1238,7 @@ function _htmlChoreStatsRail(card) {
                   <div class="fh-avatar" style="background:${color};width:26px;height:26px;font-size:var(--fh-text-xs)">${ini(r.person.name)}</div>
                   <span class="fh-es-kid-name">${escHTML(r.person.name)}</span>
                   <span class="fh-es-kid-count">${r.chores} chore${r.chores === 1 ? "" : "s"}</span>
+                  <span class="fh-es-kid-rank" style="margin-left:auto;font-size:var(--fh-text-xs);font-weight:700;color:var(--fh-text-sec)">Rank ${(rankOv != null ? rankOv : (r.person.rank_index || 0)) + 1}${rankOv != null ? " (what-if)" : ""}</span>
                 </div>
                 <div class="fh-es-week">
                   <span class="fh-es-week-usd">${fUSD(r.weekAvgUSD)}</span><span class="fh-es-week-lbl">/wk</span>

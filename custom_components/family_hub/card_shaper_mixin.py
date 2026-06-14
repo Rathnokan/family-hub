@@ -292,7 +292,14 @@ class CardShaperMixin:
                 "item_type":            i.get("item_type", ITEM_TYPE_ONE_TIME),
                 "subscription_period":  i.get("subscription_period", ""),
                 "subscription_anchor":  i.get("subscription_anchor", 1),
+                # v0.7.6: reward gates — lock state + reason for the card
+                "require_daily_pct":    i.get("require_daily_pct", 0),
+                "min_rank_index":       i.get("min_rank_index", 0),
             }
+            # v0.7.6: evaluate gates for this person and attach lock info.
+            gate = self._reward_gate_status(person_id, i)
+            row["locked"]      = gate["locked"]
+            row["lock_reason"] = "; ".join(gate["reasons"])
             if i.get("is_group_reward"):
                 # Enrich contributor list with name/color for the card renderer.
                 enriched = []

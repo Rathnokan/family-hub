@@ -22,10 +22,51 @@ from datetime import date, timedelta
 
 from .const import (
     ACTIVE_STATUSES,
+    CHORE_TYPE_ASSIGNED,
     MAINTENANCE_DUE_SOON_DAYS,
     REDEMPTION_PENDING,
     STATUS_PENDING_APPROVAL,
 )
+
+
+def _chore_occ_per_week(chore) -> float:
+    """Average times/week a chore comes due, from its recurrence. Mirrors the
+    card's _choreOccPerWeek. One-time / unknown → 0."""
+    rec   = chore.get("recurrence", {}) or {}
+    rtype = rec.get("type", "daily")
+    if rtype == "daily":
+        df = rec.get("day_filter") or []
+        return len(df) if df else 7
+    if rtype == "weekly":
+        wd = rec.get("weekdays") or []
+        return len(wd) if wd else 1
+    if rtype == "every_n_days":
+        n = rec.get("interval", 1) or 1
+        return 7 / n if n > 0 else 0
+    if rtype == "every_n_weeks":
+        n = rec.get("interval", 1) or 1
+        return 1 / n if n > 0 else 0
+    if rtype == "monthly_on_date":
+        days = rec.get("days_of_month") or []
+        dom  = len(days) if days else 1
+        return dom * 12 / 52
+    return 0
+
+
+def assigned_points_per_week(store, person_id: str) -> int:
+    """Points DIRECTLY ASSIGNED to a kid in a typical week — the basis the admin
+    shows for the dynamic rank capacity. Active assigned-type chores where the
+    kid is the current holder (assigned_to), at full points × weekly occurrence.
+    Excludes claimable/bonus + reminders; streak bonuses aren't chore points.
+    Mirrors streaks_ranks_mixin._assignable_week_points for current assignments."""
+    total = 0.0
+    for c in store.get_active_chores():
+        if c.get("chore_type") != CHORE_TYPE_ASSIGNED:
+            continue
+        if person_id not in (c.get("assigned_to") or []):
+            continue
+        total += _chore_occ_per_week(c) * c.get("points", 0)
+    return round(total)
 
 
 def person_entity_id(name: str) -> str:
@@ -239,6 +280,9 @@ def build_needs_attention_payload(store) -> dict:
             "item_type":           i.get("item_type", "one_time"),
             "subscription_period": i.get("subscription_period", ""),
             "subscription_anchor": i.get("subscription_anchor", 1),
+            # v0.7.6: reward gates (so the admin edit form round-trips them)
+            "require_daily_pct":   i.get("require_daily_pct", 0),
+            "min_rank_index":      i.get("min_rank_index", 0),
         }
         for i in sorted(
             store.store_items,
@@ -327,6 +371,8 @@ def build_needs_attention_payload(store) -> dict:
                 "rank_drop_thresholds": p.get("rank_drop_thresholds"),
                 "rank_gain_thresholds": p.get("rank_gain_thresholds"),
                 "rank_curve":           p.get("rank_curve"),
+                "rank_locked":          p.get("rank_locked", False),
+                "assigned_ppw":         assigned_points_per_week(store, p["id"]),
                 "child_mode":          p.get("child_mode", False),
                 "completion_streak":        p.get("completion_streak", 0),
                 "completion_threshold_pct": p.get("completion_threshold_pct", 80),
@@ -376,6 +422,7 @@ def build_needs_attention_payload(store) -> dict:
         "rank_default_cap":          store.settings.get("rank_default_cap", 100),
         "rank_default_drop_pct":     store.settings.get("rank_default_drop_pct", 60),
         "rank_default_gain_pct":     store.settings.get("rank_default_gain_pct", 80),
+        "rank_dynamic_capacity":     store.settings.get("rank_dynamic_capacity", True),
         "rank_ppd_ladder":           store.rank_ppd_ladder,
 
         # Enriched 30-day history log for admin log/approvals UI

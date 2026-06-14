@@ -20,7 +20,7 @@ import { getEffectiveRank, effectiveRankThresholds, getWeeklyPts, getWeeklyPtsLo
          htmlGoalBanner, htmlRailGoal, htmlGoalToggleBtn,
          storeItemIcon, htmlStoreItemLimit,
          htmlStreakFreezeChip, htmlDailyProgress,
-         htmlGroupContributorBars, htmlChipInBtn, htmlGroupProposalBanner,
+         htmlGroupContributorBars, htmlChipInBtn, htmlGroupProposalBanner, htmlRewardLockBadge, htmlBonusBoard,
          htmlSubscriptionRail, htmlRailSubscriptions, htmlStoreRailContent } from "./_shared.js";
 
 // ---- Palette ----------------------------------------------------------------
@@ -126,7 +126,7 @@ export const bakerTheme = {
         const showRail = activeTab === "tasks";
         const railHTML = showRail
             ? _railPanels({ attr, naAttr, person, balance, weekly, lost, atRisk, openCount,
-                            rankIdx, dropThr, gainThr, rank })
+                            rankIdx, dropThr, gainThr, rank, card })
             : "";
 
         return `
@@ -155,12 +155,13 @@ export const bakerTheme = {
 // ---- Rail panels ------------------------------------------------------------
 
 function _railPanels({ attr, naAttr, person, balance, weekly, lost, atRisk, openCount,
-                       rankIdx, dropThr, gainThr, rank }) {
+                       rankIdx, dropThr, gainThr, rank, card }) {
     return `
         ${_railPanelKPIs(balance, weekly, lost, atRisk, openCount, attr.show_dollar_value ? attr.dollar_value : null)}
         ${htmlRailGoal(attr)}
         ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, person, attr)}
         ${_railPanelStreaks(attr, naAttr, person)}
+        ${(() => { const b = htmlBonusBoard(card._attrs("sensor.family_hub_claimable_tasks").tasks || [], person.person_id, { bare: true }); return b ? _railPanel("bonus orders", b) : ""; })()}
         ${(() => { const b = htmlRotationRail(person, naAttr, BK.terra); return b ? _railPanel("rotation", b) : ""; })()}
         ${_railPanelSubs(attr, balance, person.person_id)}
         ${_railPanelRecent(person, naAttr)}`;
@@ -348,6 +349,8 @@ function _menu(attr, person, balance, card) {
                     ${htmlGoalToggleBtn(item, attr, person.person_id)}
                     ${isGroup
                         ? htmlChipInBtn(item, person.person_id, balance)
+                        : (item.locked && !requested && !(isSubscription && isSubscribed))
+                        ? htmlRewardLockBadge(item)
                         : isSubscription
                         ? isSubscribed
                             ? `<span class="fh-bk-badge" style="color:${BK.terra}">Subscribed ✓</span>`

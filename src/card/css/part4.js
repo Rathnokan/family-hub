@@ -444,9 +444,12 @@ export const CSS_4 = `    text-shadow:2px 2px 0 rgba(255,255,255,.3), 4px 4px 0 
   }
 
   /* ---- Family grid ---- */
-  .fh-ad-family-grid { display: flex; flex-direction: column; gap: 10px; }
-  @media (min-width: 850px) {
-    .fh-ad-family-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  /* Intrinsic responsive grid: cards never go below a readable ~300px and the
+     column count adapts to whatever width the pane actually has (1 → 2 → 3…),
+     instead of a fixed 2-up that squishes when the subscriptions rail is open. */
+  .fh-ad-family-grid {
+    display: grid; gap: 10px;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   }
   .fh-ad-person-card {
     background: #1A2538; border: 1px solid #2A3852;
@@ -485,11 +488,14 @@ export const CSS_4 = `    text-shadow:2px 2px 0 rgba(255,255,255,.3), 4px 4px 0 
   }
   .fh-ad-person-bal { font-size: var(--fh-text-sm); color: #A6B3CC; margin-top: 4px; }
   .fh-ad-person-foot {
-    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-    padding: 10px 14px;
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 10px 44px 10px 14px;   /* right pad clears the absolute trash button */
     background: rgba(255,255,255,.025);
     border-top: 1px solid #2A3852;
   }
+  /* Status label always gets its own line so the Streaks/Ranks/toggle row stays
+     intact at any card width (no accidental mid-row wrap). */
+  .fh-ad-person-foot .fh-penalty-pause-label { flex: 1 0 100%; }
 
   /* ---- Settings grid — 2 panels: config (left) + hub layout (right) ---- */
   .fh-ad-settings-grid {

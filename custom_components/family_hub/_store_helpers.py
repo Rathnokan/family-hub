@@ -279,6 +279,11 @@ def _migrate_store_item(item: dict) -> dict:
     item.setdefault("item_type", ITEM_TYPE_ONE_TIME)
     item.setdefault("subscription_period", "")
     item.setdefault("subscription_anchor", 1)
+    # v0.7.6: reward gates — both default off so existing rewards are unaffected.
+    # require_daily_pct: 0 = no requirement; 1-100 = min % of today's daily chores done.
+    # min_rank_index:    0 = no requirement; N = require person rank_index >= N.
+    item.setdefault("require_daily_pct", 0)
+    item.setdefault("min_rank_index", 0)
     return item
 
 

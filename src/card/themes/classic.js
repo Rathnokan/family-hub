@@ -18,7 +18,7 @@ import { getEffectiveRank, effectiveRankThresholds, getWeeklyPts, getWeeklyPtsLo
          htmlGoalBanner, htmlGoalToggleBtn, storeItemIcon,
          htmlStoreItemLimit,
          htmlStreakFreezeChip, htmlDailyProgress,
-         htmlGroupContributorBars, htmlChipInBtn, htmlGroupProposalBanner,
+         htmlGroupContributorBars, htmlChipInBtn, htmlGroupProposalBanner, htmlRewardLockBadge, htmlBonusBoard,
          htmlSubscriptionRail, htmlRailSubscriptions, htmlStoreRailContent } from "./_shared.js";
 
 const CLASSIC_RANKS = [
@@ -83,7 +83,7 @@ export const classicTheme = {
         const showRail = card._tab === "tasks";
         const railHTML = showRail
             ? _railPanels({ attr, naAttr, person, balance, weekly, lost, atRisk, openCount,
-                            pendingCount, rankIdx, dropThr, gainThr, color })
+                            pendingCount, rankIdx, dropThr, gainThr, color, card })
             : "";
 
         return `
@@ -114,11 +114,12 @@ export const classicTheme = {
 // ---------------------------------------------------------------------------
 
 function _railPanels({ attr, naAttr, person, balance, weekly, lost, atRisk, openCount,
-                       pendingCount, rankIdx, dropThr, gainThr, color }) {
+                       pendingCount, rankIdx, dropThr, gainThr, color, card }) {
     return `
         ${_railPanelKPIs(balance, weekly, lost, atRisk, openCount, pendingCount)}
         ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, color, person, attr)}
         ${_railPanelStreaks(attr, naAttr, person, color)}
+        ${(() => { const b = htmlBonusBoard(card._attrs("sensor.family_hub_claimable_tasks").tasks || [], person.person_id, { bare: true }); return b ? _railPanel("BONUS", b) : ""; })()}
         ${(() => { const b = htmlRotationRail(person, naAttr, color); return b ? _railPanel("ROTATION", b) : ""; })()}
         ${_railPanelSubs(attr, balance, person.person_id)}
         ${_railPanelRecent(person, naAttr, color)}`;
@@ -364,6 +365,8 @@ function _store(attr, color, person, balance, card) {
                     ${htmlGroupContributorBars(item, person.person_id)}
                     ${isGroup
                         ? htmlChipInBtn(item, person.person_id, balance)
+                        : (item.locked && !requested && !(isSubscription && isSubscribed))
+                        ? htmlRewardLockBadge(item)
                         : isSubscription
                         ? isSubscribed
                             ? `<span class="fh-badge fh-badge-subscribed">Subscribed ✓</span>`

@@ -254,6 +254,79 @@ class ChoresMixin:
         await self.async_save()
         return chore
 
+    async def _reconcile_chore_instance_types(self, only_chore_id: str | None = None) -> int:
+        """Repair active task instances whose shape no longer matches their chore's type.
+
+        Switching a chore's type at runtime (e.g. ASSIGNED → CLAIMABLE "Bonus")
+        used to strand the old instances: owned pending instances kept showing on
+        kids' dashboards, while no shared claimable instance was ever generated
+        (the daily tick's per-date "already exists" guard saw the stale owned
+        instance and skipped creation). This pass purges the type-wrong active
+        instances and regenerates today's correct instance(s) for the current
+        type. Detection is conservative so it can run safely on every load:
+
+          - CLAIMABLE chore: a PENDING instance with an owner is always a leftover
+            (claiming flips a claimable instance to CLAIMED, never leaves it
+            PENDING+owned).
+          - ASSIGNED chore: a PENDING instance with no owner is a ghost (assigned
+            chores always own their instances).
+
+        Reminders and CLAIMED / PENDING_APPROVAL instances are left untouched.
+        Does not save — the caller persists. Returns the count of chores repaired.
+        """
+        today = date.today()
+        repaired = 0
+        for chore in self.chores:
+            if only_chore_id is not None and chore.get("id") != only_chore_id:
+                continue
+            if not chore.get("active", True):
+                continue
+            if chore.get("recurrence", {}).get("type") == RECURRENCE_ONE_TIME:
+                continue
+            ctype = chore.get("chore_type", CHORE_TYPE_ASSIGNED)
+
+            wrong_ids = set()
+            for t in self._data["task_instances"]:
+                if t.get("chore_id") != chore["id"]:
+                    continue
+                if t["status"] not in ACTIVE_STATUSES:
+                    continue
+                owner = t.get("assigned_to")
+                if ctype == CHORE_TYPE_CLAIMABLE and owner is not None and t["status"] == STATUS_PENDING:
+                    wrong_ids.add(t["id"])
+                elif ctype == CHORE_TYPE_ASSIGNED and owner is None and t["status"] == STATUS_PENDING:
+                    wrong_ids.add(t["id"])
+            if not wrong_ids:
+                continue
+
+            self._data["task_instances"] = [
+                t for t in self._data["task_instances"] if t["id"] not in wrong_ids
+            ]
+
+            today_str = today.isoformat()
+            if ctype == CHORE_TYPE_CLAIMABLE:
+                has_today = any(
+                    t for t in self._data["task_instances"]
+                    if t["chore_id"] == chore["id"]
+                    and t["due_date"] == today_str
+                    and t["status"] in ACTIVE_STATUSES
+                )
+                if not has_today:
+                    await self._async_create_task_instance(chore, today, person_id=None)
+            elif ctype == CHORE_TYPE_ASSIGNED:
+                for pid in chore.get("assigned_to", []):
+                    has_today = any(
+                        t for t in self._data["task_instances"]
+                        if t["chore_id"] == chore["id"]
+                        and t.get("assigned_to") == pid
+                        and t["due_date"] == today_str
+                        and t["status"] in ACTIVE_STATUSES
+                    )
+                    if not has_today:
+                        await self._async_create_task_instance(chore, today, person_id=pid)
+            repaired += 1
+        return repaired
+
     async def async_update_chore(self, chore_id: str, **kwargs: Any) -> dict | None:
         """
         Update a chore definition.
@@ -278,6 +351,7 @@ class ChoresMixin:
         }
         old_assigned = list(chore.get("assigned_to", []))
         old_pool     = list(chore.get("rotation_pool", []))
+        old_type     = chore.get("chore_type")
 
         for key, val in kwargs.items():
             if key not in allowed:
@@ -335,7 +409,16 @@ class ChoresMixin:
         #   2. For each person newly added to the assignment list, create a
         #      fresh instance for today (the next tick will handle future dates).
         #   3. Leave instances that already have the correct assigned_to alone.
-        if old_assigned != new_assigned:
+        #
+        # v0.7.6: a chore_type change (e.g. ASSIGNED → CLAIMABLE "Bonus") takes
+        # precedence — purge the now type-wrong instances and regenerate today's
+        # correct instance(s) so the chore immediately stops showing as an owned
+        # task and starts appearing in the claimable picker. Skip the assignment
+        # sync below in that case (the reconcile already rebuilt the instances).
+        type_changed = "chore_type" in kwargs and chore.get("chore_type") != old_type
+        if type_changed:
+            await self._reconcile_chore_instance_types(only_chore_id=chore_id)
+        elif old_assigned != new_assigned:
             today = date.today()
 
             # Collect the due dates of existing active instances so we can

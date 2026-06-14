@@ -968,6 +968,77 @@ export function htmlChipInBtn(item, personId, balance) {
 }
 
 /**
+ * v0.7.6: locked-reward badge shown in place of the redeem / subscribe button
+ * when a reward's chore-completion-% or minimum-rank gate is not met. The lock
+ * state + reason are computed server-side (_reward_gate_status) and ride on the
+ * per-person store_items row as item.locked / item.lock_reason. Returns "" when
+ * the reward is unlocked so themes can call it inline. Font stays at the 12px
+ * floor (--fh-text-xs).
+ */
+export function htmlRewardLockBadge(item) {
+    if (!item?.locked) return "";
+    const reason = item.lock_reason || "Locked";
+    return `<span class="fh-reward-lock" title="${escAttr(reason)}"
+                  style="display:inline-flex;align-items:center;gap:4px;text-align:center;
+                         font-size:var(--fh-text-xs);font-weight:700;line-height:1.25;
+                         color:var(--fh-overdue);max-width:140px">🔒 ${escHTML(reason)}</span>`;
+}
+
+/**
+ * v0.7.6: "Bonus chores — up for grabs" board for the personal dashboards.
+ * Renders the family-wide claimable (Bonus) pool with a one-tap Claim button
+ * bound to the viewing kid, so kids can grab bonus chores without leaving their
+ * own page (previously claimable tasks only showed in Chores HQ / Command
+ * Center). Reuses the existing ok-claim dispatch (claim_task) — no new wiring.
+ * Returns "" when the pool is empty so themes can append it inline. Theme-neutral
+ * (CSS vars) and respects the 12px type floor.
+ *
+ * @param {object[]} claimable  sensor.family_hub_claimable_tasks → tasks
+ * @param {string}   personId   viewing kid's person_id (the claimer)
+ * @param {object}   [opts]     { title } optional section-title override
+ */
+export function htmlBonusBoard(claimable, personId, opts = {}) {
+    if (!claimable || !claimable.length) return "";
+    const bare = !!opts.bare;   // bare = rows only (theme rail-panel supplies the heading)
+    const rows = claimable.map(t => {
+        const multi = t.claimable_subtype === "multi_claim";
+        const slots = multi ? Math.max(0, t.slots_remaining ?? 0) : 1;
+        if (multi && slots <= 0) return "";   // capacity full — nothing to claim
+        const meta = multi
+            ? `${slots} spot${slots === 1 ? "" : "s"} left`
+            : "first come";
+        // Compact vertical layout so it fits the narrow right rail.
+        return `
+          <div class="fh-bonus-row"
+               style="padding:8px;border:1px solid var(--fh-border);border-radius:8px;
+                      background:var(--fh-surface);margin-bottom:6px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px">
+              <span style="font-size:var(--fh-text-sm);font-weight:700;color:var(--fh-text);
+                           overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHTML(t.name)}</span>
+              <span style="font-size:var(--fh-text-sm);font-weight:800;color:var(--fh-success);white-space:nowrap">+${t.points || 0}</span>
+            </div>
+            <div style="font-size:var(--fh-text-xs);color:var(--fh-text-sec);margin:2px 0 6px">${escHTML(meta)}</div>
+            <button class="fh-bonus-claim"
+                    data-act="ok-claim"
+                    data-tid="${escAttr(t.task_id)}"
+                    data-pid="${escAttr(personId)}"
+                    style="width:100%;border:none;border-radius:8px;padding:8px;min-height:44px;
+                           font-size:var(--fh-text-sm);font-weight:800;color:#fff;
+                           background:var(--fh-success);cursor:pointer">CLAIM</button>
+          </div>`;
+    }).join("");
+    if (!rows.trim()) return "";
+    if (bare) return rows;
+    const title = opts.title || "⭐ Bonus chores — up for grabs";
+    return `
+      <div class="fh-bonus-board" style="margin-top:14px">
+        <div style="font-size:var(--fh-text-sm);font-weight:800;letter-spacing:.04em;
+                    color:var(--fh-text-sec);margin-bottom:8px">${escHTML(title)}</div>
+        ${rows}
+      </div>`;
+}
+
+/**
  * Render the "Your Subscriptions" rail above the store tab. (v0.6.5 Phase 4)
  * Returns "" when there are no non-canceled subscriptions so themes can call
  * it unconditionally. Shows name, renewal countdown, affordability, and a

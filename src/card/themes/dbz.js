@@ -24,7 +24,7 @@ import { getEffectiveRank, effectiveRankThresholds, getWeeklyPts, getWeeklyPtsLo
          htmlGoalBanner, htmlRailGoal, htmlGoalToggleBtn,
          storeItemIcon, htmlStoreItemLimit,
          htmlStreakFreezeChip, htmlDailyProgress,
-         htmlGroupContributorBars, htmlChipInBtn, htmlGroupProposalBanner,
+         htmlGroupContributorBars, htmlChipInBtn, htmlGroupProposalBanner, htmlRewardLockBadge, htmlBonusBoard,
          htmlSubscriptionRail, htmlRailSubscriptions, htmlStoreRailContent } from "./_shared.js";
 
 // ---- Palette ----------------------------------------------------------------
@@ -127,7 +127,7 @@ export const dbzTheme = {
         const showRail = activeTab === "tasks";
         const railHTML = showRail
             ? _railPanels({ attr, naAttr, person, balance, weekly, lost, atRisk, openCount,
-                            rankIdx, dropThr, gainThr, nextItem, fillPct })
+                            rankIdx, dropThr, gainThr, nextItem, fillPct, card })
             : "";
 
         return `
@@ -178,12 +178,13 @@ export const dbzTheme = {
 // ---- Rail panels ------------------------------------------------------------
 
 function _railPanels({ attr, naAttr, person, balance, weekly, lost, atRisk, openCount,
-                       rankIdx, dropThr, gainThr, nextItem, fillPct }) {
+                       rankIdx, dropThr, gainThr, nextItem, fillPct, card }) {
     return `
         ${_railPanelKPIs(balance, weekly, lost, atRisk, openCount, attr.show_dollar_value ? attr.dollar_value : null)}
         ${htmlRailGoal(attr)}
         ${_railPanelRank(rankIdx, weekly, dropThr, gainThr, person, attr)}
         ${_railPanelStreaks(attr, naAttr, person)}
+        ${(() => { const b = htmlBonusBoard(card._attrs("sensor.family_hub_claimable_tasks").tasks || [], person.person_id, { bare: true }); return b ? _railPanel("BONUS", b) : ""; })()}
         ${(() => { const b = htmlRotationRail(person, naAttr, DBZ.orange); return b ? _railPanel("ROTATION", b) : ""; })()}
         ${_railPanelSubs(attr, balance, person.person_id)}
         ${_railPanelNextUp(nextItem, fillPct)}`;
@@ -362,6 +363,8 @@ function _powerUps(attr, person, balance, card) {
                     ${htmlGoalToggleBtn(item, attr, person.person_id)}
                     ${isGroup
                         ? htmlChipInBtn(item, person.person_id, balance)
+                        : (item.locked && !requested && !(isSubscription && isSubscribed))
+                        ? htmlRewardLockBadge(item)
                         : isSubscription
                         ? isSubscribed
                             ? `<span style="color:${DBZ.orange};font-weight:800;font-size:.9rem">SUB ✓</span>`

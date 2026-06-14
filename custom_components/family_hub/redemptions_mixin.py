@@ -142,10 +142,110 @@ class RedemptionsMixin:
     def get_pending_redemptions(self) -> list[dict]:
         return [r for r in self.redemptions if r["status"] == REDEMPTION_PENDING]
 
+    # ------------------------------------------------------------------
+    # v0.7.6 — reward gates (chore-completion % + minimum rank)
+    # ------------------------------------------------------------------
+
+    def _reward_gate_status(self, person_id: str, item: dict) -> dict:
+        """Evaluate per-reward redemption gates for one person.
+
+        Two opt-in gates, both default off (0):
+          - require_daily_pct: min % of TODAY's assigned DAILY chores done, AND
+            every assigned non-daily chore (weekly/every-N/monthly) due TODAY
+            must be complete. "Done" = approved/awarded only; excused chores are
+            excluded from both numerator and denominator. Claimable/bonus chores
+            never count. Waived on penalty-paused (sick) days.
+          - min_rank_index: person rank_index must be >= this. Always applies.
+
+        Returns a dict consumed by both the card shaper and the request path.
+        The reward locks if EITHER configured gate fails.
+        """
+        required_pct = int(item.get("require_daily_pct", 0) or 0)
+        min_rank     = int(item.get("min_rank_index", 0) or 0)
+        person       = self.get_person(person_id)
+        current_rank = person.get("rank_index", 0) if person else 0
+
+        status = {
+            "locked": False,
+            "rank_ok": True,
+            "daily_ok": True,
+            "min_rank_index": min_rank,
+            "current_rank_index": current_rank,
+            "required_pct": required_pct,
+            "daily_done": 0,
+            "daily_total": 0,
+            "daily_pct": 100,
+            "weekly_blockers": [],
+            "reasons": [],
+        }
+        if not person:
+            return status
+
+        # --- Rank gate (applies even on paused days) ---
+        if min_rank > 0 and current_rank < min_rank:
+            status["rank_ok"] = False
+            status["locked"]  = True
+            # Rank index is 0-based; display as 1-based "rank N".
+            status["reasons"].append(f"Reach rank {min_rank + 1}")
+
+        # --- Chore-% gate (waived while penalties are paused for this person) ---
+        if required_pct > 0 and not self.is_penalty_paused_for(person_id):
+            today_str = date.today().isoformat()
+            DONE = (STATUS_APPROVED, STATUS_SELF_REPORTED)
+            daily_done = 0
+            daily_total = 0
+            weekly_blockers: list[str] = []
+            for inst in self.task_instances:
+                if inst.get("due_date") != today_str:
+                    continue
+                if inst.get("assigned_to") != person_id:
+                    continue
+                if inst.get("status") == STATUS_EXCUSED:
+                    continue
+                chore = self.get_chore(inst.get("chore_id"))
+                if not chore or chore.get("chore_type") != CHORE_TYPE_ASSIGNED:
+                    continue
+                is_done = inst.get("status") in DONE
+                r_type  = chore.get("recurrence", {}).get("type", RECURRENCE_DAILY)
+                if r_type == RECURRENCE_DAILY:
+                    daily_total += 1
+                    if is_done:
+                        daily_done += 1
+                elif r_type in (RECURRENCE_WEEKLY, RECURRENCE_EVERY_N_DAYS,
+                                RECURRENCE_EVERY_N_WEEKS, RECURRENCE_MONTHLY_ON_DATE):
+                    # Non-daily chore due today must be 100% complete.
+                    if not is_done:
+                        weekly_blockers.append(chore.get("name", "a chore"))
+
+            daily_pct = int((daily_done / daily_total) * 100) if daily_total else 100
+            status["daily_done"]      = daily_done
+            status["daily_total"]     = daily_total
+            status["daily_pct"]       = daily_pct
+            status["weekly_blockers"] = weekly_blockers
+
+            if weekly_blockers:
+                status["daily_ok"] = False
+                status["locked"]   = True
+                status["reasons"].append("Finish: " + ", ".join(weekly_blockers[:2]))
+            if daily_total and daily_pct < required_pct:
+                status["daily_ok"] = False
+                status["locked"]   = True
+                status["reasons"].append(f"Chores {daily_pct}% (need {required_pct}%)")
+
+        return status
+
     async def async_request_redemption(self, person_id: str, item_id: str) -> dict | None:
         person = self.get_person(person_id)
         item   = self.get_store_item(item_id)
         if not person or not item:
+            return None
+        # v0.7.6: reward gates — chore-completion % and/or minimum rank.
+        gate = self._reward_gate_status(person_id, item)
+        if gate["locked"]:
+            _LOGGER.warning(
+                "Family Hub: redemption gate blocked %s / %s — %s",
+                person_id, item_id, "; ".join(gate["reasons"]) or "locked",
+            )
             return None
         # Rate-limit check (item 5)
         max_pp = item.get("max_per_period", 0)

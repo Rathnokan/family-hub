@@ -347,6 +347,50 @@ class StreaksRanksMixin:
         gain = _resolve("rank_gain_thresholds", "rank_gain_threshold", global_gain)
         return drop, gain
 
+    def _effective_rank_pcts(self, person: dict, idx: int) -> tuple[float, float]:
+        """Resolve the (drop%, gain%) bands for a person at rank `idx`.
+
+        Used by the dynamic-capacity mode: the band % is multiplied by the week's
+        assigned points to get an absolute threshold. Resolution: per-rank curve
+        arrays (`rank_curve.drop_pcts`/`gain_pcts`) → global defaults.
+        """
+        s = self._data["settings"]
+        g_drop = s.get("rank_default_drop_pct", 60)
+        g_gain = s.get("rank_default_gain_pct", 80)
+        curve  = person.get("rank_curve") or {}
+
+        def _pick(arr_key: str, global_val: float) -> float:
+            arr = curve.get(arr_key)
+            if isinstance(arr, list) and arr:
+                j = max(0, min(int(idx), len(arr) - 1))
+                return float(arr[j])
+            return float(global_val)
+
+        return _pick("drop_pcts", g_drop), _pick("gain_pcts", g_gain)
+
+    def _assignable_week_points(self, person_id: str, week_start: str, week_end: str) -> int:
+        """Total points DIRECTLY ASSIGNED to a kid during [week_start, week_end).
+
+        Sums the base points of every assigned-type chore instance due to this
+        person in the window — i.e. the most they could earn from their own
+        chores that week. Deliberately excludes claimable/"bonus" chores and
+        reminders (only CHORE_TYPE_ASSIGNED counts); streak-milestone bonuses are
+        separate point awards, never instance points, so they're excluded too.
+        Counts each instance regardless of completion (it's the assigned ceiling).
+        """
+        total = 0
+        for inst in self.task_instances:
+            if inst.get("assigned_to") != person_id:
+                continue
+            due = inst.get("due_date", "")
+            if not (week_start <= due < week_end):
+                continue
+            chore = self.get_chore(inst.get("chore_id"))
+            if not chore or chore.get("chore_type") != CHORE_TYPE_ASSIGNED:
+                continue
+            total += chore.get("points", 0)
+        return total
+
     async def _async_process_weekly_ranks(self, tick_date: date) -> None:
         """
         Evaluate last week's point performance and adjust rank_index.
@@ -357,6 +401,7 @@ class StreaksRanksMixin:
         """
         s = self._data["settings"]
         eval_weekday = s.get("rank_eval_weekday", 0)  # 0 = Monday
+        dynamic = s.get("rank_dynamic_capacity", True)
 
         if tick_date.weekday() != eval_weekday:
             return
@@ -368,9 +413,25 @@ class StreaksRanksMixin:
         for person in self.get_active_people():
             if person.get("type") == "parent":
                 continue
+            # v0.7.6: a manually-locked rank is left untouched by the weekly eval.
+            if person.get("rank_locked"):
+                continue
 
             current_idx = person.get("rank_index", 0)
-            drop_thr, gain_thr = self._effective_rank_thresholds(person, current_idx)
+
+            if dynamic:
+                # v0.7.6: thresholds scale with the points actually ASSIGNED to
+                # this kid during the evaluated week (direct chores only — no
+                # bonus/claimable, no streak bonus). A rest week (nothing
+                # assigned) leaves the rank untouched.
+                assignable = self._assignable_week_points(person["id"], week_start, week_end)
+                if assignable <= 0:
+                    continue
+                drop_pct, gain_pct = self._effective_rank_pcts(person, current_idx)
+                drop_thr = round(assignable * drop_pct / 100)
+                gain_thr = round(assignable * gain_pct / 100)
+            else:
+                drop_thr, gain_thr = self._effective_rank_thresholds(person, current_idx)
 
             weekly_pts = sum(
                 e.get("points_delta", 0)

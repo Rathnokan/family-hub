@@ -182,6 +182,8 @@ class StoreItemsMixin:
         item_type: str = ITEM_TYPE_ONE_TIME,
         subscription_period: str = "",
         subscription_anchor: int = 1,
+        require_daily_pct: int = 0,
+        min_rank_index: int = 0,
     ) -> dict:
         # v0.6.3: place new items at the end of the sort_order ladder so the
         # drag-reorder bisect math doesn't collide with existing positions.
@@ -223,6 +225,9 @@ class StoreItemsMixin:
             "item_type":            item_type if item_type in (ITEM_TYPE_ONE_TIME, ITEM_TYPE_SUBSCRIPTION) else ITEM_TYPE_ONE_TIME,
             "subscription_period":  subscription_period,
             "subscription_anchor":  subscription_anchor,
+            # v0.7.6: reward gates (0 = off for both)
+            "require_daily_pct":    max(0, min(100, int(require_daily_pct))),
+            "min_rank_index":       max(0, int(min_rank_index)),
         }
         self._data["store_items"].append(item)
         await self.async_save()
@@ -235,10 +240,16 @@ class StoreItemsMixin:
         allowed = {"name", "description", "dollar_value", "scope", "person_ids", "active",
                    "sort_order", "icon", "category_label", "max_per_period", "period",
                    "is_group_reward", "contributors",
-                   "item_type", "subscription_period", "subscription_anchor"}
+                   "item_type", "subscription_period", "subscription_anchor",
+                   "require_daily_pct", "min_rank_index"}
         for key, val in kwargs.items():
             if key in allowed:
                 item[key] = val
+        # v0.7.6: clamp gate values defensively
+        if "require_daily_pct" in kwargs:
+            item["require_daily_pct"] = max(0, min(100, int(item.get("require_daily_pct", 0) or 0)))
+        if "min_rank_index" in kwargs:
+            item["min_rank_index"] = max(0, int(item.get("min_rank_index", 0) or 0))
         if "dollar_value" in kwargs:
             item["points_cost"] = self._dollar_to_points(item["dollar_value"])
         await self.async_save()

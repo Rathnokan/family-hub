@@ -282,6 +282,8 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             # Remembered generator knobs (e.g. {cap, gain_pcts, drop_pcts}). Stored
             # as-is for the editor; eval/render use the absolute *_thresholds arrays.
             vol.Optional("rank_curve"): vol.Any(None, dict),
+            # v0.7.6: lock rank against weekly auto-evaluation
+            vol.Optional("rank_locked"):         cv.boolean,
             # v0.6.0 S6: large-button mode
             vol.Optional("child_mode"):          cv.boolean,
             # v0.6.1: success-rate person streak (knobs only — streak count is admin-overridden via set_completion_streak)
@@ -527,6 +529,8 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             item_type=call.data.get("item_type", "one_time"),
             subscription_period=call.data.get("subscription_period", ""),
             subscription_anchor=call.data.get("subscription_anchor", 1),
+            require_daily_pct=call.data.get("require_daily_pct", 0),
+            min_rank_index=call.data.get("min_rank_index", 0),
         )
         await coordinator.async_refresh()
 
@@ -556,6 +560,9 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             vol.Optional("item_type", default="one_time"):    vol.In(["one_time", "subscription"]),
             vol.Optional("subscription_period", default=""):  vol.Any("", vol.In(SUB_PERIODS)),
             vol.Optional("subscription_anchor", default=1):   vol.All(vol.Coerce(int), vol.Range(min=0, max=31)),
+            # v0.7.6: reward gates
+            vol.Optional("require_daily_pct", default=0):     vol.All(vol.Coerce(int), vol.Range(min=0, max=100)),
+            vol.Optional("min_rank_index", default=0):        vol.All(vol.Coerce(int), vol.Range(min=0, max=4)),
         }),
     )
 
@@ -598,6 +605,9 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             vol.Optional("item_type"):           vol.In(["one_time", "subscription"]),
             vol.Optional("subscription_period"): vol.Any("", vol.In(SUB_PERIODS)),
             vol.Optional("subscription_anchor"): vol.All(vol.Coerce(int), vol.Range(min=0, max=31)),
+            # v0.7.6: reward gates
+            vol.Optional("require_daily_pct"):   vol.All(vol.Coerce(int), vol.Range(min=0, max=100)),
+            vol.Optional("min_rank_index"):      vol.All(vol.Coerce(int), vol.Range(min=0, max=4)),
         }),
     )
 
@@ -868,6 +878,7 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             rank_default_cap=call.data.get("rank_default_cap"),
             rank_default_drop_pct=call.data.get("rank_default_drop_pct"),
             rank_default_gain_pct=call.data.get("rank_default_gain_pct"),
+            rank_dynamic_capacity=call.data.get("rank_dynamic_capacity"),
         )
         await coordinator.async_refresh()
 
@@ -890,6 +901,7 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             vol.Optional("rank_default_cap"):           vol.All(vol.Coerce(int), vol.Range(min=0)),
             vol.Optional("rank_default_drop_pct"):      vol.All(vol.Coerce(int), vol.Range(min=0, max=100)),
             vol.Optional("rank_default_gain_pct"):      vol.All(vol.Coerce(int), vol.Range(min=0, max=100)),
+            vol.Optional("rank_dynamic_capacity"):      cv.boolean,
         }),
     )
 
