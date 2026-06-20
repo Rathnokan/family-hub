@@ -142,6 +142,14 @@ update_person:
       required: true
       selector:
         text:
+    checklist_notify:
+      name: Phone checklist notification
+      description: >-
+        Turn the quiet "today's chores" home-screen / lock-screen notification
+        on or off for this person. Requires their notify_target to be set to
+        their phone. Off by default.
+      selector:
+        boolean:
 remove_person:
   name: Deactivate person
   description: Soft-remove (deactivate) a person. Hidden from dashboards; history preserved. Reversible via Reactivate.

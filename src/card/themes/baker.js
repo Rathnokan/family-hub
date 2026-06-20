@@ -14,12 +14,12 @@ import { escHTML, escAttr, fPts, fUSD, ini, relTime,
          groupHistorySkipped }                            from "../utils.js";
 import { HISTORY_META }                                   from "../constants.js";
 import { getEffectiveRank, effectiveRankThresholds, getWeeklyPts, getWeeklyPtsLost, getPointsAtRisk,
-         htmlRankBar, htmlSuccessStreak, htmlLateClaimBtn, htmlRotationRail,
+         htmlRankBar, htmlSuccessStreak, htmlWeeklyStreak, htmlLateClaimBtn, htmlRotationRail,
          groupByCategory, getActiveStreaks,
          computeStreakProgress, htmlChoreRow,
          htmlGoalBanner, htmlRailGoal, htmlGoalToggleBtn,
          storeItemIcon, htmlStoreItemLimit,
-         htmlStreakFreezeChip, htmlDailyProgress,
+         htmlStreakFreezeChip, htmlDailyProgress, htmlWeeklyProgress,
          htmlGroupContributorBars, htmlChipInBtn, htmlGroupProposalBanner, htmlRewardLockBadge, htmlBonusBoard,
          htmlSubscriptionRail, htmlRailSubscriptions, htmlStoreRailContent } from "./_shared.js";
 
@@ -202,12 +202,13 @@ function _railPanelKPIs(balance, weekly, lost, atRisk, openCount, dollarValue) {
 function _railPanelRank(rankIdx, weekly, dropThr, gainThr, person, attr) {
     const bar    = htmlRankBar(rankIdx, weekly, dropThr, gainThr, BAKER_RANKS, BK.terra, person);
     const streak = htmlSuccessStreak(person, BK.terra);
+    const wstreak = htmlWeeklyStreak(person);
     const freeze = htmlStreakFreezeChip(attr);
     if (!bar) {
         return _railPanel("promotion track",
-            `<div class="fh-bk-rmax">${escHTML(getEffectiveRank(rankIdx, BAKER_RANKS).name)} · top of the line</div>${streak}${freeze}`);
+            `<div class="fh-bk-rmax">${escHTML(getEffectiveRank(rankIdx, BAKER_RANKS).name)} · top of the line</div>${streak}${wstreak}${freeze}`);
     }
-    return _railPanel("promotion track", bar + streak + freeze);
+    return _railPanel("promotion track", bar + streak + wstreak + freeze);
 }
 
 function _railPanelStreaks(attr, naAttr, person) {
@@ -304,6 +305,7 @@ function _orders(attr, person, naAttr, card) {
 
     return `
         ${htmlDailyProgress(attr)}
+        ${htmlWeeklyProgress(attr)}
         <div class="fh-row-list">
             ${groupHtml}
             ${pendingSection}

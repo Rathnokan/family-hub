@@ -24,6 +24,7 @@ from .const import (
     ACTIVE_STATUSES,
     CHORE_TYPE_ASSIGNED,
     MAINTENANCE_DUE_SOON_DAYS,
+    RECURRENCE_DAILY,
     REDEMPTION_PENDING,
     STATUS_PENDING_APPROVAL,
 )
@@ -67,6 +68,29 @@ def assigned_points_per_week(store, person_id: str) -> int:
             continue
         total += _chore_occ_per_week(c) * c.get("points", 0)
     return round(total)
+
+
+def _rank_eff_for_card(store, person) -> dict:
+    """{rank_drop_eff, rank_gain_eff} — the ACTUAL weekly-point thresholds for the
+    person at their current rank, resolved the same way the weekly rank evaluation
+    does. In dynamic-capacity mode (default) these are a % of the kid's weekly
+    assigned points (assigned_ppw basis, matching the admin Ranks drawer);
+    otherwise the static per-rank/scalar/global thresholds. The card renders these
+    directly so the rank bar can never drift from how rank-ups are actually judged.
+    Parents (max rank) get zeros.
+    """
+    if person.get("type") == "parent":
+        return {"rank_drop_eff": 0, "rank_gain_eff": 0}
+    idx = person.get("rank_index", 0)
+    if store._data["settings"].get("rank_dynamic_capacity", True):
+        basis = assigned_points_per_week(store, person["id"])
+        drop_pct, gain_pct = store._effective_rank_pcts(person, idx)
+        return {
+            "rank_drop_eff": round(basis * drop_pct / 100),
+            "rank_gain_eff": round(basis * gain_pct / 100),
+        }
+    drop, gain = store._effective_rank_thresholds(person, idx)
+    return {"rank_drop_eff": drop, "rank_gain_eff": gain}
 
 
 def person_entity_id(name: str) -> str:
@@ -128,18 +152,34 @@ def build_person_scalars(store, person_id) -> dict:
     pending_redeem_count = len([r for r in store.redemptions if r["person_id"] == person_id and r["status"] == REDEMPTION_PENDING])
 
     _chore_type_by_id = {c["id"]: c.get("chore_type", "") for c in store.chores}
+    _recurrence_by_id = {
+        c["id"]: (c.get("recurrence") or {}).get("type", RECURRENCE_DAILY)
+        for c in store.chores
+    }
     _done_statuses    = {"pending_approval", "approved", "self_reported"}
+    # Daily progress counts DAILY-recurrence chores only. Weekly/monthly window
+    # chores can be done any day in their window, so they don't belong in a
+    # "done today" tally (they still appear in the task list).
     tasks_done_today  = sum(
         1 for t in all_tasks
         if t.get("assigned_to") == person_id
         and t.get("due_date") == today
         and t.get("status") in _done_statuses
         and _chore_type_by_id.get(t.get("chore_id", ""), "") != "reminder"
+        and _recurrence_by_id.get(t.get("chore_id", ""), RECURRENCE_DAILY) == RECURRENCE_DAILY
     )
 
     balance    = person.get("points_balance", 0)
     rank_index = person.get("rank_index", 0)
     ppdollar   = store.get_rank_ppd(rank_index)
+
+    # v0.7.6: points earned / possible for the two progress bars. Daily = today's
+    # DAILY-recurrence chores (drives the daily streak); weekly = the whole rank
+    # week across all assigned chores. Both add bonus-chore points to "earned".
+    # Points-based (not chore counts) so harder chores weigh more and bonus chores
+    # help. Computed in the store so the bars and the streak share one definition.
+    daily_earned, daily_possible = store.get_daily_progress(person_id)
+    week_earned,  week_possible  = store.get_week_progress(person_id)
 
     return {
         # Identity
@@ -167,6 +207,10 @@ def build_person_scalars(store, person_id) -> dict:
         "tasks_completed_total":     len(completed_total),
         "pending_redemptions":       pending_redeem_count,
         "tasks_done_today":          tasks_done_today,
+        "daily_earned":              daily_earned,
+        "daily_possible":            daily_possible,
+        "week_earned":               week_earned,
+        "week_possible":             week_possible,
         "streak_freezes_available":  person.get("streak_freezes_available", 0),
         "goal_item_id":              person.get("goal_item_id", "") or "",
     }
@@ -215,6 +259,57 @@ def build_person_payload(store, person_id) -> dict:
         "group_proposals": store.get_group_proposals_for_person(person_id),
         "subscriptions":   store.get_subscriptions_for_person(person_id, rank_index),
     }
+
+
+# ---------------------------------------------------------------------------
+# Per-person phone-widget summary
+# ---------------------------------------------------------------------------
+
+def build_person_widget(store, person_id) -> dict:
+    """Display-ready summary for a phone home-screen widget (one per person).
+
+    Returns {"state": <headline str>, "attrs": {...}}. The state is a glanceable
+    one-liner ("3 to do · 45 pts") so the HA companion app's plain "Entity State"
+    widget needs no template; the attributes carry the chore name list plus a
+    pre-joined multiline string so the "Template" widget / automations also need
+    no Jinja. Reuses get_tasks_for_card so the widget always matches the person's
+    own card page.
+    """
+    scalars = build_person_scalars(store, person_id)
+    if not scalars:
+        return {"state": "—", "attrs": {}}
+
+    person  = store.get_person(person_id)
+    name    = person["name"].split()[0] if person and person.get("name") else ""
+    balance = person.get("points_balance", 0) if person else 0
+
+    tasks     = store.get_tasks_for_card(person_id)
+    to_do     = tasks.get("due_today", [])
+    names     = [r["name"] for r in to_do]
+    remaining = len(names)
+    to_earn   = sum(r.get("points", 0) for r in to_do)
+    all_done  = remaining == 0
+
+    state = f"All done · {balance} pts" if all_done else f"{remaining} to do · {balance} pts"
+
+    attrs = {
+        "headline":             state,
+        "person_name":          name,
+        "theme_key":            scalars.get("theme_key", "classic"),
+        "avatar_color":         scalars.get("avatar_color", "#7F77DD"),
+        "chores_remaining":     remaining,
+        "chore_list":           names,
+        "chore_summary":        " · ".join(names),
+        "chore_lines":          "\n".join(names),
+        "next_chore":           names[0] if names else "",
+        "done_today":           scalars.get("tasks_done_today", 0),
+        "points_balance":       balance,
+        "points_to_earn_today": to_earn,
+        "dollar_value":         scalars.get("dollar_value", 0),
+        "show_dollar_value":    scalars.get("show_dollar_value", False),
+        "all_done":             all_done,
+    }
+    return {"state": state, "attrs": attrs}
 
 
 # ---------------------------------------------------------------------------
@@ -373,11 +468,16 @@ def build_needs_attention_payload(store) -> dict:
                 "rank_curve":           p.get("rank_curve"),
                 "rank_locked":          p.get("rank_locked", False),
                 "assigned_ppw":         assigned_points_per_week(store, p["id"]),
+                **_rank_eff_for_card(store, p),
                 "child_mode":          p.get("child_mode", False),
                 "completion_streak":        p.get("completion_streak", 0),
                 "completion_threshold_pct": p.get("completion_threshold_pct", 80),
                 "completion_milestone":     p.get("completion_milestone", 7),
                 "completion_bonus_points":  p.get("completion_bonus_points", 50),
+                "weekly_completion_streak":        p.get("weekly_completion_streak", 0),
+                "weekly_completion_threshold_pct": p.get("weekly_completion_threshold_pct", 80),
+                "weekly_completion_milestone":     p.get("weekly_completion_milestone", 4),
+                "weekly_completion_bonus_points":  p.get("weekly_completion_bonus_points", 100),
                 "goal_item_id":             p.get("goal_item_id", "") or "",
             }
             for p in store.people if p.get("active", True)

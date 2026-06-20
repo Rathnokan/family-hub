@@ -42,6 +42,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.event import async_track_time_change
 
 from .const import (
+    ACTIVE_STATUSES,
     CARD_JS_FILENAME,
     CARD_JS_URL,
     CARD_URL_PATH,
@@ -209,6 +210,34 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
     )
 
+    # --- Actionable notification handler (phone checklist "Done" buttons) ---
+    # The HA companion app fires `mobile_app_notification_action` when a kid taps
+    # a "Done: <chore>" button on their quiet checklist notification. We map the
+    # FH_DONE_<task_id> action back to the assigned person and complete the task;
+    # complete_task refreshes the coordinator, which re-pushes the updated tile.
+    async def _handle_notification_action(event) -> None:
+        action = event.data.get("action", "")
+        if not action.startswith("FH_DONE_"):
+            return
+        task_id = action[len("FH_DONE_"):]
+        task = next((t for t in store.task_instances if t["id"] == task_id), None)
+        if not task or task.get("status") not in ACTIVE_STATUSES:
+            return
+        person_id = task.get("assigned_to")
+        if not person_id:
+            return
+        await hass.services.async_call(
+            DOMAIN, "complete_task",
+            {"task_id": task_id, "person_id": person_id},
+            blocking=True,
+        )
+
+    entry.async_on_unload(
+        hass.bus.async_listen(
+            "mobile_app_notification_action", _handle_notification_action
+        )
+    )
+
     # --- Dynamic sensor management ------------------------------------------
     # async_add_entities is only available inside async_setup_entry via the
     # platform forward. We capture it by setting up a callback that the
@@ -265,6 +294,7 @@ async def _async_cleanup_stale_entities(
 ) -> None:
     """Remove any entities that no longer exist in this version of the integration."""
     expected: set[str] = {f"{DOMAIN}_person_{p['id']}" for p in store.people}
+    expected.update({f"{DOMAIN}_widget_{p['id']}" for p in store.people})
     expected.update({
         f"{DOMAIN}_maintenance_due",
         f"{DOMAIN}_maintenance_overdue",

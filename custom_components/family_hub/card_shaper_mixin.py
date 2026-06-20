@@ -168,6 +168,12 @@ class CardShaperMixin:
                 continue
             if t["status"] not in ACTIVE_STATUSES:
                 continue
+            # Already marked done and awaiting a parent's OK — the kid has done
+            # their part, so it belongs ONLY in the pending-approval list below,
+            # never in due-today/overdue (a prior-day pending one was showing as
+            # "overdue" at the top of the board).
+            if t["status"] == STATUS_PENDING_APPROVAL:
+                continue
             chore = self.get_chore(t["chore_id"])
             if not chore:
                 continue
@@ -203,6 +209,9 @@ class CardShaperMixin:
                 "daily_penalty_firing":  daily_penalty_firing,
                 "expires_after_days":    chore.get("expires_after_days"),
                 "is_one_time":           chore["recurrence"].get("type") == RECURRENCE_ONE_TIME,
+                # Carried so the card's daily-progress bar can count DAILY chores
+                # only (weekly/monthly window chores list but don't pad "done today").
+                "recurrence_type":       chore["recurrence"].get("type", RECURRENCE_DAILY),
                 "streak":                self._get_streak(person_id, t["chore_id"]),
                 # v0.6.3 P2: carry the chore's sort_order so personal-page lists
                 # respect the admin drag-reorder. Within a category, rows are

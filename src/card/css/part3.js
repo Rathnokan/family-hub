@@ -3,6 +3,16 @@ export const CSS_3 = `    position:absolute; top:-4px; width:2px; height:14px;
   }
   .fh-rank-bar-mark--drop { background:var(--fh-rb-drop, #E07A4C); }
   .fh-rank-bar-mark--gain { background:var(--fh-rb-gain, #5BB87A); }
+  /* v0.7.6: visible point-value label beneath each threshold marker. The Echo
+     Show is touch — hover titles never show — so kids read the exact points
+     needed straight off the bar. */
+  .fh-rank-bar-mark-val {
+    position:absolute; top:9px; transform:translateX(-50%);
+    font-size:.75rem; font-weight:800; line-height:1;
+    white-space:nowrap; letter-spacing:.02em; pointer-events:none;
+  }
+  .fh-rank-bar-mark-val--drop { color:var(--fh-rb-drop, #E07A4C); }
+  .fh-rank-bar-mark-val--gain { color:var(--fh-rb-gain, #5BB87A); }
   .fh-rank-bar-status {
     font-size:.75rem; color:var(--fh-rb-status, rgba(255,255,255,.55));
     white-space:nowrap; flex-shrink:0; font-weight:700;
@@ -92,6 +102,21 @@ export const CSS_3 = `    position:absolute; top:-4px; width:2px; height:14px;
   .fh-dn-page .fh-daily-progress--complete .fh-daily-progress-label,
   .fh-bk-page .fh-daily-progress--complete .fh-daily-progress-label,
   .fh-hp-page .fh-daily-progress--complete .fh-daily-progress-label { color:#3a7a3a; }
+  /* v0.7.6: weekly progress bar — distinct blue so the whole-week bar reads
+     apart from the green daily bar. Stacks directly under the daily bar. */
+  .fh-progress--weekly { margin-top:-2px; }
+  .fh-progress--weekly .fh-daily-progress-fill { background:var(--fh-progress-week, #5B9BD5); }
+  .fh-progress--weekly.fh-daily-progress--complete .fh-daily-progress-label { color:var(--fh-progress-week, #5B9BD5); }
+  /* DBZ is a BRIGHT sky-blue page — the default light track + light label are
+     invisible on it. Dark text + a dark track so both bars read clearly. */
+  .fh-dbz-page .fh-daily-progress-bar { background:rgba(0,0,0,.22); }
+  .fh-dbz-page .fh-daily-progress-label { color:#0E3354; }
+  .fh-dbz-page .fh-daily-progress--complete .fh-daily-progress-label { color:#0A6B34; }
+  .fh-dbz-page .fh-progress--weekly.fh-daily-progress--complete .fh-daily-progress-label { color:#1C4E80; }
+  /* Kid-large boards (pre-reader, viewed at distance): thicker bars + bigger
+     labels so the progress reads from across the kitchen. */
+  .kid-large .fh-daily-progress-bar { height:9px; }
+  .kid-large .fh-daily-progress-label { font-size:var(--fh-text-base); }
 
   /* Themed overrides â€” light/paper themes need darker rank bar chrome */
   .fh-dn-page, .fh-bk-page, .fh-hp-page {

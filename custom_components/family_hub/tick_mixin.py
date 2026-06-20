@@ -209,16 +209,15 @@ class TickMixin:
           - If zero chores were due yesterday, treat as rest day: cursor advances,
             streak unchanged
 
-        Only ASSIGNED chores count. Claimable/reminder chores don't contribute
-        because they have no "due to person X" semantics.
+        Only ASSIGNED, DAILY-recurrence chores count. Claimable/reminder chores
+        have no "due to person X" semantics, and weekly/monthly window chores can
+        be done any day in their window, so they don't belong in a daily hit-rate.
         """
         settings = self._data["settings"]
         global_paused = settings.get("penalties_paused", False)
 
         yesterday = tick_date - timedelta(days=1)
         yesterday_str = yesterday.isoformat()
-
-        chores_by_id = {c["id"]: c for c in self._data.get("chores", [])}
 
         for person in self.get_active_people():
             if person.get("type") != "kid":
@@ -232,34 +231,19 @@ class TickMixin:
             if last_eval and last_eval >= yesterday_str:
                 continue  # already evaluated this day
 
-            # Count assigned chores due to THIS person yesterday.
-            # Excused instances are treated as rest days (not counted either way).
-            COMPLETED_STATUSES = (STATUS_APPROVED, STATUS_SELF_REPORTED, STATUS_PENDING_APPROVAL)
-            EXCLUDED_STATUSES  = (STATUS_EXCUSED,)  # don't count in numerator OR denominator
+            # Points-based hit-rate over yesterday's DAILY chores: earned / possible
+            # points (+ any bonus chore points earned), so harder chores weigh more
+            # and a bonus chore can help hold the streak. Excused days don't count.
+            earned_pts, possible_pts = self._period_points(
+                person["id"], yesterday, yesterday + timedelta(days=1), daily_only=True
+            )
 
-            due_count       = 0
-            completed_count = 0
-            for inst in self.task_instances:
-                if inst.get("due_date") != yesterday_str:
-                    continue
-                if inst.get("assigned_to") != person["id"]:
-                    continue
-                chore = chores_by_id.get(inst.get("chore_id"))
-                if not chore or chore.get("chore_type") != CHORE_TYPE_ASSIGNED:
-                    continue
-                status = inst.get("status")
-                if status in EXCLUDED_STATUSES:
-                    continue
-                due_count += 1
-                if status in COMPLETED_STATUSES:
-                    completed_count += 1
-
-            if due_count == 0:
+            if possible_pts == 0:
                 # Rest day — no chores were due, advance cursor without touching streak
                 person["last_completion_eval_date"] = yesterday_str
                 continue
 
-            hit_pct   = (completed_count / due_count) * 100
+            hit_pct   = (earned_pts / possible_pts) * 100
             threshold = person.get("completion_threshold_pct", 80)
 
             if hit_pct >= threshold:
@@ -362,6 +346,7 @@ class TickMixin:
             await self._async_process_completion_streaks(current)
             await self._async_process_allowances(current)
             await self._async_process_weekly_ranks(current)
+            await self._async_process_weekly_completion_streaks(current)
             await self._async_process_subscriptions(current)
             current += timedelta(days=1)
 

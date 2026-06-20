@@ -290,8 +290,14 @@ async def async_setup_services(hass: HomeAssistant, coordinator: FamilyHubCoordi
             vol.Optional("completion_threshold_pct"): vol.All(vol.Coerce(int), vol.Range(min=1, max=100)),
             vol.Optional("completion_milestone"):     vol.All(vol.Coerce(int), vol.Range(min=0, max=365)),
             vol.Optional("completion_bonus_points"):  vol.All(vol.Coerce(int), vol.Range(min=0, max=10000)),
+            # v0.7.6: weekly-consistency streak (knobs)
+            vol.Optional("weekly_completion_threshold_pct"): vol.All(vol.Coerce(int), vol.Range(min=1, max=100)),
+            vol.Optional("weekly_completion_milestone"):     vol.All(vol.Coerce(int), vol.Range(min=0, max=52)),
+            vol.Optional("weekly_completion_bonus_points"):  vol.All(vol.Coerce(int), vol.Range(min=0, max=10000)),
             # v0.6.3: store goal — item ID the kid is saving toward ("" clears)
             vol.Optional("goal_item_id"):             cv.string,
+            # Phone checklist notification opt-in (quiet daily tile + Done buttons)
+            vol.Optional("checklist_notify"):         cv.boolean,
         }),
     )
 

@@ -402,6 +402,13 @@ class FamilyHubDataStore(CardShaperMixin, TickMixin, StreaksRanksMixin, Subscrip
             person.setdefault("completion_milestone",       7)    # bonus every N days (0 = off)
             person.setdefault("completion_bonus_points",    50)
             person.setdefault("last_completion_eval_date",  None) # ISO date string
+            # v0.7.6: weekly-consistency streak — bonus for N consecutive weeks
+            # at threshold% of ALL the week's chores done.
+            person.setdefault("weekly_completion_streak",            0)
+            person.setdefault("weekly_completion_threshold_pct",     80)  # % of the week's chores done
+            person.setdefault("weekly_completion_milestone",         4)   # bonus every N weeks (0 = off)
+            person.setdefault("weekly_completion_bonus_points",      100)
+            person.setdefault("last_weekly_completion_eval_date",    None)
             # v0.6.3: store goal — kid picks a store item to save toward. Card
             # surfaces a progress bar (balance / item.points_cost) on the rail
             # and store tab. Empty string = no goal.

@@ -30,6 +30,7 @@ export const HISTORY_META = {
     person_added:         { label: "Person added",       color: "var(--fh-text-sec)" },
     allowance:            { label: "Allowance",          color: "var(--fh-success)"  },
     completion_streak_milestone:   { label: "Success streak",   color: "var(--fh-success)"  },
+    weekly_completion_streak_milestone: { label: "Weekly streak", color: "var(--fh-success)" },
     subscription_cancel_declined:  { label: "Cancel declined",   color: "var(--fh-warning)"  },
     subscription_updated:          { label: "Sub updated",        color: "var(--fh-text-sec)" },
     // v0.6.5 subscription lifecycle (renewals/lapses are deductions)

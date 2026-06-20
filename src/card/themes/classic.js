@@ -12,12 +12,12 @@ import { DEFAULT_COLOR, FLASH_MS, HISTORY_META, WEEKDAY_LABELS } from "../consta
 import { I } from "../constants.js";
 import { escHTML, escAttr, ini, fPts, fUSD, cap, relTime, groupHistorySkipped } from "../utils.js";
 import { getEffectiveRank, effectiveRankThresholds, getWeeklyPts, getWeeklyPtsLost, getPointsAtRisk,
-         htmlRankBar, htmlSuccessStreak, htmlLateClaimBtn, htmlRotationRail,
+         htmlRankBar, htmlSuccessStreak, htmlWeeklyStreak, htmlLateClaimBtn, htmlRotationRail,
          getActiveStreaks, computeStreakProgress,
          htmlChoreRow, htmlAddReminderCTA,
          htmlGoalBanner, htmlGoalToggleBtn, storeItemIcon,
          htmlStoreItemLimit,
-         htmlStreakFreezeChip, htmlDailyProgress,
+         htmlStreakFreezeChip, htmlDailyProgress, htmlWeeklyProgress,
          htmlGroupContributorBars, htmlChipInBtn, htmlGroupProposalBanner, htmlRewardLockBadge, htmlBonusBoard,
          htmlSubscriptionRail, htmlRailSubscriptions, htmlStoreRailContent } from "./_shared.js";
 
@@ -161,12 +161,13 @@ function _railPanelKPIs(balance, weekly, lost, atRisk, openCount, pendingCount) 
 function _railPanelRank(rankIdx, weekly, dropThr, gainThr, color, person, attr) {
     const bar    = htmlRankBar(rankIdx, weekly, dropThr, gainThr, CLASSIC_RANKS, color, person);
     const streak = htmlSuccessStreak(person, color);
+    const wstreak = htmlWeeklyStreak(person);
     const freeze = htmlStreakFreezeChip(attr);
     if (!bar) {
         return _railPanel("RANK",
-            `<div class="fh-classic-rmax">${escHTML(getEffectiveRank(rankIdx, CLASSIC_RANKS).name)} · max</div>${streak}${freeze}`);
+            `<div class="fh-classic-rmax">${escHTML(getEffectiveRank(rankIdx, CLASSIC_RANKS).name)} · max</div>${streak}${wstreak}${freeze}`);
     }
-    return _railPanel("RANK", bar + streak + freeze);
+    return _railPanel("RANK", bar + streak + wstreak + freeze);
 }
 
 function _railPanelStreaks(attr, naAttr, person, color) {
@@ -312,6 +313,7 @@ function _tasks(attr, color, person, card) {
 
     return `
         ${htmlDailyProgress(attr)}
+        ${htmlWeeklyProgress(attr)}
         ${htmlAddReminderCTA(person)}
         <div class="fh-row-list" style="--row-color:${color}">
             ${overdue.length ? overdue.map(t => renderRow(t, true)).join("") : ""}

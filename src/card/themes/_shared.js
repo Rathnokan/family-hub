@@ -79,6 +79,16 @@ export function getNextRankByIndex(rankIndex, ranks) {
  * @param {number} rankIdx  current rank index
  */
 export function effectiveRankThresholds(person, naAttr, rankIdx) {
+    // Prefer the backend-computed effective thresholds — they mirror the weekly
+    // rank evaluation exactly (dynamic-capacity % of the kid's assigned points,
+    // or static), so the bar can never disagree with how rank-ups are judged.
+    if (person && (person.rank_gain_eff != null || person.rank_drop_eff != null)) {
+        return {
+            dropThr: person.rank_drop_eff ?? 0,
+            gainThr: person.rank_gain_eff ?? 0,
+        };
+    }
+    // Legacy fallback (models without rank_*_eff): static threshold resolution.
     const pick = (arr, scalar, globalVal, dflt) => {
         if (Array.isArray(arr) && arr.length) {
             const j = Math.min(Math.max(0, rankIdx | 0), arr.length - 1);
@@ -202,29 +212,40 @@ export function htmlRankBar(rankIndex, weeklyPts, dropThr, gainThr, ranks, color
     const isTop   = rankIndex >= ranks.length - 1;
     const isBot   = rankIndex <= 0;
 
-    const cap     = person?.rank_curve?.cap;
-    const barMax  = Math.max(cap || Math.round(gainThr * 1.2), gainThr, 1);
+    // Bar spans the kid's weekly capacity so the markers sit at their true % in
+    // dynamic mode: assigned points/week → configured cap → a little past gain.
+    const basis   = person?.assigned_ppw || person?.rank_curve?.cap || 0;
+    const barMax  = Math.max(basis || Math.round(gainThr * 1.2), gainThr, weeklyPts, 1);
     const pctOf   = v => Math.min(100, Math.max(0, Math.round(v / barMax * 100)));
     const fillPct = pctOf(weeklyPts);
     const dropPct = pctOf(dropThr);
     const gainPct = pctOf(gainThr);
 
+    // Status now states the actionable gap in points, not just the direction.
     let fillColor, statusText;
     if (!isTop && weeklyPts >= gainThr) {
         fillColor  = color;
-        statusText = `${weeklyPts}pts · +1 rank`;
+        statusText = `${weeklyPts} pts · rank up ready`;
     } else if (!isBot && weeklyPts < dropThr) {
         fillColor  = "#E07A4C";
-        statusText = `${weeklyPts}pts · −1 rank`;
+        statusText = `${weeklyPts} pts · ${Math.max(0, dropThr - weeklyPts)} to hold`;
+    } else if (isTop) {
+        fillColor  = "#E0B84C";
+        statusText = `${weeklyPts} pts · max rank`;
     } else {
         fillColor  = "#E0B84C";
-        statusText = `${weeklyPts}pts · holds`;
+        statusText = `${weeklyPts} pts · ${Math.max(0, gainThr - weeklyPts)} to rank up`;
     }
 
-    const dropLine = isBot ? "" :
-        `<span class="fh-rank-bar-mark fh-rank-bar-mark--drop" style="left:${dropPct}%" title="Drop below ${dropThr}"></span>`;
-    const gainLine = isTop ? "" :
-        `<span class="fh-rank-bar-mark fh-rank-bar-mark--gain" style="left:${gainPct}%" title="Rank up at ${gainThr}"></span>`;
+    // Each threshold marker carries a VISIBLE point label beneath it (the Echo
+    // Show is touch — hover tooltips never show), so kids see exactly how many
+    // points each bar needs.
+    const mark = (cls, pos, thr, arrow, titleTxt) =>
+        `<span class="fh-rank-bar-mark fh-rank-bar-mark--${cls}" style="left:${pos}%" title="${titleTxt}"></span>` +
+        `<span class="fh-rank-bar-mark-val fh-rank-bar-mark-val--${cls}" style="left:${pos}%">${arrow}${thr}</span>`;
+
+    const dropLine = isBot ? "" : mark("drop", dropPct, dropThr, "▾", `Drop below ${dropThr}`);
+    const gainLine = isTop ? "" : mark("gain", gainPct, gainThr, "▴", `Rank up at ${gainThr}`);
 
     return `
         <div class="fh-rank-bar-row">
@@ -348,6 +369,35 @@ export function htmlSuccessStreak(person, accentColor) {
         </div>`;
 }
 
+/**
+ * Render the weekly-consistency streak line — the weekly counterpart to
+ * htmlSuccessStreak. Only renders when the feature is enabled for this person
+ * (weekly_completion_milestone > 0) AND they have an active weekly streak.
+ *
+ *   📅 3wk streak · 80% weekly target
+ *
+ * Always tinted weekly-blue (matching the weekly progress bar) regardless of
+ * theme, so it reads as a distinct chip from the theme-accent daily streak —
+ * "daily = warm accent, weekly = blue" is the consistent visual language.
+ *
+ * @param {object} person  needs_attention people[] entry.
+ */
+export function htmlWeeklyStreak(person) {
+    if (!person) return "";
+    const milestone = person.weekly_completion_milestone || 0;
+    const streak    = person.weekly_completion_streak || 0;
+    if (milestone <= 0 || streak <= 0) return "";
+    const threshold = person.weekly_completion_threshold_pct || 80;
+    const tone = "#5B9BD5";   // weekly-blue — matches --fh-progress-week
+    return `
+        <div class="fh-success-streak fh-success-streak--weekly" style="--ss-tone:${tone}">
+            <span class="fh-success-streak-icon">📅</span>
+            <span class="fh-success-streak-val">${streak}wk streak</span>
+            <span class="fh-success-streak-sep">·</span>
+            <span class="fh-success-streak-target">${threshold}% weekly target</span>
+        </div>`;
+}
+
 // ---------------------------------------------------------------------------
 // Streak rail data helper (S8 — used by all themed personal pages)
 // ---------------------------------------------------------------------------
@@ -466,40 +516,62 @@ export function htmlStreakFreezeChip(attr) {
 }
 
 // ---------------------------------------------------------------------------
-// Daily progress bar (v0.6.3 item 9)
+// Progress bars (v0.6.3 item 9; dual daily + weekly in v0.7.6)
 // ---------------------------------------------------------------------------
 
 /**
- * Render a thin "X / Y done today" progress bar at the top of the tasks tab.
- * Returns "" on rest days (no assigned chores due) so themes can call it
- * unconditionally without adding blank space.
- *
- * Data sources (all from the personal sensor `attr`):
- *   - attr.tasks_done_today          (int) — approved/self_reported/pending_approval today
- *   - attr.tasks_due_today_list      (arr) — still-pending assigned tasks
- *
- * @param {object} attr  Personal sensor attributes.
+ * Generic progress-bar row, POINTS-based. `earned` can exceed `possible` when
+ * bonus chores are done — the fill caps at 100% but the label shows the real
+ * numbers (e.g. "✓ 27 / 24 pts today"), so doing extra visibly pays off. Themes
+ * only style `.fh-progress--daily` / `--weekly`.
  */
-export function htmlDailyProgress(attr) {
-    const done      = attr?.tasks_done_today || 0;
-    const remaining = (attr?.tasks_due_today_list || [])
-        .filter(t => t.chore_type !== "reminder").length;
-    const total     = done + remaining;
-    if (total === 0) return "";
-
-    const pct    = Math.round((done / total) * 100);
-    const allDone = done >= total;
-    const label  = allDone
-        ? `✓ All ${total} done today!`
-        : `${done} / ${total} done today`;
-
+function htmlProgressBar(kind, earned, possible, period) {
+    if (!possible || possible <= 0) return "";
+    const pct     = Math.min(100, Math.round((earned / possible) * 100));
+    const allDone = earned >= possible;
+    const label   = `${allDone ? "✓ " : ""}${earned} / ${possible} pts ${period}`;
     return `
-        <div class="fh-daily-progress ${allDone ? "fh-daily-progress--complete" : ""}">
+        <div class="fh-daily-progress fh-progress--${kind} ${allDone ? "fh-daily-progress--complete" : ""}">
             <div class="fh-daily-progress-bar">
                 <div class="fh-daily-progress-fill" style="width:${pct}%"></div>
             </div>
             <span class="fh-daily-progress-label">${label}</span>
         </div>`;
+}
+
+/**
+ * Daily progress bar — POINTS earned / possible from TODAY's daily chores (plus
+ * any bonus points earned today). Points-based so harder chores weigh more and a
+ * bonus chore can lift the bar. Shares its basis with the daily streak bonus, so
+ * the bar and the streak agree. Reads the backend `daily_earned`/`daily_possible`
+ * scalars. Returns "" on rest days (no daily points possible).
+ *
+ * @param {object} attr  Personal sensor attributes / model section.
+ */
+export function htmlDailyProgress(attr) {
+    return htmlProgressBar(
+        "daily",
+        attr?.daily_earned   || 0,
+        attr?.daily_possible || 0,
+        "today",
+    );
+}
+
+/**
+ * Weekly progress bar — POINTS earned / possible across the whole rank week (all
+ * assigned chores + bonus earned). The full-week points total the kid fills up
+ * over the week, and what the weekly-consistency streak keys off. Reads the
+ * backend `week_earned`/`week_possible`. Returns "" when nothing's scheduled.
+ *
+ * @param {object} attr  Personal sensor attributes / model section.
+ */
+export function htmlWeeklyProgress(attr) {
+    return htmlProgressBar(
+        "weekly",
+        attr?.week_earned   || 0,
+        attr?.week_possible || 0,
+        "this week",
+    );
 }
 
 // ---------------------------------------------------------------------------

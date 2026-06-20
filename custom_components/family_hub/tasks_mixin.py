@@ -508,6 +508,91 @@ class TasksMixin:
         except Exception as err:
             _LOGGER.warning("Family Hub: notification failed for '%s': %s", target, err)
 
+    async def _send_notify_data(self, target: str, title, message: str, data: dict) -> None:
+        """Call a HA notify service with an extra `data` payload (channel,
+        importance, tag, action buttons). Errors are logged, never raised."""
+        payload: dict = {"message": message, "data": data}
+        if title:
+            payload["title"] = title
+        try:
+            await self._hass.services.async_call("notify", target, payload, blocking=False)
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.warning("Family Hub: rich notification failed for '%s': %s", target, err)
+
+    # ------------------------------------------------------------------
+    # Phone home-screen checklist notification (opt-in, per person)
+    # ------------------------------------------------------------------
+
+    async def async_refresh_checklist_notifications(self) -> None:
+        """Post / update / clear the single quiet "today's chores" notification
+        for each opted-in person.
+
+        One silent, self-replacing notification per person (fixed tag, low
+        channel importance) that acts as a tick-off checklist with Done buttons —
+        never a stream of pings. Re-pushed ONLY when the person's visible to-do
+        list actually changes (signature dedup), so unrelated mutations don't
+        spam the notify service. Opt-in via the per-person `checklist_notify`
+        flag (default off); a person with it off has any prior tile cleared once.
+        """
+        sigs = getattr(self, "_checklist_sig", None)
+        if sigs is None:
+            sigs = {}
+            self._checklist_sig = sigs
+
+        for person in self.get_active_people():
+            pid    = person["id"]
+            target = (person.get("notify_target") or "").strip()
+
+            if not person.get("checklist_notify") or not target:
+                # Disabled (or no target) — clear a tile we previously posted.
+                if pid in sigs:
+                    if target:
+                        await self._clear_checklist(person, target)
+                    sigs.pop(pid, None)
+                continue
+
+            to_do = self.get_tasks_for_card(pid).get("due_today", [])
+            sig   = (tuple(t["task_id"] for t in to_do), person.get("points_balance", 0))
+            if sigs.get(pid) == sig:
+                continue  # unchanged — stay quiet
+
+            if to_do:
+                await self._send_checklist(person, target, to_do)
+            else:
+                await self._clear_checklist(person, target)
+            sigs[pid] = sig
+
+    async def _send_checklist(self, person: dict, target: str, to_do: list) -> None:
+        """Post / replace the quiet checklist tile for one person."""
+        pid     = person["id"]
+        first   = person["name"].split()[0] if person.get("name") else "Chores"
+        names   = [t["name"] for t in to_do]
+        balance = person.get("points_balance", 0)
+
+        title   = f"{first}'s chores — {len(names)} to do"
+        message = "\n".join(f"• {n}" for n in names) + f"\n\n{balance} pts"
+
+        # Android shows ~3 action buttons; the rest stay readable in the body.
+        actions = [
+            {"action": f"FH_DONE_{t['task_id']}", "title": f"Done: {t['name']}"[:36]}
+            for t in to_do[:3]
+        ]
+        data = {
+            "tag":        f"family_hub_checklist_{pid}",
+            "channel":    "Family Hub Chores",
+            "importance": "low",     # silent — no sound, no heads-up banner
+            "sticky":     "true",    # survive a Done tap until we re-push
+            "actions":    actions,
+        }
+        await self._send_notify_data(target, title, message, data)
+
+    async def _clear_checklist(self, person: dict, target: str) -> None:
+        """Remove the checklist tile (all done, or opted out)."""
+        await self._send_notify_data(
+            target, None, "clear_notification",
+            {"tag": f"family_hub_checklist_{person['id']}"},
+        )
+
     async def async_check_notifications(self) -> None:
         """
         Send per-chore reminders and penalty nudges. Called every coordinator poll.

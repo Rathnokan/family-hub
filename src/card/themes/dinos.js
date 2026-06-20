@@ -14,12 +14,12 @@ import { escHTML, escAttr, fPts, fUSD, ini, relTime,
          groupHistorySkipped }                            from "../utils.js";
 import { HISTORY_META }                                   from "../constants.js";
 import { getEffectiveRank, effectiveRankThresholds, getWeeklyPts, getWeeklyPtsLost, getPointsAtRisk,
-         htmlRankBar, htmlSuccessStreak, htmlLateClaimBtn, htmlRotationRail,
+         htmlRankBar, htmlSuccessStreak, htmlWeeklyStreak, htmlLateClaimBtn, htmlRotationRail,
          groupByCategory, getActiveStreaks,
          computeStreakProgress, htmlChoreRow,
          htmlGoalBanner, htmlRailGoal, htmlGoalToggleBtn,
          storeItemIcon, htmlStoreItemLimit,
-         htmlStreakFreezeChip, htmlDailyProgress,
+         htmlStreakFreezeChip, htmlDailyProgress, htmlWeeklyProgress,
          htmlGroupContributorBars, htmlChipInBtn, htmlGroupProposalBanner, htmlRewardLockBadge, htmlBonusBoard,
          htmlSubscriptionRail, htmlRailSubscriptions, htmlStoreRailContent } from "./_shared.js";
 
@@ -211,12 +211,13 @@ function _railPanelKPIs(balance, weekly, lost, atRisk, openCount, dollarValue) {
 function _railPanelRank(rankIdx, weekly, dropThr, gainThr, person, attr) {
     const bar    = htmlRankBar(rankIdx, weekly, dropThr, gainThr, DINOS_RANKS, DN.amber, person);
     const streak = htmlSuccessStreak(person, DN.amber);
+    const wstreak = htmlWeeklyStreak(person);
     const freeze = htmlStreakFreezeChip(attr);
     if (!bar) {
         return _railPanel("DIG STATUS",
-            `<div class="fh-dn-rmax">${escHTML(getEffectiveRank(rankIdx, DINOS_RANKS).name)} · MAX</div>${streak}${freeze}`);
+            `<div class="fh-dn-rmax">${escHTML(getEffectiveRank(rankIdx, DINOS_RANKS).name)} · MAX</div>${streak}${wstreak}${freeze}`);
     }
-    return _railPanel("DIG STATUS", bar + streak + freeze);
+    return _railPanel("DIG STATUS", bar + streak + wstreak + freeze);
 }
 
 function _railPanelStreaks(attr, naAttr, person) {
@@ -314,6 +315,7 @@ function _fieldTasks(attr, person, naAttr, card) {
 
     return `
         ${htmlDailyProgress(attr)}
+        ${htmlWeeklyProgress(attr)}
         <div class="fh-row-list">
             ${groupHtml}
             ${pendingSection}

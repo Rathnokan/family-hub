@@ -45,6 +45,7 @@ from .const import (
     DOMAIN,
     HISTORY_ALLOWANCE,
     HISTORY_COMPLETION_STREAK_MILESTONE,
+    HISTORY_WEEKLY_COMPLETION_STREAK_MILESTONE,
     HISTORY_PERSON_ADDED,
     HISTORY_POINTS_AWARDED,
     HISTORY_REDEMPTION_APPROVED,
@@ -316,6 +317,202 @@ class StreaksRanksMixin:
         person["completion_streak"] = max(0, count)
         await self.async_save()
         return True
+
+    async def async_set_weekly_completion_streak(self, person_id: str, count: int) -> bool:
+        """Admin override: set a person's weekly-consistency streak count directly."""
+        person = self.get_person(person_id)
+        if not person:
+            return False
+        person["weekly_completion_streak"] = max(0, count)
+        await self.async_save()
+        return True
+
+    # ------------------------------------------------------------------
+    # Progress stats (v0.7.6) — daily + weekly chore-completion progress
+    # ------------------------------------------------------------------
+
+    # A chore instance counts as "done" the moment the kid marks it, so the
+    # progress bars give immediate feedback (parent approval can still be
+    # pending). Mirrors tick_mixin's daily success-streak COMPLETED_STATUSES.
+    _PROGRESS_DONE = (STATUS_APPROVED, STATUS_SELF_REPORTED, STATUS_PENDING_APPROVAL)
+
+    def _progress_week_window(self, ref: date) -> tuple[date, date]:
+        """(week_start, week_end_exclusive) for the rank week containing `ref`.
+
+        Anchored to the configured rank_eval_weekday so the weekly progress bar,
+        the weekly-consistency streak, and the rank bar all share one week. Python
+        date.weekday() and the stored eval weekday both use 0 = Monday.
+        """
+        eval_wd = self._data["settings"].get("rank_eval_weekday", 0)
+        days_since = (ref.weekday() - eval_wd) % 7
+        start = ref - timedelta(days=days_since)
+        return start, start + timedelta(days=7)
+
+    def _period_points(
+        self, person_id: str, start: date, end: date, daily_only: bool = False
+    ) -> tuple[int, int]:
+        """(earned, possible) chore POINTS over real instances due in [start, end).
+
+        possible = base points of ASSIGNED chores due to the kid (excused days
+        excluded) — the points they're expected to earn. earned = those that are
+        done, PLUS points from any CLAIMABLE/bonus chores the kid completed in the
+        window. Bonus points lift the numerator only (they're not "required"), so
+        doing extra can help reach or hold a streak even when a required chore
+        slips. `daily_only` restricts the required set to DAILY-recurrence chores
+        (the daily bar/streak); the weekly side counts every assigned chore.
+
+        Points, not counts, so harder chores weigh more and a kid with 10 chores
+        isn't held to a different bar than a kid with 8.
+        """
+        start_s, end_s = start.isoformat(), end.isoformat()
+        earned = possible = 0
+        for inst in self.task_instances:
+            due = inst.get("due_date", "")
+            if not (start_s <= due < end_s):
+                continue
+            if inst.get("status") == STATUS_EXCUSED:
+                continue
+            chore = self.get_chore(inst.get("chore_id"))
+            if not chore:
+                continue
+            ctype   = chore.get("chore_type")
+            pts     = chore.get("points", 0)
+            is_done = inst.get("status") in self._PROGRESS_DONE
+            if ctype == CHORE_TYPE_ASSIGNED:
+                if inst.get("assigned_to") != person_id:
+                    continue
+                if daily_only and (chore.get("recurrence") or {}).get("type", RECURRENCE_DAILY) != RECURRENCE_DAILY:
+                    continue
+                possible += pts
+                if is_done:
+                    earned += pts
+            elif ctype == CHORE_TYPE_CLAIMABLE:
+                # Bonus chore — counts toward earned only, and only when this kid
+                # is the one who completed it.
+                if is_done and inst.get("completed_by") == person_id:
+                    earned += pts
+        return earned, possible
+
+    def _projected_owner(self, chore: dict, person_id: str) -> bool:
+        """Would this chore's instance on a FUTURE day belong to person_id?
+
+        Non-rotating: the kid is in assigned_to. Rotating: only the current
+        holder is projected forward (a snapshot — actual hand-offs self-correct
+        as real instances materialise each day).
+        """
+        if chore.get("rotation_pool"):
+            assigned = chore.get("assigned_to") or []
+            return bool(assigned) and assigned[0] == person_id
+        return person_id in (chore.get("assigned_to") or [])
+
+    def get_daily_progress(self, person_id: str) -> tuple[int, int]:
+        """(earned, possible) POINTS for TODAY's DAILY chores, plus any bonus
+        points earned today. Drives the daily progress bar and shares its basis
+        with the daily success-streak, so the bar and the streak agree.
+        """
+        today = date.today()
+        return self._period_points(person_id, today, today + timedelta(days=1), daily_only=True)
+
+    def get_week_progress(self, person_id: str) -> tuple[int, int]:
+        """(earned, possible) POINTS for the CURRENT rank week across ALL assigned
+        chores, plus bonus earned. The full-week possible total the kid fills up
+        over the week. Past/today come from real instances (accurate
+        rotation/excusals); the remaining days' required points are projected from
+        each chore's recurrence + current assignment.
+        """
+        today = date.today()
+        start, end = self._progress_week_window(today)
+        # Real portion: week-start through end of today.
+        real_end = min(today + timedelta(days=1), end)
+        earned, possible = self._period_points(person_id, start, real_end, daily_only=False)
+        # Projected portion: tomorrow through the end of the week (required pts).
+        person = self.get_person(person_id)
+        if person:
+            d = max(start, today + timedelta(days=1))
+            while d < end:
+                for chore in self.get_active_chores():
+                    if chore.get("chore_type") != CHORE_TYPE_ASSIGNED:
+                        continue
+                    if not self._is_due_on_date(chore, d):
+                        continue
+                    if self._projected_owner(chore, person_id):
+                        possible += chore.get("points", 0)
+                d += timedelta(days=1)
+        return earned, possible
+
+    async def _async_process_weekly_completion_streaks(self, tick_date: date) -> None:
+        """Evaluate the just-finished week's overall chore-completion rate per kid
+        and update their weekly-consistency streak.
+
+        Mirrors `_async_process_completion_streaks` (daily) but at the rank-week
+        boundary: a "good week" = done/total over ALL assigned chores due that
+        week >= weekly_completion_threshold_pct. Hit the milestone (every N
+        consecutive good weeks) → award weekly_completion_bonus_points + log.
+        Miss → reset to 0. Skipped while penalties are paused, for parents, and
+        when the feature is off (weekly_completion_milestone == 0).
+        """
+        s = self._data["settings"]
+        eval_weekday = s.get("rank_eval_weekday", 0)  # 0 = Monday
+        if tick_date.weekday() != eval_weekday:
+            return
+
+        global_paused = s.get("penalties_paused", False)
+        week_start = tick_date - timedelta(days=7)
+        week_end   = tick_date
+        week_start_s = week_start.isoformat()
+
+        for person in self.get_active_people():
+            if person.get("type") != "kid":
+                continue
+            if global_paused or person.get("penalties_paused"):
+                continue
+            if person.get("weekly_completion_milestone", 0) == 0:
+                continue
+
+            last_eval = person.get("last_weekly_completion_eval_date")
+            if last_eval and last_eval >= week_start_s:
+                continue  # already evaluated this week (catch-up safety)
+
+            earned, possible = self._period_points(person["id"], week_start, week_end, daily_only=False)
+            if possible == 0:
+                # Rest week — nothing was assigned. Advance cursor, leave streak.
+                person["last_weekly_completion_eval_date"] = week_start_s
+                continue
+
+            hit_pct   = (earned / possible) * 100
+            threshold = person.get("weekly_completion_threshold_pct", 80)
+
+            if hit_pct >= threshold:
+                person["weekly_completion_streak"] = person.get("weekly_completion_streak", 0) + 1
+                milestone = person.get("weekly_completion_milestone", 4)
+                if milestone > 0 and person["weekly_completion_streak"] % milestone == 0:
+                    bonus = person.get("weekly_completion_bonus_points", 100)
+                    if bonus > 0:
+                        person["points_balance"]  = person.get("points_balance", 0)  + bonus
+                        person["points_lifetime"] = person.get("points_lifetime", 0) + bonus
+                        self._append_history(
+                            event_type=HISTORY_WEEKLY_COMPLETION_STREAK_MILESTONE,
+                            person_id=person["id"],
+                            reference_id=_new_id(),
+                            points_delta=bonus,
+                            balance_after=person["points_balance"],
+                            note=f"{person['weekly_completion_streak']}-week consistency streak",
+                        )
+                        _LOGGER.info(
+                            "Family Hub: weekly-consistency bonus — %s %dpts (streak=%d wks, hit=%.0f%%)",
+                            person.get("name", person["id"]),
+                            bonus, person["weekly_completion_streak"], hit_pct,
+                        )
+            else:
+                if person.get("weekly_completion_streak", 0) > 0:
+                    _LOGGER.info(
+                        "Family Hub: weekly-consistency streak broken — %s (was %d wks, hit=%.0f%% < %d%%)",
+                        person.get("name", person["id"]),
+                        person.get("weekly_completion_streak", 0), hit_pct, threshold,
+                    )
+                person["weekly_completion_streak"] = 0
+
+            person["last_weekly_completion_eval_date"] = week_start_s
 
     def _effective_rank_thresholds(self, person: dict, idx: int) -> tuple[int, int]:
         """Resolve the (drop, gain) weekly-point thresholds for a person at rank `idx`.

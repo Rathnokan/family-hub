@@ -12,14 +12,14 @@ import { escHTML, escAttr, fPts, fUSD, ini,
          groupHistorySkipped }                            from "../utils.js";
 import { DEFAULT_COLOR, HISTORY_META, WEEKDAY_LABELS }   from "../constants.js";
 import { getEffectiveRank, effectiveRankThresholds, getWeeklyPts, getWeeklyPtsLost, getPointsAtRisk,
-         htmlRankBar, htmlSuccessStreak, htmlLateClaimBtn, htmlRotationRail,
+         htmlRankBar, htmlSuccessStreak, htmlWeeklyStreak, htmlLateClaimBtn, htmlRotationRail,
          getActiveStreaks,
          computeStreakProgress,
          groupByCategory,
          htmlChoreRow,
          htmlGoalBanner, htmlRailGoal, htmlGoalToggleBtn,
          storeItemIcon, htmlStoreItemLimit,
-         htmlStreakFreezeChip, htmlDailyProgress,
+         htmlStreakFreezeChip, htmlDailyProgress, htmlWeeklyProgress,
          htmlGroupContributorBars, htmlChipInBtn, htmlGroupProposalBanner, htmlRewardLockBadge, htmlBonusBoard,
          htmlSubscriptionRail, htmlRailSubscriptions, htmlStoreRailContent } from "./_shared.js";
 
@@ -236,13 +236,14 @@ function _railPanelKPIs(balance, openCount, weekly, lost, atRisk, dollarValue) {
 function _railPanelRank(rankIdx, weekly, dropThr, gainThr, person, attr) {
     const bar    = htmlRankBar(rankIdx, weekly, dropThr, gainThr, ENGINEER_RANKS, ENG.amber, person);
     const streak = htmlSuccessStreak(person, ENG.amber);
+    const wstreak = htmlWeeklyStreak(person);
     const freeze = htmlStreakFreezeChip(attr);
     if (!bar) {
         // Parent — rank bar is empty string; show a static "MAX RANK" note.
         return _railPanel("RANK · TRACK",
-            `<div class="fh-eng-rmax">${escHTML(getEffectiveRank(rankIdx, ENGINEER_RANKS).name)} &middot; MAX</div>${streak}${freeze}`);
+            `<div class="fh-eng-rmax">${escHTML(getEffectiveRank(rankIdx, ENGINEER_RANKS).name)} &middot; MAX</div>${streak}${wstreak}${freeze}`);
     }
-    return _railPanel("RANK · TRACK", bar + streak + freeze);
+    return _railPanel("RANK · TRACK", bar + streak + wstreak + freeze);
 }
 
 function _railPanelStreaks(attr, naAttr, person) {
@@ -349,6 +350,7 @@ function _workOrders(attr, person, balance, card) {
 
     return `
         ${htmlDailyProgress(attr)}
+        ${htmlWeeklyProgress(attr)}
         <div class="fh-row-list">
             ${groupHtml}
             ${pendingSection}

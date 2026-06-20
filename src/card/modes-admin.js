@@ -492,6 +492,9 @@ function _htmlAdFamily(people, attr, card) {
                         data-pcompletionthreshold="${p.completion_threshold_pct ?? 80}"
                         data-pcompletionmilestone="${p.completion_milestone ?? 7}"
                         data-pcompletionbonus="${p.completion_bonus_points ?? 50}"
+                        data-pweeklythreshold="${p.weekly_completion_threshold_pct ?? 80}"
+                        data-pweeklymilestone="${p.weekly_completion_milestone ?? 4}"
+                        data-pweeklybonus="${p.weekly_completion_bonus_points ?? 100}"
                         title="Edit person">${I.edit}</button>
             </div>
             ${isKid ? `

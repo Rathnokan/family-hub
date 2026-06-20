@@ -976,6 +976,8 @@ export const CSS_2 = `    color:var(--fh-text-sec); letter-spacing:.04em;
 
   .fh-rank-bar-row {
     display:flex; align-items:center; gap:6px; margin-top:4px;
+    /* room for the v0.7.6 point-value labels hanging beneath the markers */
+    padding-bottom:16px;
   }
   .fh-rank-bar-label {
     font-size:.75rem; font-weight:700; letter-spacing:.04em;

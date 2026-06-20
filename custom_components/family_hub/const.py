@@ -197,6 +197,7 @@ HISTORY_TASK_ADDED            = "task_added"
 HISTORY_PERSON_ADDED          = "person_added"
 HISTORY_ALLOWANCE             = "allowance"
 HISTORY_COMPLETION_STREAK_MILESTONE = "completion_streak_milestone"  # v0.6.1 success-rate streak bonus
+HISTORY_WEEKLY_COMPLETION_STREAK_MILESTONE = "weekly_completion_streak_milestone"  # v0.7.6 weekly consistency streak bonus
 HISTORY_GROUP_CHIP_IN               = "group_chip_in"   # v0.6.3 item 13 — points chipped in
 HISTORY_GROUP_REDEEMED              = "group_redeemed"  # v0.6.3 item 13 — group reward redeemed
 HISTORY_GROUP_PROPOSED              = "group_proposed"  # v0.6.3 item 13 — kid proposed sharing

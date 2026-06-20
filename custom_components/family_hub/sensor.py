@@ -8,6 +8,11 @@ Per-person (1 per active family member, created dynamically):
     state  = current spendable point balance
     attrs  = all task lists, store items, penalty info, show_dollar_value flag
 
+Per-person widget (1 per active family member, created dynamically):
+  sensor.family_hub_[name]_widget
+    state  = glanceable headline for phone widgets ("3 to do · 45 pts")
+    attrs  = chore name list + a pre-joined multiline string (no Jinja needed)
+
 Global (4 fixed):
   sensor.family_hub_maintenance_due      — items due within 14 days
   sensor.family_hub_maintenance_overdue  — overdue maintenance items
@@ -54,6 +59,7 @@ from .const import (
 from .coordinator import FamilyHubCoordinator
 from .card_model import (
     build_person_scalars,
+    build_person_widget,
     build_needs_attention_scalars,
     build_maintenance_due_scalars,
     build_maintenance_overdue_scalars,
@@ -94,6 +100,7 @@ async def async_setup_entry(
         sensor = FamilyHubPersonSensor(coordinator, person["id"])
         person_entities[person["id"]] = sensor
         entities.append(sensor)
+        entities.append(FamilyHubPersonWidgetSensor(coordinator, person["id"]))
 
     # --- Global sensors -------------------------------------------------------
     entities.append(FamilyHubMaintenanceDueSensor(coordinator))
@@ -117,7 +124,10 @@ async def async_setup_entry(
             return
         sensor = FamilyHubPersonSensor(coordinator, person_id)
         person_entities[person_id] = sensor
-        async_add_entities([sensor], update_before_add=True)
+        async_add_entities(
+            [sensor, FamilyHubPersonWidgetSensor(coordinator, person_id)],
+            update_before_add=True,
+        )
         _LOGGER.info("Family Hub: registered sensor for new person %s", person_id)
 
     def remove_person_sensor(person_id: str) -> None:
@@ -207,6 +217,45 @@ class FamilyHubPersonSensor(FamilyHubBaseSensor):
         # lists, store items, goal, subscriptions) reaches the card via the
         # websocket model (family_hub/get_model), not these attributes.
         return build_person_scalars(self.coordinator.store, self._person_id)
+
+
+# ---------------------------------------------------------------------------
+# Per-person phone-widget sensor
+# ---------------------------------------------------------------------------
+
+class FamilyHubPersonWidgetSensor(FamilyHubBaseSensor):
+    """One companion sensor per active family member, shaped for a phone
+    home-screen widget.
+
+    State = a glanceable headline ("3 to do · 45 pts") so the HA companion
+    app's plain "Entity State" widget needs no template. Attributes carry the
+    chore name list plus a pre-joined multiline string for the "Template"
+    widget / automations. Shares the person sensor's dynamic add lifecycle.
+    """
+
+    _attr_icon = "mdi:clipboard-list-outline"
+
+    # The name list / joined strings are for at-a-glance display, not history.
+    _unrecorded_attributes = frozenset({
+        "chore_list", "chore_lines", "chore_summary",
+    })
+
+    def __init__(self, coordinator: FamilyHubCoordinator, person_id: str) -> None:
+        super().__init__(coordinator)
+        self._person_id = person_id
+        person = coordinator.store.get_person(person_id)
+        safe_name = person["name"].lower().replace(" ", "_") if person else person_id
+        self._attr_unique_id = f"{DOMAIN}_widget_{person_id}"
+        self._attr_name = f"{person['name'] if person else person_id} widget"
+        self.entity_id = f"sensor.family_hub_{safe_name}_widget"
+
+    @property
+    def native_value(self) -> str:
+        return build_person_widget(self.coordinator.store, self._person_id)["state"]
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        return build_person_widget(self.coordinator.store, self._person_id)["attrs"]
 
 
 # Maintenance task selection lives in card_model.get_maintenance_tasks (imported

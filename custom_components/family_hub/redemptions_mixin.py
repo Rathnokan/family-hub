@@ -150,11 +150,14 @@ class RedemptionsMixin:
         """Evaluate per-reward redemption gates for one person.
 
         Two opt-in gates, both default off (0):
-          - require_daily_pct: min % of TODAY's assigned DAILY chores done, AND
-            every assigned non-daily chore (weekly/every-N/monthly) due TODAY
-            must be complete. "Done" = approved/awarded only; excused chores are
-            excluded from both numerator and denominator. Claimable/bonus chores
-            never count. Waived on penalty-paused (sick) days.
+          - require_daily_pct: min % of TODAY's assigned DAILY chore POINTS earned
+            (points-based, matching the daily progress bar + streak), AND every
+            assigned non-daily chore (weekly/every-N/monthly) due TODAY must be
+            complete. "Done" = approved only (stricter than the bar — a reward
+            can't be redeemed on a chore the parent hasn't OK'd yet). Bonus/
+            claimable points the kid earned today count toward the % (so doing
+            extra can unlock a reward). Excused chores are excluded. Waived on
+            penalty-paused (sick) days.
           - min_rank_index: person rank_index must be >= this. Always applies.
 
         Returns a dict consumed by both the card shaper and the request path.
@@ -192,30 +195,38 @@ class RedemptionsMixin:
         if required_pct > 0 and not self.is_penalty_paused_for(person_id):
             today_str = date.today().isoformat()
             DONE = (STATUS_APPROVED, STATUS_SELF_REPORTED)
-            daily_done = 0
-            daily_total = 0
+            daily_done = 0    # daily-chore POINTS earned today (+ bonus)
+            daily_total = 0   # daily-chore POINTS possible today (required)
             weekly_blockers: list[str] = []
             for inst in self.task_instances:
                 if inst.get("due_date") != today_str:
                     continue
-                if inst.get("assigned_to") != person_id:
-                    continue
                 if inst.get("status") == STATUS_EXCUSED:
                     continue
                 chore = self.get_chore(inst.get("chore_id"))
-                if not chore or chore.get("chore_type") != CHORE_TYPE_ASSIGNED:
+                if not chore:
                     continue
+                ctype   = chore.get("chore_type")
+                pts     = chore.get("points", 0)
                 is_done = inst.get("status") in DONE
-                r_type  = chore.get("recurrence", {}).get("type", RECURRENCE_DAILY)
-                if r_type == RECURRENCE_DAILY:
-                    daily_total += 1
-                    if is_done:
-                        daily_done += 1
-                elif r_type in (RECURRENCE_WEEKLY, RECURRENCE_EVERY_N_DAYS,
-                                RECURRENCE_EVERY_N_WEEKS, RECURRENCE_MONTHLY_ON_DATE):
-                    # Non-daily chore due today must be 100% complete.
-                    if not is_done:
-                        weekly_blockers.append(chore.get("name", "a chore"))
+                if ctype == CHORE_TYPE_ASSIGNED:
+                    if inst.get("assigned_to") != person_id:
+                        continue
+                    r_type = chore.get("recurrence", {}).get("type", RECURRENCE_DAILY)
+                    if r_type == RECURRENCE_DAILY:
+                        daily_total += pts
+                        if is_done:
+                            daily_done += pts
+                    elif r_type in (RECURRENCE_WEEKLY, RECURRENCE_EVERY_N_DAYS,
+                                    RECURRENCE_EVERY_N_WEEKS, RECURRENCE_MONTHLY_ON_DATE):
+                        # Non-daily chore due today must be 100% complete.
+                        if not is_done:
+                            weekly_blockers.append(chore.get("name", "a chore"))
+                elif ctype == CHORE_TYPE_CLAIMABLE:
+                    # Bonus chore the kid finished today — its points count toward
+                    # the gate %, so doing extra can help unlock a reward.
+                    if is_done and inst.get("completed_by") == person_id:
+                        daily_done += pts
 
             daily_pct = int((daily_done / daily_total) * 100) if daily_total else 100
             status["daily_done"]      = daily_done

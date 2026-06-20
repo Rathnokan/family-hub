@@ -174,12 +174,19 @@ class PeopleMixin:
             # rank is just a starting point and weekly eval resumes.
             "rank_locked": False,
             "child_mode": False,
-            # v0.6.1: success-rate person streak
+            # v0.6.1: success-rate person streak (daily)
             "completion_streak":          0,
             "completion_threshold_pct":   80,
             "completion_milestone":       7,
             "completion_bonus_points":    50,
             "last_completion_eval_date":  None,
+            # v0.7.6: weekly-consistency streak — bonus for N consecutive weeks
+            # at threshold% of ALL the week's chores done.
+            "weekly_completion_streak":            0,
+            "weekly_completion_threshold_pct":     80,
+            "weekly_completion_milestone":         4,    # bonus every N weeks (0 = off)
+            "weekly_completion_bonus_points":      100,
+            "last_weekly_completion_eval_date":    None,
             # v0.6.3: store goal item (empty = none)
             "goal_item_id":               "",
             # v0.6.3 item 7: streak freeze tokens
@@ -218,10 +225,16 @@ class PeopleMixin:
             # v0.6.1: success-rate person streak (admin-configurable knobs)
             "completion_streak",
             "completion_threshold_pct", "completion_milestone", "completion_bonus_points",
+            # v0.7.6: weekly-consistency streak (admin-configurable knobs)
+            "weekly_completion_streak",
+            "weekly_completion_threshold_pct", "weekly_completion_milestone",
+            "weekly_completion_bonus_points",
             # v0.6.3: store goal item
             "goal_item_id",
             # v0.6.3 item 7: streak freeze tokens (admin can also top up)
             "streak_freezes_available",
+            # Phone checklist notification opt-in (default off)
+            "checklist_notify",
         }
         for key, val in kwargs.items():
             if key in allowed:

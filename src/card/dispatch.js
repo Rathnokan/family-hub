@@ -722,6 +722,10 @@ export function dispatch(act, el, card) {
                     completionThreshold:   parseInt(el.dataset.pcompletionthreshold ?? "80"),
                     completionMilestone:   parseInt(el.dataset.pcompletionmilestone ?? "7"),
                     completionBonusPoints: parseInt(el.dataset.pcompletionbonus     ?? "50"),
+                    // v0.7.6: weekly-consistency streak knobs
+                    weeklyThreshold:       parseInt(el.dataset.pweeklythreshold ?? "80"),
+                    weeklyMilestone:       parseInt(el.dataset.pweeklymilestone ?? "4"),
+                    weeklyBonusPoints:     parseInt(el.dataset.pweeklybonus     ?? "100"),
                 }
             };
             card._doRender(true);
@@ -875,6 +879,10 @@ export function dispatch(act, el, card) {
                 completion_threshold_pct: Math.max(1, Math.min(100, int("m-completion-threshold") || 80)),
                 completion_milestone:     Math.max(0, int("m-completion-milestone") || 0),
                 completion_bonus_points:  Math.max(0, int("m-completion-bonus")     || 0),
+                // v0.7.6: weekly-consistency streak knobs
+                weekly_completion_threshold_pct: Math.max(1, Math.min(100, int("m-weekly-threshold") || 80)),
+                weekly_completion_milestone:     Math.max(0, Math.min(52, int("m-weekly-milestone") || 0)),
+                weekly_completion_bonus_points:  Math.max(0, int("m-weekly-bonus") || 0),
             });
             card._closeModal();
             break;

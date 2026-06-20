@@ -1020,7 +1020,7 @@ export function mEditPerson(d) {
         ${section("Success streak", "bonus for consistent days", `
            <div class="fh-row">
              <div class="fh-field">
-               <label class="fh-label">Threshold (% of due chores done)</label>
+               <label class="fh-label">Threshold (% of the day's chore points)</label>
                <input class="fh-input" id="m-completion-threshold" type="number"
                       min="1" max="100" value="${d.completionThreshold ?? 80}">
              </div>
@@ -1035,9 +1035,35 @@ export function mEditPerson(d) {
              <input class="fh-input" id="m-completion-bonus" type="number"
                     min="0" value="${d.completionBonusPoints ?? 50}">
              <div class="fh-field-help">
-               Awards bonus points when this person completes at least the threshold
-               share of their daily assigned chores for N consecutive days.
-               Rest days (no chores due) and excused chores don't count either way.
+               Awards bonus points when this person earns at least the threshold
+               share of the day's daily-chore points — bonus chores count toward it —
+               for N consecutive days. Rest days (nothing due) and excused chores
+               don't count either way. Set milestone to 0 to disable.
+             </div>
+           </div>
+        `)}
+
+        ${section("Weekly streak", "bonus for consistent weeks", `
+           <div class="fh-row">
+             <div class="fh-field">
+               <label class="fh-label">Target (% of the week's chore points)</label>
+               <input class="fh-input" id="m-weekly-threshold" type="number"
+                      min="1" max="100" value="${d.weeklyThreshold ?? 80}">
+             </div>
+             <div class="fh-field">
+               <label class="fh-label">Milestone (weeks, 0 = off)</label>
+               <input class="fh-input" id="m-weekly-milestone" type="number"
+                      min="0" max="52" value="${d.weeklyMilestone ?? 4}">
+             </div>
+           </div>
+           <div class="fh-field">
+             <label class="fh-label">Bonus points at each milestone</label>
+             <input class="fh-input" id="m-weekly-bonus" type="number"
+                    min="0" value="${d.weeklyBonusPoints ?? 100}">
+             <div class="fh-field-help">
+               Awards bonus points when this person earns the target share of the
+               week's chore points — every chore across the week plus bonus chores —
+               for N consecutive weeks. Evaluated once a week on the rank-eval day.
                Set milestone to 0 to disable.
              </div>
            </div>

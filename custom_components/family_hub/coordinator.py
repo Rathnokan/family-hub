@@ -73,6 +73,14 @@ class FamilyHubCoordinator(DataUpdateCoordinator):
         except Exception as err:  # noqa: BLE001
             _LOGGER.warning("Family Hub: notification check failed (non-fatal): %s", err)
 
+        # Phone home-screen checklist tiles (opt-in). Best-effort like the
+        # reminder dispatch above — a flaky notify target must not fail the
+        # whole update. Internally dedups, so this is cheap when nothing changed.
+        try:
+            await self.store.async_refresh_checklist_notifications()
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.warning("Family Hub: checklist refresh failed (non-fatal): %s", err)
+
         return self.store.get_summary()
 
     async def async_daily_rollover(self, now=None) -> None:
