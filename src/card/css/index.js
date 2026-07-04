@@ -5,5 +5,6 @@ import { CSS_2 } from "./part2.js";
 import { CSS_3 } from "./part3.js";
 import { CSS_4 } from "./part4.js";
 import { CSS_5 } from "./part5.js";
+import { CSS_6 } from "./part6.js";
 
-export const CSS = CSS_1 + CSS_2 + CSS_3 + CSS_4 + CSS_5;
+export const CSS = CSS_1 + CSS_2 + CSS_3 + CSS_4 + CSS_5 + CSS_6;

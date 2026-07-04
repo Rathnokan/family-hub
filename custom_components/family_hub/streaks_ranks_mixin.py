@@ -222,6 +222,19 @@ class StreaksRanksMixin:
             return 0
         return person.get("streaks", {}).get(chore_id, {}).get("count", 0)
 
+    def _get_skip_streak(self, person_id: str, chore_id: str) -> int:
+        """Return the consecutive-skip count for this person+chore (0 if none).
+
+        Counterpart to `_get_streak` for the daily-chore grace penalty: this is
+        the number of consecutive skips already accrued. The card uses it to tell
+        whether skipping a chore *today* would still fall inside the grace window
+        (skip_streak + 1 < daily_penalty_after_days ⇒ no penalty yet).
+        """
+        person = self.get_person(person_id)
+        if not person:
+            return 0
+        return person.get("streaks", {}).get(chore_id, {}).get("skips", 0)
+
     def _break_streak(self, person_id: str, chore_id: str) -> None:
         """Reset streak to 0. Called when a chore is skipped and not paused."""
         person = self.get_person(person_id)

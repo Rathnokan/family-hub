@@ -10,10 +10,21 @@
 
 import { DEFAULT_COLOR, HISTORY_META, VERSION } from "./constants.js";
 import { I } from "./constants.js";
-import { escHTML, escAttr, ini, fPts, fUSD, cap, relTime, groupHistorySkipped } from "./utils.js";
+import { escHTML, escAttr, ini, fPts, fUSD, cap, relTime, slug, groupHistorySkipped } from "./utils.js";
 import { ROOMS } from "./rooms/index.js";
 import { storeItemFormFields } from "./modals.js";
 import { choreIcon } from "./icons.js";
+import {
+    PROTEINS, PROTEIN_ORDER, GROUPS, GROUP_ORDER, SIDES, AISLES, ING_SECTIONS,
+    getIngredients, allMeals, getRecipe,
+} from "./rooms/meals-data.js";
+
+// Glyph palette for the admin meal/ingredient pickers (ported from the prototype).
+const _ADMIN_GLYPHS = [
+    "🍳", "🥞", "🥣", "🥪", "🌮", "🌯", "🍝", "🍕", "🍔", "🍗",
+    "🥩", "🍖", "🥓", "🦃", "🍜", "🥘", "🍲", "🥗", "🍛", "🥧",
+    "🫓", "🫘", "🥦", "🥕", "🍎", "🧀", "🥚", "🥔", "🌽", "🍚",
+];
 
 // Format a chore instance due_date ("YYYY-MM-DD") as a short local-day label
 // (e.g. "Thu, May 29"). Parsed from explicit parts to avoid UTC date shift.
@@ -62,6 +73,7 @@ export function htmlAdmin(card) {
         { id: "family",   label: "Family",   icon: "◍", badge: 0 },
         { id: "tasks",    label: "Chores",   icon: "◉", badge: 0 },
         { id: "rewards",  label: "Rewards",  icon: "◈", badge: 0 },
+        { id: "meals",    label: "Meals",    icon: "◇", badge: 0 },
         { id: "history",  label: "History",  icon: "◑", badge: 0 },
         { id: "settings", label: "Settings", icon: "◎", badge: 0 },
     ];
@@ -74,6 +86,7 @@ export function htmlAdmin(card) {
         case "family":   body = _htmlAdFamily(people, attr, card);                     break;
         case "tasks":    body = _htmlAdTasks(allChores, people, catLabels, card);      break;
         case "rewards":  body = _htmlAdRewards(storeItems, people, catLabels, card);  break;
+        case "meals":    body = _htmlAdMeals(card);                                   break;
         case "history":  body = _htmlAdHistory(attr, card);                           break;
         case "settings": body = _htmlAdSettings(attr, people, card);                  break;
         default:         body = _htmlAdToday(approvals, redemptions, groupProposals, [], attr);
@@ -90,6 +103,7 @@ export function htmlAdmin(card) {
                               <button class="fh-ad-btn fh-ad-btn--primary" data-act="open-add-chore">${I.plus} Add chore</button>` },
         rewards:  { crumb: "REWARDS",       title: "Rewards",
                     actions: `<button class="fh-ad-btn fh-ad-btn--primary" data-act="open-add-store-item">${I.plus} Add reward</button>` },
+        meals:    { crumb: "MEAL PLANNER",  title: "Meals",    actions: "" },
         history:  { crumb: "ACTIVITY",      title: "History",  actions: "" },
         settings: { crumb: "CONFIGURATION", title: "Settings", actions: "" },
     };
@@ -1846,4 +1860,186 @@ function _renderAdminSkippedGroup(group, firstParent, card) {
         </div>
         <div class="fh-hist-subitems"${expanded ? "" : ' style="display:none"'}>${subItems}</div>
       </div>`;
+}
+
+
+// ---------------------------------------------------------------------------
+// Meals section (v0.8.0) — the Meal Planner's only typing surface.
+// Add ingredients / meals / optional recipe cards. Form controls are native
+// (read at submit by dispatch) so chip/checkbox state survives without a
+// re-render; the recipe editor freezes background re-renders (see _maybeRender).
+// ---------------------------------------------------------------------------
+
+function _glyphOptions(sel) {
+    return _ADMIN_GLYPHS.map(g => `<option value="${g}"${g === sel ? " selected" : ""}>${g}</option>`).join("");
+}
+
+function _htmlAdMeals(card) {
+    const m         = card._attrs("sensor.family_hub_meals");
+    const custom    = m.custom    || [];
+    const customIng = m.customIng || [];
+    const recipes   = m.recipes   || {};
+    const sub       = card._mealsAdminSubtab || "meals";
+
+    const tab = (id, label) => `
+        <button class="fh-ml-qchip${sub === id ? " on" : ""}" data-act="meals-admin-subtab" data-sub="${id}">${label}</button>`;
+    const tabs = `<div class="fh-ml-adm-tabs">${tab("meals", "Meals")}${tab("ingredients", "Ingredients")}${tab("recipes", "Recipes")}</div>`;
+
+    let panels = "";
+    if (sub === "meals")            panels = _adMealForm(custom, customIng);
+    else if (sub === "ingredients") panels = _adIngForm(customIng);
+    else                            panels = _adRecipeForm(card, custom, recipes);
+
+    return `<div class="fh-ml-page" style="padding:4px 2px">${tabs}${panels}</div>`;
+}
+
+function _adMealForm(custom, customIng) {
+    const allIng = getIngredients(customIng);
+    const chk = (id, label) => `<label class="fh-ml-chk"><input type="checkbox" id="${id}">${escHTML(label)}</label>`;
+
+    const protCut = PROTEIN_ORDER.map(pid => {
+        const p = PROTEINS[pid];
+        return `<optgroup label="${escAttr(p.label)}">` +
+            p.cuts.map(c => `<option value="${pid}:${c.id}">${escHTML(p.label)} · ${escHTML(c.label)}</option>`).join("") +
+            `</optgroup>`;
+    }).join("");
+
+    const form = `
+      <div class="fh-ml-panel">
+        <div class="fh-ml-panel-hdr">Add a meal</div>
+        <div class="fh-ml-form">
+          <label class="fh-ml-flabel">Name</label>
+          <input class="fh-ml-input" id="ma-name" placeholder="e.g. Grandma's Goulash">
+          <label class="fh-ml-flabel">Picture</label>
+          <select class="fh-ml-input" id="ma-glyph">${_glyphOptions("🍽️")}</select>
+          <label class="fh-ml-flabel">Which meals</label>
+          <div class="fh-ml-chiprow">
+            <label class="fh-ml-chk"><input type="checkbox" id="ma-type-b">Breakfast</label>
+            <label class="fh-ml-chk"><input type="checkbox" id="ma-type-l">Lunch</label>
+            <label class="fh-ml-chk"><input type="checkbox" id="ma-type-d" checked>Dinner</label>
+          </div>
+          <label class="fh-ml-flabel">Protein &amp; cut (for the guided builder)</label>
+          <select class="fh-ml-input" id="ma-protcut"><option value="">— none —</option>${protCut}</select>
+          <label class="fh-ml-flabel">Food groups it covers</label>
+          <div class="fh-ml-chiprow">${GROUP_ORDER.map(g => chk("ma-grp-" + g, GROUPS[g].label)).join("")}</div>
+          <label class="fh-ml-flabel">Usual sides (pre-picked when planned)</label>
+          <div class="fh-ml-chiprow">${SIDES.map(s => chk("ma-side-" + s.id, `${s.glyph} ${s.name}`)).join("")}</div>
+          <label class="fh-ml-flabel">Pantry ingredients it uses (powers “What Can We Make”)</label>
+          <div class="fh-ml-chiprow">${allIng.map(i => chk("ma-ing-" + i.id, `${i.glyph} ${i.label}`)).join("")}</div>
+          <div style="display:flex;justify-content:flex-end;padding-top:6px">
+            <button class="fh-bk-go-btn" data-act="meals-admin-add-meal">Add to library ✓</button>
+          </div>
+        </div>
+      </div>`;
+
+    const list = `
+      <div class="fh-ml-panel">
+        <div class="fh-ml-panel-hdr">Family-added meals</div>
+        <div class="fh-ml-admin-list">
+          ${custom.length === 0
+            ? `<div class="fh-ml-empty-note">nothing added yet — meals you add (or save from Recipe Ideas) land here</div>`
+            : custom.map(mm => `
+              <div class="fh-ml-admin-row">
+                <span class="g">${mm.glyph || "🍽️"}</span>
+                <span class="nm">${escHTML(mm.name)}<div class="meta">${(mm.types || []).map(t => t === "b" ? "BREAKFAST" : t === "l" ? "LUNCH" : "DINNER").join(" · ")}${mm.source ? " · " + escHTML(String(mm.source).toUpperCase()) : ""}</div></span>
+                <button class="fh-ml-xbtn" data-act="meals-admin-remove-meal" data-id="${escAttr(mm.id)}">✕</button>
+              </div>`).join("")}
+        </div>
+      </div>`;
+
+    return `<div class="fh-ml-adm">${form}${list}</div>`;
+}
+
+function _adIngForm(customIng) {
+    const catOpts   = ING_SECTIONS.map(([id, lbl]) => `<option value="${id}">${escHTML(lbl)}</option>`).join("");
+    const aisleOpts = Object.keys(AISLES).map(a => `<option value="${a}">${escHTML(AISLES[a])}</option>`).join("");
+
+    const form = `
+      <div class="fh-ml-panel">
+        <div class="fh-ml-panel-hdr">Add an ingredient</div>
+        <div class="fh-ml-form">
+          <label class="fh-ml-flabel">Name</label>
+          <input class="fh-ml-input" id="mi-name" placeholder="e.g. Zucchini">
+          <label class="fh-ml-flabel">Picture</label>
+          <select class="fh-ml-input" id="mi-glyph">${_glyphOptions("🥕")}</select>
+          <label class="fh-ml-flabel">Food group (where it shows in the pantry)</label>
+          <select class="fh-ml-input" id="mi-cat">${catOpts}</select>
+          <label class="fh-ml-flabel">Grocery aisle</label>
+          <select class="fh-ml-input" id="mi-aisle">${aisleOpts}</select>
+          <div style="display:flex;justify-content:flex-end;padding-top:6px">
+            <button class="fh-bk-go-btn" data-act="meals-admin-add-ing">Add ingredient ✓</button>
+          </div>
+        </div>
+      </div>`;
+
+    const list = `
+      <div class="fh-ml-panel">
+        <div class="fh-ml-panel-hdr">Family-added ingredients</div>
+        <div class="fh-ml-admin-list">
+          ${customIng.length === 0
+            ? `<div class="fh-ml-empty-note">nothing added yet — new ingredients show up in the pantry chips and grocery aisles</div>`
+            : customIng.map(i => `
+              <div class="fh-ml-admin-row">
+                <span class="g">${i.glyph || "🥕"}</span>
+                <span class="nm">${escHTML(i.label)}<div class="meta">${escHTML(((ING_SECTIONS.find(([c]) => c === i.cat) || [])[1]) || "")} · ${escHTML(AISLES[i.aisle] || "")}</div></span>
+                <button class="fh-ml-xbtn" data-act="meals-admin-remove-ing" data-id="${escAttr(i.id)}">✕</button>
+              </div>`).join("")}
+        </div>
+      </div>`;
+
+    return `<div class="fh-ml-adm">${form}${list}</div>`;
+}
+
+function _adRecipeForm(card, custom, recipes) {
+    const meals = allMeals(custom)
+        .filter(mm => !mm.special)
+        .sort((a, b) => (getRecipe(a, recipes) ? 1 : 0) - (getRecipe(b, recipes) ? 1 : 0) || a.name.localeCompare(b.name));
+
+    const list = `
+      <div class="fh-ml-panel">
+        <div class="fh-ml-panel-hdr">Recipe cards <small>~ optional — a meal works fine without one ~</small></div>
+        <div class="fh-ml-admin-list">
+          ${meals.map(mm => {
+            const has = !!getRecipe(mm, recipes);
+            const active = card._mealsAdminRecipeId === mm.id;
+            return `
+              <div class="fh-ml-admin-row"${active ? ' style="background:rgba(139,58,42,.08)"' : ""}>
+                <span class="g">${mm.glyph || "🍽️"}</span>
+                <span class="nm">${escHTML(mm.name)}<div class="meta">${has ? "HAS A RECIPE CARD" : "NO RECIPE YET"}</div></span>
+                <button class="fh-ml-ghost-btn" data-act="meals-admin-recipe-edit" data-id="${escAttr(mm.id)}">${has ? "Edit" : "＋ Add"}</button>
+              </div>`;
+          }).join("")}
+        </div>
+      </div>`;
+
+    const editId = card._mealsAdminRecipeId;
+    const editMeal = editId ? meals.find(mm => mm.id === editId) : null;
+    let editor;
+    if (editMeal) {
+        const r = getRecipe(editMeal, recipes) || { time: "", serves: 5, ingredients: [], steps: [] };
+        editor = `
+          <div class="fh-ml-panel">
+            <div class="fh-ml-panel-hdr">${editMeal.glyph || "🍽️"} ${escHTML(editMeal.name)}</div>
+            <div class="fh-ml-form">
+              <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:10px">
+                <div><label class="fh-ml-flabel">Time</label>
+                  <input class="fh-ml-input" id="mr-time" value="${escAttr(r.time || "")}" placeholder="e.g. 30 min"></div>
+                <div><label class="fh-ml-flabel">Serves</label>
+                  <input class="fh-ml-input" id="mr-serves" inputmode="numeric" value="${escAttr(String(r.serves || 5))}"></div>
+              </div>
+              <label class="fh-ml-flabel">Ingredients — one per line</label>
+              <textarea class="fh-ml-input" id="mr-ing" rows="5" placeholder="2 lb ground beef&#10;1 can crushed tomatoes&#10;…">${escHTML((r.ingredients || []).join("\n"))}</textarea>
+              <label class="fh-ml-flabel">Steps — one per line, keep them short</label>
+              <textarea class="fh-ml-input" id="mr-steps" rows="5" placeholder="Brown the beef, drain.&#10;Everything in the pot, simmer 20 min.&#10;…">${escHTML((r.steps || []).join("\n"))}</textarea>
+              <div style="display:flex;justify-content:flex-end;gap:10px;padding-top:6px">
+                <button class="fh-ml-ghost-btn" data-act="meals-admin-recipe-cancel">Cancel</button>
+                <button class="fh-bk-go-btn" data-act="meals-admin-recipe-save" data-id="${escAttr(editMeal.id)}">Save recipe ✓</button>
+              </div>
+            </div>
+          </div>`;
+    } else {
+        editor = `<div class="fh-ml-panel"><div class="fh-ml-empty-note" style="margin:auto 0">pick a meal on the left to add or edit its recipe card</div></div>`;
+    }
+
+    return `<div class="fh-ml-adm">${list}${editor}</div>`;
 }

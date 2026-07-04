@@ -137,6 +137,7 @@ _STORE_DOMAINS: dict[str, list[str]] = {
     "chores":  ["chores", "task_instances"],
     "rewards": ["store_items", "redemptions", "subscriptions", "group_reward_proposals"],
     "history": ["history"],
+    "meals":   ["meals"],   # v0.8.0 Meals room (own store: .storage/family_hub_meals)
 }
 _SAVE_DELAY_SECONDS = 2.0  # debounce window for async_delay_save
 
@@ -162,7 +163,36 @@ def _empty_store(
         "subscriptions": [],
         "history": [],
         "group_reward_proposals": [],
+        "meals": _empty_meals(),
     }
+
+
+def _empty_meals() -> dict:
+    """v0.8.0: empty Meals-room state. Mirrors the prototype's localStorage keys
+    (camelCase preserved so the frontend port reads the model verbatim). `favs`
+    seeds the static library's fav:true ids; everything else starts empty so the
+    family builds their own plan (theme nights ship unassigned)."""
+    from .const import MEALS_SEED_FAVS
+    return {
+        "plan":      {},   # 'YYYY-MM-DD' -> { b, l, d:{main,sides,protein,variant,via}, noRhythm }
+        "rhythm":    {},   # '<weekday 0=Sun>' -> theme key
+        "favs":      list(MEALS_SEED_FAVS),
+        "groc":      {},   # grocery-row key -> True (checked off)
+        "custom":    [],   # custom + saved-idea meals
+        "customIng": [],   # custom pantry ingredients
+        "recipes":   {},   # mealId -> recipe card
+        "have":      [],   # "what we have" pantry tag ids
+    }
+
+
+def _migrate_meals(data: dict) -> None:
+    """Idempotent forward-fill for the meals section. Safe on every load: ensures
+    the section + all sub-keys exist so older stores (and the first load after the
+    feature ships) gain the meals domain without wiping any existing plan."""
+    meals = data.setdefault("meals", _empty_meals())
+    defaults = _empty_meals()
+    for key, default in defaults.items():
+        meals.setdefault(key, default)
 
 
 # ---------------------------------------------------------------------------

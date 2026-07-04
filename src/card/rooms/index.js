@@ -17,6 +17,7 @@ import { renderMaintenance }   from "./maintenance.js";
 import { renderSmartHome }     from "./smarthome.js";
 import { renderMeals }         from "./meals.js";
 import { renderCalendar }      from "./calendar.js";
+import { mealById }            from "./meals-data.js";
 
 export const ROOMS = [
     {
@@ -60,10 +61,19 @@ export const ROOMS = [
         sub:     "Weekly menu & grocery list",
         icon:    `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.06 22.99h1.66c.84 0 1.53-.64 1.63-1.46L23 5.05h-5V1h-1.97v4.05h-4.97l.3 2.34c1.71.47 3.31 1.32 4.27 2.26 1.44 1.42 2.43 2.89 2.43 5.29v8.05M1 21.99V21h15.03v.99c0 .55-.45 1-1.01 1H2.01c-.56 0-1.01-.45-1.01-1m15.03-7c0-1.46-.74-2.87-2.22-4.28-1.13-1.07-2.84-1.93-4.43-2.43-.25-.08-.5-.12-.76-.12H8.5c-.25 0-.5.04-.76.12-1.59.5-3.3 1.36-4.43 2.43C1.83 13.13 1 14.54 1 16h15.03z"/></svg>`,
         accent:  "#ff9f0a",
-        status:  "coming",
-        preview: "Plan the week's meals, build a grocery list, and see tonight's dinner at a glance.",
+        status:  "live",
         render: (card) => renderMeals(card),
-        getStats() { return []; },
+        getStats(card) {
+            const attr    = card._attrs("sensor.family_hub_meals");
+            const custom  = attr.custom || [];
+            const tonight = attr.tonight_main;
+            let dinnerName = "—";
+            if (tonight) {
+                const m = mealById(tonight, custom);
+                if (m) dinnerName = m.name;
+            }
+            return [{ label: "tonight", value: dinnerName }];
+        },
     },
     {
         id:      "smarthome",

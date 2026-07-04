@@ -151,17 +151,28 @@ export function getWeeklyPts(personId, historyLog, evalWeekday = 0) {
  * expiry penalties the tick applies when a chore isn't completed. Spending on
  * rewards/subscriptions is deliberate, not "lost", so it is excluded.
  *
+ * The penalty for a missed chore is assessed by the NEXT morning's tick, so its
+ * history timestamp lands a day after the chore was actually due — which would
+ * spill a Sunday miss into the new week on Monday. We window by the skipped
+ * instance's `due_date` (the day the chore was due) when the backend provides
+ * it, falling back to the timestamp for older/uninstanced rows.
+ *
  * Returns a positive number (the magnitude of the deductions).
  */
 export function getWeeklyPtsLost(personId, historyLog, evalWeekday = 0) {
     const start = rankWeekStart(evalWeekday);
     return (historyLog || [])
-        .filter(e =>
-            e.person_id === personId &&
-            e.type === "task_skipped" &&
-            (e.points_delta || 0) < 0 &&
-            new Date(e.timestamp) >= start
-        )
+        .filter(e => {
+            if (e.person_id !== personId) return false;
+            if (e.type !== "task_skipped") return false;
+            if ((e.points_delta || 0) >= 0) return false;
+            // due_date is a plain YYYY-MM-DD — parse as local midnight so it
+            // compares cleanly against the local week start.
+            const when = e.due_date
+                ? new Date(`${e.due_date}T00:00:00`)
+                : new Date(e.timestamp);
+            return when >= start;
+        })
         .reduce((sum, e) => sum + Math.abs(e.points_delta || 0), 0);
 }
 
@@ -173,9 +184,16 @@ export function getWeeklyPtsLost(personId, historyLog, evalWeekday = 0) {
  * configured. Mirrors the per-instance counting of the "chores due" KPI it sits
  * beside (no chore-id dedupe). Returns 0 when nothing is at risk.
  *
+ * Grace-aware: a daily chore with a `daily_penalty_after_days` window only costs
+ * points once the consecutive-skip count reaches the threshold. Skipping it
+ * today would be skip number (skip_streak + 1); while that's still inside the
+ * grace window it costs nothing, so it contributes 0 here. Returns 0 entirely
+ * when penalties are paused for this person (global or per-person).
+ *
  * @param {object} attr  Personal sensor attributes (family_hub_[name]).
  */
 export function getPointsAtRisk(attr) {
+    if (attr?.penalties_paused) return 0;   // no penalty can fire → nothing at risk
     return (attr?.tasks_due_today_list || [])
         .filter(t =>
             t.status === "pending" &&
@@ -183,7 +201,15 @@ export function getPointsAtRisk(attr) {
             t.penalty_enabled &&
             (t.penalty_points || 0) > 0
         )
-        .reduce((sum, t) => sum + (t.penalty_points || 0), 0);
+        .reduce((sum, t) => {
+            const graceN  = t.daily_penalty_after_days || 0;
+            const isDaily = (t.recurrence_type || "daily") === "daily";
+            // Inside the grace window — skipping today is still penalty-free.
+            if (isDaily && graceN && (t.skip_streak || 0) + 1 < graceN) {
+                return sum;
+            }
+            return sum + (t.penalty_points || 0);
+        }, 0);
 }
 
 // ---------------------------------------------------------------------------

@@ -352,3 +352,80 @@ update_subscription:
 admin_subscribe_for_person:
   name: Subscribe for person (admin)
   description: Parent starts a subscription on a kid's behalf.
+
+# ---------------------------------------------------------------------------
+# Meals room (v0.8.0) — driven by the dashboard card; listed for reference.
+# ---------------------------------------------------------------------------
+meals_set_bl:
+  name: Meals — set breakfast/lunch
+  description: >-
+    Set (or clear) a breakfast or lunch slot for a date. Scope can broadcast the
+    pick across today / this week / two weeks.
+  fields:
+    date:
+      name: Date
+      description: Target date (YYYY-MM-DD).
+      required: true
+      selector:
+        text:
+    slot:
+      name: Slot
+      description: "'b' for breakfast or 'l' for lunch."
+      required: true
+      selector:
+        select:
+          options: ["b", "l"]
+    meal_id:
+      name: Meal ID
+      description: Meal to set; omit/empty to clear the slot.
+      selector:
+        text:
+    scope:
+      name: Scope
+      description: How far to apply the pick.
+      selector:
+        select:
+          options: ["today", "week", "2weeks"]
+meals_set_dinner:
+  name: Meals — set dinner
+  description: >-
+    Set a day's dinner main + sides. The card supplies the resolved variant
+    (pizza rotation / taco protein) and the chosen protein.
+meals_set_dinner_sides:
+  name: Meals — set dinner sides
+  description: Update the sides on a planned dinner.
+meals_clear_dinner:
+  name: Meals — clear dinner
+  description: Clear a day's dinner and block theme-night refill for that day.
+meals_clear_day:
+  name: Meals — clear day
+  description: Clear a whole day's meals.
+meals_set_rhythm:
+  name: Meals — set theme night
+  description: >-
+    Pin (or clear) a theme night on a weekday (0=Sunday). Available themes:
+    pizza, taco, pasta, leftovers. Auto-fills that weekday's dinner.
+meals_toggle_fav:
+  name: Meals — toggle favourite
+  description: Toggle a meal's favourite flag.
+meals_add_custom_meal:
+  name: Meals — add custom meal
+  description: Add a meal to the library (admin-authored or saved from Recipe Ideas).
+meals_remove_custom_meal:
+  name: Meals — remove custom meal
+  description: Remove a custom meal and scrub it from favourites and the plan.
+meals_add_ingredient:
+  name: Meals — add ingredient
+  description: Add a custom pantry ingredient (admin).
+meals_remove_ingredient:
+  name: Meals — remove ingredient
+  description: Remove a custom pantry ingredient.
+meals_save_recipe:
+  name: Meals — save recipe card
+  description: Attach a recipe card (time, serves, ingredients, steps) to a meal.
+meals_toggle_have:
+  name: Meals — toggle pantry tag
+  description: Toggle a "what we have" pantry ingredient tag.
+meals_toggle_grocery:
+  name: Meals — toggle grocery row
+  description: Check or uncheck a grocery-list row.

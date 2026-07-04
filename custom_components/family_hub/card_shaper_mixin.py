@@ -213,6 +213,10 @@ class CardShaperMixin:
                 # only (weekly/monthly window chores list but don't pad "done today").
                 "recurrence_type":       chore["recurrence"].get("type", RECURRENCE_DAILY),
                 "streak":                self._get_streak(person_id, t["chore_id"]),
+                # Consecutive-skip count so the card's "at risk" KPI can tell
+                # whether skipping this daily chore today is still penalty-free
+                # (inside the daily_penalty_after_days grace window).
+                "skip_streak":           self._get_skip_streak(person_id, t["chore_id"]),
                 # v0.6.3 P2: carry the chore's sort_order so personal-page lists
                 # respect the admin drag-reorder. Within a category, rows are
                 # sorted by (sort_order, name) — same key as the admin table.

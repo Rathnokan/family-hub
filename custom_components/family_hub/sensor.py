@@ -63,6 +63,7 @@ from .card_model import (
     build_needs_attention_scalars,
     build_maintenance_due_scalars,
     build_maintenance_overdue_scalars,
+    build_meals_scalars,
     get_maintenance_tasks,
 )
 
@@ -107,6 +108,7 @@ async def async_setup_entry(
     entities.append(FamilyHubMaintenanceOverdueSensor(coordinator))
     entities.append(FamilyHubNeedsAttentionSensor(coordinator))
     entities.append(FamilyHubClaimableTasksSensor(coordinator))
+    entities.append(FamilyHubMealsSensor(coordinator))
 
     async_add_entities(entities, update_before_add=True)
 
@@ -391,3 +393,33 @@ class FamilyHubClaimableTasksSensor(FamilyHubBaseSensor):
         # v0.7.0 P3: the claimable + command-center task lists reach the card via
         # the websocket model. State (count) is enough on the sensor itself.
         return {}
+
+
+# ---------------------------------------------------------------------------
+# Global — meals (v0.8.0 Meals room)
+# ---------------------------------------------------------------------------
+
+class FamilyHubMealsSensor(FamilyHubBaseSensor):
+    """Weekly meal plan summary.
+
+    State = number of upcoming planned days. Attributes carry the lean scalar
+    summary (tonight's dinner id + variant); the full meals state (plan, rhythm,
+    library, pantry, groceries) reaches the card via the websocket model. The
+    `tonight_main` id lets automations / voice announce tonight's dinner.
+    """
+
+    _attr_native_unit_of_measurement = "days"
+    _attr_icon      = "mdi:silverware-fork-knife"
+    _attr_unique_id = f"{DOMAIN}_meals"
+    _attr_name      = "Meals"
+    entity_id       = "sensor.family_hub_meals"
+
+    @property
+    def native_value(self) -> int:
+        return build_meals_scalars(self.coordinator.store).get("planned_days", 0)
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        # Lean scalar summary only; the full meals model reaches the card via the
+        # websocket model (family_hub/get_model).
+        return build_meals_scalars(self.coordinator.store)

@@ -227,9 +227,43 @@ SENSOR_MAINTENANCE_DUE     = "maintenance_due"
 SENSOR_MAINTENANCE_OVERDUE = "maintenance_overdue"
 SENSOR_NEEDS_ATTENTION     = "needs_attention"
 SENSOR_CLAIMABLE           = "claimable_tasks"
+SENSOR_MEALS               = "meals"               # v0.8.0 Meals room
 
 # Maintenance due-soon window (days)
 MAINTENANCE_DUE_SOON_DAYS = 14
+
+# ---------------------------------------------------------------------------
+# Meals room (v0.8.0) — weekly meal planner
+# ---------------------------------------------------------------------------
+# Planning horizon: today + (N-1) days. Mirrors the prototype's HORIZON_DAYS.
+MEALS_HORIZON_DAYS = 30
+
+# Seed favourites = the static library's `fav: true` meals (the full library
+# lives in the frontend meals-data.js; only these ids are needed server-side to
+# pre-populate a fresh family's Library favourites row).
+MEALS_SEED_FAVS = [
+    "eggs-toast", "oatmeal", "turkey-sand", "quesadillas",
+    "spaghetti", "taco-night", "grilled-chx", "stirfry", "pizza",
+]
+
+# Theme-night fill table (configurable rhythm). The card resolves the full meal
+# library; the backend only needs the theme mains + their default sides + the
+# rotation lists so `_apply_rhythm` can auto-fill a weekday's dinner. Weekday
+# keys in `rhythm` use the prototype's 0=Sunday convention (see meals_mixin).
+MEALS_PIZZA_ROTATION = [
+    "Marco's · pepperoni",
+    "Homemade · margherita",
+    "Slice House · supreme",
+]
+MEALS_PASTA_ROTATION = ["spaghetti", "ziti"]
+# main + default sides per theme key. Pasta resolves its main from the rotation.
+MEALS_THEME_FILL = {
+    "pizza":     {"main": "pizza",      "sides": ["side-salad"]},
+    "leftovers": {"main": "leftovers",  "sides": []},
+    "taco":      {"main": "taco-night", "sides": ["corn-cob"]},
+    # pasta: main chosen from MEALS_PASTA_ROTATION; both pasta mains use these sides
+    "pasta":     {"sides": ["side-salad", "garlic-bread"]},
+}
 
 # ---------------------------------------------------------------------------
 # Service names
@@ -270,6 +304,21 @@ SERVICE_APPROVE_CANCEL_SUBSCRIPTION = "approve_cancel_subscription"
 SERVICE_DECLINE_CANCEL_SUBSCRIPTION = "decline_cancel_subscription"
 SERVICE_ADMIN_CANCEL_SUBSCRIPTION   = "admin_cancel_subscription"
 SERVICE_ADMIN_SUBSCRIBE_FOR_PERSON  = "admin_subscribe_for_person"
+# v0.8.0: Meals room services
+SERVICE_MEALS_SET_BL            = "meals_set_bl"             # breakfast/lunch quick-pick (+ scope)
+SERVICE_MEALS_SET_DINNER        = "meals_set_dinner"         # dinner main + sides (+ protein/variant)
+SERVICE_MEALS_SET_DINNER_SIDES  = "meals_set_dinner_sides"   # update sides on a planned dinner
+SERVICE_MEALS_CLEAR_DINNER      = "meals_clear_dinner"       # clear a day's dinner (blocks rhythm refill)
+SERVICE_MEALS_CLEAR_DAY         = "meals_clear_day"          # clear a whole day
+SERVICE_MEALS_SET_RHYTHM        = "meals_set_rhythm"         # pin/clear a theme night on a weekday
+SERVICE_MEALS_TOGGLE_FAV        = "meals_toggle_fav"         # toggle a meal favourite
+SERVICE_MEALS_ADD_CUSTOM_MEAL   = "meals_add_custom_meal"    # add a library meal (admin / saved idea)
+SERVICE_MEALS_REMOVE_CUSTOM_MEAL = "meals_remove_custom_meal"
+SERVICE_MEALS_ADD_INGREDIENT    = "meals_add_ingredient"     # add a pantry ingredient (admin)
+SERVICE_MEALS_REMOVE_INGREDIENT = "meals_remove_ingredient"
+SERVICE_MEALS_SAVE_RECIPE       = "meals_save_recipe"        # attach a recipe card to a meal
+SERVICE_MEALS_TOGGLE_HAVE       = "meals_toggle_have"        # toggle a "what we have" pantry tag
+SERVICE_MEALS_TOGGLE_GROCERY    = "meals_toggle_grocery"     # check/uncheck a grocery row
 
 # Weekday constants (0=Monday … 6=Sunday)
 WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]

@@ -7,6 +7,7 @@
 import { FLASH_MS, CHORE_TEMPLATES } from "./constants.js";
 import { rotationPoolEditor, curveFromPercents } from "./modals.js";
 import { openPrintableChoreList } from "./print-chore-list.js";
+import * as _md from "./rooms/meals-data.js";
 
 /**
  * Dispatch a data-act action.
@@ -1105,7 +1106,616 @@ export function dispatch(act, el, card) {
             });
             break;
         }
+
+        // ================================================================
+        // MEALS ROOM — dispatch cases (v0.8.0)
+        // ================================================================
+
+        // ---- Tab navigation (pure UI) ------------------------------------
+        case "meals-tab":
+            card._mealsTab = el.dataset.tab || "week";
+            // Close any open overlays when switching tabs
+            card._mealsDrawer  = null;
+            card._mealsRecipe  = null;
+            card._mealsDayPick = null;
+            card._doRender(true);
+            break;
+
+        // ---- This Week pagination (pure UI) ------------------------------
+        case "meals-week-prev":
+            card._mealsWeekPage = Math.max(0, (card._mealsWeekPage || 0) - 1);
+            card._doRender(true);
+            break;
+        case "meals-week-next":
+            card._mealsWeekPage = Math.min(4, (card._mealsWeekPage || 0) + 1);
+            card._doRender(true);
+            break;
+        case "meals-week-today":
+            card._mealsWeekPage = 0;
+            card._doRender(true);
+            break;
+
+        // Tapping an empty day in This Week jumps to Plan tab for that day
+        case "meals-week-tap-day": {
+            const wDate = el.dataset.date;
+            if (!wDate) break;
+            card._mealsTab      = "plan";
+            card._mealsJumpDate = wDate;
+            card._mealsDrawer   = null;
+            card._doRender(true);
+            break;
+        }
+
+        // ---- Plan tab — day rail selection (pure UI) --------------------
+        case "meals-plan-select-day":
+            card._mealsJumpDate = el.dataset.date || null;
+            card._mealsDrawer   = null;
+            card._doRender(true);
+            break;
+
+        // ---- Plan tab — clear day / dinner / single side (service calls) -
+        case "meals-clear-day":
+            card._svc("meals_clear_day", { date: el.dataset.date });
+            break;
+
+        case "meals-clear-dinner":
+            card._svc("meals_clear_dinner", { date: el.dataset.date });
+            break;
+
+        case "meals-clear-bl":
+            card._svc("meals_set_bl", {
+                date:       el.dataset.date,
+                slot:       el.dataset.slot,
+                meal_id:    "",        // omit/empty = clear
+                scope:      "today",
+                week_start: "Sunday",
+            });
+            break;
+
+        case "meals-remove-side": {
+            const rsDate  = el.dataset.date;
+            const rsSide  = el.dataset.side;
+            const rsAttr  = card._attrs("sensor.family_hub_meals");
+            const rsEntry = (rsAttr.plan || {})[rsDate] || {};
+            const rsSides = (rsEntry.d && rsEntry.d.sides || []).filter(x => x !== rsSide);
+            card._svc("meals_set_dinner_sides", { date: rsDate, sides: rsSides });
+            break;
+        }
+
+        // ---- Rhythm strip — open/close popover (pure UI) ----------------
+        case "meals-rhythm-pop": {
+            const wd  = el.dataset.weekday;
+            const pop = card.shadowRoot.getElementById("fh-rh-pop-" + wd);
+            // Close any other open popovers first
+            card.shadowRoot.querySelectorAll("[id^='fh-rh-pop-']").forEach(p => {
+                if (p.id !== "fh-rh-pop-" + wd) p.style.display = "none";
+            });
+            if (pop) pop.style.display = pop.style.display === "none" ? "" : "none";
+            break;
+        }
+
+        // ---- Rhythm strip — set rhythm (service call) -------------------
+        case "meals-set-rhythm": {
+            const wd  = el.dataset.weekday;
+            const tk  = el.dataset.theme || "";    // empty string = clear
+            card._svc("meals_set_rhythm", {
+                weekday:   parseInt(wd, 10),
+                ...(tk ? { theme_key: tk } : {}),  // omit = clear
+            });
+            // Close the popover
+            const rPop = card.shadowRoot.getElementById("fh-rh-pop-" + wd);
+            if (rPop) rPop.style.display = "none";
+            break;
+        }
+
+        // ---- Drawer: open -----------------------------------------------
+        case "meals-open-drawer":
+        case "meals-open-sides": {
+            const dk   = el.dataset.kind || (act === "meals-open-sides" ? "d-sides" : "d-main");
+            const dd   = el.dataset.date || card._mealsJumpDate || null;
+            if (!dd) break;
+            // Initialise selSides from existing plan entry
+            const drAttr  = card._attrs("sensor.family_hub_meals");
+            const drEntry = (drAttr.plan || {})[dd] || {};
+            const initStep = dk === "d-sides" ? "sides"
+                : (dk === "b" || dk === "l")  ? "browse"
+                : "protein";
+            const initSides = (dk === "d-sides" && drEntry.d)
+                ? (drEntry.d.sides || [])
+                : [];
+            card._mealsDrawer = {
+                kind: dk, dateISO: dd, step: initStep,
+                cat: null, cut: null, scope: "today", favOnly: false,
+                pendingMainId: null, pickedProtein: null,
+                nudgeOff: false, fatsOff: false,
+                selSides: initSides,
+            };
+            card._doRender(true);
+            break;
+        }
+
+        // ---- Drawer: close -----------------------------------------------
+        case "meals-close-drawer":
+            card._mealsDrawer = null;
+            card._doRender(true);
+            break;
+
+        // ---- Drawer: back navigation (pure UI) --------------------------
+        case "meals-drawer-back": {
+            const dr = card._mealsDrawer;
+            if (!dr) break;
+            if (dr.step === "cut")   { dr.step = "protein"; dr.cat = null; }
+            else if (dr.step === "make") {
+                const { PROTEINS: _P } = _mealsDataLookupForDispatch();
+                const cuts = (dr.cat ? (_P[dr.cat]?.cuts || []).filter(c => {
+                    // Mirror visibleCuts logic: need at least one meal for this cat+cut
+                    // We skip the import here and just reset to protein if <2 cuts
+                    return true;
+                }) : []);
+                if (dr.cat && cuts.length > 1) { dr.step = "cut"; dr.cut = null; }
+                else { dr.step = "protein"; dr.cat = null; dr.cut = null; }
+            }
+            else if (dr.step === "browse")  { dr.step = "protein"; }
+            else if (dr.step === "tacoprotein") { dr.step = "make"; dr.pendingMainId = null; }
+            else if (dr.step === "sides" && dr.pendingMainId) {
+                const { mealById: _mb, allMeals: _am } = _mealsDataLookupForDispatch();
+                const pm = _mb(dr.pendingMainId, (card._attrs("sensor.family_hub_meals").custom || []));
+                if (pm && pm.proteinPick) { dr.step = "tacoprotein"; }
+                else { dr.step = "make"; dr.pendingMainId = null; }
+            }
+            card._mealsDrawer = { ...dr };
+            card._doRender(true);
+            break;
+        }
+
+        // ---- Drawer: browse mode (pure UI) ------------------------------
+        case "meals-drawer-browse":
+            if (!card._mealsDrawer) break;
+            card._mealsDrawer = { ...card._mealsDrawer, step: "browse" };
+            card._doRender(true);
+            break;
+
+        case "meals-drawer-favonly":
+            if (!card._mealsDrawer) break;
+            card._mealsDrawer = { ...card._mealsDrawer, favOnly: !card._mealsDrawer.favOnly };
+            card._doRender(true);
+            break;
+
+        case "meals-drawer-scope":
+            if (!card._mealsDrawer) break;
+            card._mealsDrawer = { ...card._mealsDrawer, scope: el.dataset.scope || "today" };
+            card._doRender(true);
+            break;
+
+        // ---- Drawer: protein / cut selection (pure UI) ------------------
+        case "meals-drawer-pick-cat": {
+            const dr = card._mealsDrawer;
+            if (!dr) break;
+            const catId = el.dataset.cat;
+            const { PROTEINS: _P2, MEALS: _M } = _mealsDataLookupForDispatch();
+            const custom2 = card._attrs("sensor.family_hub_meals").custom || [];
+            const allM    = _M.concat(custom2);
+            const dinnersForCat = allM.filter(m => m.types.includes("d") && !m.special && m.protein === catId);
+            const cuts    = (_P2[catId]?.cuts || []).filter(c => dinnersForCat.some(m => m.cut === c.id));
+            if (cuts.length > 1) {
+                card._mealsDrawer = { ...dr, cat: catId, step: "cut" };
+            } else {
+                card._mealsDrawer = { ...dr, cat: catId, cut: cuts.length === 1 ? cuts[0].id : null, step: "make" };
+            }
+            card._doRender(true);
+            break;
+        }
+
+        case "meals-drawer-pick-cut":
+            if (!card._mealsDrawer) break;
+            card._mealsDrawer = { ...card._mealsDrawer, cut: el.dataset.cut, step: "make" };
+            card._doRender(true);
+            break;
+
+        // ---- Drawer: pick a dinner main (moves to sides step or assigns special) -
+        case "meals-drawer-pick-main": {
+            const dr = card._mealsDrawer;
+            if (!dr) break;
+            const mId   = el.dataset.meal;
+            const { mealById: _mb2, allMeals: _am2 } = _mealsDataLookupForDispatch();
+            const cust2 = card._attrs("sensor.family_hub_meals").custom || [];
+            const meal2 = _mb2(mId, cust2);
+            if (!meal2) break;
+            if (meal2.special) {
+                // Special meals (Leftovers, Eating Out) skip sides
+                card._svc("meals_set_dinner", { date: dr.dateISO, main: mId, sides: [] });
+                _drawerConfirm(card, dr.dateISO, meal2);
+            } else {
+                const initSides = new Set(meal2.sides || []);
+                if (meal2.proteinPick) {
+                    card._mealsDrawer = {
+                        ...dr, pendingMainId: mId,
+                        pickedProtein: meal2.defaultPick || meal2.proteinPick[0],
+                        selSides: [...initSides],
+                        step: "tacoprotein", nudgeOff: false, fatsOff: false,
+                    };
+                } else {
+                    card._mealsDrawer = {
+                        ...dr, pendingMainId: mId,
+                        selSides: [...initSides],
+                        step: "sides", nudgeOff: false, fatsOff: false,
+                    };
+                }
+                card._doRender(true);
+            }
+            break;
+        }
+
+        // ---- Drawer: special meal quick-pick (protein step) -----------
+        case "meals-drawer-pick-special": {
+            const dr = card._mealsDrawer;
+            if (!dr) break;
+            const mId = el.dataset.meal;
+            const { mealById: _mbS } = _mealsDataLookupForDispatch();
+            const custS = card._attrs("sensor.family_hub_meals").custom || [];
+            card._svc("meals_set_dinner", { date: dr.dateISO, main: mId, sides: [] });
+            _drawerConfirm(card, dr.dateISO, _mbS(mId, custS));
+            break;
+        }
+
+        // ---- Drawer: pick a taco protein --------------------------------
+        case "meals-drawer-pick-taco-protein": {
+            const dr = card._mealsDrawer;
+            if (!dr) break;
+            card._mealsDrawer = {
+                ...dr, pickedProtein: el.dataset.protein, step: "sides",
+            };
+            card._doRender(true);
+            break;
+        }
+
+        // ---- Drawer: BL meal pick ---------------------------------------
+        case "meals-drawer-pick-bl": {
+            const dr = card._mealsDrawer;
+            if (!dr) break;
+            card._svc("meals_set_bl", {
+                date:       dr.dateISO,
+                slot:       dr.kind,   // "b" or "l"
+                meal_id:    el.dataset.meal,
+                scope:      dr.scope || "today",
+                week_start: "Sunday",
+            });
+            card._mealsDrawer = null;
+            card._doRender(true);
+            break;
+        }
+
+        // ---- Drawer: toggle a side (pure UI — selSides in drawer state) -
+        case "meals-toggle-side": {
+            const dr = card._mealsDrawer;
+            if (!dr) break;
+            const sid  = el.dataset.side;
+            const cur  = new Set(dr.selSides || []);
+            if (cur.has(sid)) cur.delete(sid); else cur.add(sid);
+            card._mealsDrawer = { ...dr, selSides: [...cur] };
+            card._doRender(true);
+            break;
+        }
+
+        // ---- Drawer: dismiss veggie nudge / fats note -------------------
+        case "meals-dismiss-nudge":
+            if (!card._mealsDrawer) break;
+            card._mealsDrawer = { ...card._mealsDrawer, nudgeOff: true };
+            card._doRender(true);
+            break;
+
+        case "meals-dismiss-fats":
+            if (!card._mealsDrawer) break;
+            card._mealsDrawer = { ...card._mealsDrawer, fatsOff: true };
+            card._doRender(true);
+            break;
+
+        // ---- Drawer: "No sides" / "Done" --------------------------------
+        case "meals-drawer-no-sides": {
+            const dr = card._mealsDrawer;
+            if (!dr) break;
+            if (dr.kind === "d-sides") {
+                card._svc("meals_set_dinner_sides", { date: dr.dateISO, sides: [] });
+            } else {
+                const { variantFor: _vf, mealById: _mb3, parseISO: _p } = _mealsDataLookupForDispatch();
+                const cust3 = card._attrs("sensor.family_hub_meals").custom || [];
+                const pm    = _mb3(dr.pendingMainId, cust3);
+                const vari  = pm ? _vf(pm, _p(dr.dateISO), dr.pickedProtein) : "";
+                card._svc("meals_set_dinner", {
+                    date:    dr.dateISO,
+                    main:    dr.pendingMainId,
+                    sides:   [],
+                    ...(dr.pickedProtein ? { protein: dr.pickedProtein } : {}),
+                    ...(vari ? { variant: vari } : {}),
+                });
+                _drawerConfirm(card, dr.dateISO, pm);
+                return;
+            }
+            card._mealsDrawer = null;
+            card._doRender(true);
+            break;
+        }
+
+        case "meals-drawer-done-sides": {
+            const dr = card._mealsDrawer;
+            if (!dr) break;
+            if (dr.kind === "d-sides") {
+                card._svc("meals_set_dinner_sides", { date: dr.dateISO, sides: dr.selSides || [] });
+                card._mealsDrawer = null;
+                card._doRender(true);
+            } else {
+                const { variantFor: _vf2, mealById: _mb4, parseISO: _p2 } = _mealsDataLookupForDispatch();
+                const cust4 = card._attrs("sensor.family_hub_meals").custom || [];
+                const pm2   = _mb4(dr.pendingMainId, cust4);
+                const vari2 = pm2 ? _vf2(pm2, _p2(dr.dateISO), dr.pickedProtein) : "";
+                card._svc("meals_set_dinner", {
+                    date:    dr.dateISO,
+                    main:    dr.pendingMainId,
+                    sides:   dr.selSides || [],
+                    ...(dr.pickedProtein ? { protein: dr.pickedProtein } : {}),
+                    ...(vari2 ? { variant: vari2 } : {}),
+                });
+                _drawerConfirm(card, dr.dateISO, pm2);
+            }
+            break;
+        }
+
+        // ---- Drawer confirm: plan the next open day (opt-in advance) ----
+        case "meals-drawer-next-day": {
+            const dr = card._mealsDrawer;
+            if (!dr) break;
+            _advanceToNextEmpty(card, dr.dateISO);   // opens next empty dinner, or closes if none
+            break;
+        }
+
+        // ---- Pantry: toggle an ingredient (service call) ----------------
+        case "meals-toggle-have":
+            card._svc("meals_toggle_have", { ingredient_id: el.dataset.ing });
+            break;
+
+        // ---- Pantry: tap a matched meal → open day-pick modal -----------
+        case "meals-pantry-pick":
+            card._mealsDayPick = el.dataset.meal || null;
+            card._doRender(true);
+            break;
+
+        // ---- Day-pick modal: pick a date → set dinner -------------------
+        case "meals-daypick-pick": {
+            const dpDate  = el.dataset.date;
+            const dpMeal  = el.dataset.meal;
+            const dpAttr  = card._attrs("sensor.family_hub_meals");
+            const dpCust  = dpAttr.custom || [];
+            const { mealById: _mb5 } = _mealsDataLookupForDispatch();
+            const dpM     = _mb5(dpMeal, dpCust);
+            if (!dpDate || !dpM) break;
+            card._svc("meals_set_dinner", {
+                date:  dpDate,
+                main:  dpMeal,
+                sides: (dpM.sides || []).slice(0, 2),
+            });
+            card._mealsDayPick = null;
+            card._doRender(true);
+            break;
+        }
+
+        // ---- Day-pick modal: close --------------------------------------
+        case "meals-close-daypick":
+            card._mealsDayPick = null;
+            card._doRender(true);
+            break;
+
+        // ---- Library: type filter (pure UI) ----------------------------
+        case "meals-lib-filter":
+            card._mealsLibFilter = el.dataset.filter || "all";
+            card._doRender(true);
+            break;
+
+        // ---- Library: open recipe modal (pure UI) ----------------------
+        case "meals-open-recipe":
+            card._mealsRecipe = el.dataset.meal || null;
+            card._doRender(true);
+            break;
+
+        // ---- Library: close recipe modal --------------------------------
+        case "meals-close-recipe":
+            card._mealsRecipe = null;
+            card._doRender(true);
+            break;
+
+        // ---- Library: plan a meal from recipe modal (opens day-pick) ---
+        case "meals-recipe-plan":
+            card._mealsRecipe  = null;
+            card._mealsDayPick = el.dataset.meal || null;
+            card._doRender(true);
+            break;
+
+        // ---- Library: plan a meal tile (opens day-pick) ----------------
+        case "meals-lib-plan-meal":
+            card._mealsDayPick = el.dataset.meal || null;
+            card._doRender(true);
+            break;
+
+        // ---- Library: toggle favorite (service call) -------------------
+        case "meals-toggle-fav":
+            card._svc("meals_toggle_fav", { meal_id: el.dataset.meal });
+            break;
+
+        // ---- Library: refresh ideas (pure UI — re-renders from rankIdeas) -
+        case "meals-ideas-refresh":
+            card._doRender(true);
+            break;
+
+        // ---- Library: save an idea as a custom meal (service call) -----
+        case "meals-save-idea": {
+            const { IDEAS_POOL: _ip } = _mealsDataLookupForDispatch();
+            const idea = _ip.find(x => x.id === el.dataset.meal);
+            if (!idea) break;
+            const newMeal = {
+                id:      idea.id,
+                name:    idea.name,
+                glyph:   idea.glyph,
+                types:   ["d"],
+                groups:  idea.groups || [],
+                ing:     idea.ing    || [],
+                sides:   idea.sides  || [],
+                protein: idea.protein || "meatless",
+                cut:     idea.cut    || "",
+                fav:     false,
+                source:  "Spoonacular",
+            };
+            card._svc("meals_add_custom_meal", { meal: newMeal });
+            break;
+        }
+
+        // ---- Groceries: toggle a grocery item checked/unchecked ---------
+        case "meals-toggle-groc":
+            card._svc("meals_toggle_grocery", {
+                key:     el.dataset.key,
+                checked: el.dataset.checked === "true",
+            });
+            break;
+
+        // ---- Groceries: reset all checks for this week ------------------
+        case "meals-reset-groc": {
+            // Toggle-off every key currently checked for this weekKey
+            const rgAttr = card._attrs("sensor.family_hub_meals");
+            const rgGroc = rgAttr.groc || {};
+            const wk     = el.dataset.weekkey || "";
+            Object.entries(rgGroc).forEach(([key, val]) => {
+                if (val && key.startsWith(wk + ":")) {
+                    card._svc("meals_toggle_grocery", { key, checked: false });
+                }
+            });
+            break;
+        }
+
+        // ---- Admin: Meal Planner editor (desktop Admin mode) ------------
+        case "meals-admin-subtab":
+            card._mealsAdminSubtab   = el.dataset.sub;
+            card._mealsAdminRecipeId = null;
+            card._doRender(true);
+            break;
+
+        case "meals-admin-add-meal": {
+            const name = v("ma-name").trim();
+            if (!name) { alert("Give the meal a name first."); break; }
+            const types = ["b", "l", "d"].filter(t => b("ma-type-" + t));
+            if (!types.length) { alert("Pick breakfast, lunch, or dinner."); break; }
+            const groups = _md.GROUP_ORDER.filter(g => b("ma-grp-" + g));
+            const sides  = _md.SIDES.filter(s => b("ma-side-" + s.id)).map(s => s.id);
+            const allIng = _md.getIngredients(card._attrs("sensor.family_hub_meals").customIng || []);
+            const ing    = allIng.filter(i => b("ma-ing-" + i.id)).map(i => i.id);
+            const pc     = v("ma-protcut");
+            const [prot, cut] = pc ? pc.split(":") : ["", ""];
+            const id = "custom-" + (name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || Date.now());
+            const meal = { id, name, glyph: v("ma-glyph") || "🍽️", types, groups, ing, sides, fav: false };
+            if (prot) meal.protein = prot;
+            if (cut)  meal.cut = cut;
+            card._svc("meals_add_custom_meal", { meal });
+            break;
+        }
+
+        case "meals-admin-remove-meal":
+            card._svc("meals_remove_custom_meal", { meal_id: el.dataset.id });
+            break;
+
+        case "meals-admin-add-ing": {
+            const name = v("mi-name").trim();
+            if (!name) { alert("Name the ingredient first."); break; }
+            const id = "custom-ing-" + (name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || Date.now());
+            card._svc("meals_add_ingredient", {
+                ingredient: { id, label: name, glyph: v("mi-glyph") || "🥕", cat: v("mi-cat"), aisle: v("mi-aisle") },
+            });
+            break;
+        }
+
+        case "meals-admin-remove-ing":
+            card._svc("meals_remove_ingredient", { ingredient_id: el.dataset.id });
+            break;
+
+        case "meals-admin-recipe-edit":
+            card._mealsAdminRecipeId = el.dataset.id;
+            card._doRender(true);
+            break;
+
+        case "meals-admin-recipe-cancel":
+            card._mealsAdminRecipeId = null;
+            card._doRender(true);
+            break;
+
+        case "meals-admin-recipe-save": {
+            const lines = id => v(id).split("\n").map(s => s.trim()).filter(Boolean);
+            const ingredients = lines("mr-ing");
+            const steps       = lines("mr-steps");
+            if (!ingredients.length || !steps.length) {
+                alert("A recipe needs at least one ingredient and one step.");
+                break;
+            }
+            card._svc("meals_save_recipe", {
+                meal_id: el.dataset.id,
+                recipe:  { time: v("mr-time").trim() || "—", serves: parseInt(v("mr-serves"), 10) || 5, ingredients, steps },
+            });
+            card._mealsAdminRecipeId = null;
+            card._doRender(true);
+            break;
+        }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Meals-specific dispatch helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Import the meals-data module lazily so it doesn't bloat other dispatch paths.
+ * Returns a subset of exports needed in dispatch handlers.
+ */
+function _mealsDataLookupForDispatch() {
+    // Dynamic import is async; for dispatch we use a synchronous static import.
+    // This helper exists as a single named entry point for any tree-shaker.
+    return _md;
+}
+
+/**
+ * After successfully setting a dinner, find the next empty dinner slot and
+ * jump the drawer to it (auto-advance flow), or close the drawer if the
+ * 30-day horizon is fully planned.
+ */
+// After a dinner is committed, show a confirm step that lets the parent choose
+// to plan the next open day or be done — instead of auto-advancing.
+function _drawerConfirm(card, dateISO, meal) {
+    card._mealsDrawer = {
+        kind: "d", dateISO, step: "confirm",
+        savedName:  meal ? meal.name  : "Dinner",
+        savedGlyph: meal ? meal.glyph : "✓",
+    };
+    card._doRender(true);
+}
+
+function _advanceToNextEmpty(card, fromISO) {
+    const { today: _t, addDays: _a, iso: _i, HORIZON_DAYS: _h } = _md;
+    const plan  = card._attrs("sensor.family_hub_meals").plan || {};
+    const start = _md.parseISO(fromISO);
+    let next    = null;
+    for (let i = 1; i < _h; i++) {
+        const d = _a(start, i);
+        if (d > _a(_t(), _h - 1)) break;
+        const e = plan[_i(d)];
+        if (!e || !e.d) { next = d; break; }
+    }
+    if (next) {
+        const nextISO = _i(next);
+        card._mealsJumpDate = nextISO;
+        card._mealsDrawer = {
+            kind: "d-main", dateISO: nextISO, step: "protein",
+            cat: null, cut: null, scope: "today", favOnly: false,
+            pendingMainId: null, pickedProtein: null,
+            nudgeOff: false, fatsOff: false, selSides: [],
+        };
+    } else {
+        card._mealsDrawer  = null;
+    }
+    card._doRender(true);
 }
 
 // ---------------------------------------------------------------------------

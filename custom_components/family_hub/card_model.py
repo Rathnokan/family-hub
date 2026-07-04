@@ -213,6 +213,9 @@ def build_person_scalars(store, person_id) -> dict:
         "week_possible":             week_possible,
         "streak_freezes_available":  person.get("streak_freezes_available", 0),
         "goal_item_id":              person.get("goal_item_id", "") or "",
+        # Effective penalty pause (global OR per-person) so the card can zero out
+        # the "at risk" KPI when no penalty could actually fire for this person.
+        "penalties_paused":          store.is_penalty_paused_for(person_id),
     }
 
 
@@ -605,6 +608,36 @@ def build_maintenance_overdue_payload(store) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Meals room (v0.8.0)
+# ---------------------------------------------------------------------------
+
+def build_meals_scalars(store) -> dict:
+    """Lean meals SENSOR payload: tonight's dinner (id + variant) + a planned-days
+    count. The dinner NAME isn't here — the meal library lives in the frontend, so
+    the card resolves the id from meals-data.js. Enough for the room tile, voice,
+    and automations."""
+    meals = store.get_meals_for_card()
+    plan  = meals.get("plan", {})
+    today = date.today().isoformat()
+    dinner = (plan.get(today, {}) or {}).get("d") or {}
+    planned = sum(
+        1 for k, e in plan.items()
+        if k >= today and (e.get("d") or e.get("b") or e.get("l"))
+    )
+    return {
+        "tonight_main":    dinner.get("main", ""),
+        "tonight_variant": dinner.get("variant", ""),
+        "planned_days":    planned,
+    }
+
+
+def build_meals_payload(store) -> dict:
+    """Full meals model section = scalars + the entire meals state (plan, rhythm,
+    favs, custom, customIng, recipes, have, groc)."""
+    return {**build_meals_scalars(store), **store.get_meals_for_card()}
+
+
+# ---------------------------------------------------------------------------
 # Full card model — keyed by entity_id, mirrors what card._attrs(id) reads
 # ---------------------------------------------------------------------------
 
@@ -617,6 +650,7 @@ def build_card_model(store) -> dict:
         "sensor.family_hub_claimable_tasks":     build_claimable_payload(store),
         "sensor.family_hub_maintenance_due":     build_maintenance_due_payload(store),
         "sensor.family_hub_maintenance_overdue": build_maintenance_overdue_payload(store),
+        "sensor.family_hub_meals":               build_meals_payload(store),
     }
     for p in store.get_active_people():
         model[person_entity_id(p["name"])] = build_person_payload(store, p["id"])

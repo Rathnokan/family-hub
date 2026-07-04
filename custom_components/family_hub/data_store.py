@@ -174,6 +174,7 @@ from ._store_helpers import (
     _migrate_chore,
     _migrate_store_item,
     _migrate_task_instance,
+    _migrate_meals,
     _advance_renewal_date,
     _days_until_reset,
 )
@@ -188,13 +189,14 @@ from .store_items_mixin import StoreItemsMixin
 from .group_rewards_mixin import GroupRewardsMixin
 from .redemptions_mixin import RedemptionsMixin
 from .history_admin_mixin import HistoryAdminMixin
+from .meals_mixin import MealsMixin
 
 _LOGGER = logging.getLogger(__name__)
 
 
 
 
-class FamilyHubDataStore(CardShaperMixin, TickMixin, StreaksRanksMixin, SubscriptionsMixin, PeopleMixin, ChoresMixin, TasksMixin, StoreItemsMixin, GroupRewardsMixin, RedemptionsMixin, HistoryAdminMixin):
+class FamilyHubDataStore(CardShaperMixin, TickMixin, StreaksRanksMixin, SubscriptionsMixin, PeopleMixin, ChoresMixin, TasksMixin, StoreItemsMixin, GroupRewardsMixin, RedemptionsMixin, HistoryAdminMixin, MealsMixin):
     """Manages reading and writing the Family Hub JSON data file."""
 
     def __init__(self, hass: HomeAssistant, storage_path: str) -> None:
@@ -461,6 +463,9 @@ class FamilyHubDataStore(CardShaperMixin, TickMixin, StreaksRanksMixin, Subscrip
 
         # v0.6.5: ensure subscriptions list exists
         self._data.setdefault("subscriptions", [])
+
+        # v0.8.0: ensure the meals section + all its sub-keys exist
+        _migrate_meals(self._data)
 
     async def async_save(self) -> None:
         """Persist data to the per-domain HA Stores (v0.7.0 P3).

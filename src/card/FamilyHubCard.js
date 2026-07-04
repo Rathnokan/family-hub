@@ -97,6 +97,19 @@ export class FamilyHubCard extends HTMLElement {
         this._adminCollapsedRewardCats = new Set();
         this._storeItemFilter          = null;   // "active" | "inactive" | null
 
+        // ---- Meals room UI state (v0.8.0) ------------------------------------
+        this._mealsTab            = "week";    // active tab: today|week|plan|pantry|library|groceries
+        this._mealsWeekPage       = 0;         // This Week pagination (0 = current week)
+        this._mealsJumpDate       = null;      // ISO date selected in Plan rail (null = today)
+        this._mealsDrawer         = null;      // Drawer state object or null (see dispatch.js)
+        this._mealsRecipe         = null;      // mealId for open recipe modal, or null
+        this._mealsDayPick        = null;      // mealId for open day-pick modal, or null
+        this._mealsNudgeDismissed = new Set(); // dismissed veggie-nudge per-open-drawer session
+        this._mealsFatDismissed   = new Set(); // dismissed fats-note per-open-drawer session
+        this._mealsLibFilter      = "all";     // Library type filter: all|b|l|d
+        this._mealsAdminSubtab    = "meals";   // Admin Meals section sub-tab: meals|ingredients|recipes
+        this._mealsAdminRecipeId  = null;      // mealId being recipe-edited in Admin (freezes re-render)
+
         // AbortController for event listener cleanup
         this._abortCtrl = null;
 
@@ -412,6 +425,9 @@ export class FamilyHubCard extends HTMLElement {
         // Inline subscription editor open — a background model refetch would
         // rebuild .fh-card and wipe the typed cost/date before save.
         if (this._editingSubId) return;
+        // Meals admin recipe editor open — protect the typed time/serves/
+        // ingredients/steps textareas from a background refetch.
+        if (this._mealsAdminRecipeId) return;
 
         // v0.7.0 P2: card data lives in a websocket model, not sensor attributes.
         // The needs_attention sensor exposes a single data_rev counter that bumps
@@ -455,7 +471,7 @@ export class FamilyHubCard extends HTMLElement {
             this._fetching = false;
         }
         // A modal / inline panel may have opened while we were fetching — respect the freeze.
-        if (this._modal || this._adminSelectedChoreId || this._adminSelectedItemId || this._editingSubId) return;
+        if (this._modal || this._adminSelectedChoreId || this._adminSelectedItemId || this._editingSubId || this._mealsAdminRecipeId) return;
         this._doRender(false);
     }
 
@@ -484,7 +500,7 @@ export class FamilyHubCard extends HTMLElement {
                 card.innerHTML = `<div class="fh-empty">Loading…</div>`;
             } else {
                 // Redirect stale section IDs from older builds
-                const _validAdminSecs = ["today","family","tasks","rewards","history","settings"];
+                const _validAdminSecs = ["today","family","tasks","rewards","meals","history","settings"];
                 if (!_validAdminSecs.includes(this._adminSec)) this._adminSec = "today";
 
                 switch (this._cfg.mode) {

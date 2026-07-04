@@ -254,8 +254,12 @@ class HistoryAdminMixin:
 
                 # skipped_date lets the frontend group all skipped chores from
                 # the same day into one collapsible entry with a total penalty.
+                # due_date anchors the penalty to the day the chore was actually
+                # due (not the tick that assessed it the next morning) so the
+                # card's "lost this week" attributes it to the correct week.
                 if inst_status == STATUS_SKIPPED:
                     row["skipped_date"] = e["timestamp"][:10]
+                    row["due_date"]     = instance.get("due_date", e["timestamp"][:10])
 
                 result.append(row)
 
