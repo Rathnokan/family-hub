@@ -563,7 +563,15 @@ export class FamilyHubCard extends HTMLElement {
         if (view.startsWith("room:")) {
             const roomId = view.slice(5);   // "room:".length === 5
             const room   = getRoomById(roomId);
-            inner = room?.render ? room.render(this) : `<div class="fh-empty">Unknown room.</div>`;
+            // v0.8.0: block the drill-down when the room's module is disabled
+            // (covers initial_view deep-links, not just tile taps).
+            const modules = this._attrs("sensor.family_hub_needs_attention").modules;
+            if (modules && modules[roomId] === false) {
+                inner = `<div class="fh-empty">This module is turned off.<br>
+                    <span style="opacity:.7">Enable it in Home Assistant → Family Hub → Configure.</span></div>`;
+            } else {
+                inner = room?.render ? room.render(this) : `<div class="fh-empty">Unknown room.</div>`;
+            }
         } else if (view.startsWith("person:")) {
             const personId     = view.slice(7); // "person:".length === 7
             this._viewPersonId = personId;

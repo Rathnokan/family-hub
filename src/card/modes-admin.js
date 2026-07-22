@@ -1628,21 +1628,28 @@ function _htmlAdSettings(attr, people, card) {
       </div>`).join("");
 
     // ---- Hub Layout panel content (S9 P3) -------------------------------
+    const modulesMap = attr.modules || {};
     const roomToggles = ROOMS.map(room => {
         const status  = roomsCfg[room.id]?.status ?? room.status;
         const visible = status !== "hidden";
         const isComingSoon = room.status === "coming";
+        // v0.8.0: a room whose module is disabled is a locked row — the live/hidden
+        // layout choice is moot while the module is off (managed in HA options).
+        const moduleOff = modulesMap[room.id] === false;
+        const subNote = moduleOff
+            ? ` · <em>module off — manage in integration options</em>`
+            : (isComingSoon ? ` · <em>coming soon</em>` : "");
         return `
-          <div class="fh-hub-room-row" data-room-id="${escAttr(room.id)}">
+          <div class="fh-hub-room-row${moduleOff ? " fh-hub-room-row--off" : ""}" data-room-id="${escAttr(room.id)}">
             <div class="fh-hub-room-icon" style="color:${room.accent}">${room.icon}</div>
             <div class="fh-hub-room-info">
               <div class="fh-hub-room-name">${escHTML(room.label)}</div>
-              <div class="fh-hub-room-sub">${escHTML(room.sub)}${isComingSoon ? ` · <em>coming soon</em>` : ""}</div>
+              <div class="fh-hub-room-sub">${escHTML(room.sub)}${subNote}</div>
             </div>
             <label class="fh-toggle">
               <input type="checkbox" class="fh-hub-room-toggle"
                      data-room-id="${escAttr(room.id)}"
-                     ${visible ? "checked" : ""}>
+                     ${visible ? "checked" : ""}${moduleOff ? " disabled" : ""}>
               <span class="fh-toggle-slider"></span>
             </label>
           </div>`;

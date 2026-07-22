@@ -1031,6 +1031,15 @@ var mo=Object.defineProperty;var N=(e,t)=>()=>(e&&(t=e(e=0)),t);var go=(e,t)=>()
   }
   .fh-home-room-tile.coming { opacity:.6; cursor:default; }
   .fh-home-room-tile.coming:hover { border-color:transparent; background:var(--fh-surface); }
+  /* v0.8.0: disabled-module tile \u2014 dimmed and inert (no drill-down). */
+  .fh-home-room-tile.off { opacity:.45; cursor:default; }
+  .fh-home-room-tile.off:hover { border-color:transparent; background:var(--fh-surface); }
+  .fh-home-room-off {
+    display:inline-block; font-size:.78rem; font-weight:800; letter-spacing:.08em;
+    padding:2px 8px; border-radius:10px;
+    background:var(--fh-bg); color:var(--fh-text-sec);
+    border:1px solid var(--fh-border); margin-bottom:4px;
+  }
   .fh-home-room-icon {
     width:36px; height:36px; flex-shrink:0;
     display:flex; align-items:center; justify-content:center; margin-top:1px;
@@ -3290,6 +3299,9 @@ var mo=Object.defineProperty;var N=(e,t)=>()=>(e&&(t=e(e=0)),t);var go=(e,t)=>()
     border: 1px solid var(--fh-border);
     border-radius: var(--fh-radius-sm);
   }
+  /* v0.8.0: locked row \u2014 module disabled in integration options. */
+  .fh-hub-room-row--off { opacity: .5; }
+  .fh-hub-room-row--off .fh-toggle { pointer-events: none; }
   .fh-hub-room-icon {
     width: 28px; height: 28px; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center;
@@ -5557,43 +5569,43 @@ var mo=Object.defineProperty;var N=(e,t)=>()=>(e&&(t=e(e=0)),t);var go=(e,t)=>()
     .fh-ml-rail-day.active { border-left:none; border-bottom-color:#8B3A2A; }
     .fh-ml-rail-date { flex:none; text-align:center; }
   }
-`});var Mt,Ia=N(()=>{$a();Ea();za();Ma();Fa();Da();Mt=_a+Sa+Ca+Aa+Ba+Ra});var Ta=N(()=>{Ia()});var Pa,lt,H,Bt,ie,W,Ft,K=N(()=>{Pa="family_hub",lt="0.7.6",H="#7F77DD",Bt=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],ie={task_completed:{label:"Completed",color:"var(--fh-success)"},task_approved:{label:"Approved",color:"var(--fh-success)"},pending_approval:{label:"Pending approval",color:"var(--fh-warning)"},task_denied:{label:"Denied",color:"var(--fh-overdue)"},task_skipped:{label:"Skipped",color:"var(--fh-warning)"},task_excused:{label:"Excused",color:"var(--fh-accent)"},task_rejected:{label:"Rejected",color:"var(--fh-overdue)"},task_marked_complete:{label:"Marked done",color:"var(--fh-success)"},task_late_claimed:{label:"Claimed late",color:"var(--fh-warning)"},points_awarded:{label:"Points",color:"var(--fh-accent)"},redemption_requested:{label:"Redeem request",color:"var(--fh-warning)"},redemption_approved:{label:"Redeem approved",color:"var(--fh-success)"},redemption_declined:{label:"Redeem declined",color:"var(--fh-overdue)"},task_added:{label:"Task added",color:"var(--fh-text-sec)"},person_added:{label:"Person added",color:"var(--fh-text-sec)"},allowance:{label:"Allowance",color:"var(--fh-success)"},completion_streak_milestone:{label:"Success streak",color:"var(--fh-success)"},weekly_completion_streak_milestone:{label:"Weekly streak",color:"var(--fh-success)"},subscription_cancel_declined:{label:"Cancel declined",color:"var(--fh-warning)"},subscription_updated:{label:"Sub updated",color:"var(--fh-text-sec)"},subscription_started:{label:"Subscribed",color:"var(--fh-accent)"},subscription_renewed:{label:"Sub renewal",color:"var(--fh-text-sec)"},subscription_lapsed:{label:"Sub lapsed",color:"var(--fh-warning)"},subscription_canceled:{label:"Sub canceled",color:"var(--fh-text-sec)"},subscription_cancel_requested:{label:"Cancel requested",color:"var(--fh-warning)"},group_proposed:{label:"Group proposed",color:"var(--fh-text-sec)"},group_chip_in:{label:"Chipped in",color:"var(--fh-accent)"},group_redeemed:{label:"Group redeemed",color:"var(--fh-success)"}},W={check:'<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>',plus:'<svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"/></svg>',edit:'<svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.21a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>',trash:'<svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>',bell:'<svg viewBox="0 0 24 24"><path d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2zm6-6V11a6 6 0 0 0-5-5.92V4a1 1 0 1 0-2 0v1.08A6 6 0 0 0 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>',award:'<svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>',minus:'<svg viewBox="0 0 24 24"><path d="M19 13H5v-2h14z"/></svg>',close:'<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>',settings:'<svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7 7 0 0 0-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"/></svg>',person:'<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>',store:'<svg viewBox="0 0 24 24"><path d="M20 4H4v2l16-2zm1 5H3l1 11h16l1-11zm-9 8H10v-4h2v4zm0-6H10v-2h2v2z"/></svg>',remove:'<svg viewBox="0 0 24 24"><path d="M15 16h4v2h-4zm0-8h7v2h-7zm0 4h6v2h-6zM2 6v14c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V6H2zm8 13H4v-1h6v1zm0-3H4v-1h6v1zm0-3H4v-1h6v1zm1-7H3V8h8V6zm-2-3H5V2h4v1z"/></svg>',history:'<svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>',excuse:'<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>',print:'<svg viewBox="0 0 24 24"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7a1 1 0 1 1 0-2 1 1 0 0 1 0 2zm-1-9H6v4h12V3z"/></svg>',rewards:'<svg viewBox="0 0 24 24"><path d="M20 6h-2.18c.07-.44.18-.88.18-1.36C18 2.53 15.89.36 13.36.36c-1.38 0-2.56.6-3.36 1.55C9.2.96 8.02.36 6.64.36 4.11.36 2 2.53 2 4.64c0 .48.11.92.18 1.36H0v4h1v10h22V10h1V6h-4zm-8 12H6V10h6v8zm0-10H4V8h8v2zm4 10h-2v-8h2v8zm2-10h-6V8h6v2zm-5.36-4c-.45 0-1.09-.49-1.09-1.36 0-.87.64-1.36 1.09-1.36.46 0 1.1.49 1.1 1.36C13.74 3.51 13.1 4 12.64 4zM6.64 4c-.45 0-1.09-.49-1.09-1.36 0-.87.64-1.36 1.09-1.36.46 0 1.1.49 1.1 1.36C7.74 3.51 7.1 4 6.64 4z"/></svg>',toggle:'<svg viewBox="0 0 24 24"><path d="M17 7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h10c2.76 0 5-2.24 5-5s-2.24-5-5-5zm0 8c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"/></svg>'},Ft=[{key:"brush-teeth-am",name:"Brush teeth",description:"Morning \u2014 brush for 2 minutes",category:"Morning",points:5},{key:"make-bed",name:"Make bed",description:"Pull up covers and fluff pillow",category:"Morning",points:10},{key:"get-dressed",name:"Get dressed",description:"Clothes on, shoes tied, ready to go",category:"Morning",points:5},{key:"take-vitamins",name:"Take vitamins",description:"",category:"Morning",points:5},{key:"eat-breakfast",name:"Eat breakfast",description:"",category:"Morning",points:5},{key:"brush-teeth-pm",name:"Brush teeth (evening)",description:"Before bed \u2014 brush for 2 minutes",category:"Evening",points:5},{key:"pajamas-on",name:"Pajamas on",description:"",category:"Evening",points:5},{key:"pick-up-room",name:"Pick up room",description:"Put toys away and tidy floor",category:"Evening",points:10},{key:"pack-backpack",name:"Pack backpack",description:"Ready for tomorrow",category:"Evening",points:10},{key:"clear-table",name:"Clear table",description:"After dinner \u2014 dishes to the sink",category:"Kitchen",points:10},{key:"load-dishwasher",name:"Load dishwasher",description:"",category:"Kitchen",points:15},{key:"unload-dishwasher",name:"Unload dishwasher",description:"",category:"Kitchen",points:15},{key:"wipe-counters",name:"Wipe counters",description:"",category:"Kitchen",points:10},{key:"take-out-trash",name:"Take out trash",description:"",category:"Chores",points:15},{key:"vacuum",name:"Vacuum living room",description:"",category:"Chores",points:20},{key:"sweep-floor",name:"Sweep/mop floor",description:"",category:"Chores",points:15},{key:"feed-pets",name:"Feed pets",description:"",category:"Chores",points:10},{key:"water-plants",name:"Water plants",description:"",category:"Chores",points:10},{key:"homework",name:"Homework",description:"Complete all assigned homework",category:"School",points:20},{key:"reading",name:"Reading time",description:"Read for 20 minutes",category:"School",points:15}]});function Oa(e){return e<-1?`${Math.abs(e)}d overdue`:e===-1?"1d overdue":e===0?"Today":e===1?"Tomorrow":`In ${e}d`}function dt(e,t){return e.map(a=>`<option value="${a.value}" ${a.value===t?"selected":""}>${a.label}</option>`).join("")}function ta(e,t,a=!1){let o=e||[],s=a?o.slice(0,1):o;return Bt.map((i,n)=>{let l=s.includes(n);return`<label class="fh-wd-chip ${l?"checked":""}">
-          <input type="${a?"radio":"checkbox"}" class="${t}" value="${n}" ${l?"checked":""}>
+`});var Mt,Ia=N(()=>{$a();Ea();za();Ma();Fa();Da();Mt=_a+Sa+Ca+Aa+Ba+Ra});var Ta=N(()=>{Ia()});var Pa,lt,H,Bt,ie,W,Ft,K=N(()=>{Pa="family_hub",lt="0.7.6",H="#7F77DD",Bt=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],ie={task_completed:{label:"Completed",color:"var(--fh-success)"},task_approved:{label:"Approved",color:"var(--fh-success)"},pending_approval:{label:"Pending approval",color:"var(--fh-warning)"},task_denied:{label:"Denied",color:"var(--fh-overdue)"},task_skipped:{label:"Skipped",color:"var(--fh-warning)"},task_excused:{label:"Excused",color:"var(--fh-accent)"},task_rejected:{label:"Rejected",color:"var(--fh-overdue)"},task_marked_complete:{label:"Marked done",color:"var(--fh-success)"},task_late_claimed:{label:"Claimed late",color:"var(--fh-warning)"},points_awarded:{label:"Points",color:"var(--fh-accent)"},redemption_requested:{label:"Redeem request",color:"var(--fh-warning)"},redemption_approved:{label:"Redeem approved",color:"var(--fh-success)"},redemption_declined:{label:"Redeem declined",color:"var(--fh-overdue)"},task_added:{label:"Task added",color:"var(--fh-text-sec)"},person_added:{label:"Person added",color:"var(--fh-text-sec)"},allowance:{label:"Allowance",color:"var(--fh-success)"},completion_streak_milestone:{label:"Success streak",color:"var(--fh-success)"},weekly_completion_streak_milestone:{label:"Weekly streak",color:"var(--fh-success)"},subscription_cancel_declined:{label:"Cancel declined",color:"var(--fh-warning)"},subscription_updated:{label:"Sub updated",color:"var(--fh-text-sec)"},subscription_started:{label:"Subscribed",color:"var(--fh-accent)"},subscription_renewed:{label:"Sub renewal",color:"var(--fh-text-sec)"},subscription_lapsed:{label:"Sub lapsed",color:"var(--fh-warning)"},subscription_canceled:{label:"Sub canceled",color:"var(--fh-text-sec)"},subscription_cancel_requested:{label:"Cancel requested",color:"var(--fh-warning)"},group_proposed:{label:"Group proposed",color:"var(--fh-text-sec)"},group_chip_in:{label:"Chipped in",color:"var(--fh-accent)"},group_redeemed:{label:"Group redeemed",color:"var(--fh-success)"}},W={check:'<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>',plus:'<svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"/></svg>',edit:'<svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.21a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>',trash:'<svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>',bell:'<svg viewBox="0 0 24 24"><path d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2zm6-6V11a6 6 0 0 0-5-5.92V4a1 1 0 1 0-2 0v1.08A6 6 0 0 0 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>',award:'<svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>',minus:'<svg viewBox="0 0 24 24"><path d="M19 13H5v-2h14z"/></svg>',close:'<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>',settings:'<svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7 7 0 0 0-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"/></svg>',person:'<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>',store:'<svg viewBox="0 0 24 24"><path d="M20 4H4v2l16-2zm1 5H3l1 11h16l1-11zm-9 8H10v-4h2v4zm0-6H10v-2h2v2z"/></svg>',remove:'<svg viewBox="0 0 24 24"><path d="M15 16h4v2h-4zm0-8h7v2h-7zm0 4h6v2h-6zM2 6v14c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V6H2zm8 13H4v-1h6v1zm0-3H4v-1h6v1zm0-3H4v-1h6v1zm1-7H3V8h8V6zm-2-3H5V2h4v1z"/></svg>',history:'<svg viewBox="0 0 24 24"><path d="M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>',excuse:'<svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>',print:'<svg viewBox="0 0 24 24"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7a1 1 0 1 1 0-2 1 1 0 0 1 0 2zm-1-9H6v4h12V3z"/></svg>',rewards:'<svg viewBox="0 0 24 24"><path d="M20 6h-2.18c.07-.44.18-.88.18-1.36C18 2.53 15.89.36 13.36.36c-1.38 0-2.56.6-3.36 1.55C9.2.96 8.02.36 6.64.36 4.11.36 2 2.53 2 4.64c0 .48.11.92.18 1.36H0v4h1v10h22V10h1V6h-4zm-8 12H6V10h6v8zm0-10H4V8h8v2zm4 10h-2v-8h2v8zm2-10h-6V8h6v2zm-5.36-4c-.45 0-1.09-.49-1.09-1.36 0-.87.64-1.36 1.09-1.36.46 0 1.1.49 1.1 1.36C13.74 3.51 13.1 4 12.64 4zM6.64 4c-.45 0-1.09-.49-1.09-1.36 0-.87.64-1.36 1.09-1.36.46 0 1.1.49 1.1 1.36C7.74 3.51 7.1 4 6.64 4z"/></svg>',toggle:'<svg viewBox="0 0 24 24"><path d="M17 7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h10c2.76 0 5-2.24 5-5s-2.24-5-5-5zm0 8c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"/></svg>'},Ft=[{key:"brush-teeth-am",name:"Brush teeth",description:"Morning \u2014 brush for 2 minutes",category:"Morning",points:5},{key:"make-bed",name:"Make bed",description:"Pull up covers and fluff pillow",category:"Morning",points:10},{key:"get-dressed",name:"Get dressed",description:"Clothes on, shoes tied, ready to go",category:"Morning",points:5},{key:"take-vitamins",name:"Take vitamins",description:"",category:"Morning",points:5},{key:"eat-breakfast",name:"Eat breakfast",description:"",category:"Morning",points:5},{key:"brush-teeth-pm",name:"Brush teeth (evening)",description:"Before bed \u2014 brush for 2 minutes",category:"Evening",points:5},{key:"pajamas-on",name:"Pajamas on",description:"",category:"Evening",points:5},{key:"pick-up-room",name:"Pick up room",description:"Put toys away and tidy floor",category:"Evening",points:10},{key:"pack-backpack",name:"Pack backpack",description:"Ready for tomorrow",category:"Evening",points:10},{key:"clear-table",name:"Clear table",description:"After dinner \u2014 dishes to the sink",category:"Kitchen",points:10},{key:"load-dishwasher",name:"Load dishwasher",description:"",category:"Kitchen",points:15},{key:"unload-dishwasher",name:"Unload dishwasher",description:"",category:"Kitchen",points:15},{key:"wipe-counters",name:"Wipe counters",description:"",category:"Kitchen",points:10},{key:"take-out-trash",name:"Take out trash",description:"",category:"Chores",points:15},{key:"vacuum",name:"Vacuum living room",description:"",category:"Chores",points:20},{key:"sweep-floor",name:"Sweep/mop floor",description:"",category:"Chores",points:15},{key:"feed-pets",name:"Feed pets",description:"",category:"Chores",points:10},{key:"water-plants",name:"Water plants",description:"",category:"Chores",points:10},{key:"homework",name:"Homework",description:"Complete all assigned homework",category:"School",points:20},{key:"reading",name:"Reading time",description:"Read for 20 minutes",category:"School",points:15}]});function Oa(e){return e<-1?`${Math.abs(e)}d overdue`:e===-1?"1d overdue":e===0?"Today":e===1?"Tomorrow":`In ${e}d`}function dt(e,t){return e.map(a=>`<option value="${a.value}" ${a.value===t?"selected":""}>${a.label}</option>`).join("")}function ta(e,t,a=!1){let o=e||[],s=a?o.slice(0,1):o;return Bt.map((i,n)=>{let r=s.includes(n);return`<label class="fh-wd-chip ${r?"checked":""}">
+          <input type="${a?"radio":"checkbox"}" class="${t}" value="${n}" ${r?"checked":""}>
           ${i}
-        </label>`}).join("")}function ne(e){if(!e)return"";let t=Date.now()-new Date(e).getTime(),a=Math.floor(t/6e4);if(a<1)return"just now";if(a<60)return`${a}m ago`;let o=Math.floor(a/60);return o<24?`${o}h ago`:`${Math.floor(o/24)}d ago`}function uo(e){return e?new Date(e+"T12:00:00").toLocaleDateString(void 0,{month:"short",day:"numeric"}):""}function ce(e){let t=[],a=new Map;for(let s of e){if(s.type==="task_skipped"){let i=s.skipped_date||(s.timestamp||"").slice(0,10);if(i){a.has(i)||a.set(i,[]),a.get(i).push(s);continue}}t.push({isGroup:!1,entry:s,timestamp:s.timestamp})}let o=[];for(let[s,i]of a){let n=i.reduce((l,d)=>l+Math.abs(d.points_delta||0),0);o.push({isGroup:!0,key:`skipped-${s}`,date:s,dateDisplay:uo(s),totalPenalty:n,items:i,timestamp:i[0].timestamp})}return[...t,...o].sort((s,i)=>(i.timestamp||"").localeCompare(s.timestamp||""))}var j,O,G,ea,La,f,C,Q=N(()=>{K();j=e=>(e||"?")[0].toUpperCase(),O=e=>(e||0).toLocaleString(),G=e=>`$${(e||0).toFixed(2)}`,ea=e=>e?e[0].toUpperCase()+e.slice(1):"",La=e=>(e||"").toLowerCase().replace(/ /g,"_"),f=e=>String(e||"").replace(/[&<>'"]/g,t=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"})[t]),C=f});function pe(e,t,a="28px"){return typeof e=="string"&&e.startsWith("data:image/")?`<span class="fh-chore-icon" style="width:${a};height:${a};display:inline-flex;align-items:center;justify-content:center;flex-shrink:0"><img src="${e}" style="width:100%;height:100%;object-fit:contain;border-radius:4px" alt=""></span>`:e&&Na[e]?`<span class="fh-chore-icon fh-chore-emoji" style="width:${a};height:${a};display:inline-flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24"><text x="12" y="12" text-anchor="middle" dominant-baseline="central" font-size="22">${Na[e]}</text></svg></span>`:e&&aa[e]?`<span class="fh-chore-icon" style="width:${a};height:${a};display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:currentColor">`+aa[e]+"</span>":`<span class="fh-chore-dot" style="width:12px;height:12px;border-radius:50%;background:${t||vo[0]};display:inline-block;flex-shrink:0"></span>`}var I,aa,Na,sa,Ha,vo,mr,ut=N(()=>{I=e=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${e}</svg>`,aa={bed:I('<rect x="2" y="8" width="20" height="12" rx="1"/><path d="M2 14h20"/><path d="M7 14V9a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v5"/><circle cx="6" cy="11" r="1" fill="currentColor" stroke="none"/>'),tooth:I('<path d="M9 3h6a4 4 0 0 1 4 4c0 5-1.5 9-3 12-.5 1-1.5 1-2 0l-.5-2c-.3-.9-1.7-.9-2 0l-.5 2c-.5 1-1.5 1-2 0C7.5 16 6 12 6 7a4 4 0 0 1 3-4z"/>'),shower:I('<path d="M5 5l4 4"/><path d="M19 4a9 9 0 0 0-9 9"/><path d="M14 4a9 9 0 0 0-5 5"/><path d="M4 22l5-5"/><circle cx="11" cy="15" r=".6" fill="currentColor" stroke="none"/><circle cx="14" cy="17" r=".6" fill="currentColor" stroke="none"/><circle cx="8.5" cy="17" r=".6" fill="currentColor" stroke="none"/><circle cx="11" cy="19" r=".6" fill="currentColor" stroke="none"/>'),hair:I('<path d="M4 4h16v3H4z"/><path d="M6 7v9M9 7v12M12 7v12M15 7v9M18 7v9"/>'),sleep:I('<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/>'),laundry:I('<rect x="3" y="2" width="18" height="20" rx="2"/><circle cx="12" cy="13" r="5"/><circle cx="12" cy="13" r="2.5"/><path d="M7 6h.5M10 6h.5"/>'),folding:I('<path d="M3 6l3-4h4l2 3 2-3h4l3 4-4 2v12a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V8z"/>'),room:I('<path d="M3 21V9.5L12 3l9 6.5V21H3z"/><path d="M9 21v-7h6v7"/>'),pack:I('<path d="M5 7h14l-1.5 12a2 2 0 0 1-2 2H8.5a2 2 0 0 1-2-2z"/><path d="M8 7V6a4 4 0 0 1 8 0v1"/><path d="M9 13h6"/>'),backpack:I('<path d="M9 4a3 3 0 0 1 6 0v1a7 7 0 0 1-6 0z"/><rect x="4" y="7" width="16" height="14" rx="2"/><path d="M8 14h8M8 17h5"/>'),dog:I('<path d="M3 11a9 9 0 0 0 18 0V8l-3-1-1-5-5 3-5-3-1 5-3 1z"/><path d="M7 19v3M17 19v3"/><circle cx="10" cy="11" r=".8" fill="currentColor" stroke="none"/><circle cx="14" cy="11" r=".8" fill="currentColor" stroke="none"/><path d="M10 14c1.5 1.5 2.5 1.5 4 0"/>'),cat:I('<path d="M5 7l-1-5 4 4h4l4-4-1 5a7 7 0 0 1-10 0z"/><circle cx="10" cy="12" r=".5" fill="currentColor" stroke="none"/><circle cx="14" cy="12" r=".5" fill="currentColor" stroke="none"/><path d="M10 14l1 2h2l1-2M12 17v1.5"/>'),pet:I('<ellipse cx="7.5" cy="7.5" rx="2.5" ry="3"/><ellipse cx="16.5" cy="7.5" rx="2.5" ry="3"/><ellipse cx="4" cy="14" rx="2" ry="2.5"/><ellipse cx="20" cy="14" rx="2" ry="2.5"/><ellipse cx="12" cy="16.5" rx="5.5" ry="4.5"/>'),fish:I('<path d="M20 12a8 8 0 0 1-8 6 8 8 0 0 1-8-6 8 8 0 0 1 8-6 8 8 0 0 1 8 6z"/><path d="M20 12l4-5v10z"/><circle cx="9" cy="11" r="1" fill="currentColor" stroke="none"/>'),dishes:I('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M3 12h3M18 12h3M12 3v3M12 18v3"/>'),plate:I('<path d="M5 3v8a4 4 0 0 0 8 0V3M9 3v17"/><path d="M19 3v17M17 7a2 2 0 0 1 4 0v4h-4z"/>'),cooking:I('<path d="M4 15h16l-1.5 5a2 2 0 0 1-1.9 1.5H7.4A2 2 0 0 1 5.5 20z"/><path d="M8 7V5M12 6V4M16 7V5"/><path d="M5 12h14a6 6 0 0 0-6-6h-2a6 6 0 0 0-6 6z"/>'),meals:I('<path d="M4 15a8 8 0 0 0 16 0H4z"/><path d="M8 10c0-1 1-2 1-3M12 10c0-1 1-2 1-3M16 10c0-1 1-2 1-3"/>'),lunch:I('<rect x="3" y="10" width="18" height="11" rx="2"/><path d="M8 10V8a4 4 0 0 1 8 0v2"/><path d="M8 15h8M8 18h5"/>'),coffee:I('<path d="M6 10h12v6a4 4 0 0 1-4 4H10a4 4 0 0 1-4-4z"/><path d="M18 12h2a2 2 0 0 1 0 4h-2"/><path d="M9 6c0-1.5 1-2 1-3M13 6c0-1.5 1-2 1-3"/>'),snack:I('<path d="M14 3c1 0 2 1 2 2 0 2-2 3-3 4-1-1-3-2-3-4a2 2 0 0 1 2-2h2z"/><path d="M12 9a6 6 0 1 0 0 12 6 6 0 0 0 0-12z"/>'),bread:I('<path d="M3 11a5 5 0 0 1 10 0v9H3z"/><path d="M13 11a5 5 0 0 1 5-5h1a2 2 0 0 1 2 2v11H13z"/><path d="M3 14h10"/>'),menu:I('<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M9 11h6M9 15h4"/>'),table:I('<circle cx="12" cy="13" r="5"/><path d="M5 3v8M5 11a3 3 0 0 0 6 0"/><path d="M19 3v17M17 7a2 2 0 0 1 4 0v4h-4z"/>'),trash:I('<path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12"/><path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/>'),broom:I('<path d="M19 3 9 13"/><path d="M7 15.5l5 5M5 21l2-2M10 20.5l3-3"/><path d="m9 13 5 5-3 3-7 1 1-7z"/>'),vacuum:I('<circle cx="14" cy="15" r="5"/><circle cx="14" cy="15" r="2"/><path d="M9 15H6a4 4 0 0 1-4-4V8a4 4 0 0 1 4-4h5l3-2h6l-3 6"/>'),wipe:I('<rect x="3" y="10" width="18" height="10" rx="2"/><path d="M7 14l3 3M11 14l3 3M15 14l3 3"/><path d="M7 10V5a3 3 0 0 1 6 0v5"/>'),mop:I('<path d="M4 3l12 12"/><path d="M14 4l6 6"/><path d="M4 15l6-6 8 8-6 4-8-6z"/>'),sweep:I('<path d="M16 3 4 15"/><path d="M2 22l4-4.5"/><path d="M4 15h12a4 4 0 0 1 0 8H4z"/>'),bathroom:I('<path d="M3 14h18v4a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z"/><path d="M3 14V9a4 4 0 0 1 4-4h0a4 4 0 0 1 4 4v1"/><path d="M5 10h4"/>'),windows:I('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h18M12 3v18"/>'),recycling:I('<path d="M7 11l-4 4 4 4M3 15h10a4 4 0 0 0 3.46-6"/><path d="M17 13l4-4-4-4M21 9H11a4 4 0 0 0-3.46 6"/>'),bucket:I('<path d="M7 6h10l1.5 13a2 2 0 0 1-2 2H7.5a2 2 0 0 1-2-2z"/><path d="M5.5 6a6.5 6.5 0 0 1 13 0"/><path d="M9 12c0 2 1 3 3 3s3-1 3-3"/>'),dusting:I('<path d="M3 21l10-10"/><path d="M12 8l2-5 4 4-5 2z"/><path d="M14 12l3 3"/><path d="M17 7c1.5 1.5 1.5 3.5 0 5"/><path d="M15 5c2.5 1.5 3.5 4.5 1 7"/>'),lawn:I('<path d="M3 21h18"/><path d="M6 21V14a6 6 0 0 1 12 0v7"/><path d="M12 8v6"/><path d="M10 11c-.5-1.5 0-3.5 2-3.5s2.5 2 2 3.5"/>'),garden:I('<path d="M3 14a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M17 15h3l1-6"/><path d="M5 14V9a4 4 0 0 1 8 0v5"/><path d="M7 20l1 3M10 20l1 3M13 20l1 3"/>'),plant:I('<path d="M12 20V12"/><path d="M12 12c-3-2-6-1-7-6 5-1 8 2 7 6z"/><path d="M12 12c3-2 6-1 7-6-5-1-8 2-7 6z"/><path d="M8 20h8"/>'),leaves:I('<path d="M5 21c3-8 9-14 16-14-2 8-8 14-16 14z"/><path d="M5 21l8-8"/>'),snow:I('<path d="M12 3v18M4.5 7.5l15 9M19.5 7.5l-15 9"/><path d="M9 6l3-3 3 3M9 18l3 3 3-3"/><path d="M4.5 10.5l-3 2 3 2M19.5 10.5l3 2-3 2"/>'),garage:I('<rect x="2" y="10" width="20" height="11" rx="1"/><path d="M2 10L12 3l10 7"/><path d="M6 15h12M6 18h8"/>'),homework:I('<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/><path d="M16 17l2 2 4-4"/>'),reading:I('<path d="M3 6c3-1.5 6-1.5 9 0 3-1.5 6-1.5 9 0v13c-3-1.5-6-1.5-9 0-3-1.5-6-1.5-9 0z"/><path d="M12 6v13"/>'),book:I('<path d="M4 19V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12H6a2 2 0 0 1-2-2z"/><path d="M4 17h14"/><path d="M8 7v5l2-2 2 2V7"/>'),pencil:I('<path d="M4 20l12-12 4 4-12 12z"/><path d="M14 6l4 4"/><path d="M4 20l-2 2"/>'),piano:I('<rect x="2" y="6" width="20" height="13" rx="1"/><path d="M7 6v7M10 6v7M15 6v7M18 6v7"/><path d="M2 13h20"/>'),practice:I('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>'),calculator:I('<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8"/><rect x="7" y="10" width="3" height="2" rx=".5"/><rect x="10.5" y="10" width="3" height="2" rx=".5"/><rect x="14" y="10" width="3" height="2" rx=".5"/><rect x="7" y="13.5" width="3" height="2" rx=".5"/><rect x="10.5" y="13.5" width="3" height="2" rx=".5"/><rect x="14" y="13" width="3" height="5" rx=".5"/><rect x="7" y="17" width="3" height="2" rx=".5"/><rect x="10.5" y="17" width="3" height="2" rx=".5"/>'),medicine:I('<path d="M8.5 14.5l-5-5a5 5 0 0 1 7-7l5 5"/><path d="M14.5 9.5l-5 5"/><path d="M14.5 14.5l5-5a5 5 0 0 1 0 7l-2 2a5 5 0 0 1-7 0l-1-1"/>'),water:I('<path d="M12 2l7 11a7 7 0 1 1-14 0z"/>'),exercise:I('<path d="M6 12h12"/><path d="M6 10v4M18 10v4"/><path d="M4 9v6M20 9v6"/>'),sport:I('<circle cx="12" cy="12" r="9"/><path d="M12 3a15 15 0 0 1 4 9 15 15 0 0 1-4 9"/><path d="M12 3a15 15 0 0 0-4 9 15 15 0 0 0 4 9"/><path d="M3 9h18M3 15h18"/>'),walk:I('<circle cx="12" cy="4" r="2"/><path d="M8 20l2-6h4l-1 6"/><path d="M16 20l-1-6"/><path d="M9 10h6l-1 4H9l-1-4z"/><path d="M8 7l-2 3M16 7l2 3"/>'),art:I('<path d="M12 21a9 9 0 1 0-.5 0"/><circle cx="8.5" cy="9" r="1.5"/><circle cx="14.5" cy="8" r="1.5"/><circle cx="16.5" cy="13.5" r="1.5"/><circle cx="10" cy="15.5" r="1.5"/>'),music:I('<path d="M9 20V9l12-2v11"/><circle cx="6" cy="20" r="3"/><circle cx="18" cy="18" r="3"/>'),bike:I('<circle cx="6" cy="15" r="4"/><circle cx="18" cy="15" r="4"/><path d="M6 15l4-8 2 3h6"/><path d="M14 10l4 5"/>'),games:I('<rect x="2" y="7" width="20" height="13" rx="2"/><path d="M6 13v-2M5 12h2"/><circle cx="15.5" cy="11.5" r=".5" fill="currentColor" stroke="none"/><circle cx="17.5" cy="13.5" r=".5" fill="currentColor" stroke="none"/><path d="M11 16h2"/>'),tools:I('<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.77 3.77z"/>'),smarthome:I('<path d="M3 21V9.5L12 3l9 6.5V21H3z"/><circle cx="12" cy="15" r="2"/><path d="M9.17 12.17a5 5 0 0 1 5.66 0"/><path d="M6.34 9.34a9 9 0 0 1 11.32 0"/>'),screen:I('<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>'),car:I('<path d="M5 17H3a2 2 0 0 1-2-2v-4l3-6h16l3 6v4a2 2 0 0 1-2 2h-2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M5 9h14"/>'),shop:I('<path d="M6 2l3 6h10l-1.5 7H7.5L6 2z"/><circle cx="10" cy="19" r="2"/><circle cx="17" cy="19" r="2"/><path d="M4 2H2"/>'),phone:I('<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>'),mail:I('<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 7 10-7"/>'),errand:I('<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><path d="M8 11h8M8 15h5"/>'),chore:I('<path d="M4 6h10l3 3v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"/><path d="M8 11l2 2 4-4"/><path d="M14 6V3h6v6h-6z"/>'),star:I('<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>'),check:I('<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-5"/>'),timer:I('<circle cx="12" cy="13" r="8"/><path d="M12 5V3M9 3h6"/><path d="M16.95 8.05l1.41-1.41"/><path d="M12 9v4h4"/>'),gift:I('<rect x="3" y="8" width="18" height="13" rx="1"/><path d="M3 12h18"/><path d="M12 8v13"/><path d="M7.5 8a2.5 2.5 0 1 1 0-5C9 3 11 5 12 8c1-3 3-5 4.5-5a2.5 2.5 0 1 1 0 5"/>'),cash:I('<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 9.5h.01M18 14.5h.01"/>'),candy:I('<circle cx="12" cy="12" r="5"/><path d="M7 12L3 8v8z"/><path d="M17 12l4-4v8z"/>'),icecream:I('<path d="M8 11a4 4 0 0 1 8 0"/><path d="M7 11h10l-5 11z"/><path d="M9.5 11l.5-2M14.5 11l-.5-2"/>'),cake:I('<rect x="3" y="13" width="18" height="8" rx="1"/><path d="M3 17h18"/><path d="M7 13v-2a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v2"/><path d="M13 13v-2a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v2"/><path d="M9 5v2M15 5v2"/>'),party:I('<path d="M3 21l5-14 8 8z"/><circle cx="17" cy="6" r="1"/><circle cx="20" cy="10" r="1"/><circle cx="14" cy="3" r="1"/><path d="M19 14l2 2M15 14l3 2"/>'),controller:I('<path d="M6 18a4 4 0 0 1-4-4V11a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4v3a4 4 0 0 1-4 4h-1l-2-3H9l-2 3z"/><path d="M7 11v3M5.5 12.5h3"/><circle cx="16" cy="11.5" r=".7" fill="currentColor"/><circle cx="18" cy="13.5" r=".7" fill="currentColor"/>'),trophy:I('<path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 6H4v2a3 3 0 0 0 3 3"/><path d="M17 6h3v2a3 3 0 0 1-3 3"/><path d="M9 15h6v3H9z"/><path d="M8 21h8"/>'),movie:I('<rect x="2" y="6" width="20" height="12" rx="1"/><path d="M2 10h20M2 14h20"/><path d="M5 6v12M19 6v12"/>'),toy:I('<rect x="4" y="8" width="16" height="12" rx="2"/><circle cx="9" cy="13" r="1.2"/><circle cx="15" cy="13" r="1.2"/><path d="M9 17h6"/><path d="M9 8V5h6v3"/>'),sticker:I('<path d="M12 3a9 9 0 1 1-9 9 9 9 0 0 1 9-9z"/><path d="M9 10h.01M15 10h.01"/><path d="M9 14s1 1.5 3 1.5 3-1.5 3-1.5"/>')},Na={bed:"\u{1F6CF}\uFE0F",tooth:"\u{1F9B7}",shower:"\u{1F6BF}",hair:"\u{1F487}",sleep:"\u{1F634}",laundry:"\u{1F9FA}",folding:"\u{1F455}",room:"\u{1F9F9}",pack:"\u{1F392}",backpack:"\u{1F392}",dog:"\u{1F415}",cat:"\u{1F408}",pet:"\u{1F43E}",fish:"\u{1F41F}",dishes:"\u{1F37D}\uFE0F",plate:"\u{1F374}",table:"\u{1F37D}\uFE0F",cooking:"\u{1F373}",meals:"\u{1F372}",lunch:"\u{1F96A}",coffee:"\u2615",snack:"\u{1F37F}",bread:"\u{1F35E}",menu:"\u{1F4CB}",trash:"\u{1F5D1}\uFE0F",broom:"\u{1F9F9}",sweep:"\u{1F9F9}",vacuum:"\u{1F9F9}",mop:"\u{1F9FD}",wipe:"\u{1F9FD}",dusting:"\u{1F9F9}",bucket:"\u{1FAA3}",bathroom:"\u{1F6BD}",windows:"\u{1FA9F}",recycling:"\u267B\uFE0F",lawn:"\u{1F33F}",garden:"\u{1FAB4}",plant:"\u{1F331}",leaves:"\u{1F342}",snow:"\u2744\uFE0F",garage:"\u{1F9F0}",homework:"\u{1F4DD}",reading:"\u{1F4D6}",book:"\u{1F4DA}",pencil:"\u270F\uFE0F",calculator:"\u{1F9EE}",piano:"\u{1F3B9}",practice:"\u23F1\uFE0F",medicine:"\u{1F48A}",water:"\u{1F4A7}",exercise:"\u{1F4AA}",sport:"\u26BD",walk:"\u{1F6B6}",art:"\u{1F3A8}",music:"\u{1F3B5}",bike:"\u{1F6B2}",games:"\u{1F3AE}",tools:"\u{1F527}",smarthome:"\u{1F3E0}",screen:"\u{1F4FA}",car:"\u{1F697}",shop:"\u{1F6D2}",phone:"\u{1F4F1}",mail:"\u2709\uFE0F",errand:"\u{1F6CD}\uFE0F",chore:"\u{1F4CB}",star:"\u2B50",check:"\u2705",timer:"\u23F2\uFE0F",gift:"\u{1F381}",cash:"\u{1F4B5}",candy:"\u{1F36C}",icecream:"\u{1F366}",cake:"\u{1F382}",party:"\u{1F389}",controller:"\u{1F3AE}",trophy:"\u{1F3C6}",movie:"\u{1F3AC}",toy:"\u{1F9F8}",sticker:"\u{1F31F}"},sa=[{key:"bed",label:"Make Bed",category:"Self-Care"},{key:"tooth",label:"Brush Teeth",category:"Self-Care"},{key:"shower",label:"Shower",category:"Self-Care"},{key:"hair",label:"Groom Hair",category:"Self-Care"},{key:"sleep",label:"Bedtime",category:"Self-Care"},{key:"laundry",label:"Laundry",category:"Self-Care"},{key:"folding",label:"Fold Clothes",category:"Self-Care"},{key:"room",label:"Clean Room",category:"Self-Care"},{key:"pack",label:"Pack Bag",category:"Self-Care"},{key:"backpack",label:"Backpack",category:"Self-Care"},{key:"dog",label:"Walk Dog",category:"Pets"},{key:"cat",label:"Feed Cat",category:"Pets"},{key:"pet",label:"Pet Care",category:"Pets"},{key:"fish",label:"Feed Fish",category:"Pets"},{key:"dishes",label:"Dishes",category:"Kitchen"},{key:"plate",label:"Set Table",category:"Kitchen"},{key:"table",label:"Place Setting",category:"Kitchen"},{key:"cooking",label:"Cooking",category:"Kitchen"},{key:"meals",label:"Meal Prep",category:"Kitchen"},{key:"lunch",label:"Pack Lunch",category:"Kitchen"},{key:"coffee",label:"Make Coffee",category:"Kitchen"},{key:"snack",label:"Snack",category:"Kitchen"},{key:"bread",label:"Baking",category:"Kitchen"},{key:"menu",label:"Menu Plan",category:"Kitchen"},{key:"trash",label:"Trash",category:"Cleaning"},{key:"broom",label:"Sweep",category:"Cleaning"},{key:"sweep",label:"Sweep Floor",category:"Cleaning"},{key:"vacuum",label:"Vacuum",category:"Cleaning"},{key:"mop",label:"Mop",category:"Cleaning"},{key:"wipe",label:"Wipe Down",category:"Cleaning"},{key:"dusting",label:"Dusting",category:"Cleaning"},{key:"bucket",label:"Deep Clean",category:"Cleaning"},{key:"bathroom",label:"Bathroom",category:"Cleaning"},{key:"windows",label:"Windows",category:"Cleaning"},{key:"recycling",label:"Recycling",category:"Cleaning"},{key:"lawn",label:"Lawn",category:"Outdoors"},{key:"garden",label:"Garden",category:"Outdoors"},{key:"plant",label:"Plants",category:"Outdoors"},{key:"leaves",label:"Rake Leaves",category:"Outdoors"},{key:"snow",label:"Shovel Snow",category:"Outdoors"},{key:"garage",label:"Garage",category:"Outdoors"},{key:"homework",label:"Homework",category:"School"},{key:"reading",label:"Reading",category:"School"},{key:"book",label:"Books",category:"School"},{key:"pencil",label:"Study",category:"School"},{key:"calculator",label:"Math",category:"School"},{key:"piano",label:"Piano",category:"School"},{key:"practice",label:"Practice",category:"School"},{key:"medicine",label:"Medicine",category:"Health"},{key:"water",label:"Drink Water",category:"Health"},{key:"exercise",label:"Exercise",category:"Health"},{key:"sport",label:"Sport",category:"Health"},{key:"walk",label:"Walk",category:"Health"},{key:"art",label:"Art",category:"Hobbies"},{key:"music",label:"Music",category:"Hobbies"},{key:"bike",label:"Bike",category:"Hobbies"},{key:"games",label:"Games",category:"Hobbies"},{key:"tools",label:"Tools",category:"Home"},{key:"smarthome",label:"Smart Home",category:"Home"},{key:"screen",label:"Devices",category:"Home"},{key:"car",label:"Car",category:"Home"},{key:"shop",label:"Shopping",category:"Home"},{key:"phone",label:"Phone",category:"Home"},{key:"mail",label:"Mail",category:"Home"},{key:"errand",label:"Errand",category:"Home"},{key:"chore",label:"Chore",category:"Generic"},{key:"star",label:"Star Task",category:"Generic"},{key:"check",label:"Done",category:"Generic"},{key:"timer",label:"Timed Task",category:"Generic"}],Ha=[{key:"candy",label:"Candy",category:"Treats"},{key:"icecream",label:"Ice Cream",category:"Treats"},{key:"snack",label:"Snack",category:"Treats"},{key:"cake",label:"Cake",category:"Treats"},{key:"bread",label:"Baked Good",category:"Treats"},{key:"cash",label:"Cash",category:"Money & Gifts"},{key:"gift",label:"Gift",category:"Money & Gifts"},{key:"shop",label:"Shopping",category:"Money & Gifts"},{key:"sticker",label:"Sticker",category:"Money & Gifts"},{key:"screen",label:"Screen Time",category:"Screen Time"},{key:"games",label:"Video Games",category:"Screen Time"},{key:"controller",label:"Gamepad",category:"Screen Time"},{key:"movie",label:"Movie",category:"Screen Time"},{key:"phone",label:"Phone Time",category:"Screen Time"},{key:"bike",label:"Bike Ride",category:"Outings"},{key:"car",label:"Car Trip",category:"Outings"},{key:"walk",label:"Walk Out",category:"Outings"},{key:"sport",label:"Sports",category:"Outings"},{key:"pet",label:"Pet Time",category:"Outings"},{key:"toy",label:"Toy",category:"Fun & Special"},{key:"party",label:"Party",category:"Fun & Special"},{key:"trophy",label:"Trophy",category:"Fun & Special"},{key:"star",label:"Special",category:"Fun & Special"},{key:"music",label:"Music",category:"Fun & Special"},{key:"art",label:"Art Supplies",category:"Fun & Special"},{key:"book",label:"Book",category:"Fun & Special"},{key:"timer",label:"Extra Time",category:"Fun & Special"}],vo=["#7F77DD","#30d158","#ff9f0a","#ff453a","#5ac8fa","#ff2d55","#af52de"];mr=Object.keys(aa)});function fe(e){return!e||e.type!=="task_skipped"||e.instance_status!=="skipped"||!e.reference_id||!e.person_id?"":`<button class="fh-btn fh-btn-ghost fh-btn-sm fh-late-claim"
+        </label>`}).join("")}function ne(e){if(!e)return"";let t=Date.now()-new Date(e).getTime(),a=Math.floor(t/6e4);if(a<1)return"just now";if(a<60)return`${a}m ago`;let o=Math.floor(a/60);return o<24?`${o}h ago`:`${Math.floor(o/24)}d ago`}function uo(e){return e?new Date(e+"T12:00:00").toLocaleDateString(void 0,{month:"short",day:"numeric"}):""}function ce(e){let t=[],a=new Map;for(let s of e){if(s.type==="task_skipped"){let i=s.skipped_date||(s.timestamp||"").slice(0,10);if(i){a.has(i)||a.set(i,[]),a.get(i).push(s);continue}}t.push({isGroup:!1,entry:s,timestamp:s.timestamp})}let o=[];for(let[s,i]of a){let n=i.reduce((r,d)=>r+Math.abs(d.points_delta||0),0);o.push({isGroup:!0,key:`skipped-${s}`,date:s,dateDisplay:uo(s),totalPenalty:n,items:i,timestamp:i[0].timestamp})}return[...t,...o].sort((s,i)=>(i.timestamp||"").localeCompare(s.timestamp||""))}var j,O,G,ea,La,m,C,Q=N(()=>{K();j=e=>(e||"?")[0].toUpperCase(),O=e=>(e||0).toLocaleString(),G=e=>`$${(e||0).toFixed(2)}`,ea=e=>e?e[0].toUpperCase()+e.slice(1):"",La=e=>(e||"").toLowerCase().replace(/ /g,"_"),m=e=>String(e||"").replace(/[&<>'"]/g,t=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"})[t]),C=m});function pe(e,t,a="28px"){return typeof e=="string"&&e.startsWith("data:image/")?`<span class="fh-chore-icon" style="width:${a};height:${a};display:inline-flex;align-items:center;justify-content:center;flex-shrink:0"><img src="${e}" style="width:100%;height:100%;object-fit:contain;border-radius:4px" alt=""></span>`:e&&Na[e]?`<span class="fh-chore-icon fh-chore-emoji" style="width:${a};height:${a};display:inline-flex;align-items:center;justify-content:center;flex-shrink:0"><svg viewBox="0 0 24 24"><text x="12" y="12" text-anchor="middle" dominant-baseline="central" font-size="22">${Na[e]}</text></svg></span>`:e&&aa[e]?`<span class="fh-chore-icon" style="width:${a};height:${a};display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;color:currentColor">`+aa[e]+"</span>":`<span class="fh-chore-dot" style="width:12px;height:12px;border-radius:50%;background:${t||vo[0]};display:inline-block;flex-shrink:0"></span>`}var I,aa,Na,sa,Ha,vo,mr,ut=N(()=>{I=e=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${e}</svg>`,aa={bed:I('<rect x="2" y="8" width="20" height="12" rx="1"/><path d="M2 14h20"/><path d="M7 14V9a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v5"/><circle cx="6" cy="11" r="1" fill="currentColor" stroke="none"/>'),tooth:I('<path d="M9 3h6a4 4 0 0 1 4 4c0 5-1.5 9-3 12-.5 1-1.5 1-2 0l-.5-2c-.3-.9-1.7-.9-2 0l-.5 2c-.5 1-1.5 1-2 0C7.5 16 6 12 6 7a4 4 0 0 1 3-4z"/>'),shower:I('<path d="M5 5l4 4"/><path d="M19 4a9 9 0 0 0-9 9"/><path d="M14 4a9 9 0 0 0-5 5"/><path d="M4 22l5-5"/><circle cx="11" cy="15" r=".6" fill="currentColor" stroke="none"/><circle cx="14" cy="17" r=".6" fill="currentColor" stroke="none"/><circle cx="8.5" cy="17" r=".6" fill="currentColor" stroke="none"/><circle cx="11" cy="19" r=".6" fill="currentColor" stroke="none"/>'),hair:I('<path d="M4 4h16v3H4z"/><path d="M6 7v9M9 7v12M12 7v12M15 7v9M18 7v9"/>'),sleep:I('<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/>'),laundry:I('<rect x="3" y="2" width="18" height="20" rx="2"/><circle cx="12" cy="13" r="5"/><circle cx="12" cy="13" r="2.5"/><path d="M7 6h.5M10 6h.5"/>'),folding:I('<path d="M3 6l3-4h4l2 3 2-3h4l3 4-4 2v12a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V8z"/>'),room:I('<path d="M3 21V9.5L12 3l9 6.5V21H3z"/><path d="M9 21v-7h6v7"/>'),pack:I('<path d="M5 7h14l-1.5 12a2 2 0 0 1-2 2H8.5a2 2 0 0 1-2-2z"/><path d="M8 7V6a4 4 0 0 1 8 0v1"/><path d="M9 13h6"/>'),backpack:I('<path d="M9 4a3 3 0 0 1 6 0v1a7 7 0 0 1-6 0z"/><rect x="4" y="7" width="16" height="14" rx="2"/><path d="M8 14h8M8 17h5"/>'),dog:I('<path d="M3 11a9 9 0 0 0 18 0V8l-3-1-1-5-5 3-5-3-1 5-3 1z"/><path d="M7 19v3M17 19v3"/><circle cx="10" cy="11" r=".8" fill="currentColor" stroke="none"/><circle cx="14" cy="11" r=".8" fill="currentColor" stroke="none"/><path d="M10 14c1.5 1.5 2.5 1.5 4 0"/>'),cat:I('<path d="M5 7l-1-5 4 4h4l4-4-1 5a7 7 0 0 1-10 0z"/><circle cx="10" cy="12" r=".5" fill="currentColor" stroke="none"/><circle cx="14" cy="12" r=".5" fill="currentColor" stroke="none"/><path d="M10 14l1 2h2l1-2M12 17v1.5"/>'),pet:I('<ellipse cx="7.5" cy="7.5" rx="2.5" ry="3"/><ellipse cx="16.5" cy="7.5" rx="2.5" ry="3"/><ellipse cx="4" cy="14" rx="2" ry="2.5"/><ellipse cx="20" cy="14" rx="2" ry="2.5"/><ellipse cx="12" cy="16.5" rx="5.5" ry="4.5"/>'),fish:I('<path d="M20 12a8 8 0 0 1-8 6 8 8 0 0 1-8-6 8 8 0 0 1 8-6 8 8 0 0 1 8 6z"/><path d="M20 12l4-5v10z"/><circle cx="9" cy="11" r="1" fill="currentColor" stroke="none"/>'),dishes:I('<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><path d="M3 12h3M18 12h3M12 3v3M12 18v3"/>'),plate:I('<path d="M5 3v8a4 4 0 0 0 8 0V3M9 3v17"/><path d="M19 3v17M17 7a2 2 0 0 1 4 0v4h-4z"/>'),cooking:I('<path d="M4 15h16l-1.5 5a2 2 0 0 1-1.9 1.5H7.4A2 2 0 0 1 5.5 20z"/><path d="M8 7V5M12 6V4M16 7V5"/><path d="M5 12h14a6 6 0 0 0-6-6h-2a6 6 0 0 0-6 6z"/>'),meals:I('<path d="M4 15a8 8 0 0 0 16 0H4z"/><path d="M8 10c0-1 1-2 1-3M12 10c0-1 1-2 1-3M16 10c0-1 1-2 1-3"/>'),lunch:I('<rect x="3" y="10" width="18" height="11" rx="2"/><path d="M8 10V8a4 4 0 0 1 8 0v2"/><path d="M8 15h8M8 18h5"/>'),coffee:I('<path d="M6 10h12v6a4 4 0 0 1-4 4H10a4 4 0 0 1-4-4z"/><path d="M18 12h2a2 2 0 0 1 0 4h-2"/><path d="M9 6c0-1.5 1-2 1-3M13 6c0-1.5 1-2 1-3"/>'),snack:I('<path d="M14 3c1 0 2 1 2 2 0 2-2 3-3 4-1-1-3-2-3-4a2 2 0 0 1 2-2h2z"/><path d="M12 9a6 6 0 1 0 0 12 6 6 0 0 0 0-12z"/>'),bread:I('<path d="M3 11a5 5 0 0 1 10 0v9H3z"/><path d="M13 11a5 5 0 0 1 5-5h1a2 2 0 0 1 2 2v11H13z"/><path d="M3 14h10"/>'),menu:I('<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M9 11h6M9 15h4"/>'),table:I('<circle cx="12" cy="13" r="5"/><path d="M5 3v8M5 11a3 3 0 0 0 6 0"/><path d="M19 3v17M17 7a2 2 0 0 1 4 0v4h-4z"/>'),trash:I('<path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-12"/><path d="M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"/>'),broom:I('<path d="M19 3 9 13"/><path d="M7 15.5l5 5M5 21l2-2M10 20.5l3-3"/><path d="m9 13 5 5-3 3-7 1 1-7z"/>'),vacuum:I('<circle cx="14" cy="15" r="5"/><circle cx="14" cy="15" r="2"/><path d="M9 15H6a4 4 0 0 1-4-4V8a4 4 0 0 1 4-4h5l3-2h6l-3 6"/>'),wipe:I('<rect x="3" y="10" width="18" height="10" rx="2"/><path d="M7 14l3 3M11 14l3 3M15 14l3 3"/><path d="M7 10V5a3 3 0 0 1 6 0v5"/>'),mop:I('<path d="M4 3l12 12"/><path d="M14 4l6 6"/><path d="M4 15l6-6 8 8-6 4-8-6z"/>'),sweep:I('<path d="M16 3 4 15"/><path d="M2 22l4-4.5"/><path d="M4 15h12a4 4 0 0 1 0 8H4z"/>'),bathroom:I('<path d="M3 14h18v4a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z"/><path d="M3 14V9a4 4 0 0 1 4-4h0a4 4 0 0 1 4 4v1"/><path d="M5 10h4"/>'),windows:I('<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h18M12 3v18"/>'),recycling:I('<path d="M7 11l-4 4 4 4M3 15h10a4 4 0 0 0 3.46-6"/><path d="M17 13l4-4-4-4M21 9H11a4 4 0 0 0-3.46 6"/>'),bucket:I('<path d="M7 6h10l1.5 13a2 2 0 0 1-2 2H7.5a2 2 0 0 1-2-2z"/><path d="M5.5 6a6.5 6.5 0 0 1 13 0"/><path d="M9 12c0 2 1 3 3 3s3-1 3-3"/>'),dusting:I('<path d="M3 21l10-10"/><path d="M12 8l2-5 4 4-5 2z"/><path d="M14 12l3 3"/><path d="M17 7c1.5 1.5 1.5 3.5 0 5"/><path d="M15 5c2.5 1.5 3.5 4.5 1 7"/>'),lawn:I('<path d="M3 21h18"/><path d="M6 21V14a6 6 0 0 1 12 0v7"/><path d="M12 8v6"/><path d="M10 11c-.5-1.5 0-3.5 2-3.5s2.5 2 2 3.5"/>'),garden:I('<path d="M3 14a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M17 15h3l1-6"/><path d="M5 14V9a4 4 0 0 1 8 0v5"/><path d="M7 20l1 3M10 20l1 3M13 20l1 3"/>'),plant:I('<path d="M12 20V12"/><path d="M12 12c-3-2-6-1-7-6 5-1 8 2 7 6z"/><path d="M12 12c3-2 6-1 7-6-5-1-8 2-7 6z"/><path d="M8 20h8"/>'),leaves:I('<path d="M5 21c3-8 9-14 16-14-2 8-8 14-16 14z"/><path d="M5 21l8-8"/>'),snow:I('<path d="M12 3v18M4.5 7.5l15 9M19.5 7.5l-15 9"/><path d="M9 6l3-3 3 3M9 18l3 3 3-3"/><path d="M4.5 10.5l-3 2 3 2M19.5 10.5l3 2-3 2"/>'),garage:I('<rect x="2" y="10" width="20" height="11" rx="1"/><path d="M2 10L12 3l10 7"/><path d="M6 15h12M6 18h8"/>'),homework:I('<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 7h8M8 11h8M8 15h5"/><path d="M16 17l2 2 4-4"/>'),reading:I('<path d="M3 6c3-1.5 6-1.5 9 0 3-1.5 6-1.5 9 0v13c-3-1.5-6-1.5-9 0-3-1.5-6-1.5-9 0z"/><path d="M12 6v13"/>'),book:I('<path d="M4 19V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12H6a2 2 0 0 1-2-2z"/><path d="M4 17h14"/><path d="M8 7v5l2-2 2 2V7"/>'),pencil:I('<path d="M4 20l12-12 4 4-12 12z"/><path d="M14 6l4 4"/><path d="M4 20l-2 2"/>'),piano:I('<rect x="2" y="6" width="20" height="13" rx="1"/><path d="M7 6v7M10 6v7M15 6v7M18 6v7"/><path d="M2 13h20"/>'),practice:I('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>'),calculator:I('<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8"/><rect x="7" y="10" width="3" height="2" rx=".5"/><rect x="10.5" y="10" width="3" height="2" rx=".5"/><rect x="14" y="10" width="3" height="2" rx=".5"/><rect x="7" y="13.5" width="3" height="2" rx=".5"/><rect x="10.5" y="13.5" width="3" height="2" rx=".5"/><rect x="14" y="13" width="3" height="5" rx=".5"/><rect x="7" y="17" width="3" height="2" rx=".5"/><rect x="10.5" y="17" width="3" height="2" rx=".5"/>'),medicine:I('<path d="M8.5 14.5l-5-5a5 5 0 0 1 7-7l5 5"/><path d="M14.5 9.5l-5 5"/><path d="M14.5 14.5l5-5a5 5 0 0 1 0 7l-2 2a5 5 0 0 1-7 0l-1-1"/>'),water:I('<path d="M12 2l7 11a7 7 0 1 1-14 0z"/>'),exercise:I('<path d="M6 12h12"/><path d="M6 10v4M18 10v4"/><path d="M4 9v6M20 9v6"/>'),sport:I('<circle cx="12" cy="12" r="9"/><path d="M12 3a15 15 0 0 1 4 9 15 15 0 0 1-4 9"/><path d="M12 3a15 15 0 0 0-4 9 15 15 0 0 0 4 9"/><path d="M3 9h18M3 15h18"/>'),walk:I('<circle cx="12" cy="4" r="2"/><path d="M8 20l2-6h4l-1 6"/><path d="M16 20l-1-6"/><path d="M9 10h6l-1 4H9l-1-4z"/><path d="M8 7l-2 3M16 7l2 3"/>'),art:I('<path d="M12 21a9 9 0 1 0-.5 0"/><circle cx="8.5" cy="9" r="1.5"/><circle cx="14.5" cy="8" r="1.5"/><circle cx="16.5" cy="13.5" r="1.5"/><circle cx="10" cy="15.5" r="1.5"/>'),music:I('<path d="M9 20V9l12-2v11"/><circle cx="6" cy="20" r="3"/><circle cx="18" cy="18" r="3"/>'),bike:I('<circle cx="6" cy="15" r="4"/><circle cx="18" cy="15" r="4"/><path d="M6 15l4-8 2 3h6"/><path d="M14 10l4 5"/>'),games:I('<rect x="2" y="7" width="20" height="13" rx="2"/><path d="M6 13v-2M5 12h2"/><circle cx="15.5" cy="11.5" r=".5" fill="currentColor" stroke="none"/><circle cx="17.5" cy="13.5" r=".5" fill="currentColor" stroke="none"/><path d="M11 16h2"/>'),tools:I('<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.77 3.77z"/>'),smarthome:I('<path d="M3 21V9.5L12 3l9 6.5V21H3z"/><circle cx="12" cy="15" r="2"/><path d="M9.17 12.17a5 5 0 0 1 5.66 0"/><path d="M6.34 9.34a9 9 0 0 1 11.32 0"/>'),screen:I('<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>'),car:I('<path d="M5 17H3a2 2 0 0 1-2-2v-4l3-6h16l3 6v4a2 2 0 0 1-2 2h-2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M5 9h14"/>'),shop:I('<path d="M6 2l3 6h10l-1.5 7H7.5L6 2z"/><circle cx="10" cy="19" r="2"/><circle cx="17" cy="19" r="2"/><path d="M4 2H2"/>'),phone:I('<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2"/>'),mail:I('<rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 7 10-7"/>'),errand:I('<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><path d="M8 11h8M8 15h5"/>'),chore:I('<path d="M4 6h10l3 3v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"/><path d="M8 11l2 2 4-4"/><path d="M14 6V3h6v6h-6z"/>'),star:I('<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>'),check:I('<circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-5"/>'),timer:I('<circle cx="12" cy="13" r="8"/><path d="M12 5V3M9 3h6"/><path d="M16.95 8.05l1.41-1.41"/><path d="M12 9v4h4"/>'),gift:I('<rect x="3" y="8" width="18" height="13" rx="1"/><path d="M3 12h18"/><path d="M12 8v13"/><path d="M7.5 8a2.5 2.5 0 1 1 0-5C9 3 11 5 12 8c1-3 3-5 4.5-5a2.5 2.5 0 1 1 0 5"/>'),cash:I('<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 9.5h.01M18 14.5h.01"/>'),candy:I('<circle cx="12" cy="12" r="5"/><path d="M7 12L3 8v8z"/><path d="M17 12l4-4v8z"/>'),icecream:I('<path d="M8 11a4 4 0 0 1 8 0"/><path d="M7 11h10l-5 11z"/><path d="M9.5 11l.5-2M14.5 11l-.5-2"/>'),cake:I('<rect x="3" y="13" width="18" height="8" rx="1"/><path d="M3 17h18"/><path d="M7 13v-2a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v2"/><path d="M13 13v-2a2 2 0 0 1 2-2h0a2 2 0 0 1 2 2v2"/><path d="M9 5v2M15 5v2"/>'),party:I('<path d="M3 21l5-14 8 8z"/><circle cx="17" cy="6" r="1"/><circle cx="20" cy="10" r="1"/><circle cx="14" cy="3" r="1"/><path d="M19 14l2 2M15 14l3 2"/>'),controller:I('<path d="M6 18a4 4 0 0 1-4-4V11a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4v3a4 4 0 0 1-4 4h-1l-2-3H9l-2 3z"/><path d="M7 11v3M5.5 12.5h3"/><circle cx="16" cy="11.5" r=".7" fill="currentColor"/><circle cx="18" cy="13.5" r=".7" fill="currentColor"/>'),trophy:I('<path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 6H4v2a3 3 0 0 0 3 3"/><path d="M17 6h3v2a3 3 0 0 1-3 3"/><path d="M9 15h6v3H9z"/><path d="M8 21h8"/>'),movie:I('<rect x="2" y="6" width="20" height="12" rx="1"/><path d="M2 10h20M2 14h20"/><path d="M5 6v12M19 6v12"/>'),toy:I('<rect x="4" y="8" width="16" height="12" rx="2"/><circle cx="9" cy="13" r="1.2"/><circle cx="15" cy="13" r="1.2"/><path d="M9 17h6"/><path d="M9 8V5h6v3"/>'),sticker:I('<path d="M12 3a9 9 0 1 1-9 9 9 9 0 0 1 9-9z"/><path d="M9 10h.01M15 10h.01"/><path d="M9 14s1 1.5 3 1.5 3-1.5 3-1.5"/>')},Na={bed:"\u{1F6CF}\uFE0F",tooth:"\u{1F9B7}",shower:"\u{1F6BF}",hair:"\u{1F487}",sleep:"\u{1F634}",laundry:"\u{1F9FA}",folding:"\u{1F455}",room:"\u{1F9F9}",pack:"\u{1F392}",backpack:"\u{1F392}",dog:"\u{1F415}",cat:"\u{1F408}",pet:"\u{1F43E}",fish:"\u{1F41F}",dishes:"\u{1F37D}\uFE0F",plate:"\u{1F374}",table:"\u{1F37D}\uFE0F",cooking:"\u{1F373}",meals:"\u{1F372}",lunch:"\u{1F96A}",coffee:"\u2615",snack:"\u{1F37F}",bread:"\u{1F35E}",menu:"\u{1F4CB}",trash:"\u{1F5D1}\uFE0F",broom:"\u{1F9F9}",sweep:"\u{1F9F9}",vacuum:"\u{1F9F9}",mop:"\u{1F9FD}",wipe:"\u{1F9FD}",dusting:"\u{1F9F9}",bucket:"\u{1FAA3}",bathroom:"\u{1F6BD}",windows:"\u{1FA9F}",recycling:"\u267B\uFE0F",lawn:"\u{1F33F}",garden:"\u{1FAB4}",plant:"\u{1F331}",leaves:"\u{1F342}",snow:"\u2744\uFE0F",garage:"\u{1F9F0}",homework:"\u{1F4DD}",reading:"\u{1F4D6}",book:"\u{1F4DA}",pencil:"\u270F\uFE0F",calculator:"\u{1F9EE}",piano:"\u{1F3B9}",practice:"\u23F1\uFE0F",medicine:"\u{1F48A}",water:"\u{1F4A7}",exercise:"\u{1F4AA}",sport:"\u26BD",walk:"\u{1F6B6}",art:"\u{1F3A8}",music:"\u{1F3B5}",bike:"\u{1F6B2}",games:"\u{1F3AE}",tools:"\u{1F527}",smarthome:"\u{1F3E0}",screen:"\u{1F4FA}",car:"\u{1F697}",shop:"\u{1F6D2}",phone:"\u{1F4F1}",mail:"\u2709\uFE0F",errand:"\u{1F6CD}\uFE0F",chore:"\u{1F4CB}",star:"\u2B50",check:"\u2705",timer:"\u23F2\uFE0F",gift:"\u{1F381}",cash:"\u{1F4B5}",candy:"\u{1F36C}",icecream:"\u{1F366}",cake:"\u{1F382}",party:"\u{1F389}",controller:"\u{1F3AE}",trophy:"\u{1F3C6}",movie:"\u{1F3AC}",toy:"\u{1F9F8}",sticker:"\u{1F31F}"},sa=[{key:"bed",label:"Make Bed",category:"Self-Care"},{key:"tooth",label:"Brush Teeth",category:"Self-Care"},{key:"shower",label:"Shower",category:"Self-Care"},{key:"hair",label:"Groom Hair",category:"Self-Care"},{key:"sleep",label:"Bedtime",category:"Self-Care"},{key:"laundry",label:"Laundry",category:"Self-Care"},{key:"folding",label:"Fold Clothes",category:"Self-Care"},{key:"room",label:"Clean Room",category:"Self-Care"},{key:"pack",label:"Pack Bag",category:"Self-Care"},{key:"backpack",label:"Backpack",category:"Self-Care"},{key:"dog",label:"Walk Dog",category:"Pets"},{key:"cat",label:"Feed Cat",category:"Pets"},{key:"pet",label:"Pet Care",category:"Pets"},{key:"fish",label:"Feed Fish",category:"Pets"},{key:"dishes",label:"Dishes",category:"Kitchen"},{key:"plate",label:"Set Table",category:"Kitchen"},{key:"table",label:"Place Setting",category:"Kitchen"},{key:"cooking",label:"Cooking",category:"Kitchen"},{key:"meals",label:"Meal Prep",category:"Kitchen"},{key:"lunch",label:"Pack Lunch",category:"Kitchen"},{key:"coffee",label:"Make Coffee",category:"Kitchen"},{key:"snack",label:"Snack",category:"Kitchen"},{key:"bread",label:"Baking",category:"Kitchen"},{key:"menu",label:"Menu Plan",category:"Kitchen"},{key:"trash",label:"Trash",category:"Cleaning"},{key:"broom",label:"Sweep",category:"Cleaning"},{key:"sweep",label:"Sweep Floor",category:"Cleaning"},{key:"vacuum",label:"Vacuum",category:"Cleaning"},{key:"mop",label:"Mop",category:"Cleaning"},{key:"wipe",label:"Wipe Down",category:"Cleaning"},{key:"dusting",label:"Dusting",category:"Cleaning"},{key:"bucket",label:"Deep Clean",category:"Cleaning"},{key:"bathroom",label:"Bathroom",category:"Cleaning"},{key:"windows",label:"Windows",category:"Cleaning"},{key:"recycling",label:"Recycling",category:"Cleaning"},{key:"lawn",label:"Lawn",category:"Outdoors"},{key:"garden",label:"Garden",category:"Outdoors"},{key:"plant",label:"Plants",category:"Outdoors"},{key:"leaves",label:"Rake Leaves",category:"Outdoors"},{key:"snow",label:"Shovel Snow",category:"Outdoors"},{key:"garage",label:"Garage",category:"Outdoors"},{key:"homework",label:"Homework",category:"School"},{key:"reading",label:"Reading",category:"School"},{key:"book",label:"Books",category:"School"},{key:"pencil",label:"Study",category:"School"},{key:"calculator",label:"Math",category:"School"},{key:"piano",label:"Piano",category:"School"},{key:"practice",label:"Practice",category:"School"},{key:"medicine",label:"Medicine",category:"Health"},{key:"water",label:"Drink Water",category:"Health"},{key:"exercise",label:"Exercise",category:"Health"},{key:"sport",label:"Sport",category:"Health"},{key:"walk",label:"Walk",category:"Health"},{key:"art",label:"Art",category:"Hobbies"},{key:"music",label:"Music",category:"Hobbies"},{key:"bike",label:"Bike",category:"Hobbies"},{key:"games",label:"Games",category:"Hobbies"},{key:"tools",label:"Tools",category:"Home"},{key:"smarthome",label:"Smart Home",category:"Home"},{key:"screen",label:"Devices",category:"Home"},{key:"car",label:"Car",category:"Home"},{key:"shop",label:"Shopping",category:"Home"},{key:"phone",label:"Phone",category:"Home"},{key:"mail",label:"Mail",category:"Home"},{key:"errand",label:"Errand",category:"Home"},{key:"chore",label:"Chore",category:"Generic"},{key:"star",label:"Star Task",category:"Generic"},{key:"check",label:"Done",category:"Generic"},{key:"timer",label:"Timed Task",category:"Generic"}],Ha=[{key:"candy",label:"Candy",category:"Treats"},{key:"icecream",label:"Ice Cream",category:"Treats"},{key:"snack",label:"Snack",category:"Treats"},{key:"cake",label:"Cake",category:"Treats"},{key:"bread",label:"Baked Good",category:"Treats"},{key:"cash",label:"Cash",category:"Money & Gifts"},{key:"gift",label:"Gift",category:"Money & Gifts"},{key:"shop",label:"Shopping",category:"Money & Gifts"},{key:"sticker",label:"Sticker",category:"Money & Gifts"},{key:"screen",label:"Screen Time",category:"Screen Time"},{key:"games",label:"Video Games",category:"Screen Time"},{key:"controller",label:"Gamepad",category:"Screen Time"},{key:"movie",label:"Movie",category:"Screen Time"},{key:"phone",label:"Phone Time",category:"Screen Time"},{key:"bike",label:"Bike Ride",category:"Outings"},{key:"car",label:"Car Trip",category:"Outings"},{key:"walk",label:"Walk Out",category:"Outings"},{key:"sport",label:"Sports",category:"Outings"},{key:"pet",label:"Pet Time",category:"Outings"},{key:"toy",label:"Toy",category:"Fun & Special"},{key:"party",label:"Party",category:"Fun & Special"},{key:"trophy",label:"Trophy",category:"Fun & Special"},{key:"star",label:"Special",category:"Fun & Special"},{key:"music",label:"Music",category:"Fun & Special"},{key:"art",label:"Art Supplies",category:"Fun & Special"},{key:"book",label:"Book",category:"Fun & Special"},{key:"timer",label:"Extra Time",category:"Fun & Special"}],vo=["#7F77DD","#30d158","#ff9f0a","#ff453a","#5ac8fa","#ff2d55","#af52de"];mr=Object.keys(aa)});function fe(e){return!e||e.type!=="task_skipped"||e.instance_status!=="skipped"||!e.reference_id||!e.person_id?"":`<button class="fh-btn fh-btn-ghost fh-btn-sm fh-late-claim"
                     data-act="claim-late"
                     data-iid="${C(e.reference_id)}"
                     data-pid="${C(e.person_id)}"
-                    title="Claim this late \u2014 a parent has to approve it">Claim</button>`}function me(e,t="28px"){return e!=null&&e.icon?`<span class="fh-store-item-icon">${pe(e.icon,null,t)}</span>`:""}function U(e,t){let a=Math.min(Math.max(0,e),t.length-1);return t[a]}function ge(e,t,a){if(e&&(e.rank_gain_eff!=null||e.rank_drop_eff!=null))return{dropThr:e.rank_drop_eff??0,gainThr:e.rank_gain_eff??0};let o=(s,i,n,l)=>{if(Array.isArray(s)&&s.length){let d=Math.min(Math.max(0,a|0),s.length-1),p=s[d];if(p!=null)return p}return i??n??l};return{dropThr:o(e==null?void 0:e.rank_drop_thresholds,e==null?void 0:e.rank_drop_threshold,t==null?void 0:t.rank_drop_threshold,50),gainThr:o(e==null?void 0:e.rank_gain_thresholds,e==null?void 0:e.rank_gain_threshold,t==null?void 0:t.rank_gain_threshold,75)}}function ja(e=0){let t=new Date,a=t.getDay(),o=(e+1)%7,s=(a-o+7)%7,i=new Date(t);return i.setHours(0,0,0,0),i.setDate(i.getDate()-s),i}function be(e,t,a=0){let o=ja(a);return(t||[]).filter(s=>s.person_id===e&&(s.points_delta||0)>0&&new Date(s.timestamp)>=o).reduce((s,i)=>s+(i.points_delta||0),0)}function ue(e,t,a=0){let o=ja(a);return(t||[]).filter(s=>s.person_id!==e||s.type!=="task_skipped"||(s.points_delta||0)>=0?!1:(s.due_date?new Date(`${s.due_date}T00:00:00`):new Date(s.timestamp))>=o).reduce((s,i)=>s+Math.abs(i.points_delta||0),0)}function ve(e){return e!=null&&e.penalties_paused?0:((e==null?void 0:e.tasks_due_today_list)||[]).filter(t=>t.status==="pending"&&t.chore_type!=="reminder"&&t.penalty_enabled&&(t.penalty_points||0)>0).reduce((t,a)=>{let o=a.daily_penalty_after_days||0;return(a.recurrence_type||"daily")==="daily"&&o&&(a.skip_streak||0)+1<o?t:t+(a.penalty_points||0)},0)}function xe(e,t,a,o,s,i,n){var k;if(e>=999)return"";let l=U(e,s),d=e>=s.length-1,p=e<=0,c=(n==null?void 0:n.assigned_ppw)||((k=n==null?void 0:n.rank_curve)==null?void 0:k.cap)||0,b=Math.max(c||Math.round(o*1.2),o,t,1),g=A=>Math.min(100,Math.max(0,Math.round(A/b*100))),u=g(t),x=g(a),w=g(o),m,$;!d&&t>=o?(m=i,$=`${t} pts \xB7 rank up ready`):!p&&t<a?(m="#E07A4C",$=`${t} pts \xB7 ${Math.max(0,a-t)} to hold`):d?(m="#E0B84C",$=`${t} pts \xB7 max rank`):(m="#E0B84C",$=`${t} pts \xB7 ${Math.max(0,o-t)} to rank up`);let S=(A,E,F,D,R)=>`<span class="fh-rank-bar-mark fh-rank-bar-mark--${A}" style="left:${E}%" title="${R}"></span><span class="fh-rank-bar-mark-val fh-rank-bar-mark-val--${A}" style="left:${E}%">${D}${F}</span>`,v=p?"":S("drop",x,a,"\u25BE",`Drop below ${a}`),h=d?"":S("gain",w,o,"\u25B4",`Rank up at ${o}`);return`
+                    title="Claim this late \u2014 a parent has to approve it">Claim</button>`}function me(e,t="28px"){return e!=null&&e.icon?`<span class="fh-store-item-icon">${pe(e.icon,null,t)}</span>`:""}function U(e,t){let a=Math.min(Math.max(0,e),t.length-1);return t[a]}function ge(e,t,a){if(e&&(e.rank_gain_eff!=null||e.rank_drop_eff!=null))return{dropThr:e.rank_drop_eff??0,gainThr:e.rank_gain_eff??0};let o=(s,i,n,r)=>{if(Array.isArray(s)&&s.length){let d=Math.min(Math.max(0,a|0),s.length-1),p=s[d];if(p!=null)return p}return i??n??r};return{dropThr:o(e==null?void 0:e.rank_drop_thresholds,e==null?void 0:e.rank_drop_threshold,t==null?void 0:t.rank_drop_threshold,50),gainThr:o(e==null?void 0:e.rank_gain_thresholds,e==null?void 0:e.rank_gain_threshold,t==null?void 0:t.rank_gain_threshold,75)}}function ja(e=0){let t=new Date,a=t.getDay(),o=(e+1)%7,s=(a-o+7)%7,i=new Date(t);return i.setHours(0,0,0,0),i.setDate(i.getDate()-s),i}function be(e,t,a=0){let o=ja(a);return(t||[]).filter(s=>s.person_id===e&&(s.points_delta||0)>0&&new Date(s.timestamp)>=o).reduce((s,i)=>s+(i.points_delta||0),0)}function ue(e,t,a=0){let o=ja(a);return(t||[]).filter(s=>s.person_id!==e||s.type!=="task_skipped"||(s.points_delta||0)>=0?!1:(s.due_date?new Date(`${s.due_date}T00:00:00`):new Date(s.timestamp))>=o).reduce((s,i)=>s+Math.abs(i.points_delta||0),0)}function ve(e){return e!=null&&e.penalties_paused?0:((e==null?void 0:e.tasks_due_today_list)||[]).filter(t=>t.status==="pending"&&t.chore_type!=="reminder"&&t.penalty_enabled&&(t.penalty_points||0)>0).reduce((t,a)=>{let o=a.daily_penalty_after_days||0;return(a.recurrence_type||"daily")==="daily"&&o&&(a.skip_streak||0)+1<o?t:t+(a.penalty_points||0)},0)}function xe(e,t,a,o,s,i,n){var w;if(e>=999)return"";let r=U(e,s),d=e>=s.length-1,p=e<=0,c=(n==null?void 0:n.assigned_ppw)||((w=n==null?void 0:n.rank_curve)==null?void 0:w.cap)||0,b=Math.max(c||Math.round(o*1.2),o,t,1),g=z=>Math.min(100,Math.max(0,Math.round(z/b*100))),u=g(t),v=g(a),_=g(o),f,$;!d&&t>=o?(f=i,$=`${t} pts \xB7 rank up ready`):!p&&t<a?(f="#E07A4C",$=`${t} pts \xB7 ${Math.max(0,a-t)} to hold`):d?(f="#E0B84C",$=`${t} pts \xB7 max rank`):(f="#E0B84C",$=`${t} pts \xB7 ${Math.max(0,o-t)} to rank up`);let S=(z,E,F,D,R)=>`<span class="fh-rank-bar-mark fh-rank-bar-mark--${z}" style="left:${E}%" title="${R}"></span><span class="fh-rank-bar-mark-val fh-rank-bar-mark-val--${z}" style="left:${E}%">${D}${F}</span>`,x=p?"":S("drop",v,a,"\u25BE",`Drop below ${a}`),h=d?"":S("gain",_,o,"\u25B4",`Rank up at ${o}`);return`
         <div class="fh-rank-bar-row">
-            <span class="fh-rank-bar-label" style="color:${i}">${f(l.name)}</span>
+            <span class="fh-rank-bar-label" style="color:${i}">${m(r.name)}</span>
             <span class="fh-rank-bar-track">
-                <span class="fh-rank-bar-fill" style="width:${u}%;background:${m}"></span>
-                ${v}
+                <span class="fh-rank-bar-fill" style="width:${u}%;background:${f}"></span>
+                ${x}
                 ${h}
             </span>
-            <span class="fh-rank-bar-status">${f($)}</span>
-        </div>`}function xo(e,t){let a=e==null?void 0:e.person_id;if(!a)return[];let o=(t==null?void 0:t.people)||[],s=l=>{var d;return((d=o.find(p=>p.person_id===l))==null?void 0:d.name)||"\u2014"},i=l=>{let d=o.find(p=>p.person_id===l);return d&&d.active!==!1},n=[];for(let l of(t==null?void 0:t.active_chores)||[]){let d=l.rotation_pool||[];if(!d.includes(a))continue;let p=d.filter(i);if(!p.length)continue;let c=l.assigned_to&&l.assigned_to[0]||p[0],b=p.indexOf(c),g=p[((b+1)%p.length+p.length)%p.length],u=l.rotation_cadence||"",x="";if(u==="weekly"){let w=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],$=((l.rotation_switch_weekday??0)+1)%7,S=new Date;S.setHours(0,0,0,0);let v=($-S.getDay()+7)%7;v===0&&(v=7);let h=new Date(S);h.setDate(h.getDate()+v),x=`${w[h.getDay()]} ${h.getMonth()+1}/${h.getDate()}`}else u==="per_instance"?x="next time":u==="daily"&&(x="tomorrow");n.push({chore:l.name,mine:c===a,youNext:g===a&&c!==a,currentName:s(c),nextName:s(g),switchWhen:x})}return n}function ye(e,t,a){let o=xo(e,t),s=o.filter(d=>d.mine),i=o.filter(d=>d.youNext);if(!s.length&&!i.length)return"";let n=a||"var(--fh-accent)",l=(d,p,c)=>p.length?`
+            <span class="fh-rank-bar-status">${m($)}</span>
+        </div>`}function xo(e,t){let a=e==null?void 0:e.person_id;if(!a)return[];let o=(t==null?void 0:t.people)||[],s=r=>{var d;return((d=o.find(p=>p.person_id===r))==null?void 0:d.name)||"\u2014"},i=r=>{let d=o.find(p=>p.person_id===r);return d&&d.active!==!1},n=[];for(let r of(t==null?void 0:t.active_chores)||[]){let d=r.rotation_pool||[];if(!d.includes(a))continue;let p=d.filter(i);if(!p.length)continue;let c=r.assigned_to&&r.assigned_to[0]||p[0],b=p.indexOf(c),g=p[((b+1)%p.length+p.length)%p.length],u=r.rotation_cadence||"",v="";if(u==="weekly"){let _=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],$=((r.rotation_switch_weekday??0)+1)%7,S=new Date;S.setHours(0,0,0,0);let x=($-S.getDay()+7)%7;x===0&&(x=7);let h=new Date(S);h.setDate(h.getDate()+x),v=`${_[h.getDay()]} ${h.getMonth()+1}/${h.getDate()}`}else u==="per_instance"?v="next time":u==="daily"&&(v="tomorrow");n.push({chore:r.name,mine:c===a,youNext:g===a&&c!==a,currentName:s(c),nextName:s(g),switchWhen:v})}return n}function ye(e,t,a){let o=xo(e,t),s=o.filter(d=>d.mine),i=o.filter(d=>d.youNext);if(!s.length&&!i.length)return"";let n=a||"var(--fh-accent)",r=(d,p,c)=>p.length?`
         <div class="fh-rot-group">
-          <div class="fh-rot-group-hdr" style="color:${n}">${f(d)}</div>
+          <div class="fh-rot-group-hdr" style="color:${n}">${m(d)}</div>
           ${p.map(b=>`
             <div class="fh-rot-line">
-              <span class="fh-rot-line-chore">${f(b.chore)}</span>
-              ${c&&b.switchWhen?`<span class="fh-rot-line-when">${f(b.switchWhen)}</span>`:""}
+              <span class="fh-rot-line-chore">${m(b.chore)}</span>
+              ${c&&b.switchWhen?`<span class="fh-rot-line-when">${m(b.switchWhen)}</span>`:""}
             </div>`).join("")}
-        </div>`:"";return l("Current",s,!1)+l("Up Next",i,!0)}function ke(e,t){if(!e)return"";let a=e.completion_milestone||0,o=e.completion_streak||0;if(a<=0||o<=0)return"";let s=e.completion_threshold_pct||80;return`
+        </div>`:"";return r("Current",s,!1)+r("Up Next",i,!0)}function we(e,t){if(!e)return"";let a=e.completion_milestone||0,o=e.completion_streak||0;if(a<=0||o<=0)return"";let s=e.completion_threshold_pct||80;return`
         <div class="fh-success-streak" style="--ss-tone:${t||"#F8D38A"}">
             <span class="fh-success-streak-icon">\u{1F525}</span>
             <span class="fh-success-streak-val">${o}d streak</span>
             <span class="fh-success-streak-sep">\xB7</span>
             <span class="fh-success-streak-target">${s}% target</span>
-        </div>`}function we(e){if(!e)return"";let t=e.weekly_completion_milestone||0,a=e.weekly_completion_streak||0;if(t<=0||a<=0)return"";let o=e.weekly_completion_threshold_pct||80;return`
+        </div>`}function ke(e){if(!e)return"";let t=e.weekly_completion_milestone||0,a=e.weekly_completion_streak||0;if(t<=0||a<=0)return"";let o=e.weekly_completion_threshold_pct||80;return`
         <div class="fh-success-streak fh-success-streak--weekly" style="--ss-tone:#5B9BD5">
             <span class="fh-success-streak-icon">\u{1F4C5}</span>
             <span class="fh-success-streak-val">${a}wk streak</span>
             <span class="fh-success-streak-sep">\xB7</span>
             <span class="fh-success-streak-target">${o}% weekly target</span>
-        </div>`}function _e(e,t,a,o=8){let s=new Map((t.active_chores||[]).map(p=>[p.chore_id,p])),i=new Map;for(let p of[...e.tasks_due_today_list||[],...e.tasks_overdue_list||[],...e.tasks_pending_approval_list||[]])p.chore_id&&p.name&&!i.has(p.chore_id)&&i.set(p.chore_id,{name:p.name,streak:p.streak||0});let l=((t.people||[]).find(p=>p.person_id===a.person_id)||{}).streaks||{},d=new Map;for(let[p,c]of Object.entries(l))d.set(p,c.count||0);for(let[p,c]of i.entries()){let b=d.get(p)||0;c.streak>b&&d.set(p,c.streak)}return[...d.entries()].map(([p,c])=>{let b=s.get(p),g=i.get(p),u=(b==null?void 0:b.name)||(g==null?void 0:g.name)||"(retired)";return{chore_id:p,name:u,streak:c,milestone:(b==null?void 0:b.streak_milestone)||0,bonus:(b==null?void 0:b.streak_bonus_points)||0,chore:b||{}}}).filter(p=>p.streak>=1).sort((p,c)=>c.streak-p.streak).slice(0,o)}function $e(e,t,a=10){let o=t>0?Math.min(t,a):7;if(t<=0)return{goalSegs:o,filledN:Math.min(e,o),countLbl:`${e}`};let s=e%t,i=e>0&&s===0?o:s,n=t-(s||t);return{goalSegs:o,filledN:i,countLbl:`${e} \xB7 next ${n}`}}function Se(e){let t=(e==null?void 0:e.streak_freezes_available)||0;return t<=0?"":`
+        </div>`}function _e(e,t,a,o=8){let s=new Map((t.active_chores||[]).map(p=>[p.chore_id,p])),i=new Map;for(let p of[...e.tasks_due_today_list||[],...e.tasks_overdue_list||[],...e.tasks_pending_approval_list||[]])p.chore_id&&p.name&&!i.has(p.chore_id)&&i.set(p.chore_id,{name:p.name,streak:p.streak||0});let r=((t.people||[]).find(p=>p.person_id===a.person_id)||{}).streaks||{},d=new Map;for(let[p,c]of Object.entries(r))d.set(p,c.count||0);for(let[p,c]of i.entries()){let b=d.get(p)||0;c.streak>b&&d.set(p,c.streak)}return[...d.entries()].map(([p,c])=>{let b=s.get(p),g=i.get(p),u=(b==null?void 0:b.name)||(g==null?void 0:g.name)||"(retired)";return{chore_id:p,name:u,streak:c,milestone:(b==null?void 0:b.streak_milestone)||0,bonus:(b==null?void 0:b.streak_bonus_points)||0,chore:b||{}}}).filter(p=>p.streak>=1).sort((p,c)=>c.streak-p.streak).slice(0,o)}function $e(e,t,a=10){let o=t>0?Math.min(t,a):7;if(t<=0)return{goalSegs:o,filledN:Math.min(e,o),countLbl:`${e}`};let s=e%t,i=e>0&&s===0?o:s,n=t-(s||t);return{goalSegs:o,filledN:i,countLbl:`${e} \xB7 next ${n}`}}function Se(e){let t=(e==null?void 0:e.streak_freezes_available)||0;return t<=0?"":`
         <div class="fh-freeze-chip" title="Streak freeze tokens \u2014 auto-spent to protect your streak on a rough day">
             <span class="fh-freeze-chip-icon">\u{1F9CA}</span>
             <span class="fh-freeze-chip-label">${t===1?"1 streak freeze":`${t} streak freezes`}</span>
@@ -5603,23 +5615,23 @@ var mo=Object.defineProperty;var N=(e,t)=>()=>(e&&(t=e(e=0)),t);var go=(e,t)=>()
                 <div class="fh-daily-progress-fill" style="width:${s}%"></div>
             </div>
             <span class="fh-daily-progress-label">${n}</span>
-        </div>`}function Ee(e){return Ga("daily",(e==null?void 0:e.daily_earned)||0,(e==null?void 0:e.daily_possible)||0,"today")}function Ce(e){return Ga("weekly",(e==null?void 0:e.week_earned)||0,(e==null?void 0:e.week_possible)||0,"this week")}function Ne(e,t){let a=e.filter(d=>d._over),o=e.filter(d=>!d._over),s=[];a.length&&s.push({label:"Overdue",tasks:a,isOverdue:!0});let i=t&&t.length?t:[...new Set(o.map(d=>d.category_label||""))],n=new Set(i);for(let d of i){let p=o.filter(c=>(c.category_label||"")===d);p.length&&s.push({label:d||"Other",tasks:p,isOverdue:!1})}let l=o.filter(d=>!n.has(d.category_label||""));return l.length&&s.push({label:"Other",tasks:l,isOverdue:!1}),s}function yo(e){if(!e)return"";let t=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],a=new Date;a.setHours(0,0,0,0);let o=e.recurrence_type,s=Number(e.days_until_reset);if(o&&o!=="one_time"&&o!=="daily"&&Number.isFinite(s)&&s>0){let l=new Date(a);return l.setDate(l.getDate()+s),s===1?"Tomorrow":s<=6?t[l.getDay()]:s===7?`Next ${t[l.getDay()].slice(0,3)}`:`${l.getMonth()+1}/${l.getDate()}`}if(!e.due_date)return"";let i=new Date(e.due_date+"T00:00:00");if(isNaN(i.getTime()))return"";let n=Math.round((i-a)/864e5);return n<0?"":n===0?"Today":n===1?"Tomorrow":n<=6?t[i.getDay()]:`${i.getMonth()+1}/${i.getDate()}`}function Y(e,t,a,o,s={}){let i=s.index,n=!!(o&&o._pendingSubmit&&o._pendingSubmit.has(e.task_id))||e.status==="pending_approval",l=!!e._over||!!e._overdue,d=e.chore_type==="reminder",p=e.streak||0,c=e.points||0,b=t.leadFormat&&!d?t.leadFormat(e,i):null,g=b!=null&&b!==""?`<div class="fh-row-lead">${f(String(b))}</div>`:"",u=t.kickerFormat&&!d?t.kickerFormat(e,i):null,x=u!=null&&u!==""?`<div class="fh-row-kicker">${f(String(u))}</div>`:"",w=t.iconColor?t.iconColor(e,l):void 0,m=`<div class="fh-row-icon">${pe(e.icon,w)}</div>`,$=e.description?`<div class="fh-row-desc">${f(e.description)}</div>`:"",S=!d&&e.penalty_enabled&&e.penalty_points>0,v=S&&!c?`<div class="fh-row-penalty">\u2212${e.penalty_points}pts if skipped</div>`:"",h=[];if(p>=2&&!d){let _=t.streakIcon||"\u{1F525}";h.push(`<span class="fh-row-chip fh-row-chip--streak">${_} ${p}</span>`)}if(l){let _=t.statusFormat&&t.statusFormat.breach?t.statusFormat.breach(e):`BREACH \xB7 ${e.days_overdue||0}D`;h.push(`<span class="fh-row-chip fh-row-chip--breach">${f(_)}</span>`)}else if(!d&&e.days_until_reset===1){let _=t.statusFormat&&t.statusFormat.resetSoon?t.statusFormat.resetSoon(e):"RESETS 1D";h.push(`<span class="fh-row-chip fh-row-chip--reset">${f(_)}</span>`)}if(!d&&e.daily_penalty_firing){let _=t.statusFormat&&t.statusFormat.firing?t.statusFormat.firing(e):`\u2212${e.penalty_points||0}pts/day`;h.push(`<span class="fh-row-chip fh-row-chip--firing">${f(_)}</span>`)}if(!d&&e.expires_after_days&&e.due_date){let _=new Date(e.due_date);_.setDate(_.getDate()+e.expires_after_days);let M=new Date;M.setHours(0,0,0,0),_.setHours(0,0,0,0);let z=Math.round((_-M)/864e5);if(z<=2){let B=t.statusFormat&&t.statusFormat.expiry?t.statusFormat.expiry(z):z<=0?"Expires today":`Expires in ${z}d`;h.push(`<span class="fh-row-chip fh-row-chip--expiry">${f(B)}</span>`)}}let k=`<div class="fh-row-chips">${h.join("")}</div>`,A="fh-row-pts",E="";d?E="":c&&S?(A+=" fh-row-pts--dual",E=`<span class="fh-row-pts-pos">+${c}</span><span class="fh-row-pts-sep">/</span><span class="fh-row-pts-neg">\u2212${e.penalty_points}</span>`):c?E=`+${c}`:S&&(E=`<span class="fh-row-pts-neg">\u2212${e.penalty_points}</span>`);let F=!d&&!n?yo(e):"",D=F?`<div class="fh-row-due">${f(F)}</div>`:"",R=`<div class="fh-row-pts-col"><div class="${A}">${E}</div>${D}</div>`,T=s.btnData?Object.entries(s.btnData).map(([_,M])=>` data-${_}="${C(String(M??""))}"`).join(""):"",P;if(n){let _=t.btnPendingLabel||"Pending<br>Approval";P=`<div class="fh-row-btn fh-row-btn--pending" aria-disabled="true">${t.btnPendingIcon?`<span class="fh-row-btn-icon">${t.btnPendingIcon}</span>`:""}<span class="fh-row-btn-label">${_}</span></div>`}else if(d){let _=t.reminderBtnLabel||"Dismiss";P=`<button class="fh-row-btn fh-row-btn--reminder"
+        </div>`}function Ee(e){return Ga("daily",(e==null?void 0:e.daily_earned)||0,(e==null?void 0:e.daily_possible)||0,"today")}function Ce(e){return Ga("weekly",(e==null?void 0:e.week_earned)||0,(e==null?void 0:e.week_possible)||0,"this week")}function Ne(e,t){let a=e.filter(d=>d._over),o=e.filter(d=>!d._over),s=[];a.length&&s.push({label:"Overdue",tasks:a,isOverdue:!0});let i=t&&t.length?t:[...new Set(o.map(d=>d.category_label||""))],n=new Set(i);for(let d of i){let p=o.filter(c=>(c.category_label||"")===d);p.length&&s.push({label:d||"Other",tasks:p,isOverdue:!1})}let r=o.filter(d=>!n.has(d.category_label||""));return r.length&&s.push({label:"Other",tasks:r,isOverdue:!1}),s}function yo(e){if(!e)return"";let t=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],a=new Date;a.setHours(0,0,0,0);let o=e.recurrence_type,s=Number(e.days_until_reset);if(o&&o!=="one_time"&&o!=="daily"&&Number.isFinite(s)&&s>0){let r=new Date(a);return r.setDate(r.getDate()+s),s===1?"Tomorrow":s<=6?t[r.getDay()]:s===7?`Next ${t[r.getDay()].slice(0,3)}`:`${r.getMonth()+1}/${r.getDate()}`}if(!e.due_date)return"";let i=new Date(e.due_date+"T00:00:00");if(isNaN(i.getTime()))return"";let n=Math.round((i-a)/864e5);return n<0?"":n===0?"Today":n===1?"Tomorrow":n<=6?t[i.getDay()]:`${i.getMonth()+1}/${i.getDate()}`}function Y(e,t,a,o,s={}){let i=s.index,n=!!(o&&o._pendingSubmit&&o._pendingSubmit.has(e.task_id))||e.status==="pending_approval",r=!!e._over||!!e._overdue,d=e.chore_type==="reminder",p=e.streak||0,c=e.points||0,b=t.leadFormat&&!d?t.leadFormat(e,i):null,g=b!=null&&b!==""?`<div class="fh-row-lead">${m(String(b))}</div>`:"",u=t.kickerFormat&&!d?t.kickerFormat(e,i):null,v=u!=null&&u!==""?`<div class="fh-row-kicker">${m(String(u))}</div>`:"",_=t.iconColor?t.iconColor(e,r):void 0,f=`<div class="fh-row-icon">${pe(e.icon,_)}</div>`,$=e.description?`<div class="fh-row-desc">${m(e.description)}</div>`:"",S=!d&&e.penalty_enabled&&e.penalty_points>0,x=S&&!c?`<div class="fh-row-penalty">\u2212${e.penalty_points}pts if skipped</div>`:"",h=[];if(p>=2&&!d){let k=t.streakIcon||"\u{1F525}";h.push(`<span class="fh-row-chip fh-row-chip--streak">${k} ${p}</span>`)}if(r){let k=t.statusFormat&&t.statusFormat.breach?t.statusFormat.breach(e):`BREACH \xB7 ${e.days_overdue||0}D`;h.push(`<span class="fh-row-chip fh-row-chip--breach">${m(k)}</span>`)}else if(!d&&e.days_until_reset===1){let k=t.statusFormat&&t.statusFormat.resetSoon?t.statusFormat.resetSoon(e):"RESETS 1D";h.push(`<span class="fh-row-chip fh-row-chip--reset">${m(k)}</span>`)}if(!d&&e.daily_penalty_firing){let k=t.statusFormat&&t.statusFormat.firing?t.statusFormat.firing(e):`\u2212${e.penalty_points||0}pts/day`;h.push(`<span class="fh-row-chip fh-row-chip--firing">${m(k)}</span>`)}if(!d&&e.expires_after_days&&e.due_date){let k=new Date(e.due_date);k.setDate(k.getDate()+e.expires_after_days);let M=new Date;M.setHours(0,0,0,0),k.setHours(0,0,0,0);let A=Math.round((k-M)/864e5);if(A<=2){let B=t.statusFormat&&t.statusFormat.expiry?t.statusFormat.expiry(A):A<=0?"Expires today":`Expires in ${A}d`;h.push(`<span class="fh-row-chip fh-row-chip--expiry">${m(B)}</span>`)}}let w=`<div class="fh-row-chips">${h.join("")}</div>`,z="fh-row-pts",E="";d?E="":c&&S?(z+=" fh-row-pts--dual",E=`<span class="fh-row-pts-pos">+${c}</span><span class="fh-row-pts-sep">/</span><span class="fh-row-pts-neg">\u2212${e.penalty_points}</span>`):c?E=`+${c}`:S&&(E=`<span class="fh-row-pts-neg">\u2212${e.penalty_points}</span>`);let F=!d&&!n?yo(e):"",D=F?`<div class="fh-row-due">${m(F)}</div>`:"",R=`<div class="fh-row-pts-col"><div class="${z}">${E}</div>${D}</div>`,T=s.btnData?Object.entries(s.btnData).map(([k,M])=>` data-${k}="${C(String(M??""))}"`).join(""):"",P;if(n){let k=t.btnPendingLabel||"Pending<br>Approval";P=`<div class="fh-row-btn fh-row-btn--pending" aria-disabled="true">${t.btnPendingIcon?`<span class="fh-row-btn-icon">${t.btnPendingIcon}</span>`:""}<span class="fh-row-btn-label">${k}</span></div>`}else if(d){let k=t.reminderBtnLabel||"Dismiss";P=`<button class="fh-row-btn fh-row-btn--reminder"
                            data-act="complete" data-tid="${C(e.task_id)}" data-pid="${C(a.person_id)}"${T}>
-                       <span class="fh-row-btn-label">${_}</span>
-                   </button>`}else{let _=t.btnLabel||"Complete",M=t.btnIcon?`<span class="fh-row-btn-icon">${t.btnIcon}</span>`:"";P=`<button class="fh-row-btn"
+                       <span class="fh-row-btn-label">${k}</span>
+                   </button>`}else{let k=t.btnLabel||"Complete",M=t.btnIcon?`<span class="fh-row-btn-icon">${t.btnIcon}</span>`:"";P=`<button class="fh-row-btn"
                            data-act="complete" data-tid="${C(e.task_id)}" data-pid="${C(a.person_id)}"${T}>
-                       ${M}<span class="fh-row-btn-label">${_}</span>
-                   </button>`}let r=[`fh-row--${t.themeKey}`,l&&"overdue",d&&"reminder",n&&"submitted",s.rowClass||""].filter(Boolean).join(" "),y=s.rowStyle?` style="${s.rowStyle}"`:"";return`
-        <div class="fh-row ${r}"${y}>
+                       ${M}<span class="fh-row-btn-label">${k}</span>
+                   </button>`}let l=[`fh-row--${t.themeKey}`,r&&"overdue",d&&"reminder",n&&"submitted",s.rowClass||""].filter(Boolean).join(" "),y=s.rowStyle?` style="${s.rowStyle}"`:"";return`
+        <div class="fh-row ${l}"${y}>
             ${g}
-            ${m}
+            ${f}
             <div class="fh-row-body">
-                ${x}
-                <div class="fh-row-name">${f(e.name)}</div>
-                ${$}
                 ${v}
+                <div class="fh-row-name">${m(e.name)}</div>
+                ${$}
+                ${x}
             </div>
-            ${k}
+            ${w}
             ${R}
             ${P}
         </div>`}function Wa(e){return`
@@ -5632,28 +5644,28 @@ var mo=Object.defineProperty;var N=(e,t)=>()=>(e&&(t=e(e=0)),t);var go=(e,t)=>()
         <div class="fh-goal-banner">
             <div class="fh-goal-banner-head">
                 <span class="fh-goal-banner-lbl">Saving for</span>
-                <span class="fh-goal-banner-name">${f(t.name)}</span>
+                <span class="fh-goal-banner-name">${m(t.name)}</span>
                 <span class="fh-goal-banner-amt">${s}/${o} pts</span>
             </div>
             <div class="fh-goal-bar"><div class="fh-goal-bar-fill" style="width:${a}%"></div></div>
         </div>`}function He(e){let t=e==null?void 0:e.goal;if(!t)return"";let a=Math.max(0,Math.min(100,t.progress_pct|0)),o=t.remaining|0,s=o>0?`${o} pts to go`:"Goal reached!";return`
         <div class="fh-goal-rail">
             <div class="fh-goal-rail-lbl">SAVING FOR</div>
-            <div class="fh-goal-rail-name">${f(t.name)}</div>
+            <div class="fh-goal-rail-name">${m(t.name)}</div>
             <div class="fh-goal-bar"><div class="fh-goal-bar-fill" style="width:${a}%"></div></div>
-            <div class="fh-goal-rail-rem">${f(s)}</div>
-        </div>`}function Ae(e){let t=(e==null?void 0:e.max_per_period)||0;if(!t)return"";let a=(e==null?void 0:e.period)||"week",s=`${t} per ${a==="day"?"day":a==="week"?"week":"month"}`,i=e==null?void 0:e.next_available;if(!i)return`<span class="fh-store-limit">${f(s)}</span>`;let n=new Date(i+"T00:00:00"),l=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][n.getDay()],d=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][n.getMonth()],p=`${l} ${d} ${n.getDate()}`;return`<span class="fh-store-limit fh-store-limit--blocked">${f(s)} \xB7 Available ${f(p)}</span>`}function Me(e,t,a){let o=(t==null?void 0:t.goal_item_id)&&t.goal_item_id===e.item_id;return`
+            <div class="fh-goal-rail-rem">${m(s)}</div>
+        </div>`}function Ae(e){let t=(e==null?void 0:e.max_per_period)||0;if(!t)return"";let a=(e==null?void 0:e.period)||"week",s=`${t} per ${a==="day"?"day":a==="week"?"week":"month"}`,i=e==null?void 0:e.next_available;if(!i)return`<span class="fh-store-limit">${m(s)}</span>`;let n=new Date(i+"T00:00:00"),r=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][n.getDay()],d=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][n.getMonth()],p=`${r} ${d} ${n.getDate()}`;return`<span class="fh-store-limit fh-store-limit--blocked">${m(s)} \xB7 Available ${m(p)}</span>`}function Me(e,t,a){let o=(t==null?void 0:t.goal_item_id)&&t.goal_item_id===e.item_id;return`
         <button class="fh-goal-tog ${o?"is-goal":""}"
                 data-act="toggle-goal"
                 data-pid="${C(a)}"
                 data-iid="${C(e.item_id)}"
                 title="${o?"Clear goal":"Save toward this"}">
             ${o?"\u2605":"\u2606"}
-        </button>`}function Be(e,t){if(!(e!=null&&e.is_group_reward))return"";let a=e.contributors||[];if(!a.length)return"";let o=a.reduce((l,d)=>l+(d.contributed_pts||0),0),s=a.reduce((l,d)=>l+(d.target_pts||0),0),i=s>0?Math.round(o/s*100):0,n=a.map(l=>{let d=l.person_id===t,p=l.contributed_pts>=(l.target_pts||1),c=l.person_color||"#7F77DD",b=(l.person_name||"?").charAt(0).toUpperCase();return`
+        </button>`}function Be(e,t){if(!(e!=null&&e.is_group_reward))return"";let a=e.contributors||[];if(!a.length)return"";let o=a.reduce((r,d)=>r+(d.contributed_pts||0),0),s=a.reduce((r,d)=>r+(d.target_pts||0),0),i=s>0?Math.round(o/s*100):0,n=a.map(r=>{let d=r.person_id===t,p=r.contributed_pts>=(r.target_pts||1),c=r.person_color||"#7F77DD",b=(r.person_name||"?").charAt(0).toUpperCase();return`
             <span class="fh-gcp ${d?"fh-gcp--me":""} ${p?"fh-gcp--done":""}"
-                  title="${C(l.person_name||"?")} \u2014 ${l.contributed_pts}/${l.target_pts} pts${d?" (you)":""}">
-                <span class="fh-gcp-av" style="background:${c}">${f(b)}</span>
-                <span class="fh-gcp-pts">${l.contributed_pts}/${l.target_pts}</span>
+                  title="${C(r.person_name||"?")} \u2014 ${r.contributed_pts}/${r.target_pts} pts${d?" (you)":""}">
+                <span class="fh-gcp-av" style="background:${c}">${m(b)}</span>
+                <span class="fh-gcp-pts">${r.contributed_pts}/${r.target_pts}</span>
             </span>`}).join("");return`
         <div class="fh-group-reward-info">
             <div class="fh-group-reward-line">
@@ -5672,16 +5684,16 @@ var mo=Object.defineProperty;var N=(e,t)=>()=>(e&&(t=e(e=0)),t);var go=(e,t)=>()
         </button>`}function Re(e){if(!(e!=null&&e.locked))return"";let t=e.lock_reason||"Locked";return`<span class="fh-reward-lock" title="${C(t)}"
                   style="display:inline-flex;align-items:center;gap:4px;text-align:center;
                          font-size:var(--fh-text-xs);font-weight:700;line-height:1.25;
-                         color:var(--fh-overdue);max-width:140px">\u{1F512} ${f(t)}</span>`}function De(e,t,a={}){if(!e||!e.length)return"";let o=!!a.bare,s=e.map(n=>{let l=n.claimable_subtype==="multi_claim",d=l?Math.max(0,n.slots_remaining??0):1;if(l&&d<=0)return"";let p=l?`${d} spot${d===1?"":"s"} left`:"first come";return`
+                         color:var(--fh-overdue);max-width:140px">\u{1F512} ${m(t)}</span>`}function De(e,t,a={}){if(!e||!e.length)return"";let o=!!a.bare,s=e.map(n=>{let r=n.claimable_subtype==="multi_claim",d=r?Math.max(0,n.slots_remaining??0):1;if(r&&d<=0)return"";let p=r?`${d} spot${d===1?"":"s"} left`:"first come";return`
           <div class="fh-bonus-row"
                style="padding:8px;border:1px solid var(--fh-border);border-radius:8px;
                       background:var(--fh-surface);margin-bottom:6px">
             <div style="display:flex;justify-content:space-between;align-items:baseline;gap:6px">
               <span style="font-size:var(--fh-text-sm);font-weight:700;color:var(--fh-text);
-                           overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f(n.name)}</span>
+                           overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${m(n.name)}</span>
               <span style="font-size:var(--fh-text-sm);font-weight:800;color:var(--fh-success);white-space:nowrap">+${n.points||0}</span>
             </div>
-            <div style="font-size:var(--fh-text-xs);color:var(--fh-text-sec);margin:2px 0 6px">${f(p)}</div>
+            <div style="font-size:var(--fh-text-xs);color:var(--fh-text-sec);margin:2px 0 6px">${m(p)}</div>
             <button class="fh-bonus-claim"
                     data-act="ok-claim"
                     data-tid="${C(n.task_id)}"
@@ -5692,9 +5704,9 @@ var mo=Object.defineProperty;var N=(e,t)=>()=>(e&&(t=e(e=0)),t);var go=(e,t)=>()
           </div>`}).join("");if(!s.trim())return"";if(o)return s;let i=a.title||"\u2B50 Bonus chores \u2014 up for grabs";return`
       <div class="fh-bonus-board" style="margin-top:14px">
         <div style="font-size:var(--fh-text-sm);font-weight:800;letter-spacing:.04em;
-                    color:var(--fh-text-sec);margin-bottom:8px">${f(i)}</div>
+                    color:var(--fh-text-sec);margin-bottom:8px">${m(i)}</div>
         ${s}
-      </div>`}function Ie(e,t,a){let o=(e||[]).filter(n=>n.status!=="canceled");if(!o.length)return"";let s={weekly:"wk",monthly:"mo",quarterly:"qtr",biannual:"6mo",annual:"yr"};return o.map(n=>{let l=n.status==="lapsed",d=n.status==="cancel_pending",p=s[n.period]||n.period,c=n.points_cost+(n.accumulated_debt||0),b=Math.min(100,Math.round(t/Math.max(c,1)*100)),g=l?"#E85A5A":d?"#E0B84C":"currentColor",u;if(l)u=`Lapsed \xB7 owes ${n.accumulated_debt}pts`;else if(d)u="Cancellation pending approval";else{let m=n.days_until_renewal,$=m<=0?"Renews today":m===1?"Renews tomorrow":`Renews in ${m}d`,S=n.points_cost+(n.accumulated_debt||0);u=t>=S?`\u2713 Ready \xB7 ${$}`:`\u26A0 Need ${S-t}pts \xB7 ${$}`}let x=n.item_icon?`<span class="fh-sub-mini-icon">${pe(n.item_icon,null,"18px")}</span>`:"",w=d?"":`
+      </div>`}function Ie(e,t,a){let o=(e||[]).filter(n=>n.status!=="canceled");if(!o.length)return"";let s={weekly:"wk",monthly:"mo",quarterly:"qtr",biannual:"6mo",annual:"yr"};return o.map(n=>{let r=n.status==="lapsed",d=n.status==="cancel_pending",p=s[n.period]||n.period,c=n.points_cost+(n.accumulated_debt||0),b=Math.min(100,Math.round(t/Math.max(c,1)*100)),g=r?"#E85A5A":d?"#E0B84C":"currentColor",u;if(r)u=`Lapsed \xB7 owes ${n.accumulated_debt}pts`;else if(d)u="Cancellation pending approval";else{let f=n.days_until_renewal,$=f<=0?"Renews today":f===1?"Renews tomorrow":`Renews in ${f}d`,S=n.points_cost+(n.accumulated_debt||0);u=t>=S?`\u2713 Ready \xB7 ${$}`:`\u26A0 Need ${S-t}pts \xB7 ${$}`}let v=n.item_icon?`<span class="fh-sub-mini-icon">${pe(n.item_icon,null,"18px")}</span>`:"",_=d?"":`
             <button class="fh-sub-cancel-btn"
                     data-act="request-cancel-sub"
                     data-subid="${C(n.subscription_id)}"
@@ -5702,16 +5714,16 @@ var mo=Object.defineProperty;var N=(e,t)=>()=>(e&&(t=e(e=0)),t);var go=(e,t)=>()
                     data-name="${C(n.item_name)}">Cancel</button>`;return`
             <div class="fh-sub-mini-row">
                 <div class="fh-sub-mini-head">
-                    ${x}
-                    <span class="fh-sub-mini-name">${f(n.item_name)}</span>
+                    ${v}
+                    <span class="fh-sub-mini-name">${m(n.item_name)}</span>
                     <span class="fh-sub-mini-price">${n.points_cost}/${p}</span>
                 </div>
                 <div class="fh-sub-mini-bar-wrap">
                     <div class="fh-sub-mini-bar" style="width:${b}%;background:${g}"></div>
                 </div>
-                <div class="fh-sub-mini-status">${f(u)}</div>
-                ${w}
-            </div>`}).join("")}function Te(e,t,a,o){let s={weekly:"wk",monthly:"mo",quarterly:"qtr",biannual:"6mo",annual:"yr"},i=new Set(["points_awarded","subscription_started","subscription_renewed"]),n={points_awarded:"Purchased",subscription_started:"Subscribed",subscription_renewed:"Sub renewal"},l=(e||[]).filter(b=>b.status!=="canceled"),d="";l.length&&(d=`<div class="fh-store-rail-section"><div class="fh-store-rail-hdr">YOUR SUBSCRIPTIONS</div>${l.map(g=>{let u=g.status==="lapsed",x=g.status==="cancel_pending",w=s[g.period]||g.period,m=g.points_cost+(g.accumulated_debt||0),$=Math.min(100,Math.round(t/Math.max(m,1)*100)),S=u?"#E85A5A":x?"#E0B84C":"currentColor",v;if(u)v=`Lapsed \xB7 owes ${g.accumulated_debt}pts`;else if(x)v="Cancellation pending approval";else{let A=g.days_until_renewal,E=A<=0?"Renews today":A===1?"Renews tomorrow":`Renews in ${A}d`,F=g.points_cost+(g.accumulated_debt||0);v=t>=F?`\u2713 Ready \xB7 ${E}`:`\u26A0 Need ${F-t}pts \xB7 ${E}`}let h=g.item_icon?`<span class="fh-sub-mini-icon">${pe(g.item_icon,null,"18px")}</span>`:"",k=x?"":`
+                <div class="fh-sub-mini-status">${m(u)}</div>
+                ${_}
+            </div>`}).join("")}function Te(e,t,a,o){let s={weekly:"wk",monthly:"mo",quarterly:"qtr",biannual:"6mo",annual:"yr"},i=new Set(["points_awarded","subscription_started","subscription_renewed"]),n={points_awarded:"Purchased",subscription_started:"Subscribed",subscription_renewed:"Sub renewal"},r=(e||[]).filter(b=>b.status!=="canceled"),d="";r.length&&(d=`<div class="fh-store-rail-section"><div class="fh-store-rail-hdr">YOUR SUBSCRIPTIONS</div>${r.map(g=>{let u=g.status==="lapsed",v=g.status==="cancel_pending",_=s[g.period]||g.period,f=g.points_cost+(g.accumulated_debt||0),$=Math.min(100,Math.round(t/Math.max(f,1)*100)),S=u?"#E85A5A":v?"#E0B84C":"currentColor",x;if(u)x=`Lapsed \xB7 owes ${g.accumulated_debt}pts`;else if(v)x="Cancellation pending approval";else{let z=g.days_until_renewal,E=z<=0?"Renews today":z===1?"Renews tomorrow":`Renews in ${z}d`,F=g.points_cost+(g.accumulated_debt||0);x=t>=F?`\u2713 Ready \xB7 ${E}`:`\u26A0 Need ${F-t}pts \xB7 ${E}`}let h=g.item_icon?`<span class="fh-sub-mini-icon">${pe(g.item_icon,null,"18px")}</span>`:"",w=v?"":`
                 <button class="fh-sub-cancel-btn"
                         data-act="request-cancel-sub"
                         data-subid="${C(g.subscription_id)}"
@@ -5720,27 +5732,27 @@ var mo=Object.defineProperty;var N=(e,t)=>()=>(e&&(t=e(e=0)),t);var go=(e,t)=>()
                 <div class="fh-store-sub-row">
                     <div class="fh-sub-mini-head">
                         ${h}
-                        <span class="fh-sub-mini-name">${f(g.item_name)}</span>
-                        <span class="fh-sub-mini-price">${g.points_cost}/${w}</span>
+                        <span class="fh-sub-mini-name">${m(g.item_name)}</span>
+                        <span class="fh-sub-mini-price">${g.points_cost}/${_}</span>
                     </div>
                     <div class="fh-sub-mini-bar-wrap">
                         <div class="fh-sub-mini-bar" style="width:${$}%;background:${S}"></div>
                     </div>
-                    <div class="fh-sub-mini-status">${f(v)}</div>
-                    ${k}
-                </div>`}).join("")}</div>`);let p=(a||[]).filter(b=>b.person_id!==o||!i.has(b.type)?!1:b.type==="points_awarded"?/^Redeemed "/.test(b.note||""):!0).slice(0,10),c="";return p.length&&(c=`<div class="fh-store-rail-section"><div class="fh-store-rail-hdr">RECENT PURCHASES</div>${p.map(g=>{let u=n[g.type]||g.type,x=g.timestamp?ne(g.timestamp):"",w=g.type==="points_awarded"?(g.note||"").replace(/^Redeemed "(.+)"$/,"$1")||"\u2014":g.chore_name||g.note||"\u2014",m=g.points_delta?`\u2212${Math.abs(g.points_delta)}pts`:"";return`
+                    <div class="fh-sub-mini-status">${m(x)}</div>
+                    ${w}
+                </div>`}).join("")}</div>`);let p=(a||[]).filter(b=>b.person_id!==o||!i.has(b.type)?!1:b.type==="points_awarded"?/^Redeemed "/.test(b.note||""):!0).slice(0,10),c="";return p.length&&(c=`<div class="fh-store-rail-section"><div class="fh-store-rail-hdr">RECENT PURCHASES</div>${p.map(g=>{let u=n[g.type]||g.type,v=g.timestamp?ne(g.timestamp):"",_=g.type==="points_awarded"?(g.note||"").replace(/^Redeemed "(.+)"$/,"$1")||"\u2014":g.chore_name||g.note||"\u2014",f=g.points_delta?`\u2212${Math.abs(g.points_delta)}pts`:"";return`
                 <div class="fh-store-purchase-row">
-                    <div class="fh-store-purchase-name">${f(w)}</div>
+                    <div class="fh-store-purchase-name">${m(_)}</div>
                     <div class="fh-store-purchase-meta">
-                        <span class="fh-store-purchase-type">${f(u)}</span>
-                        ${m?`<span class="fh-store-purchase-pts">${m}</span>`:""}
-                        <span class="fh-store-purchase-when">${f(x)}</span>
+                        <span class="fh-store-purchase-type">${m(u)}</span>
+                        ${f?`<span class="fh-store-purchase-pts">${f}</span>`:""}
+                        <span class="fh-store-purchase-when">${m(v)}</span>
                     </div>
                 </div>`}).join("")}</div>`),d+c}function Pe(e,t){return!e||!e.length?"":`<div class="fh-group-proposals">${e.map(o=>`
         <div class="fh-group-proposal-card">
             <div class="fh-group-proposal-from">
-                \u{1F91D} <strong>${f(o.proposer_name)}</strong> wants to save for
-                <strong>${f(o.item_name)}</strong> with you
+                \u{1F91D} <strong>${m(o.proposer_name)}</strong> wants to save for
+                <strong>${m(o.item_name)}</strong> with you
             </div>
             <div class="fh-group-proposal-share">Your share: ${o.my_share_pct}%</div>
             <div class="fh-group-proposal-btns">
@@ -5757,35 +5769,35 @@ var mo=Object.defineProperty;var N=(e,t)=>()=>(e&&(t=e(e=0)),t);var go=(e,t)=>()
                     Decline
                 </button>
             </div>
-        </div>`).join("")}</div>`}var et=N(()=>{ut();Q()});function ko({attr:e,naAttr:t,person:a,balance:o,weekly:s,lost:i,atRisk:n,openCount:l,pendingCount:d,rankIdx:p,dropThr:c,gainThr:b,color:g,card:u}){return`
-        ${_o(o,s,i,n,l,d)}
+        </div>`).join("")}</div>`}var et=N(()=>{ut();Q()});function wo({attr:e,naAttr:t,person:a,balance:o,weekly:s,lost:i,atRisk:n,openCount:r,pendingCount:d,rankIdx:p,dropThr:c,gainThr:b,color:g,card:u}){return`
+        ${_o(o,s,i,n,r,d)}
         ${$o(p,s,c,b,g,a,e)}
         ${So(e,t,a,g)}
-        ${(()=>{let x=De(u._attrs("sensor.family_hub_claimable_tasks").tasks||[],a.person_id,{bare:!0});return x?je("BONUS",x):""})()}
-        ${(()=>{let x=ye(a,t,g);return x?je("ROTATION",x):""})()}
-        ${wo(e,o,a.person_id)}
+        ${(()=>{let v=De(u._attrs("sensor.family_hub_claimable_tasks").tasks||[],a.person_id,{bare:!0});return v?je("BONUS",v):""})()}
+        ${(()=>{let v=ye(a,t,g);return v?je("ROTATION",v):""})()}
+        ${ko(e,o,a.person_id)}
         ${Eo(a,t,g)}`}function je(e,t){return`
         <div class="fh-classic-rpanel">
             <div class="fh-classic-rpanel-hdr">${e}</div>
             <div class="fh-classic-rpanel-body">${t}</div>
-        </div>`}function wo(e,t,a){let o=Ie(e.subscriptions,t,a);return o?je("SUBSCRIPTIONS",o):""}function _o(e,t,a,o,s,i){let n=(d,p,c,b,g="")=>`
+        </div>`}function ko(e,t,a){let o=Ie(e.subscriptions,t,a);return o?je("SUBSCRIPTIONS",o):""}function _o(e,t,a,o,s,i){let n=(d,p,c,b,g="")=>`
         <div class="fh-classic-rkpi">
             <div class="fh-classic-rkpi-lbl">${d}</div>
             <div class="fh-classic-rkpi-val-row">
-                <span class="fh-classic-rkpi-val">${f(String(p))}</span>
+                <span class="fh-classic-rkpi-val">${m(String(p))}</span>
                 ${c?`<span class="fh-classic-rkpi-unit">${c}</span>`:""}
             </div>
-            ${b?`<div class="fh-rkpi-sub ${g}">${f(b)}</div>`:""}
-        </div>`,l=`
+            ${b?`<div class="fh-rkpi-sub ${g}">${m(b)}</div>`:""}
+        </div>`,r=`
         <div class="fh-classic-rkpi-row">
             ${n("BALANCE",O(e),"pts")}
             ${n("WEEK",`+${t}`,"pts",a>0?`\u2212${a} lost`:"0 lost","fh-rkpi-sub--loss")}
             ${n("OPEN",s,"",o>0?`\u2212${o} at risk`:null,"fh-rkpi-sub--loss")}
             ${n("PENDING",i,"")}
-        </div>`;return je("OVERVIEW",l)}function $o(e,t,a,o,s,i,n){let l=xe(e,t,a,o,Rt,s,i),d=ke(i,s),p=we(i),c=Se(n);return l?je("RANK",l+d+p+c):je("RANK",`<div class="fh-classic-rmax">${f(U(e,Rt).name)} \xB7 max</div>${d}${p}${c}`)}function So(e,t,a,o){let s=_e(e,t,a,8);if(!s.length)return je("STREAKS",'<div class="fh-classic-rempty">No active streaks yet</div>');let i=s.map(n=>{let{goalSegs:l,filledN:d,countLbl:p}=$e(n.streak,n.milestone,10),c=Array.from({length:l},(g,u)=>`<span class="fh-classic-rseg${u<d?" filled":""}" style="${u<d?`background:${o}`:""}"></span>`).join(""),b=n.milestone>0&&n.bonus>0?`<span class="fh-classic-rbonus">\u2605+${n.bonus}</span>`:"";return`
+        </div>`;return je("OVERVIEW",r)}function $o(e,t,a,o,s,i,n){let r=xe(e,t,a,o,Rt,s,i),d=we(i,s),p=ke(i),c=Se(n);return r?je("RANK",r+d+p+c):je("RANK",`<div class="fh-classic-rmax">${m(U(e,Rt).name)} \xB7 max</div>${d}${p}${c}`)}function So(e,t,a,o){let s=_e(e,t,a,8);if(!s.length)return je("STREAKS",'<div class="fh-classic-rempty">No active streaks yet</div>');let i=s.map(n=>{let{goalSegs:r,filledN:d,countLbl:p}=$e(n.streak,n.milestone,10),c=Array.from({length:r},(g,u)=>`<span class="fh-classic-rseg${u<d?" filled":""}" style="${u<d?`background:${o}`:""}"></span>`).join(""),b=n.milestone>0&&n.bonus>0?`<span class="fh-classic-rbonus">\u2605+${n.bonus}</span>`:"";return`
             <div class="fh-classic-rstreak">
                 <div class="fh-classic-rstreak-head">
-                    <span class="fh-classic-rstreak-name">${f(n.name)}</span>
+                    <span class="fh-classic-rstreak-name">${m(n.name)}</span>
                     ${b}
                 </div>
                 <div class="fh-classic-rstreak-bar">
@@ -5794,56 +5806,56 @@ var mo=Object.defineProperty;var N=(e,t)=>()=>(e&&(t=e(e=0)),t);var go=(e,t)=>()
                 </div>
             </div>`}).join("");return je("STREAKS",i)}function Eo(e,t,a){let o=(t.history_log||[]).filter(i=>i.person_id===e.person_id&&(i.points_delta||0)>0).slice(0,4);if(!o.length)return je("RECENT WINS",'<div class="fh-classic-rempty">No wins logged yet</div>');let s=o.map(i=>{let n=i.timestamp?ne(i.timestamp):"";return`
             <div class="fh-classic-rwin">
-                <div class="fh-classic-rwin-when">${f(n)}</div>
+                <div class="fh-classic-rwin-when">${m(n)}</div>
                 <div class="fh-classic-rwin-row">
-                    <span class="fh-classic-rwin-name">${f(i.chore_name||i.note||"\u2014")}</span>
+                    <span class="fh-classic-rwin-name">${m(i.chore_name||i.note||"\u2014")}</span>
                     <span class="fh-classic-rwin-pts" style="color:${a}">+${i.points_delta}</span>
                 </div>
-            </div>`}).join("");return je("RECENT WINS",s)}function Co(e,t,a,o){let s=e.tasks_due_today_list||[],i=e.tasks_overdue_list||[],n=e.tasks_pending_approval_list||[],l=(E,F)=>{let D=new Map;for(let R of E){let T=R.chore_id;(!D.has(T)||F(R,D.get(T)))&&D.set(T,R)}return[...D.values()]},d=l(i,(E,F)=>(E.days_overdue||0)>(F.days_overdue||0)),p=l(s,()=>!1),c=E=>E.chore_type==="reminder",b=p.filter(E=>c(E)),g=p.filter(E=>!c(E)),x=o._attrs("sensor.family_hub_needs_attention").category_labels||[],w=new Map(x.map((E,F)=>[E,F])),m=new Map;for(let E of g){let F=E.category_label||"Today";m.has(F)||m.set(F,[]),m.get(F).push(E)}let $=[...m.keys()].sort((E,F)=>{let D=E==="Today",R=F==="Today";if(D&&!R)return 1;if(!D&&R)return-1;let T=w.has(E)?w.get(E):1/0,P=w.has(F)?w.get(F):1/0;return T!==P?T-P:E.localeCompare(F)}),S={themeKey:"classic",btnLabel:"\u2713",btnPendingLabel:"Pending Approval",reminderBtnLabel:"Done",streakIcon:"\u{1F525}",statusFormat:{breach:E=>`${E.days_overdue}d late`,resetSoon:E=>{var R;let F=E.recurrence_type,D=E.days_until_reset;return D===0?"Resets today":D===1?"Resets tomorrow":F==="weekly"&&((R=E.recurrence_weekdays)!=null&&R.length)?`Resets ${E.recurrence_weekdays.map(T=>Bt[T]).join("/")}`:`Resets in ${D}d`},firing:E=>`-${E.penalty_points}pts/day`,expiry:E=>E<=0?"Expires today":`Expires in ${E}d`},iconColor:()=>t},v=(E,F)=>{let D=F?{...E,_over:!0}:E;return Y(D,S,a,o)},h=$.map(E=>`
-        <div class="fh-row-section-hdr">${f(E)}</div>
-        ${(m.get(E)||[]).map(F=>v(F,!1)).join("")}`).join(""),k=b.length?`
+            </div>`}).join("");return je("RECENT WINS",s)}function Co(e,t,a,o){let s=e.tasks_due_today_list||[],i=e.tasks_overdue_list||[],n=e.tasks_pending_approval_list||[],r=(E,F)=>{let D=new Map;for(let R of E){let T=R.chore_id;(!D.has(T)||F(R,D.get(T)))&&D.set(T,R)}return[...D.values()]},d=r(i,(E,F)=>(E.days_overdue||0)>(F.days_overdue||0)),p=r(s,()=>!1),c=E=>E.chore_type==="reminder",b=p.filter(E=>c(E)),g=p.filter(E=>!c(E)),v=o._attrs("sensor.family_hub_needs_attention").category_labels||[],_=new Map(v.map((E,F)=>[E,F])),f=new Map;for(let E of g){let F=E.category_label||"Today";f.has(F)||f.set(F,[]),f.get(F).push(E)}let $=[...f.keys()].sort((E,F)=>{let D=E==="Today",R=F==="Today";if(D&&!R)return 1;if(!D&&R)return-1;let T=_.has(E)?_.get(E):1/0,P=_.has(F)?_.get(F):1/0;return T!==P?T-P:E.localeCompare(F)}),S={themeKey:"classic",btnLabel:"\u2713",btnPendingLabel:"Pending Approval",reminderBtnLabel:"Done",streakIcon:"\u{1F525}",statusFormat:{breach:E=>`${E.days_overdue}d late`,resetSoon:E=>{var R;let F=E.recurrence_type,D=E.days_until_reset;return D===0?"Resets today":D===1?"Resets tomorrow":F==="weekly"&&((R=E.recurrence_weekdays)!=null&&R.length)?`Resets ${E.recurrence_weekdays.map(T=>Bt[T]).join("/")}`:`Resets in ${D}d`},firing:E=>`-${E.penalty_points}pts/day`,expiry:E=>E<=0?"Expires today":`Expires in ${E}d`},iconColor:()=>t},x=(E,F)=>{let D=F?{...E,_over:!0}:E;return Y(D,S,a,o)},h=$.map(E=>`
+        <div class="fh-row-section-hdr">${m(E)}</div>
+        ${(f.get(E)||[]).map(F=>x(F,!1)).join("")}`).join(""),w=b.length?`
         <div class="fh-row-section-hdr">Reminders</div>
-        ${b.map(E=>v(E,!1)).join("")}`:"",A=!g.length&&!d.length&&!n.length&&!b.length;return`
+        ${b.map(E=>x(E,!1)).join("")}`:"",z=!g.length&&!d.length&&!n.length&&!b.length;return`
         ${Ee(e)}
         ${Ce(e)}
         ${Wa(a)}
         <div class="fh-row-list" style="--row-color:${t}">
-            ${d.length?d.map(E=>v(E,!0)).join(""):""}
+            ${d.length?d.map(E=>x(E,!0)).join(""):""}
             ${h}
-            ${k}
+            ${w}
             ${n.length?`
                 <div class="fh-row-section-hdr">Awaiting approval</div>
                 ${n.map(E=>Y(E,S,a,o)).join("")}`:""}
         </div>
-        ${A?'<div class="fh-empty">Nothing due \u2014 nice work!</div>':""}`}function zo(e,t,a,o,s){let i=e.store_items||[];if(!i.length)return'<div class="fh-empty">No rewards in the store yet.</div>';let n=s._attrs("sensor.family_hub_needs_attention"),d=(n.redemption_queue||[]).filter(g=>g.person_id===a.person_id),p=new Set(d.map(g=>g.item_id).filter(Boolean)),c=new Set(d.filter(g=>!g.item_id).map(g=>g.item_name)),b=new Set((e.subscriptions||[]).map(g=>g.item_id));return`
+        ${z?'<div class="fh-empty">Nothing due \u2014 nice work!</div>':""}`}function zo(e,t,a,o,s){let i=e.store_items||[];if(!i.length)return'<div class="fh-empty">No rewards in the store yet.</div>';let n=s._attrs("sensor.family_hub_needs_attention"),d=(n.redemption_queue||[]).filter(g=>g.person_id===a.person_id),p=new Set(d.map(g=>g.item_id).filter(Boolean)),c=new Set(d.filter(g=>!g.item_id).map(g=>g.item_name)),b=new Set((e.subscriptions||[]).map(g=>g.item_id));return`
         <div class="fh-store-with-rail">
         <div class="fh-store-main">
         ${Pe(e.group_proposals,a.person_id)}
         ${ze(e)}
         <div class="fh-store-grid">
-            ${i.map(g=>{let u=!!g.is_group_reward,x=g.item_type==="subscription",w=x&&b.has(g.item_id),m=o>=g.points_cost,$=p.has(g.item_id)||c.has(g.name),S=!!g.next_available,v={weekly:"wk",monthly:"mo",quarterly:"qtr",biannual:"6mo",annual:"yr"}[g.subscription_period]||"mo";return`
+            ${i.map(g=>{let u=!!g.is_group_reward,v=g.item_type==="subscription",_=v&&b.has(g.item_id),f=o>=g.points_cost,$=p.has(g.item_id)||c.has(g.name),S=!!g.next_available,x={weekly:"wk",monthly:"mo",quarterly:"qtr",biannual:"6mo",annual:"yr"}[g.subscription_period]||"mo";return`
                 <div class="fh-store-item">
                     <div class="fh-store-item-head">
                         ${me(g)}
-                        <div class="fh-store-name">${f(g.name)}</div>
+                        <div class="fh-store-name">${m(g.name)}</div>
                         ${Me(g,e,a.person_id)}
                     </div>
-                    ${g.description?`<div class="fh-store-desc">${f(g.description)}</div>`:""}
+                    ${g.description?`<div class="fh-store-desc">${m(g.description)}</div>`:""}
                     ${Ae(g)}
                     ${Be(g,a.person_id)}
-                    ${u?Fe(g,a.person_id,o):g.locked&&!$&&!(x&&w)?Re(g):x?w?'<span class="fh-badge fh-badge-subscribed">Subscribed \u2713</span>':$?'<span class="fh-badge fh-badge-requested" style="text-align:center">Requested \u2713</span>':`<button class="fh-btn fh-btn-sm ${m?"fh-btn-primary":"fh-btn-ghost"}"
-                                       style="${m?`background:${t}`:""}"
+                    ${u?Fe(g,a.person_id,o):g.locked&&!$&&!(v&&_)?Re(g):v?_?'<span class="fh-badge fh-badge-subscribed">Subscribed \u2713</span>':$?'<span class="fh-badge fh-badge-requested" style="text-align:center">Requested \u2713</span>':`<button class="fh-btn fh-btn-sm ${f?"fh-btn-primary":"fh-btn-ghost"}"
+                                       style="${f?`background:${t}`:""}"
                                        data-act="redeem"
                                        data-iid="${C(g.item_id)}"
                                        data-pid="${C(a.person_id)}"
-                                       ${m?"":"disabled"}>
-                                   ${m?`Subscribe \xB7 ${g.points_cost}pts/${v}`:"Need more pts"}
+                                       ${f?"":"disabled"}>
+                                   ${f?`Subscribe \xB7 ${g.points_cost}pts/${x}`:"Need more pts"}
                                </button>`:`<div class="fh-store-price" style="color:${t}">${O(g.points_cost)}pts</div>
-                           ${$?'<span class="fh-badge fh-badge-requested" style="text-align:center">Requested \u2713</span>':S?'<button class="fh-btn fh-btn-sm fh-btn-ghost" disabled style="opacity:.5;cursor:not-allowed">Not available</button>':`<button class="fh-btn fh-btn-sm ${m?"fh-btn-primary":"fh-btn-ghost"}"
-                                          style="${m?`background:${t}`:""}"
+                           ${$?'<span class="fh-badge fh-badge-requested" style="text-align:center">Requested \u2713</span>':S?'<button class="fh-btn fh-btn-sm fh-btn-ghost" disabled style="opacity:.5;cursor:not-allowed">Not available</button>':`<button class="fh-btn fh-btn-sm ${f?"fh-btn-primary":"fh-btn-ghost"}"
+                                          style="${f?`background:${t}`:""}"
                                           data-act="redeem" data-iid="${g.item_id}" data-pid="${a.person_id}"
-                                          ${m?"":"disabled"}>
-                                      ${m?"Request":"Need more pts"}
+                                          ${f?"":"disabled"}>
+                                      ${f?"Request":"Need more pts"}
                                   </button>`}`}
                 </div>`}).join("")}
         </div>
@@ -5856,14 +5868,14 @@ var mo=Object.defineProperty;var N=(e,t)=>()=>(e&&(t=e(e=0)),t);var go=(e,t)=>()
            </span>`:"";return`
         <div class="fh-hist-row" style="--hist-color:${t.color}">
             <div class="fh-hist-info">
-                <div class="fh-hist-label">${f(t.label)}</div>
-                <div class="fh-hist-name">${f(e.chore_name||e.note||"")}</div>
+                <div class="fh-hist-label">${m(t.label)}</div>
+                <div class="fh-hist-name">${m(e.chore_name||e.note||"")}</div>
                 <div class="fh-hist-meta">${ne(e.timestamp)} ${a}</div>
             </div>
         </div>`}function Bo(e,t){let a=t._expandedSkippedDates.has(e.key),o=e.totalPenalty>0?`\u2212${e.totalPenalty}pts`:"no penalty",s=e.items.map(i=>{let n=i.points_delta?`<span style="color:var(--fh-overdue);font-weight:700">${i.points_delta}pts</span>`:"";return`
             <div class="fh-hist-subrow">
                 <div class="fh-hist-info" style="flex:1;min-width:0">
-                    <div class="fh-hist-name">${f(i.chore_name||"")}</div>
+                    <div class="fh-hist-name">${m(i.chore_name||"")}</div>
                     <div class="fh-hist-meta">${n}</div>
                 </div>
                 ${fe(i)}
@@ -5872,39 +5884,39 @@ var mo=Object.defineProperty;var N=(e,t)=>()=>(e&&(t=e(e=0)),t);var go=(e,t)=>()
             <div class="fh-hist-group-hdr" data-act="toggle-skipped-group" data-key="${e.key}">
                 <div class="fh-hist-info" style="flex:1;min-width:0">
                     <div class="fh-hist-label" style="color:var(--fh-warning)">Skipped chores</div>
-                    <div class="fh-hist-name">${f(e.dateDisplay)} \xB7 ${o}</div>
+                    <div class="fh-hist-name">${m(e.dateDisplay)} \xB7 ${o}</div>
                 </div>
                 <span class="fh-hist-expand-icon">${a?"\u25B2":"\u25BC"}</span>
             </div>
             <div class="fh-hist-subitems"${a?"":' style="display:none"'}>${s}</div>
-        </div>`}var Rt,Ua,qa=N(()=>{K();K();Q();et();Rt=[{minXP:0,name:"Level 1"},{minXP:100,name:"Level 2"},{minXP:300,name:"Level 3"},{minXP:700,name:"Level 4"},{minXP:1200,name:"Level 5"}],Ua={key:"classic",tint:"#1A2538",sigil:"\u25C7",ranks:Rt,handlesNavigation:!1,rankTitle(e){return U(e,Rt).name},homeTileSubLabel(e){return e.person_type==="parent"?"HANDLER":"FIELD AGENT"},render(e,t){var h;let a=t.child_mode?" kid-large":"",o=e._personEntityId(t.name),s=e._attrs(o),i=e._attrs("sensor.family_hub_needs_attention"),n=parseInt(((h=e._states(o))==null?void 0:h.state)||"0"),l=t.avatar_color||H,d=t.rank_index!==void 0?t.rank_index:0,{dropThr:p,gainThr:c}=ge(t,i,d),b=be(t.person_id,i.history_log,i.rank_eval_weekday),g=ue(t.person_id,i.history_log,i.rank_eval_weekday),u=ve(s),x=[{key:"tasks",label:"Tasks"},{key:"store",label:"Store"},{key:"history",label:"History"}].map(k=>`
-            <div class="fh-tab ${e._tab===k.key?"active":""}"
-                 data-act="tab" data-tab="${k.key}">${k.label}</div>`).join(""),w="";e._tab==="tasks"&&(w=Co(s,l,t,e)),e._tab==="store"&&(w=zo(s,l,t,n,e)),e._tab==="history"&&(w=Ao(t,e));let m=(s.tasks_due_today_list||[]).filter(k=>k.status==="pending").length,$=(s.tasks_pending_approval_list||[]).length,S=e._tab==="tasks",v=S?ko({attr:s,naAttr:i,person:t,balance:n,weekly:b,lost:g,atRisk:u,openCount:m,pendingCount:$,rankIdx:d,dropThr:p,gainThr:c,color:l,card:e}):"";return`
+        </div>`}var Rt,Ua,qa=N(()=>{K();K();Q();et();Rt=[{minXP:0,name:"Level 1"},{minXP:100,name:"Level 2"},{minXP:300,name:"Level 3"},{minXP:700,name:"Level 4"},{minXP:1200,name:"Level 5"}],Ua={key:"classic",tint:"#1A2538",sigil:"\u25C7",ranks:Rt,handlesNavigation:!1,rankTitle(e){return U(e,Rt).name},homeTileSubLabel(e){return e.person_type==="parent"?"HANDLER":"FIELD AGENT"},render(e,t){var h;let a=t.child_mode?" kid-large":"",o=e._personEntityId(t.name),s=e._attrs(o),i=e._attrs("sensor.family_hub_needs_attention"),n=parseInt(((h=e._states(o))==null?void 0:h.state)||"0"),r=t.avatar_color||H,d=t.rank_index!==void 0?t.rank_index:0,{dropThr:p,gainThr:c}=ge(t,i,d),b=be(t.person_id,i.history_log,i.rank_eval_weekday),g=ue(t.person_id,i.history_log,i.rank_eval_weekday),u=ve(s),v=[{key:"tasks",label:"Tasks"},{key:"store",label:"Store"},{key:"history",label:"History"}].map(w=>`
+            <div class="fh-tab ${e._tab===w.key?"active":""}"
+                 data-act="tab" data-tab="${w.key}">${w.label}</div>`).join(""),_="";e._tab==="tasks"&&(_=Co(s,r,t,e)),e._tab==="store"&&(_=zo(s,r,t,n,e)),e._tab==="history"&&(_=Ao(t,e));let f=(s.tasks_due_today_list||[]).filter(w=>w.status==="pending").length,$=(s.tasks_pending_approval_list||[]).length,S=e._tab==="tasks",x=S?wo({attr:s,naAttr:i,person:t,balance:n,weekly:b,lost:g,atRisk:u,openCount:f,pendingCount:$,rankIdx:d,dropThr:p,gainThr:c,color:r,card:e}):"";return`
             <div class="fh-classic-page${a}">
-                <div class="fh-person-header" style="border-left:4px solid ${l}">
-                    <div class="fh-avatar" style="background:${l};width:46px;height:46px;font-size:1.1rem">
+                <div class="fh-person-header" style="border-left:4px solid ${r}">
+                    <div class="fh-avatar" style="background:${r};width:46px;height:46px;font-size:1.1rem">
                         ${j(t.name)}
                     </div>
                     <div style="flex:1;min-width:0">
-                        <div style="font-size:.9rem;color:var(--fh-text-sec);font-weight:600">${f(t.name)}</div>
-                        <div class="fh-balance" style="color:${l}">
+                        <div style="font-size:.9rem;color:var(--fh-text-sec);font-weight:600">${m(t.name)}</div>
+                        <div class="fh-balance" style="color:${r}">
                             ${O(n)}<span class="fh-balance-unit">pts</span>
                         </div>
                         ${s.show_dollar_value?`<div class="fh-dollar">${G(s.dollar_value)}</div>`:""}
                     </div>
                 </div>
-                <div class="fh-tabs">${x}</div>
+                <div class="fh-tabs">${v}</div>
                 <div class="fh-classic-body ${S?"has-rail":""}">
-                    <div class="fh-classic-body-main">${w}</div>
-                    ${S?`<aside class="fh-classic-rail">${v}</aside>`:""}
+                    <div class="fh-classic-body-main">${_}</div>
+                    ${S?`<aside class="fh-classic-rail">${x}</aside>`:""}
                 </div>
-            </div>`}}});function Fo({attr:e,naAttr:t,person:a,balance:o,openCount:s,weekly:i,lost:n,atRisk:l,rank:d,rankIdx:p,dropThr:c,gainThr:b,plotDate:g,card:u}){return`
-        ${Do(o,s,i,n,l,e.show_dollar_value?e.dollar_value:null)}
+            </div>`}}});function Fo({attr:e,naAttr:t,person:a,balance:o,openCount:s,weekly:i,lost:n,atRisk:r,rank:d,rankIdx:p,dropThr:c,gainThr:b,plotDate:g,card:u}){return`
+        ${Do(o,s,i,n,r,e.show_dollar_value?e.dollar_value:null)}
         ${He(e)}
         ${Io(p,i,c,b,a,e)}
         ${To(e,t,a)}
-        ${(()=>{let x=De(u._attrs("sensor.family_hub_claimable_tasks").tasks||[],a.person_id,{bare:!0});return x?Ye("BONUS \xB7 OPEN OPS",x):""})()}
-        ${(()=>{let x=ye(a,t,ae.amber);return x?Ye("ROTATION \xB7 POOL",x):""})()}
+        ${(()=>{let v=De(u._attrs("sensor.family_hub_claimable_tasks").tasks||[],a.person_id,{bare:!0});return v?Ye("BONUS \xB7 OPEN OPS",v):""})()}
+        ${(()=>{let v=ye(a,t,ae.amber);return v?Ye("ROTATION \xB7 POOL",v):""})()}
         ${Ro(e,o,a.person_id)}
         ${Po(a,d,g)}`}function Ye(e,t,a={}){let{dense:o=!1}=a;return`
         <div class="fh-eng-rpanel ${o?"dense":""}">
@@ -5918,19 +5930,19 @@ var mo=Object.defineProperty;var N=(e,t)=>()=>(e&&(t=e(e=0)),t);var go=(e,t)=>()
         <div class="fh-eng-rkpi">
             <div class="fh-eng-rkpi-lbl">${d}</div>
             <div class="fh-eng-rkpi-val-row">
-                <span class="fh-eng-rkpi-val">${f(String(p))}</span>
+                <span class="fh-eng-rkpi-val">${m(String(p))}</span>
                 ${c?`<span class="fh-eng-rkpi-unit">${c}</span>`:""}
             </div>
-            ${b?`<div class="fh-rkpi-sub ${g}">${f(b)}</div>`:""}
-        </div>`,l=`
+            ${b?`<div class="fh-rkpi-sub ${g}">${m(b)}</div>`:""}
+        </div>`,r=`
         <div class="fh-eng-rkpi-row">
             ${n("BAL",O(e),"pts",i!=null?G(i):null)}
             ${n("OPEN",t,"wo",s>0?`\u2212${s} at risk`:null,"fh-rkpi-sub--loss")}
             ${n("WEEK",`+${a}`,"pts",o>0?`\u2212${o} lost`:"0 lost","fh-rkpi-sub--loss")}
-        </div>`;return Ye("TODAY \xB7 KPIS",l,{dense:!0})}function Io(e,t,a,o,s,i){let n=xe(e,t,a,o,vt,ae.amber,s),l=ke(s,ae.amber),d=we(s),p=Se(i);return n?Ye("RANK \xB7 TRACK",n+l+d+p):Ye("RANK \xB7 TRACK",`<div class="fh-eng-rmax">${f(U(e,vt).name)} &middot; MAX</div>${l}${d}${p}`)}function To(e,t,a){let o=_e(e,t,a,8);if(!o.length)return Ye("STREAK \xB7 CONSTELLATION",'<div class="fh-eng-rempty">NO ACTIVE STREAKS &middot; START A CYCLE</div>');let s=o.map(i=>{let{goalSegs:n,filledN:l,countLbl:d}=$e(i.streak,i.milestone,12),p=Array.from({length:n},(b,g)=>g<l),c=i.milestone>0&&i.bonus>0?`<span class="fh-eng-chip fh-eng-chip-streak">&#9733;+${i.bonus}</span>`:"";return`
+        </div>`;return Ye("TODAY \xB7 KPIS",r,{dense:!0})}function Io(e,t,a,o,s,i){let n=xe(e,t,a,o,vt,ae.amber,s),r=we(s,ae.amber),d=ke(s),p=Se(i);return n?Ye("RANK \xB7 TRACK",n+r+d+p):Ye("RANK \xB7 TRACK",`<div class="fh-eng-rmax">${m(U(e,vt).name)} &middot; MAX</div>${r}${d}${p}`)}function To(e,t,a){let o=_e(e,t,a,8);if(!o.length)return Ye("STREAK \xB7 CONSTELLATION",'<div class="fh-eng-rempty">NO ACTIVE STREAKS &middot; START A CYCLE</div>');let s=o.map(i=>{let{goalSegs:n,filledN:r,countLbl:d}=$e(i.streak,i.milestone,12),p=Array.from({length:n},(b,g)=>g<r),c=i.milestone>0&&i.bonus>0?`<span class="fh-eng-chip fh-eng-chip-streak">&#9733;+${i.bonus}</span>`:"";return`
             <div class="fh-eng-rstreak">
                 <div class="fh-eng-rstreak-head">
-                    <span class="fh-eng-rstreak-name">${f(i.name)}</span>
+                    <span class="fh-eng-rstreak-name">${m(i.name)}</span>
                     ${c}
                 </div>
                 <div class="fh-eng-rstreak-bar">
@@ -5950,27 +5962,27 @@ var mo=Object.defineProperty;var N=(e,t)=>()=>(e&&(t=e(e=0)),t);var go=(e,t)=>()
         <div class="fh-eng-rsheet-legend">&#9671; APPROVAL STAMP TO COMPLETE &middot; DIMENSIONS IN POINTS &middot; DO NOT SCALE</div>`;return Ye("SHEET \xB7 A-101",o,{dense:!0})}function ct(e,t,a){return`
         <div class="fh-eng-tb-cell">
             <div class="fh-eng-tb-cell-lbl">${e}</div>
-            <div class="fh-eng-tb-cell-val" style="${a?`color:${a}`:""}">${f(t)}</div>
-        </div>`}function Lo(e,t,a,o){let s=e.tasks_due_today_list||[],i=e.tasks_overdue_list||[],n=e.tasks_pending_approval_list||[],l=o._attrs("sensor.family_hub_needs_attention").category_labels||[],d=(m,$)=>{let S=new Map;for(let v of m){let h=v.chore_id;(!S.has(h)||$(v,S.get(h)))&&S.set(h,v)}return[...S.values()]},p=d(i,(m,$)=>(m.days_overdue||0)>($.days_overdue||0)),c=d(s.filter(m=>m.chore_type!=="reminder"),()=>!1),b=[...p.map(m=>({...m,_over:!0})),...c];if(!b.length&&!n.length)return'<div class="fh-eng-empty">&#10003; ALL WORK ORDERS COMPLETE &middot; AREA CLEAR</div>';let g=0,u=Ne(b,l).map(m=>{let $=`<div class="fh-row-section-hdr">// ${f(m.label.toUpperCase())}</div>`,S=m.tasks.map(v=>Y(v,Ja,t,o,{index:++g})).join("");return $+S}).join(""),x=0,w=n.length?`
+            <div class="fh-eng-tb-cell-val" style="${a?`color:${a}`:""}">${m(t)}</div>
+        </div>`}function Lo(e,t,a,o){let s=e.tasks_due_today_list||[],i=e.tasks_overdue_list||[],n=e.tasks_pending_approval_list||[],r=o._attrs("sensor.family_hub_needs_attention").category_labels||[],d=(f,$)=>{let S=new Map;for(let x of f){let h=x.chore_id;(!S.has(h)||$(x,S.get(h)))&&S.set(h,x)}return[...S.values()]},p=d(i,(f,$)=>(f.days_overdue||0)>($.days_overdue||0)),c=d(s.filter(f=>f.chore_type!=="reminder"),()=>!1),b=[...p.map(f=>({...f,_over:!0})),...c];if(!b.length&&!n.length)return'<div class="fh-eng-empty">&#10003; ALL WORK ORDERS COMPLETE &middot; AREA CLEAR</div>';let g=0,u=Ne(b,r).map(f=>{let $=`<div class="fh-row-section-hdr">// ${m(f.label.toUpperCase())}</div>`,S=f.tasks.map(x=>Y(x,Ja,t,o,{index:++g})).join("");return $+S}).join(""),v=0,_=n.length?`
         <div class="fh-row-section-hdr">// PENDING REVIEW</div>
-        ${n.map(m=>Y(m,Ja,t,o,{index:++x})).join("")}`:"";return`
+        ${n.map(f=>Y(f,Ja,t,o,{index:++v})).join("")}`:"";return`
         ${Ee(e)}
         ${Ce(e)}
         <div class="fh-row-list">
             ${u}
-            ${w}
-        </div>`}function Oo(e,t,a,o){let s=e.store_items||[];if(!s.length)return'<div class="fh-eng-empty">NO REWARDS CONFIGURED &middot; PENDING ADMIN ACTION</div>';let i=o._attrs("sensor.family_hub_needs_attention"),l=(i.redemption_queue||[]).filter(b=>b.person_id===t.person_id),d=new Set(l.map(b=>b.item_id).filter(Boolean)),p=new Set(l.filter(b=>!b.item_id).map(b=>b.item_name)),c=new Set((e.subscriptions||[]).map(b=>b.item_id));return`
+            ${_}
+        </div>`}function Oo(e,t,a,o){let s=e.store_items||[];if(!s.length)return'<div class="fh-eng-empty">NO REWARDS CONFIGURED &middot; PENDING ADMIN ACTION</div>';let i=o._attrs("sensor.family_hub_needs_attention"),r=(i.redemption_queue||[]).filter(b=>b.person_id===t.person_id),d=new Set(r.map(b=>b.item_id).filter(Boolean)),p=new Set(r.filter(b=>!b.item_id).map(b=>b.item_name)),c=new Set((e.subscriptions||[]).map(b=>b.item_id));return`
         <div class="fh-store-with-rail">
         <div class="fh-store-main">
         ${Pe(e.group_proposals,t.person_id)}
         ${ze(e)}
         <div class="fh-eng-reward-list">
-            ${s.map(b=>{let g=!!b.is_group_reward,u=b.item_type==="subscription",x=u&&c.has(b.item_id),w=a>=b.points_cost,m=d.has(b.item_id)||p.has(b.name),$=!!b.next_available,S={weekly:"wk",monthly:"mo",quarterly:"qtr",biannual:"6mo",annual:"yr"}[b.subscription_period]||"mo";return`
+            ${s.map(b=>{let g=!!b.is_group_reward,u=b.item_type==="subscription",v=u&&c.has(b.item_id),_=a>=b.points_cost,f=d.has(b.item_id)||p.has(b.name),$=!!b.next_available,S={weekly:"wk",monthly:"mo",quarterly:"qtr",biannual:"6mo",annual:"yr"}[b.subscription_period]||"mo";return`
                 <div class="fh-eng-reward-row">
                     ${me(b)}
                     <div class="fh-eng-reward-body">
-                        <div class="fh-eng-wo-name" style="font-size:1rem">${f(b.name)}</div>
-                        ${b.description?`<div class="fh-eng-status">${f(b.description)}</div>`:""}
+                        <div class="fh-eng-wo-name" style="font-size:1rem">${m(b.name)}</div>
+                        ${b.description?`<div class="fh-eng-status">${m(b.description)}</div>`:""}
                         ${Ae(b)}
                         ${Be(b,t.person_id)}
                     </div>
@@ -5979,17 +5991,17 @@ var mo=Object.defineProperty;var N=(e,t)=>()=>(e&&(t=e(e=0)),t);var go=(e,t)=>()
                                <div class="fh-eng-pts-lbl">POINTS</div>
                            </div>`}
                     ${Me(b,e,t.person_id)}
-                    ${g?Fe(b,t.person_id,a):b.locked&&!m&&!(u&&x)?Re(b):u?x?`<div class="fh-eng-status" style="color:${ae.amber}">&#10003; SUBSCRIBED</div>`:m?`<div class="fh-eng-status" style="color:${ae.amber}">&#10003; REQUESTED</div>`:`<button class="fh-eng-stamp-btn ${w?"":"disabled"}"
+                    ${g?Fe(b,t.person_id,a):b.locked&&!f&&!(u&&v)?Re(b):u?v?`<div class="fh-eng-status" style="color:${ae.amber}">&#10003; SUBSCRIBED</div>`:f?`<div class="fh-eng-status" style="color:${ae.amber}">&#10003; REQUESTED</div>`:`<button class="fh-eng-stamp-btn ${_?"":"disabled"}"
                                        data-act="redeem"
                                        data-iid="${C(b.item_id)}"
                                        data-pid="${C(t.person_id)}"
-                                       style="font-size:9px;${w?"":"opacity:.4;cursor:not-allowed"}">
-                                   ${w?`SUBSCRIBE \xB7 ${b.points_cost}/${S}`:`INSUFFICIENT
+                                       style="font-size:9px;${_?"":"opacity:.4;cursor:not-allowed"}">
+                                   ${_?`SUBSCRIBE \xB7 ${b.points_cost}/${S}`:`INSUFFICIENT
 FUNDS`}
-                               </button>`:m?`<div class="fh-eng-status" style="color:${ae.amber}">&#10003; REQUESTED</div>`:$?`<div class="fh-eng-status" style="color:${ae.amber};font-size:.75rem">NOT AVAILABLE</div>`:`<button class="fh-eng-stamp-btn ${w?"":"disabled"}"
+                               </button>`:f?`<div class="fh-eng-status" style="color:${ae.amber}">&#10003; REQUESTED</div>`:$?`<div class="fh-eng-status" style="color:${ae.amber};font-size:.75rem">NOT AVAILABLE</div>`:`<button class="fh-eng-stamp-btn ${_?"":"disabled"}"
                                    data-act="redeem" data-iid="${b.item_id}" data-pid="${t.person_id}"
-                                   style="font-size:9px;${w?"":"opacity:.4;cursor:not-allowed"}">
-                               ${w?"REQUISITION":`INSUFFICIENT
+                                   style="font-size:9px;${_?"":"opacity:.4;cursor:not-allowed"}">
+                               ${_?"REQUISITION":`INSUFFICIENT
 FUNDS`}
                            </button>`}
                 </div>`}).join("")}
@@ -6003,28 +6015,28 @@ FUNDS`}
             ${ce(o).slice(0,12).map(i=>i.isGroup?jo(i,t):Ho(i.entry)).join("")}
         </div>`:'<div class="fh-eng-empty">NO RECORDS ON FILE &middot; HISTORY BEGINS ON FIRST COMPLETION</div>'}function Ho(e){let t=ie[e.type]||{label:e.type,color:ae.inkMute},a=e.points_delta?e.points_delta>0?`+${e.points_delta}pts`:`${e.points_delta}pts`:"",o=e.points_delta>0?ae.amber:ae.red;return`
         <div class="fh-eng-hist-row">
-            <div class="fh-eng-hist-type" style="color:${t.color}">${f(t.label.toUpperCase())}</div>
-            <div class="fh-eng-hist-name">${f(e.chore_name||e.note||"\u2014")}</div>
+            <div class="fh-eng-hist-type" style="color:${t.color}">${m(t.label.toUpperCase())}</div>
+            <div class="fh-eng-hist-name">${m(e.chore_name||e.note||"\u2014")}</div>
             ${a?`<div class="fh-eng-hist-pts" style="color:${o}">${a}</div>`:""}
         </div>`}function jo(e,t){let a=t._expandedSkippedDates.has(e.key),o=e.totalPenalty>0?`&minus;${e.totalPenalty}pts`:"no penalty";return`
         <div class="fh-eng-hist-row fh-eng-hist-skipped"
              data-act="toggle-skipped-group" data-key="${e.key}" style="cursor:pointer">
             <div class="fh-eng-hist-type" style="color:${ae.red}">SKIPPED CYCLE</div>
-            <div class="fh-eng-hist-name">${f(e.dateDisplay)} &middot; ${o}</div>
+            <div class="fh-eng-hist-name">${m(e.dateDisplay)} &middot; ${o}</div>
             <span style="color:${ae.inkMute};font-size:.75rem">${a?"\u25B2":"\u25BC"}</span>
         </div>
         ${a?e.items.map(s=>`
             <div class="fh-eng-hist-row" style="padding-left:24px;opacity:.8">
                 <div class="fh-eng-hist-type" style="color:${ae.inkMute}">ITEM</div>
-                <div class="fh-eng-hist-name">${f(s.chore_name||"")}</div>
+                <div class="fh-eng-hist-name">${m(s.chore_name||"")}</div>
                 ${s.points_delta?`<div class="fh-eng-hist-pts" style="color:${ae.red}">${s.points_delta}pts</div>`:""}
                 ${fe(s)}
-            </div>`).join(""):""}`}var ae,vt,Ja,Ka,Va=N(()=>{Q();K();et();ae={paper:"#0E3A5C",panel:"#0B2D48",grid:"#3C7AA5",ink:"#F2EBD6",inkDim:"#C9C0A2",inkMute:"#8A8669",red:"#E07A4C",amber:"#E0B84C"},vt=[{minXP:0,name:"Drafter"},{minXP:100,name:"Jr. Engineer"},{minXP:300,name:"P.E."},{minXP:700,name:"Sr. Engineer"},{minXP:1200,name:"Principal Eng."}],Ja={themeKey:"engineer",kickerFormat:(e,t)=>`WO-${String(t).padStart(3,"0")} \xB7 ${(e.category_label||"GEN").toUpperCase()}`,btnLabel:"MARK<br>COMPLETE",btnIcon:"\u2713",btnPendingLabel:"PENDING<br>APPROVAL",btnPendingIcon:"\u23F1",reminderBtnLabel:"DISMISS",streakIcon:"\u25B3",statusFormat:{breach:e=>`BREACH \xB7 ${e.days_overdue}D`,resetSoon:()=>"RESETS 1D",firing:e=>`ACCRUING \u2212${e.penalty_points}/D`,expiry:e=>e<=0?"EXPIRES TODAY":`EXPIRES ${e}D`},iconColor:()=>ae.ink},Ka={key:"engineer",tint:"#1B3550",sigil:"\u27C1",ranks:vt,handlesNavigation:!0,rankTitle(e){return U(e,vt).name},homeTileSubLabel(){return"CIVIL ENGINEER"},render(e,t){var F;let a=t.child_mode?" kid-large":"",o=e._personEntityId(t.name),s=e._attrs(o),i=e._attrs("sensor.family_hub_needs_attention"),n=parseInt(((F=e._states(o))==null?void 0:F.state)||"0"),l=t.rank_index!==void 0?t.rank_index:0,{dropThr:d,gainThr:p}=ge(t,i,l),c=be(t.person_id,i.history_log,i.rank_eval_weekday),b=ue(t.person_id,i.history_log,i.rank_eval_weekday),g=ve(s),u=[{key:"tasks",label:"WORK ORDERS",sub:"primary"},{key:"store",label:"REWARDS",sub:"exchange"},{key:"history",label:"AS-BUILTS",sub:"history"}],x=e._tab||"tasks",w=u.map(D=>`
-            <div class="fh-eng-tab ${x===D.key?"active":""}"
+            </div>`).join(""):""}`}var ae,vt,Ja,Ka,Va=N(()=>{Q();K();et();ae={paper:"#0E3A5C",panel:"#0B2D48",grid:"#3C7AA5",ink:"#F2EBD6",inkDim:"#C9C0A2",inkMute:"#8A8669",red:"#E07A4C",amber:"#E0B84C"},vt=[{minXP:0,name:"Drafter"},{minXP:100,name:"Jr. Engineer"},{minXP:300,name:"P.E."},{minXP:700,name:"Sr. Engineer"},{minXP:1200,name:"Principal Eng."}],Ja={themeKey:"engineer",kickerFormat:(e,t)=>`WO-${String(t).padStart(3,"0")} \xB7 ${(e.category_label||"GEN").toUpperCase()}`,btnLabel:"MARK<br>COMPLETE",btnIcon:"\u2713",btnPendingLabel:"PENDING<br>APPROVAL",btnPendingIcon:"\u23F1",reminderBtnLabel:"DISMISS",streakIcon:"\u25B3",statusFormat:{breach:e=>`BREACH \xB7 ${e.days_overdue}D`,resetSoon:()=>"RESETS 1D",firing:e=>`ACCRUING \u2212${e.penalty_points}/D`,expiry:e=>e<=0?"EXPIRES TODAY":`EXPIRES ${e}D`},iconColor:()=>ae.ink},Ka={key:"engineer",tint:"#1B3550",sigil:"\u27C1",ranks:vt,handlesNavigation:!0,rankTitle(e){return U(e,vt).name},homeTileSubLabel(){return"CIVIL ENGINEER"},render(e,t){var F;let a=t.child_mode?" kid-large":"",o=e._personEntityId(t.name),s=e._attrs(o),i=e._attrs("sensor.family_hub_needs_attention"),n=parseInt(((F=e._states(o))==null?void 0:F.state)||"0"),r=t.rank_index!==void 0?t.rank_index:0,{dropThr:d,gainThr:p}=ge(t,i,r),c=be(t.person_id,i.history_log,i.rank_eval_weekday),b=ue(t.person_id,i.history_log,i.rank_eval_weekday),g=ve(s),u=[{key:"tasks",label:"WORK ORDERS",sub:"primary"},{key:"store",label:"REWARDS",sub:"exchange"},{key:"history",label:"AS-BUILTS",sub:"history"}],v=e._tab||"tasks",_=u.map(D=>`
+            <div class="fh-eng-tab ${v===D.key?"active":""}"
                  data-act="tab" data-tab="${D.key}">
                 ${D.label}
                 <span class="fh-eng-tab-sub">${D.sub}</span>
-            </div>`).join(""),m="";x==="tasks"&&(m=Lo(s,t,n,e)),x==="store"&&(m=Oo(s,t,n,e)),x==="history"&&(m=No(t,e));let $=U(l,vt),S=(s.tasks_due_today_list||[]).filter(D=>D.status==="pending").length,v=new Date,h=v.toISOString().slice(0,10),k=v.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit",hour12:!1}),A=x==="tasks",E=A?Fo({attr:s,naAttr:i,person:t,balance:n,openCount:S,weekly:c,lost:b,atRisk:g,rank:$,rankIdx:l,dropThr:d,gainThr:p,plotDate:h,card:e}):"";return`
+            </div>`).join(""),f="";v==="tasks"&&(f=Lo(s,t,n,e)),v==="store"&&(f=Oo(s,t,n,e)),v==="history"&&(f=No(t,e));let $=U(r,vt),S=(s.tasks_due_today_list||[]).filter(D=>D.status==="pending").length,x=new Date,h=x.toISOString().slice(0,10),w=x.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit",hour12:!1}),z=v==="tasks",E=z?Fo({attr:s,naAttr:i,person:t,balance:n,openCount:S,weekly:c,lost:b,atRisk:g,rank:$,rankIdx:r,dropThr:d,gainThr:p,plotDate:h,card:e}):"";return`
             <div class="fh-eng-page${a}">
                 <div class="fh-eng-grid"></div>
                 <div class="fh-eng-border-outer"></div>
@@ -6045,29 +6057,29 @@ FUNDS`}
 
                         <div class="fh-eng-identity">
                             <div class="fh-eng-rank-line">
-                                ${f($.name.toUpperCase())} &middot; AGT ${f((t.code||t.name).toUpperCase())} &middot; DIV. ${f(t.person_type==="parent"?"PARENT":"FIELD")}
+                                ${m($.name.toUpperCase())} &middot; AGT ${m((t.code||t.name).toUpperCase())} &middot; DIV. ${m(t.person_type==="parent"?"PARENT":"FIELD")}
                             </div>
-                            <div class="fh-eng-name">${f(t.name)} &middot; Work Orders</div>
+                            <div class="fh-eng-name">${m(t.name)} &middot; Work Orders</div>
                         </div>
                     </div>
 
                     <!-- Tabs -->
-                    <div class="fh-eng-tabs">${w}</div>
+                    <div class="fh-eng-tabs">${_}</div>
                     <div class="fh-eng-rule"></div>
 
                     <!-- Body \u2014 two-column on wide, stacked below 900px -->
-                    <div class="fh-eng-body ${A?"has-rail":""}">
-                        <div class="fh-eng-body-main">${m}</div>
-                        ${A?`<aside class="fh-eng-rail">${E}</aside>`:""}
+                    <div class="fh-eng-body ${z?"has-rail":""}">
+                        <div class="fh-eng-body-main">${f}</div>
+                        ${z?`<aside class="fh-eng-rail">${E}</aside>`:""}
                     </div>
 
                     <!-- Footer \u2014 single mono status line -->
                     <div class="fh-eng-footer">
-                        <span class="fh-eng-file-path">FILE &middot; /WORK_ORDERS/${h}.dwg &middot; LAST PLOT ${k} LOCAL &middot; SHEET A-101 R/A</span>
+                        <span class="fh-eng-file-path">FILE &middot; /WORK_ORDERS/${h}.dwg &middot; LAST PLOT ${w} LOCAL &middot; SHEET A-101 R/A</span>
                     </div>
                 </div>
-            </div>`}}});function Go({attr:e,naAttr:t,person:a,balance:o,weekly:s,lost:i,atRisk:n,openCount:l,rankIdx:d,dropThr:p,gainThr:c,rank:b,card:g}){return`
-        ${Uo(o,s,i,n,l,e.show_dollar_value?e.dollar_value:null)}
+            </div>`}}});function Go({attr:e,naAttr:t,person:a,balance:o,weekly:s,lost:i,atRisk:n,openCount:r,rankIdx:d,dropThr:p,gainThr:c,rank:b,card:g}){return`
+        ${Uo(o,s,i,n,r,e.show_dollar_value?e.dollar_value:null)}
         ${He(e)}
         ${qo(d,s,p,c,a,e)}
         ${Jo(e,t,a)}
@@ -6082,19 +6094,19 @@ FUNDS`}
         <div class="fh-bk-rkpi">
             <div class="fh-bk-rkpi-lbl">${d}</div>
             <div class="fh-bk-rkpi-val-row">
-                <span class="fh-bk-rkpi-val">${f(String(p))}</span>
+                <span class="fh-bk-rkpi-val">${m(String(p))}</span>
                 ${c?`<span class="fh-bk-rkpi-unit">${c}</span>`:""}
             </div>
-            ${b?`<div class="fh-rkpi-sub ${g}">${f(b)}</div>`:""}
-        </div>`,l=`
+            ${b?`<div class="fh-rkpi-sub ${g}">${m(b)}</div>`:""}
+        </div>`,r=`
         <div class="fh-bk-rkpi-row">
             ${n("balance",O(e),"pts",i!=null?G(i):null)}
             ${n("this week",`+${t}`,"pts",a>0?`\u2212${a} lost`:"0 lost","fh-rkpi-sub--loss")}
             ${n("on prep",s,"items",o>0?`\u2212${o} at risk`:null,"fh-rkpi-sub--loss")}
-        </div>`;return Ge("the pantry today",l)}function qo(e,t,a,o,s,i){let n=xe(e,t,a,o,xt,se.terra,s),l=ke(s,se.terra),d=we(s),p=Se(i);return n?Ge("promotion track",n+l+d+p):Ge("promotion track",`<div class="fh-bk-rmax">${f(U(e,xt).name)} \xB7 top of the line</div>${l}${d}${p}`)}function Jo(e,t,a){let o=_e(e,t,a,8);if(!o.length)return Ge("hot streaks",'<div class="fh-bk-rempty">No hot streaks yet \u2014 fire up the oven</div>');let s=o.map(i=>{let{goalSegs:n,filledN:l,countLbl:d}=$e(i.streak,i.milestone,10),p=Array.from({length:n},(b,g)=>`<span class="fh-bk-rdot${g<l?" filled":""}"></span>`).join(""),c=i.milestone>0&&i.bonus>0?`<span class="fh-bk-rbonus">\u2605+${i.bonus}</span>`:"";return`
+        </div>`;return Ge("the pantry today",r)}function qo(e,t,a,o,s,i){let n=xe(e,t,a,o,xt,se.terra,s),r=we(s,se.terra),d=ke(s),p=Se(i);return n?Ge("promotion track",n+r+d+p):Ge("promotion track",`<div class="fh-bk-rmax">${m(U(e,xt).name)} \xB7 top of the line</div>${r}${d}${p}`)}function Jo(e,t,a){let o=_e(e,t,a,8);if(!o.length)return Ge("hot streaks",'<div class="fh-bk-rempty">No hot streaks yet \u2014 fire up the oven</div>');let s=o.map(i=>{let{goalSegs:n,filledN:r,countLbl:d}=$e(i.streak,i.milestone,10),p=Array.from({length:n},(b,g)=>`<span class="fh-bk-rdot${g<r?" filled":""}"></span>`).join(""),c=i.milestone>0&&i.bonus>0?`<span class="fh-bk-rbonus">\u2605+${i.bonus}</span>`:"";return`
             <div class="fh-bk-rstreak">
                 <div class="fh-bk-rstreak-head">
-                    <span class="fh-bk-rstreak-name">${f(i.name)}</span>
+                    <span class="fh-bk-rstreak-name">${m(i.name)}</span>
                     ${c}
                 </div>
                 <div class="fh-bk-rstreak-bar">
@@ -6103,46 +6115,46 @@ FUNDS`}
                 </div>
             </div>`}).join("");return Ge("hot streaks",s)}function Ko(e,t){let a=(t.history_log||[]).filter(s=>s.person_id===e.person_id&&(s.points_delta||0)>0).slice(0,4);if(!a.length)return Ge("today's tickets",'<div class="fh-bk-rempty">No tickets served yet</div>');let o=a.map(s=>{let i=s.timestamp?ne(s.timestamp):"";return`
             <div class="fh-bk-rorder">
-                <div class="fh-bk-rorder-when">~ ${f(i)} ~</div>
+                <div class="fh-bk-rorder-when">~ ${m(i)} ~</div>
                 <div class="fh-bk-rorder-row">
-                    <span class="fh-bk-rorder-name">${f(s.chore_name||s.note||"\u2014")}</span>
+                    <span class="fh-bk-rorder-name">${m(s.chore_name||s.note||"\u2014")}</span>
                     <span class="fh-bk-rorder-pts">+${s.points_delta}pts</span>
                 </div>
-            </div>`}).join("");return Ge("today's tickets",o)}function Vo(e,t,a,o){let s=e.tasks_due_today_list||[],i=e.tasks_overdue_list||[],n=e.tasks_pending_approval_list||[],l=a.category_labels||[],d=(m,$)=>{let S=new Map;for(let v of m)(!S.has(v.chore_id)||$(v,S.get(v.chore_id)))&&S.set(v.chore_id,v);return[...S.values()]},p=d(i,(m,$)=>(m.days_overdue||0)>($.days_overdue||0)),c=d(s.filter(m=>m.chore_type!=="reminder"),()=>!1),b=[...p.map(m=>({...m,_over:!0})),...c];if(!b.length&&!n.length)return`<div class="fh-bk-empty">\u2713 Kitchen's clear \u2014 all orders done!</div>`;let g=0,x=Ne(b,l).map(m=>{let $=`<div class="fh-row-section-hdr">${f(m.label)}</div>`,S=m.tasks.map(v=>Y(v,Ya,t,o,{index:++g})).join("");return $+S}).join(""),w=n.length?`
+            </div>`}).join("");return Ge("today's tickets",o)}function Vo(e,t,a,o){let s=e.tasks_due_today_list||[],i=e.tasks_overdue_list||[],n=e.tasks_pending_approval_list||[],r=a.category_labels||[],d=(f,$)=>{let S=new Map;for(let x of f)(!S.has(x.chore_id)||$(x,S.get(x.chore_id)))&&S.set(x.chore_id,x);return[...S.values()]},p=d(i,(f,$)=>(f.days_overdue||0)>($.days_overdue||0)),c=d(s.filter(f=>f.chore_type!=="reminder"),()=>!1),b=[...p.map(f=>({...f,_over:!0})),...c];if(!b.length&&!n.length)return`<div class="fh-bk-empty">\u2713 Kitchen's clear \u2014 all orders done!</div>`;let g=0,v=Ne(b,r).map(f=>{let $=`<div class="fh-row-section-hdr">${m(f.label)}</div>`,S=f.tasks.map(x=>Y(x,Ya,t,o,{index:++g})).join("");return $+S}).join(""),_=n.length?`
         <div class="fh-row-section-hdr">Awaiting approval</div>
-        ${n.map(m=>Y(m,Ya,t,o)).join("")}`:"";return`
+        ${n.map(f=>Y(f,Ya,t,o)).join("")}`:"";return`
         ${Ee(e)}
         ${Ce(e)}
         <div class="fh-row-list">
-            ${x}
-            ${w}
-        </div>`}function Yo(e,t,a,o){let s=e.store_items||[];if(!s.length)return'<div class="fh-bk-empty">No rewards on the menu yet.</div>';let i=o._attrs("sensor.family_hub_needs_attention"),n=(i.redemption_queue||[]).filter(c=>c.person_id===t.person_id),l=new Set(n.map(c=>c.item_id).filter(Boolean)),d=new Set(n.filter(c=>!c.item_id).map(c=>c.item_name)),p=new Set((e.subscriptions||[]).map(c=>c.item_id));return`
+            ${v}
+            ${_}
+        </div>`}function Yo(e,t,a,o){let s=e.store_items||[];if(!s.length)return'<div class="fh-bk-empty">No rewards on the menu yet.</div>';let i=o._attrs("sensor.family_hub_needs_attention"),n=(i.redemption_queue||[]).filter(c=>c.person_id===t.person_id),r=new Set(n.map(c=>c.item_id).filter(Boolean)),d=new Set(n.filter(c=>!c.item_id).map(c=>c.item_name)),p=new Set((e.subscriptions||[]).map(c=>c.item_id));return`
         <div class="fh-store-with-rail">
         <div class="fh-store-main">
         ${Pe(e.group_proposals,t.person_id)}
         ${ze(e)}
         <div class="fh-bk-menu">
-            ${s.map(c=>{let b=!!c.is_group_reward,g=c.item_type==="subscription",u=g&&p.has(c.item_id),x=a>=c.points_cost,w=l.has(c.item_id)||d.has(c.name),m=!!c.next_available,$={weekly:"wk",monthly:"mo",quarterly:"qtr",biannual:"6mo",annual:"yr"}[c.subscription_period]||"mo";return`
+            ${s.map(c=>{let b=!!c.is_group_reward,g=c.item_type==="subscription",u=g&&p.has(c.item_id),v=a>=c.points_cost,_=r.has(c.item_id)||d.has(c.name),f=!!c.next_available,$={weekly:"wk",monthly:"mo",quarterly:"qtr",biannual:"6mo",annual:"yr"}[c.subscription_period]||"mo";return`
                 <div class="fh-bk-menu-item">
                     ${me(c)}
                     <div class="fh-bk-menu-body">
-                        <div class="fh-bk-menu-name">${f(c.name)}</div>
-                        ${c.description?`<div class="fh-bk-menu-desc">${f(c.description)}</div>`:""}
+                        <div class="fh-bk-menu-name">${m(c.name)}</div>
+                        ${c.description?`<div class="fh-bk-menu-desc">${m(c.description)}</div>`:""}
                         ${Ae(c)}
                         ${Be(c,t.person_id)}
                     </div>
                     ${b?"":`<div class="fh-bk-menu-price" style="color:${se.terra}">${O(c.points_cost)}pts</div>`}
                     ${Me(c,e,t.person_id)}
-                    ${b?Fe(c,t.person_id,a):c.locked&&!w&&!(g&&u)?Re(c):g?u?`<span class="fh-bk-badge" style="color:${se.terra}">Subscribed \u2713</span>`:w?`<span class="fh-bk-badge" style="color:${se.terra}">Requested \u2713</span>`:`<button class="fh-bk-go-btn ${x?"":"disabled"}"
+                    ${b?Fe(c,t.person_id,a):c.locked&&!_&&!(g&&u)?Re(c):g?u?`<span class="fh-bk-badge" style="color:${se.terra}">Subscribed \u2713</span>`:_?`<span class="fh-bk-badge" style="color:${se.terra}">Requested \u2713</span>`:`<button class="fh-bk-go-btn ${v?"":"disabled"}"
                                        data-act="redeem"
                                        data-iid="${C(c.item_id)}"
                                        data-pid="${C(t.person_id)}"
-                                       ${x?"":'disabled style="opacity:.4;cursor:not-allowed"'}>
-                                   ${x?`Subscribe \xB7 ${c.points_cost}pts/${$}`:"Need more"}
-                               </button>`:w?`<span class="fh-bk-badge" style="color:${se.terra}">Requested \u2713</span>`:m?'<span class="fh-bk-badge" style="color:var(--fh-overdue)">Not available</span>':`<button class="fh-bk-go-btn ${x?"":"disabled"}"
+                                       ${v?"":'disabled style="opacity:.4;cursor:not-allowed"'}>
+                                   ${v?`Subscribe \xB7 ${c.points_cost}pts/${$}`:"Need more"}
+                               </button>`:_?`<span class="fh-bk-badge" style="color:${se.terra}">Requested \u2713</span>`:f?'<span class="fh-bk-badge" style="color:var(--fh-overdue)">Not available</span>':`<button class="fh-bk-go-btn ${v?"":"disabled"}"
                                    data-act="redeem" data-iid="${C(c.item_id)}" data-pid="${C(t.person_id)}"
-                                   ${x?"":'disabled style="opacity:.4;cursor:not-allowed"'}>
-                               ${x?"Request":"Need more"}
+                                   ${v?"":'disabled style="opacity:.4;cursor:not-allowed"'}>
+                               ${v?"Request":"Need more"}
                            </button>`}
                 </div>`}).join("")}
         </div>
@@ -6157,25 +6169,25 @@ FUNDS`}
                ${e.points_delta>0?"+":""}${e.points_delta}pts
            </span>`:"";return`
         <div class="fh-bk-log-row">
-            <div class="fh-bk-log-type" style="color:${t.color}">${f(t.label)}</div>
-            <div class="fh-bk-log-name">${f(e.chore_name||e.note||"\u2014")}</div>
+            <div class="fh-bk-log-type" style="color:${t.color}">${m(t.label)}</div>
+            <div class="fh-bk-log-name">${m(e.chore_name||e.note||"\u2014")}</div>
             ${a}
         </div>`}function Zo(e,t){let a=t._expandedSkippedDates.has(e.key),o=e.totalPenalty>0?`\u2212${e.totalPenalty}pts`:"no penalty";return`
         <div class="fh-bk-log-row"
              data-act="toggle-skipped-group" data-key="${C(e.key)}" style="cursor:pointer">
             <div class="fh-bk-log-type" style="color:${se.red}">Skipped</div>
-            <div class="fh-bk-log-name">${f(e.dateDisplay)} \xB7 ${o}</div>
+            <div class="fh-bk-log-name">${m(e.dateDisplay)} \xB7 ${o}</div>
             <span style="color:${se.mute};font-size:.75rem">${a?"\u25B2":"\u25BC"}</span>
         </div>
         ${a?e.items.map(s=>`
             <div class="fh-bk-log-row" style="padding-left:20px;opacity:.75">
                 <div class="fh-bk-log-type" style="color:${se.mute}">Item</div>
-                <div class="fh-bk-log-name">${f(s.chore_name||"")}</div>
+                <div class="fh-bk-log-name">${m(s.chore_name||"")}</div>
                 ${s.points_delta?`<span style="color:${se.red};font-weight:700">${s.points_delta}pts</span>`:""}
                 ${fe(s)}
-            </div>`).join(""):""}`}var se,Ya,xt,Xa,Qa=N(()=>{Q();K();et();se={bg:"#F2E5CC",panel:"#FBF3E2",ink:"#3A1F12",mute:"#8B5A3A",terra:"#8B3A2A",red:"#A02828",green:"#3A6A28"},Ya={themeKey:"baker",leadFormat:(e,t)=>e.status==="pending_approval"?null:String(t),btnLabel:"Bake it \u2713",btnPendingLabel:"Pending Approval",reminderBtnLabel:"Dismiss",streakIcon:"\u{1F525}",statusFormat:{breach:e=>`Overdue ${e.days_overdue}d`,resetSoon:()=>"Resets 1d",firing:e=>`\u2212${e.penalty_points}pts/d`,expiry:e=>e<=0?"Expires today":`Expires in ${e}d`},iconColor:(e,t)=>t?se.red:se.terra},xt=[{minXP:0,name:"Apprentice"},{minXP:100,name:"Line Cook"},{minXP:300,name:"Pastry Chef"},{minXP:700,name:"Sous Chef"},{minXP:1200,name:"Head Chef"}],Xa={key:"baker",tint:"#F2E5CC",sigil:"\u2767",ranks:xt,handlesNavigation:!1,rankTitle(e){return U(e,xt).name},homeTileSubLabel(){return"MASTER BAKER"},render(e,t){var D;let a=t.child_mode?" kid-large":"",o=e._personEntityId(t.name),s=e._attrs(o),i=e._attrs("sensor.family_hub_needs_attention"),n=parseInt(((D=e._states(o))==null?void 0:D.state)||"0"),l=t.rank_index!==void 0?t.rank_index:0,{dropThr:d,gainThr:p}=ge(t,i,l),c=be(t.person_id,i.history_log,i.rank_eval_weekday),b=ue(t.person_id,i.history_log,i.rank_eval_weekday),g=ve(s),u=U(l,xt),x=new Date,w=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],$=`${w[x.getDay()]} \xB7 ${x.getDate()} ${m[x.getMonth()]}`,S=[{key:"tasks",label:"Today's Prep",sub:"CHORES"},{key:"store",label:"Pantry",sub:"STORE"},{key:"history",label:"Recipe Book",sub:"HISTORY"}],v=e._tab||"tasks",h=S.map(R=>`
-            <div class="fh-bk-tab ${v===R.key?"active":""}"
-                 data-act="tab" data-tab="${R.key}">${R.label}<span class="fh-bk-tab-sub">${R.sub}</span></div>`).join(""),k="";v==="tasks"&&(k=Vo(s,t,i,e)),v==="store"&&(k=Yo(s,t,n,e)),v==="history"&&(k=Xo(t,e));let A=(s.tasks_due_today_list||[]).filter(R=>R.status==="pending").length,E=v==="tasks",F=E?Go({attr:s,naAttr:i,person:t,balance:n,weekly:c,lost:b,atRisk:g,openCount:A,rankIdx:l,dropThr:d,gainThr:p,rank:u,card:e}):"";return`
+            </div>`).join(""):""}`}var se,Ya,xt,Xa,Qa=N(()=>{Q();K();et();se={bg:"#F2E5CC",panel:"#FBF3E2",ink:"#3A1F12",mute:"#8B5A3A",terra:"#8B3A2A",red:"#A02828",green:"#3A6A28"},Ya={themeKey:"baker",leadFormat:(e,t)=>e.status==="pending_approval"?null:String(t),btnLabel:"Bake it \u2713",btnPendingLabel:"Pending Approval",reminderBtnLabel:"Dismiss",streakIcon:"\u{1F525}",statusFormat:{breach:e=>`Overdue ${e.days_overdue}d`,resetSoon:()=>"Resets 1d",firing:e=>`\u2212${e.penalty_points}pts/d`,expiry:e=>e<=0?"Expires today":`Expires in ${e}d`},iconColor:(e,t)=>t?se.red:se.terra},xt=[{minXP:0,name:"Apprentice"},{minXP:100,name:"Line Cook"},{minXP:300,name:"Pastry Chef"},{minXP:700,name:"Sous Chef"},{minXP:1200,name:"Head Chef"}],Xa={key:"baker",tint:"#F2E5CC",sigil:"\u2767",ranks:xt,handlesNavigation:!1,rankTitle(e){return U(e,xt).name},homeTileSubLabel(){return"MASTER BAKER"},render(e,t){var D;let a=t.child_mode?" kid-large":"",o=e._personEntityId(t.name),s=e._attrs(o),i=e._attrs("sensor.family_hub_needs_attention"),n=parseInt(((D=e._states(o))==null?void 0:D.state)||"0"),r=t.rank_index!==void 0?t.rank_index:0,{dropThr:d,gainThr:p}=ge(t,i,r),c=be(t.person_id,i.history_log,i.rank_eval_weekday),b=ue(t.person_id,i.history_log,i.rank_eval_weekday),g=ve(s),u=U(r,xt),v=new Date,_=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],f=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],$=`${_[v.getDay()]} \xB7 ${v.getDate()} ${f[v.getMonth()]}`,S=[{key:"tasks",label:"Today's Prep",sub:"CHORES"},{key:"store",label:"Pantry",sub:"STORE"},{key:"history",label:"Recipe Book",sub:"HISTORY"}],x=e._tab||"tasks",h=S.map(R=>`
+            <div class="fh-bk-tab ${x===R.key?"active":""}"
+                 data-act="tab" data-tab="${R.key}">${R.label}<span class="fh-bk-tab-sub">${R.sub}</span></div>`).join(""),w="";x==="tasks"&&(w=Vo(s,t,i,e)),x==="store"&&(w=Yo(s,t,n,e)),x==="history"&&(w=Xo(t,e));let z=(s.tasks_due_today_list||[]).filter(R=>R.status==="pending").length,E=x==="tasks",F=E?Go({attr:s,naAttr:i,person:t,balance:n,weekly:c,lost:b,atRisk:g,openCount:z,rankIdx:r,dropThr:d,gainThr:p,rank:u,card:e}):"";return`
             <div class="fh-bk-page${a}">
                 <div class="fh-bk-frame-outer"></div>
                 <div class="fh-bk-frame-inner"></div>
@@ -6189,13 +6201,13 @@ FUNDS`}
                 <div class="fh-bk-tabs">${h}</div>
 
                 <div class="fh-bk-body ${E?"has-rail":""}">
-                    <div class="fh-bk-body-main">${k}</div>
+                    <div class="fh-bk-body-main">${w}</div>
                     ${E?`<aside class="fh-bk-rail">${F}</aside>`:""}
                 </div>
 
-                <div class="fh-bk-footer"><span>\u2014 Family Hub \xB7 est. 2026 \u2014</span><span>${f(u.name)}</span></div>
-            </div>`}}});function ei({attr:e,naAttr:t,person:a,balance:o,weekly:s,lost:i,atRisk:n,openCount:l,rankIdx:d,dropThr:p,gainThr:c,dateStr:b,card:g}){return`
-        ${ai(o,s,i,n,l,e.show_dollar_value?e.dollar_value:null)}
+                <div class="fh-bk-footer"><span>\u2014 Family Hub \xB7 est. 2026 \u2014</span><span>${m(u.name)}</span></div>
+            </div>`}}});function ei({attr:e,naAttr:t,person:a,balance:o,weekly:s,lost:i,atRisk:n,openCount:r,rankIdx:d,dropThr:p,gainThr:c,dateStr:b,card:g}){return`
+        ${ai(o,s,i,n,r,e.show_dollar_value?e.dollar_value:null)}
         ${He(e)}
         ${si(d,s,p,c,a,e)}
         ${oi(e,t,a)}
@@ -6210,67 +6222,67 @@ FUNDS`}
         <div class="fh-dn-rkpi">
             <div class="fh-dn-rkpi-lbl">${d}</div>
             <div class="fh-dn-rkpi-val-row">
-                <span class="fh-dn-rkpi-val">${f(String(p))}</span>
+                <span class="fh-dn-rkpi-val">${m(String(p))}</span>
                 ${c?`<span class="fh-dn-rkpi-unit">${c}</span>`:""}
             </div>
-            ${b?`<div class="fh-rkpi-sub ${g}">${f(b)}</div>`:""}
-        </div>`,l=`
+            ${b?`<div class="fh-rkpi-sub ${g}">${m(b)}</div>`:""}
+        </div>`,r=`
         <div class="fh-dn-rkpi-row">
             ${n("FOSSILS",O(e),"pts",i!=null?G(i):null)}
             ${n("THIS WEEK",`+${t}`,"pts",a>0?`\u2212${a} lost`:"0 lost","fh-rkpi-sub--loss")}
             ${n("SPECIMENS",s,"open",o>0?`\u2212${o} at risk`:null,"fh-rkpi-sub--loss")}
-        </div>`;return We("FIELD KIT \xB7 TODAY",l)}function si(e,t,a,o,s,i){let n=xe(e,t,a,o,yt,oe.amber,s),l=ke(s,oe.amber),d=we(s),p=Se(i);return n?We("DIG STATUS",n+l+d+p):We("DIG STATUS",`<div class="fh-dn-rmax">${f(U(e,yt).name)} \xB7 MAX</div>${l}${d}${p}`)}function oi(e,t,a){let o=_e(e,t,a,8);if(!o.length)return We("FOSSIL RECORD",'<div class="fh-dn-rempty">NO STREAKS LOGGED \u2014 DIG IN</div>');let s=o.map(i=>{let{goalSegs:n,filledN:l,countLbl:d}=$e(i.streak,i.milestone,10),p=Array.from({length:n},(b,g)=>`<span class="fh-dn-footprint${g<l?"":" dim"}">\u{1F9B6}</span>`).join(""),c=i.milestone>0&&i.bonus>0?`<span class="fh-dn-rbonus">\u2605+${i.bonus}</span>`:"";return`
+        </div>`;return We("FIELD KIT \xB7 TODAY",r)}function si(e,t,a,o,s,i){let n=xe(e,t,a,o,yt,oe.amber,s),r=we(s,oe.amber),d=ke(s),p=Se(i);return n?We("DIG STATUS",n+r+d+p):We("DIG STATUS",`<div class="fh-dn-rmax">${m(U(e,yt).name)} \xB7 MAX</div>${r}${d}${p}`)}function oi(e,t,a){let o=_e(e,t,a,8);if(!o.length)return We("FOSSIL RECORD",'<div class="fh-dn-rempty">NO STREAKS LOGGED \u2014 DIG IN</div>');let s=o.map(i=>{let{goalSegs:n,filledN:r,countLbl:d}=$e(i.streak,i.milestone,10),p=Array.from({length:n},(b,g)=>`<span class="fh-dn-footprint${g<r?"":" dim"}">\u{1F9B6}</span>`).join(""),c=i.milestone>0&&i.bonus>0?`<span class="fh-dn-rbonus">\u2605+${i.bonus}</span>`:"";return`
             <div class="fh-dn-rstreak">
                 <div class="fh-dn-rstreak-head">
-                    <span class="fh-dn-rstreak-name">${f(i.name)}</span>
+                    <span class="fh-dn-rstreak-name">${m(i.name)}</span>
                     ${c}
                 </div>
                 <div class="fh-dn-rstreak-bar">
                     <span class="fh-dn-footprints">${p}</span>
                     <span class="fh-dn-rstreak-num">${d}</span>
                 </div>
-            </div>`}).join("");return We("FOSSIL RECORD",s)}function ii(e,t){let a=(t.history_log||[]).filter(s=>s.person_id===e.person_id&&(s.points_delta||0)>0).slice(0,4);if(!a.length)return We("RECENT FINDINGS",'<div class="fh-dn-rempty">NO FINDINGS YET \u2014 FILE FIRST SPECIMEN</div>');let o=a.map((s,i)=>{let n=String(i+1).padStart(3,"0"),l=s.timestamp?ne(s.timestamp):"";return`
+            </div>`}).join("");return We("FOSSIL RECORD",s)}function ii(e,t){let a=(t.history_log||[]).filter(s=>s.person_id===e.person_id&&(s.points_delta||0)>0).slice(0,4);if(!a.length)return We("RECENT FINDINGS",'<div class="fh-dn-rempty">NO FINDINGS YET \u2014 FILE FIRST SPECIMEN</div>');let o=a.map((s,i)=>{let n=String(i+1).padStart(3,"0"),r=s.timestamp?ne(s.timestamp):"";return`
             <div class="fh-dn-rfind">
-                <div class="fh-dn-rfind-tag">SP-${n} \xB7 FILED ${f(l.toUpperCase())}</div>
+                <div class="fh-dn-rfind-tag">SP-${n} \xB7 FILED ${m(r.toUpperCase())}</div>
                 <div class="fh-dn-rfind-row">
-                    <span class="fh-dn-rfind-name">${f(s.chore_name||s.note||"\u2014")}</span>
+                    <span class="fh-dn-rfind-name">${m(s.chore_name||s.note||"\u2014")}</span>
                     <span class="fh-dn-rfind-pts">+${s.points_delta}pts</span>
                 </div>
-            </div>`}).join("");return We("RECENT FINDINGS",o)}function ni(e,t,a,o){let s=e.tasks_due_today_list||[],i=e.tasks_overdue_list||[],n=e.tasks_pending_approval_list||[],l=a.category_labels||[],d=(m,$)=>{let S=new Map;for(let v of m)(!S.has(v.chore_id)||$(v,S.get(v.chore_id)))&&S.set(v.chore_id,v);return[...S.values()]},p=d(i,(m,$)=>(m.days_overdue||0)>($.days_overdue||0)),c=d(s.filter(m=>m.chore_type!=="reminder"),()=>!1),b=[...p.map(m=>({...m,_over:!0})),...c];if(!b.length&&!n.length)return'<div class="fh-dn-empty">\u25C9 SITE CLEAR \u2014 ALL SPECIMENS LOGGED</div>';let g=0,x=Ne(b,l).map(m=>{let $=`<div class="fh-row-section-hdr">${f(m.label)}</div>`,S=m.tasks.map(v=>Y(v,Za,t,o,{index:++g})).join("");return $+S}).join(""),w=n.length?`
+            </div>`}).join("");return We("RECENT FINDINGS",o)}function ni(e,t,a,o){let s=e.tasks_due_today_list||[],i=e.tasks_overdue_list||[],n=e.tasks_pending_approval_list||[],r=a.category_labels||[],d=(f,$)=>{let S=new Map;for(let x of f)(!S.has(x.chore_id)||$(x,S.get(x.chore_id)))&&S.set(x.chore_id,x);return[...S.values()]},p=d(i,(f,$)=>(f.days_overdue||0)>($.days_overdue||0)),c=d(s.filter(f=>f.chore_type!=="reminder"),()=>!1),b=[...p.map(f=>({...f,_over:!0})),...c];if(!b.length&&!n.length)return'<div class="fh-dn-empty">\u25C9 SITE CLEAR \u2014 ALL SPECIMENS LOGGED</div>';let g=0,v=Ne(b,r).map(f=>{let $=`<div class="fh-row-section-hdr">${m(f.label)}</div>`,S=f.tasks.map(x=>Y(x,Za,t,o,{index:++g})).join("");return $+S}).join(""),_=n.length?`
         <div class="fh-row-section-hdr">AWAITING APPROVAL</div>
-        ${n.map(m=>Y(m,Za,t,o)).join("")}`:"";return`
+        ${n.map(f=>Y(f,Za,t,o)).join("")}`:"";return`
         ${Ee(e)}
         ${Ce(e)}
         <div class="fh-row-list">
-            ${x}
-            ${w}
-        </div>`}function ri(e,t,a,o){let s=e.store_items||[];if(!s.length)return'<div class="fh-dn-empty">SUPPLY CACHE EMPTY</div>';let i=o._attrs("sensor.family_hub_needs_attention"),n=(i.redemption_queue||[]).filter(c=>c.person_id===t.person_id),l=new Set(n.map(c=>c.item_id).filter(Boolean)),d=new Set(n.filter(c=>!c.item_id).map(c=>c.item_name)),p=new Set((e.subscriptions||[]).map(c=>c.item_id));return`
+            ${v}
+            ${_}
+        </div>`}function ri(e,t,a,o){let s=e.store_items||[];if(!s.length)return'<div class="fh-dn-empty">SUPPLY CACHE EMPTY</div>';let i=o._attrs("sensor.family_hub_needs_attention"),n=(i.redemption_queue||[]).filter(c=>c.person_id===t.person_id),r=new Set(n.map(c=>c.item_id).filter(Boolean)),d=new Set(n.filter(c=>!c.item_id).map(c=>c.item_name)),p=new Set((e.subscriptions||[]).map(c=>c.item_id));return`
         <div class="fh-store-with-rail">
         <div class="fh-store-main">
         ${Pe(e.group_proposals,t.person_id)}
         ${ze(e)}
         <div class="fh-dn-supply">
-            ${s.map(c=>{let b=!!c.is_group_reward,g=c.item_type==="subscription",u=g&&p.has(c.item_id),x=a>=c.points_cost,w=l.has(c.item_id)||d.has(c.name),m=!!c.next_available,$={weekly:"wk",monthly:"mo",quarterly:"qtr",biannual:"6mo",annual:"yr"}[c.subscription_period]||"mo";return`
+            ${s.map(c=>{let b=!!c.is_group_reward,g=c.item_type==="subscription",u=g&&p.has(c.item_id),v=a>=c.points_cost,_=r.has(c.item_id)||d.has(c.name),f=!!c.next_available,$={weekly:"wk",monthly:"mo",quarterly:"qtr",biannual:"6mo",annual:"yr"}[c.subscription_period]||"mo";return`
                 <div class="fh-dn-supply-item">
                     ${me(c)}
                     <div class="fh-dn-supply-body">
-                        <div class="fh-dn-supply-name">${f(c.name)}</div>
-                        ${c.description?`<div class="fh-dn-supply-desc">${f(c.description)}</div>`:""}
+                        <div class="fh-dn-supply-name">${m(c.name)}</div>
+                        ${c.description?`<div class="fh-dn-supply-desc">${m(c.description)}</div>`:""}
                         ${Ae(c)}
                         ${Be(c,t.person_id)}
                     </div>
                     ${b?"":`<div class="fh-dn-pts-tag" style="color:${oe.amber}">${O(c.points_cost)}pts</div>`}
                     ${Me(c,e,t.person_id)}
-                    ${b?Fe(c,t.person_id,a):c.locked&&!w&&!(g&&u)?Re(c):g?u?`<span style="color:${oe.amber};font-size:.8rem;font-weight:700">SUBSCRIBED \u2713</span>`:w?`<span style="color:${oe.amber};font-size:.8rem;font-weight:700">REQUESTED \u2713</span>`:`<button class="fh-dn-go-btn ${x?"":"disabled"}"
+                    ${b?Fe(c,t.person_id,a):c.locked&&!_&&!(g&&u)?Re(c):g?u?`<span style="color:${oe.amber};font-size:.8rem;font-weight:700">SUBSCRIBED \u2713</span>`:_?`<span style="color:${oe.amber};font-size:.8rem;font-weight:700">REQUESTED \u2713</span>`:`<button class="fh-dn-go-btn ${v?"":"disabled"}"
                                        data-act="redeem"
                                        data-iid="${C(c.item_id)}"
                                        data-pid="${C(t.person_id)}"
-                                       ${x?"":'disabled style="opacity:.4;cursor:not-allowed"'}>
-                                   ${x?`SUBSCRIBE \xB7 ${c.points_cost}/${$}`:"NEED MORE"}
-                               </button>`:w?`<span style="color:${oe.amber};font-size:.8rem;font-weight:700">CLAIMED \u2713</span>`:m?'<span style="color:var(--fh-overdue);font-size:.75rem;font-weight:600">NOT AVAILABLE</span>':`<button class="fh-dn-go-btn ${x?"":"disabled"}"
+                                       ${v?"":'disabled style="opacity:.4;cursor:not-allowed"'}>
+                                   ${v?`SUBSCRIBE \xB7 ${c.points_cost}/${$}`:"NEED MORE"}
+                               </button>`:_?`<span style="color:${oe.amber};font-size:.8rem;font-weight:700">CLAIMED \u2713</span>`:f?'<span style="color:var(--fh-overdue);font-size:.75rem;font-weight:600">NOT AVAILABLE</span>':`<button class="fh-dn-go-btn ${v?"":"disabled"}"
                                    data-act="redeem" data-iid="${C(c.item_id)}" data-pid="${C(t.person_id)}"
-                                   ${x?"":'disabled style="opacity:.4;cursor:not-allowed"'}>
-                               ${x?"CLAIM":"NEED MORE"}
+                                   ${v?"":'disabled style="opacity:.4;cursor:not-allowed"'}>
+                               ${v?"CLAIM":"NEED MORE"}
                            </button>`}
                 </div>`}).join("")}
         </div>
@@ -6285,25 +6297,25 @@ FUNDS`}
                ${e.points_delta>0?"+":""}${e.points_delta}pts
            </span>`:"";return`
         <div class="fh-dn-log-row">
-            <div class="fh-dn-log-type" style="color:${t.color}">${f(t.label)}</div>
-            <div class="fh-dn-log-name">${f(e.chore_name||e.note||"\u2014")}</div>
+            <div class="fh-dn-log-type" style="color:${t.color}">${m(t.label)}</div>
+            <div class="fh-dn-log-name">${m(e.chore_name||e.note||"\u2014")}</div>
             ${a}
         </div>`}function ci(e,t){let a=t._expandedSkippedDates.has(e.key),o=e.totalPenalty>0?`\u2212${e.totalPenalty}pts`:"no penalty";return`
         <div class="fh-dn-log-row"
              data-act="toggle-skipped-group" data-key="${C(e.key)}" style="cursor:pointer">
             <div class="fh-dn-log-type" style="color:${oe.red}">SKIPPED</div>
-            <div class="fh-dn-log-name">${f(e.dateDisplay)} \xB7 ${o}</div>
+            <div class="fh-dn-log-name">${m(e.dateDisplay)} \xB7 ${o}</div>
             <span style="color:${oe.mute};font-size:.75rem">${a?"\u25B2":"\u25BC"}</span>
         </div>
         ${a?e.items.map(s=>`
             <div class="fh-dn-log-row" style="padding-left:20px;opacity:.75">
                 <div class="fh-dn-log-type" style="color:${oe.mute}">ITEM</div>
-                <div class="fh-dn-log-name">${f(s.chore_name||"")}</div>
+                <div class="fh-dn-log-name">${m(s.chore_name||"")}</div>
                 ${s.points_delta?`<span style="color:${oe.red};font-weight:700">${s.points_delta}pts</span>`:""}
                 ${fe(s)}
-            </div>`).join(""):""}`}var oe,Za,yt,es,ts=N(()=>{Q();K();et();oe={bg:"#E8DAB7",panel:"#F0E5C8",ink:"#2B1F0E",mute:"#6B5020",amber:"#8B6A20",red:"#8C281E",green:"#2A5A20"},Za={themeKey:"dinos",kickerFormat:(e,t)=>e.status==="pending_approval"?null:`SP-${String(t).padStart(3,"0")} \xB7 ${(e.category_label||"MISC").toUpperCase().slice(0,12)}`,btnLabel:"LOG IT",btnPendingLabel:"PENDING APPROVAL",reminderBtnLabel:"DISMISS",streakIcon:"\u{1F525}",statusFormat:{breach:e=>`OVERDUE ${e.days_overdue}D`,resetSoon:()=>"RESETS 1D",firing:e=>`\u2212${e.penalty_points}/D`,expiry:e=>e<=0?"EXPIRES TODAY":`EXPIRES ${e}D`},iconColor:(e,t)=>t?oe.red:oe.ink},yt=[{minXP:0,name:"Field Asst."},{minXP:100,name:"Jr. Paleontologist"},{minXP:300,name:"Field Lead"},{minXP:700,name:"Curator"},{minXP:1200,name:"Dr. Spencer"}],es={key:"dinos",tint:"#E8DAB7",sigil:"\u25C9",ranks:yt,handlesNavigation:!1,rankTitle(e){return U(e,yt).name},homeTileSubLabel(){return"FIELD PALEONTOLOGIST"},render(e,t){var D;let a=t.child_mode?" kid-large":"",o=e._personEntityId(t.name),s=e._attrs(o),i=e._attrs("sensor.family_hub_needs_attention"),n=parseInt(((D=e._states(o))==null?void 0:D.state)||"0"),l=t.rank_index!==void 0?t.rank_index:0,{dropThr:d,gainThr:p}=ge(t,i,l),c=be(t.person_id,i.history_log,i.rank_eval_weekday),b=ue(t.person_id,i.history_log,i.rank_eval_weekday),g=ve(s),u=U(l,yt),x=new Date,w=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],$=`${w[x.getDay()]} \xB7 ${x.getDate()} ${m[x.getMonth()]}`,S=[{key:"tasks",label:"FIELD LOG",sub:"today's specimens"},{key:"store",label:"TRADING POST",sub:"rewards"},{key:"history",label:"CATALOGUE",sub:"history"}],v=e._tab||"tasks",h=S.map(R=>`
-            <div class="fh-dn-tab ${v===R.key?"active":""}"
-                 data-act="tab" data-tab="${R.key}">${R.label}<span class="fh-dn-tab-sub">${R.sub}</span></div>`).join(""),k="";v==="tasks"&&(k=ni(s,t,i,e)),v==="store"&&(k=ri(s,t,n,e)),v==="history"&&(k=li(t,e));let A=(s.tasks_due_today_list||[]).filter(R=>R.status==="pending").length,E=v==="tasks",F=E?ei({attr:s,naAttr:i,person:t,balance:n,weekly:c,lost:b,atRisk:g,openCount:A,rankIdx:l,dropThr:d,gainThr:p,dateStr:$,card:e}):"";return`
+            </div>`).join(""):""}`}var oe,Za,yt,es,ts=N(()=>{Q();K();et();oe={bg:"#E8DAB7",panel:"#F0E5C8",ink:"#2B1F0E",mute:"#6B5020",amber:"#8B6A20",red:"#8C281E",green:"#2A5A20"},Za={themeKey:"dinos",kickerFormat:(e,t)=>e.status==="pending_approval"?null:`SP-${String(t).padStart(3,"0")} \xB7 ${(e.category_label||"MISC").toUpperCase().slice(0,12)}`,btnLabel:"LOG IT",btnPendingLabel:"PENDING APPROVAL",reminderBtnLabel:"DISMISS",streakIcon:"\u{1F525}",statusFormat:{breach:e=>`OVERDUE ${e.days_overdue}D`,resetSoon:()=>"RESETS 1D",firing:e=>`\u2212${e.penalty_points}/D`,expiry:e=>e<=0?"EXPIRES TODAY":`EXPIRES ${e}D`},iconColor:(e,t)=>t?oe.red:oe.ink},yt=[{minXP:0,name:"Field Asst."},{minXP:100,name:"Jr. Paleontologist"},{minXP:300,name:"Field Lead"},{minXP:700,name:"Curator"},{minXP:1200,name:"Dr. Spencer"}],es={key:"dinos",tint:"#E8DAB7",sigil:"\u25C9",ranks:yt,handlesNavigation:!1,rankTitle(e){return U(e,yt).name},homeTileSubLabel(){return"FIELD PALEONTOLOGIST"},render(e,t){var D;let a=t.child_mode?" kid-large":"",o=e._personEntityId(t.name),s=e._attrs(o),i=e._attrs("sensor.family_hub_needs_attention"),n=parseInt(((D=e._states(o))==null?void 0:D.state)||"0"),r=t.rank_index!==void 0?t.rank_index:0,{dropThr:d,gainThr:p}=ge(t,i,r),c=be(t.person_id,i.history_log,i.rank_eval_weekday),b=ue(t.person_id,i.history_log,i.rank_eval_weekday),g=ve(s),u=U(r,yt),v=new Date,_=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],f=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],$=`${_[v.getDay()]} \xB7 ${v.getDate()} ${f[v.getMonth()]}`,S=[{key:"tasks",label:"FIELD LOG",sub:"today's specimens"},{key:"store",label:"TRADING POST",sub:"rewards"},{key:"history",label:"CATALOGUE",sub:"history"}],x=e._tab||"tasks",h=S.map(R=>`
+            <div class="fh-dn-tab ${x===R.key?"active":""}"
+                 data-act="tab" data-tab="${R.key}">${R.label}<span class="fh-dn-tab-sub">${R.sub}</span></div>`).join(""),w="";x==="tasks"&&(w=ni(s,t,i,e)),x==="store"&&(w=ri(s,t,n,e)),x==="history"&&(w=li(t,e));let z=(s.tasks_due_today_list||[]).filter(R=>R.status==="pending").length,E=x==="tasks",F=E?ei({attr:s,naAttr:i,person:t,balance:n,weekly:c,lost:b,atRisk:g,openCount:z,rankIdx:r,dropThr:d,gainThr:p,dateStr:$,card:e}):"";return`
             <div class="fh-dn-page${a}">
                 <div class="fh-dn-trex-watermark">\u{1F995}</div>
                 <div class="fh-dn-tape fh-dn-tape-tl"></div>
@@ -6324,13 +6336,13 @@ FUNDS`}
                 <div class="fh-dn-tabs">${h}</div>
 
                 <div class="fh-dn-body ${E?"has-rail":""}">
-                    <div class="fh-dn-body-main">${k}</div>
+                    <div class="fh-dn-body-main">${w}</div>
                     ${E?`<aside class="fh-dn-rail">${F}</aside>`:""}
                 </div>
 
                 <div class="fh-dn-footer"><span>FAMILY HUB \xB7 FIELD OPERATIONS</span><span>EXPEDITION LOG \xB7 ${$.toUpperCase()}</span></div>
-            </div>`}}});function pi({attr:e,naAttr:t,person:a,balance:o,weekly:s,lost:i,atRisk:n,openCount:l,rankIdx:d,dropThr:p,gainThr:c,rank:b,card:g}){return`
-        ${fi(o,s,i,n,l,e.show_dollar_value?e.dollar_value:null)}
+            </div>`}}});function pi({attr:e,naAttr:t,person:a,balance:o,weekly:s,lost:i,atRisk:n,openCount:r,rankIdx:d,dropThr:p,gainThr:c,rank:b,card:g}){return`
+        ${fi(o,s,i,n,r,e.show_dollar_value?e.dollar_value:null)}
         ${He(e)}
         ${mi(d,s,p,c,a,e)}
         ${gi(e,t,a)}
@@ -6345,19 +6357,19 @@ FUNDS`}
         <div class="fh-hp-rkpi">
             <div class="fh-hp-rkpi-lbl">${d}</div>
             <div class="fh-hp-rkpi-val-row">
-                <span class="fh-hp-rkpi-val">${f(String(p))}</span>
+                <span class="fh-hp-rkpi-val">${m(String(p))}</span>
                 ${c?`<span class="fh-hp-rkpi-unit">${c}</span>`:""}
             </div>
-            ${b?`<div class="fh-rkpi-sub ${g}">${f(b)}</div>`:""}
-        </div>`,l=`
+            ${b?`<div class="fh-rkpi-sub ${g}">${m(b)}</div>`:""}
+        </div>`,r=`
         <div class="fh-hp-rkpi-row">
             ${n("HOUSE PTS",O(e),"",i!=null?G(i):null)}
             ${n("THIS WEEK",`+${t}`,"pts",a>0?`\u2212${a} lost`:"0 lost","fh-rkpi-sub--loss")}
             ${n("CLASSES",s,"open",o>0?`\u2212${o} at risk`:null,"fh-rkpi-sub--loss")}
-        </div>`;return Ue("HOUSE STANDINGS",l)}function mi(e,t,a,o,s,i){let n=xe(e,t,a,o,kt,re.emerald,s),l=ke(s,re.emerald),d=we(s),p=Se(i);return n?Ue("O.W.L. PROGRESS",n+l+d+p):Ue("O.W.L. PROGRESS",`<div class="fh-hp-rmax">${f(U(e,kt).name)} \xB7 max marks</div>${l}${d}${p}`)}function gi(e,t,a){let o=_e(e,t,a,8);if(!o.length)return Ue("SPELLWORK STREAKS",'<div class="fh-hp-rempty">No spells cast in succession yet</div>');let s=o.map(i=>{let{goalSegs:n,filledN:l,countLbl:d}=$e(i.streak,i.milestone,10),p=Array.from({length:n},(b,g)=>`<span class="fh-hp-rstar${g<l?" lit":""}">\u2605</span>`).join(""),c=i.milestone>0&&i.bonus>0?`<span class="fh-hp-rbonus">\u2605+${i.bonus}</span>`:"";return`
+        </div>`;return Ue("HOUSE STANDINGS",r)}function mi(e,t,a,o,s,i){let n=xe(e,t,a,o,wt,re.emerald,s),r=we(s,re.emerald),d=ke(s),p=Se(i);return n?Ue("O.W.L. PROGRESS",n+r+d+p):Ue("O.W.L. PROGRESS",`<div class="fh-hp-rmax">${m(U(e,wt).name)} \xB7 max marks</div>${r}${d}${p}`)}function gi(e,t,a){let o=_e(e,t,a,8);if(!o.length)return Ue("SPELLWORK STREAKS",'<div class="fh-hp-rempty">No spells cast in succession yet</div>');let s=o.map(i=>{let{goalSegs:n,filledN:r,countLbl:d}=$e(i.streak,i.milestone,10),p=Array.from({length:n},(b,g)=>`<span class="fh-hp-rstar${g<r?" lit":""}">\u2605</span>`).join(""),c=i.milestone>0&&i.bonus>0?`<span class="fh-hp-rbonus">\u2605+${i.bonus}</span>`:"";return`
             <div class="fh-hp-rstreak">
                 <div class="fh-hp-rstreak-head">
-                    <span class="fh-hp-rstreak-name">${f(i.name)}</span>
+                    <span class="fh-hp-rstreak-name">${m(i.name)}</span>
                     ${c}
                 </div>
                 <div class="fh-hp-rstreak-bar">
@@ -6366,46 +6378,46 @@ FUNDS`}
                 </div>
             </div>`}).join("");return Ue("SPELLWORK STREAKS",s)}function bi(e,t){let a=(t.history_log||[]).filter(s=>s.person_id===e.person_id&&(s.points_delta||0)>0).slice(0,4);if(!a.length)return Ue("OWL POST",'<div class="fh-hp-rempty">No owls delivered yet</div>');let o=a.map(s=>{let i=s.timestamp?ne(s.timestamp):"";return`
             <div class="fh-hp-rowl">
-                <div class="fh-hp-rowl-when">~ ${f(i)} ~</div>
+                <div class="fh-hp-rowl-when">~ ${m(i)} ~</div>
                 <div class="fh-hp-rowl-row">
-                    <span class="fh-hp-rowl-name">${f(s.chore_name||s.note||"\u2014")}</span>
+                    <span class="fh-hp-rowl-name">${m(s.chore_name||s.note||"\u2014")}</span>
                     <span class="fh-hp-rowl-pts">+${s.points_delta}pts</span>
                 </div>
-            </div>`}).join("");return Ue("OWL POST",o)}function ui(e,t,a,o){let s=e.tasks_due_today_list||[],i=e.tasks_overdue_list||[],n=e.tasks_pending_approval_list||[],l=a.category_labels||[],d=(m,$)=>{let S=new Map;for(let v of m)(!S.has(v.chore_id)||$(v,S.get(v.chore_id)))&&S.set(v.chore_id,v);return[...S.values()]},p=d(i,(m,$)=>(m.days_overdue||0)>($.days_overdue||0)),c=d(s.filter(m=>m.chore_type!=="reminder"),()=>!1),b=[...p.map(m=>({...m,_over:!0})),...c];if(!b.length&&!n.length)return'<div class="fh-hp-empty">All assignments complete \u2014 10 points to the house!</div>';let g=0,x=Ne(b,l).map(m=>{let $=`<div class="fh-row-section-hdr">${f(m.label)}</div>`,S=m.tasks.map(v=>Y(v,as,t,o,{index:++g})).join("");return $+S}).join(""),w=n.length?`
+            </div>`}).join("");return Ue("OWL POST",o)}function ui(e,t,a,o){let s=e.tasks_due_today_list||[],i=e.tasks_overdue_list||[],n=e.tasks_pending_approval_list||[],r=a.category_labels||[],d=(f,$)=>{let S=new Map;for(let x of f)(!S.has(x.chore_id)||$(x,S.get(x.chore_id)))&&S.set(x.chore_id,x);return[...S.values()]},p=d(i,(f,$)=>(f.days_overdue||0)>($.days_overdue||0)),c=d(s.filter(f=>f.chore_type!=="reminder"),()=>!1),b=[...p.map(f=>({...f,_over:!0})),...c];if(!b.length&&!n.length)return'<div class="fh-hp-empty">All assignments complete \u2014 10 points to the house!</div>';let g=0,v=Ne(b,r).map(f=>{let $=`<div class="fh-row-section-hdr">${m(f.label)}</div>`,S=f.tasks.map(x=>Y(x,as,t,o,{index:++g})).join("");return $+S}).join(""),_=n.length?`
         <div class="fh-row-section-hdr">Awaiting approval</div>
-        ${n.map(m=>Y(m,as,t,o)).join("")}`:"";return`
+        ${n.map(f=>Y(f,as,t,o)).join("")}`:"";return`
         ${Ee(e)}
         ${Ce(e)}
         <div class="fh-row-list">
-            ${x}
-            ${w}
-        </div>`}function vi(e,t,a,o){let s=e.store_items||[];if(!s.length)return'<div class="fh-hp-empty">The vault is empty for now.</div>';let i=o._attrs("sensor.family_hub_needs_attention"),n=(i.redemption_queue||[]).filter(c=>c.person_id===t.person_id),l=new Set(n.map(c=>c.item_id).filter(Boolean)),d=new Set(n.filter(c=>!c.item_id).map(c=>c.item_name)),p=new Set((e.subscriptions||[]).map(c=>c.item_id));return`
+            ${v}
+            ${_}
+        </div>`}function vi(e,t,a,o){let s=e.store_items||[];if(!s.length)return'<div class="fh-hp-empty">The vault is empty for now.</div>';let i=o._attrs("sensor.family_hub_needs_attention"),n=(i.redemption_queue||[]).filter(c=>c.person_id===t.person_id),r=new Set(n.map(c=>c.item_id).filter(Boolean)),d=new Set(n.filter(c=>!c.item_id).map(c=>c.item_name)),p=new Set((e.subscriptions||[]).map(c=>c.item_id));return`
         <div class="fh-store-with-rail">
         <div class="fh-store-main">
         ${Pe(e.group_proposals,t.person_id)}
         ${ze(e)}
         <div class="fh-hp-vault">
-            ${s.map(c=>{let b=!!c.is_group_reward,g=c.item_type==="subscription",u=g&&p.has(c.item_id),x=a>=c.points_cost,w=l.has(c.item_id)||d.has(c.name),m=!!c.next_available,$={weekly:"wk",monthly:"mo",quarterly:"qtr",biannual:"6mo",annual:"yr"}[c.subscription_period]||"mo";return`
+            ${s.map(c=>{let b=!!c.is_group_reward,g=c.item_type==="subscription",u=g&&p.has(c.item_id),v=a>=c.points_cost,_=r.has(c.item_id)||d.has(c.name),f=!!c.next_available,$={weekly:"wk",monthly:"mo",quarterly:"qtr",biannual:"6mo",annual:"yr"}[c.subscription_period]||"mo";return`
                 <div class="fh-hp-vault-item">
                     ${me(c)}
                     <div class="fh-hp-vault-body">
-                        <div class="fh-hp-vault-name">${f(c.name)}</div>
-                        ${c.description?`<div class="fh-hp-vault-desc">${f(c.description)}</div>`:""}
+                        <div class="fh-hp-vault-name">${m(c.name)}</div>
+                        ${c.description?`<div class="fh-hp-vault-desc">${m(c.description)}</div>`:""}
                         ${Ae(c)}
                         ${Be(c,t.person_id)}
                     </div>
                     ${b?"":`<div class="fh-hp-pts-seal" style="color:${re.emerald}">${O(c.points_cost)}pts</div>`}
                     ${Me(c,e,t.person_id)}
-                    ${b?Fe(c,t.person_id,a):c.locked&&!w&&!(g&&u)?Re(c):g?u?`<span style="color:${re.emerald};font-size:.8rem;font-weight:700">Subscribed \u2713</span>`:w?`<span style="color:${re.emerald};font-size:.8rem;font-weight:700">Requested \u2713</span>`:`<button class="fh-hp-cast-btn ${x?"":"disabled"}"
+                    ${b?Fe(c,t.person_id,a):c.locked&&!_&&!(g&&u)?Re(c):g?u?`<span style="color:${re.emerald};font-size:.8rem;font-weight:700">Subscribed \u2713</span>`:_?`<span style="color:${re.emerald};font-size:.8rem;font-weight:700">Requested \u2713</span>`:`<button class="fh-hp-cast-btn ${v?"":"disabled"}"
                                        data-act="redeem"
                                        data-iid="${C(c.item_id)}"
                                        data-pid="${C(t.person_id)}"
-                                       ${x?"":'disabled style="opacity:.4;cursor:not-allowed"'}>
-                                   ${x?`Subscribe \xB7 ${c.points_cost}pts/${$}`:"Need more"}
-                               </button>`:w?`<span style="color:${re.emerald};font-size:.8rem;font-weight:700">Requested \u2713</span>`:m?'<span style="color:var(--fh-overdue);font-size:.75rem;font-weight:600">Not available</span>':`<button class="fh-hp-cast-btn ${x?"":"disabled"}"
+                                       ${v?"":'disabled style="opacity:.4;cursor:not-allowed"'}>
+                                   ${v?`Subscribe \xB7 ${c.points_cost}pts/${$}`:"Need more"}
+                               </button>`:_?`<span style="color:${re.emerald};font-size:.8rem;font-weight:700">Requested \u2713</span>`:f?'<span style="color:var(--fh-overdue);font-size:.75rem;font-weight:600">Not available</span>':`<button class="fh-hp-cast-btn ${v?"":"disabled"}"
                                    data-act="redeem" data-iid="${C(c.item_id)}" data-pid="${C(t.person_id)}"
-                                   ${x?"":'disabled style="opacity:.4;cursor:not-allowed"'}>
-                               ${x?"Request":"Need more"}
+                                   ${v?"":'disabled style="opacity:.4;cursor:not-allowed"'}>
+                               ${v?"Request":"Need more"}
                            </button>`}
                 </div>`}).join("")}
         </div>
@@ -6415,30 +6427,30 @@ FUNDS`}
         </div>
         </div>`}function xi(e,t){let o=(t._attrs("sensor.family_hub_needs_attention").history_log||[]).filter(i=>i.person_id===e.person_id);return o.length?`
         <div class="fh-hp-log">
-            ${ce(o).slice(0,15).map(i=>i.isGroup?ki(i,t):yi(i.entry)).join("")}
+            ${ce(o).slice(0,15).map(i=>i.isGroup?wi(i,t):yi(i.entry)).join("")}
         </div>`:'<div class="fh-hp-empty">No O.W.L. records yet.</div>'}function yi(e){let t=ie[e.type]||{label:e.type,color:re.mute},a=e.points_delta?`<span style="color:${e.points_delta>0?re.emerald:re.red};font-weight:700">
                ${e.points_delta>0?"+":""}${e.points_delta}pts
            </span>`:"";return`
         <div class="fh-hp-log-row">
-            <div class="fh-hp-log-type" style="color:${t.color}">${f(t.label)}</div>
-            <div class="fh-hp-log-name">${f(e.chore_name||e.note||"\u2014")}</div>
+            <div class="fh-hp-log-type" style="color:${t.color}">${m(t.label)}</div>
+            <div class="fh-hp-log-name">${m(e.chore_name||e.note||"\u2014")}</div>
             ${a}
-        </div>`}function ki(e,t){let a=t._expandedSkippedDates.has(e.key),o=e.totalPenalty>0?`\u2212${e.totalPenalty}pts`:"no penalty";return`
+        </div>`}function wi(e,t){let a=t._expandedSkippedDates.has(e.key),o=e.totalPenalty>0?`\u2212${e.totalPenalty}pts`:"no penalty";return`
         <div class="fh-hp-log-row"
              data-act="toggle-skipped-group" data-key="${C(e.key)}" style="cursor:pointer">
             <div class="fh-hp-log-type" style="color:${re.red}">Skipped</div>
-            <div class="fh-hp-log-name">${f(e.dateDisplay)} \xB7 ${o}</div>
+            <div class="fh-hp-log-name">${m(e.dateDisplay)} \xB7 ${o}</div>
             <span style="color:${re.mute};font-size:.75rem">${a?"\u25B2":"\u25BC"}</span>
         </div>
         ${a?e.items.map(s=>`
             <div class="fh-hp-log-row" style="padding-left:20px;opacity:.75">
                 <div class="fh-hp-log-type" style="color:${re.mute}">Item</div>
-                <div class="fh-hp-log-name">${f(s.chore_name||"")}</div>
+                <div class="fh-hp-log-name">${m(s.chore_name||"")}</div>
                 ${s.points_delta?`<span style="color:${re.red};font-weight:700">${s.points_delta}pts</span>`:""}
                 ${fe(s)}
-            </div>`).join(""):""}`}var re,as,kt,ss,os=N(()=>{Q();K();et();re={bg:"#EFE0BA",panel:"#FAF0D7",ink:"#241914",mute:"#5A4020",emerald:"#1F4F3C",gold:"#C9A22A",crimson:"#6F1B26",red:"#A02020",green:"#2A5A20"},as={themeKey:"hp",leadFormat:(e,t)=>e.status==="pending_approval"||e._over?null:`P${t}`,btnLabel:"Cast \u2713",btnPendingLabel:"Pending Approval",reminderBtnLabel:"Dismiss",streakIcon:"\u26A1",statusFormat:{breach:e=>`Overdue ${e.days_overdue}d`,resetSoon:()=>"Resets 1d",firing:e=>`\u2212${e.penalty_points} house pts/d`,expiry:e=>e<=0?"Expires today":`Expires in ${e}d`},iconColor:()=>re.panel},kt=[{minXP:0,name:"First Year"},{minXP:100,name:"Second Year"},{minXP:300,name:"Prefect"},{minXP:700,name:"Head Student"},{minXP:1200,name:"Order of Phoenix"}],ss={key:"hp",tint:"#EFE0BA",sigil:"\u26A1",ranks:kt,handlesNavigation:!1,rankTitle(e){return U(e,kt).name},homeTileSubLabel(){return"HOGWARTS STUDENT"},render(e,t){var D;let a=t.child_mode?" kid-large":"",o=e._personEntityId(t.name),s=e._attrs(o),i=e._attrs("sensor.family_hub_needs_attention"),n=parseInt(((D=e._states(o))==null?void 0:D.state)||"0"),l=t.rank_index!==void 0?t.rank_index:0,{dropThr:d,gainThr:p}=ge(t,i,l),c=be(t.person_id,i.history_log,i.rank_eval_weekday),b=ue(t.person_id,i.history_log,i.rank_eval_weekday),g=ve(s),u=U(l,kt),x=new Date,w=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],$=`${w[x.getDay()]} \xB7 ${x.getDate()} ${m[x.getMonth()]}`,S=[{key:"tasks",label:"Classes",sub:"today's schedule"},{key:"store",label:"Honeydukes",sub:"reward shop"},{key:"history",label:"Pensieve",sub:"history"}],v=e._tab||"tasks",h=S.map(R=>`
-            <div class="fh-hp-tab ${v===R.key?"active":""}"
-                 data-act="tab" data-tab="${R.key}">${R.label}<span class="fh-hp-tab-sub">${R.sub}</span></div>`).join(""),k="";v==="tasks"&&(k=ui(s,t,i,e)),v==="store"&&(k=vi(s,t,n,e)),v==="history"&&(k=xi(t,e));let A=(s.tasks_due_today_list||[]).filter(R=>R.status==="pending").length,E=v==="tasks",F=E?pi({attr:s,naAttr:i,person:t,balance:n,weekly:c,lost:b,atRisk:g,openCount:A,rankIdx:l,dropThr:d,gainThr:p,rank:u,card:e}):"";return`
+            </div>`).join(""):""}`}var re,as,wt,ss,os=N(()=>{Q();K();et();re={bg:"#EFE0BA",panel:"#FAF0D7",ink:"#241914",mute:"#5A4020",emerald:"#1F4F3C",gold:"#C9A22A",crimson:"#6F1B26",red:"#A02020",green:"#2A5A20"},as={themeKey:"hp",leadFormat:(e,t)=>e.status==="pending_approval"||e._over?null:`P${t}`,btnLabel:"Cast \u2713",btnPendingLabel:"Pending Approval",reminderBtnLabel:"Dismiss",streakIcon:"\u26A1",statusFormat:{breach:e=>`Overdue ${e.days_overdue}d`,resetSoon:()=>"Resets 1d",firing:e=>`\u2212${e.penalty_points} house pts/d`,expiry:e=>e<=0?"Expires today":`Expires in ${e}d`},iconColor:()=>re.panel},wt=[{minXP:0,name:"First Year"},{minXP:100,name:"Second Year"},{minXP:300,name:"Prefect"},{minXP:700,name:"Head Student"},{minXP:1200,name:"Order of Phoenix"}],ss={key:"hp",tint:"#EFE0BA",sigil:"\u26A1",ranks:wt,handlesNavigation:!1,rankTitle(e){return U(e,wt).name},homeTileSubLabel(){return"HOGWARTS STUDENT"},render(e,t){var D;let a=t.child_mode?" kid-large":"",o=e._personEntityId(t.name),s=e._attrs(o),i=e._attrs("sensor.family_hub_needs_attention"),n=parseInt(((D=e._states(o))==null?void 0:D.state)||"0"),r=t.rank_index!==void 0?t.rank_index:0,{dropThr:d,gainThr:p}=ge(t,i,r),c=be(t.person_id,i.history_log,i.rank_eval_weekday),b=ue(t.person_id,i.history_log,i.rank_eval_weekday),g=ve(s),u=U(r,wt),v=new Date,_=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],f=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],$=`${_[v.getDay()]} \xB7 ${v.getDate()} ${f[v.getMonth()]}`,S=[{key:"tasks",label:"Classes",sub:"today's schedule"},{key:"store",label:"Honeydukes",sub:"reward shop"},{key:"history",label:"Pensieve",sub:"history"}],x=e._tab||"tasks",h=S.map(R=>`
+            <div class="fh-hp-tab ${x===R.key?"active":""}"
+                 data-act="tab" data-tab="${R.key}">${R.label}<span class="fh-hp-tab-sub">${R.sub}</span></div>`).join(""),w="";x==="tasks"&&(w=ui(s,t,i,e)),x==="store"&&(w=vi(s,t,n,e)),x==="history"&&(w=xi(t,e));let z=(s.tasks_due_today_list||[]).filter(R=>R.status==="pending").length,E=x==="tasks",F=E?pi({attr:s,naAttr:i,person:t,balance:n,weekly:c,lost:b,atRisk:g,openCount:z,rankIdx:r,dropThr:d,gainThr:p,rank:u,card:e}):"";return`
             <div class="fh-hp-page${a}">
                 <div class="fh-hp-crest-watermark">\u26A1</div>
                 <div class="fh-hp-frame"></div>
@@ -6451,8 +6463,8 @@ FUNDS`}
                     <div class="fh-hp-title-row">
                         <div class="fh-hp-crest-simple">\u269C</div>
                         <div class="fh-hp-title-center">
-                            <div class="fh-hp-title-kicker">STUDENT \xB7 ${f(t.name.toUpperCase())} \xB7 ${f(u.name.toUpperCase())}</div>
-                            <div class="fh-hp-title-main">${f(t.name)}</div>
+                            <div class="fh-hp-title-kicker">STUDENT \xB7 ${m(t.name.toUpperCase())} \xB7 ${m(u.name.toUpperCase())}</div>
+                            <div class="fh-hp-title-main">${m(t.name)}</div>
                             <div class="fh-hp-title-sub">~ Daily Class Schedule \xB7 ${$} ~</div>
                         </div>
                         <div class="fh-hp-wax-seal">${j(t.name)}</div>
@@ -6462,18 +6474,18 @@ FUNDS`}
                 <div class="fh-hp-tabs">${h}</div>
 
                 <div class="fh-hp-body ${E?"has-rail":""}">
-                    <div class="fh-hp-body-main">${k}</div>
+                    <div class="fh-hp-body-main">${w}</div>
                     ${E?`<aside class="fh-hp-rail">${F}</aside>`:""}
                 </div>
 
                 <div class="fh-hp-footer"><span>By owl, this ${$} \xB7 Ops Year 2026</span><span>\xB7 Mischief Managed \xB7</span></div>
-            </div>`}}});function wi({attr:e,naAttr:t,person:a,balance:o,weekly:s,lost:i,atRisk:n,openCount:l,rankIdx:d,dropThr:p,gainThr:c,nextItem:b,fillPct:g,card:u}){return`
-        ${$i(o,s,i,n,l,e.show_dollar_value?e.dollar_value:null)}
+            </div>`}}});function ki({attr:e,naAttr:t,person:a,balance:o,weekly:s,lost:i,atRisk:n,openCount:r,rankIdx:d,dropThr:p,gainThr:c,nextItem:b,fillPct:g,card:u}){return`
+        ${$i(o,s,i,n,r,e.show_dollar_value?e.dollar_value:null)}
         ${He(e)}
         ${Si(d,s,p,c,a,e)}
         ${Ei(e,t,a)}
-        ${(()=>{let x=De(u._attrs("sensor.family_hub_claimable_tasks").tasks||[],a.person_id,{bare:!0});return x?qe("BONUS",x):""})()}
-        ${(()=>{let x=ye(a,t,le.orange);return x?qe("ROTATION",x):""})()}
+        ${(()=>{let v=De(u._attrs("sensor.family_hub_claimable_tasks").tasks||[],a.person_id,{bare:!0});return v?qe("BONUS",v):""})()}
+        ${(()=>{let v=ye(a,t,le.orange);return v?qe("ROTATION",v):""})()}
         ${_i(e,o,a.person_id)}
         ${Ci(b,g)}`}function qe(e,t){return`
         <div class="fh-dbz-rpanel">
@@ -6483,19 +6495,19 @@ FUNDS`}
         <div class="fh-dbz-rkpi">
             <div class="fh-dbz-rkpi-lbl">${d}</div>
             <div class="fh-dbz-rkpi-val-row">
-                <span class="fh-dbz-rkpi-val">${f(String(p))}</span>
+                <span class="fh-dbz-rkpi-val">${m(String(p))}</span>
                 ${c?`<span class="fh-dbz-rkpi-unit">${c}</span>`:""}
             </div>
-            ${b?`<div class="fh-rkpi-sub ${g}">${f(b)}</div>`:""}
-        </div>`,l=`
+            ${b?`<div class="fh-rkpi-sub ${g}">${m(b)}</div>`:""}
+        </div>`,r=`
         <div class="fh-dbz-rkpi-row">
             ${n("POWER",O(e),"\u26A1",i!=null?G(i):null)}
             ${n("WEEK",`+${t}`,"\u26A1",a>0?`\u2212${a} lost`:"0 lost","fh-rkpi-sub--loss")}
             ${n("OPEN",s,"",o>0?`\u2212${o} at risk`:null,"fh-rkpi-sub--loss")}
-        </div>`;return qe("POWER LEVEL",l)}function Si(e,t,a,o,s,i){let n=xe(e,t,a,o,wt,le.orange,s),l=ke(s,le.orange),d=we(s),p=Se(i);return n?qe("NEXT FORM",n+l+d+p):qe("NEXT FORM",`<div class="fh-dbz-rmax">${f(U(e,wt).name)} \xB7 MAX</div>${l}${d}${p}`)}function Ei(e,t,a){let o=_e(e,t,a,8);if(!o.length)return qe("CHARGE STREAKS",'<div class="fh-dbz-rempty">NO CHARGE YET \u2014 TRAIN UP!</div>');let s=o.map(i=>{let{goalSegs:n,filledN:l,countLbl:d}=$e(i.streak,i.milestone,10),p=Array.from({length:n},(b,g)=>`<span class="fh-dbz-rbolt${g<l?"":" dim"}">\u26A1</span>`).join(""),c=i.milestone>0&&i.bonus>0?`<span class="fh-dbz-rbonus">\u2605+${i.bonus}</span>`:"";return`
+        </div>`;return qe("POWER LEVEL",r)}function Si(e,t,a,o,s,i){let n=xe(e,t,a,o,kt,le.orange,s),r=we(s,le.orange),d=ke(s),p=Se(i);return n?qe("NEXT FORM",n+r+d+p):qe("NEXT FORM",`<div class="fh-dbz-rmax">${m(U(e,kt).name)} \xB7 MAX</div>${r}${d}${p}`)}function Ei(e,t,a){let o=_e(e,t,a,8);if(!o.length)return qe("CHARGE STREAKS",'<div class="fh-dbz-rempty">NO CHARGE YET \u2014 TRAIN UP!</div>');let s=o.map(i=>{let{goalSegs:n,filledN:r,countLbl:d}=$e(i.streak,i.milestone,10),p=Array.from({length:n},(b,g)=>`<span class="fh-dbz-rbolt${g<r?"":" dim"}">\u26A1</span>`).join(""),c=i.milestone>0&&i.bonus>0?`<span class="fh-dbz-rbonus">\u2605+${i.bonus}</span>`:"";return`
             <div class="fh-dbz-rstreak">
                 <div class="fh-dbz-rstreak-head">
-                    <span class="fh-dbz-rstreak-name">${f(i.name)}</span>
+                    <span class="fh-dbz-rstreak-name">${m(i.name)}</span>
                     ${c}
                 </div>
                 <div class="fh-dbz-rstreak-bar">
@@ -6503,46 +6515,46 @@ FUNDS`}
                     <span class="fh-dbz-rstreak-num">${d}</span>
                 </div>
             </div>`}).join("");return qe("CHARGE STREAKS",s)}function Ci(e,t){if(!e)return qe("NEXT POWER-UP",'<div class="fh-dbz-rempty">SHOP STOCKED \u2014 ASK A PARENT</div>');let a=`
-        <div class="fh-dbz-rnext-name">${f(e.name)}</div>
+        <div class="fh-dbz-rnext-name">${m(e.name)}</div>
         <div class="fh-dbz-rnext-cost">${O(e.points_cost)}\u26A1</div>
-        <div class="fh-dbz-next-bar-track"><div class="fh-dbz-next-bar-fill" style="width:${t}%"></div></div>`;return qe("NEXT POWER-UP",a)}function zi(e,t,a,o){let s=e.tasks_due_today_list||[],i=e.tasks_overdue_list||[],n=e.tasks_pending_approval_list||[],l=a.category_labels||[],d=(w,m)=>{let $=new Map;for(let S of w)(!$.has(S.chore_id)||m(S,$.get(S.chore_id)))&&$.set(S.chore_id,S);return[...$.values()]},p=d(i,(w,m)=>(w.days_overdue||0)>(m.days_overdue||0)),c=d(s.filter(w=>w.chore_type!=="reminder"),()=>!1),b=[...p.map(w=>({...w,_over:!0})),...c];if(!b.length&&!n.length)return`
+        <div class="fh-dbz-next-bar-track"><div class="fh-dbz-next-bar-fill" style="width:${t}%"></div></div>`;return qe("NEXT POWER-UP",a)}function zi(e,t,a,o){let s=e.tasks_due_today_list||[],i=e.tasks_overdue_list||[],n=e.tasks_pending_approval_list||[],r=a.category_labels||[],d=(_,f)=>{let $=new Map;for(let S of _)(!$.has(S.chore_id)||f(S,$.get(S.chore_id)))&&$.set(S.chore_id,S);return[...$.values()]},p=d(i,(_,f)=>(_.days_overdue||0)>(f.days_overdue||0)),c=d(s.filter(_=>_.chore_type!=="reminder"),()=>!1),b=[...p.map(_=>({..._,_over:!0})),...c];if(!b.length&&!n.length)return`
             <div class="fh-dbz-all-done">
                 <div class="fh-dbz-all-done-icon">\u2B50</div>
                 <div class="fh-dbz-all-done-text">ALL DONE!</div>
-            </div>`;let u=Ne(b,l).map(w=>{let m=`<div class="fh-row-section-hdr">${f(w.label)}</div>`,$=w.tasks.map(S=>Y(S,is,t,o)).join("");return m+$}).join(""),x=n.length?`
+            </div>`;let u=Ne(b,r).map(_=>{let f=`<div class="fh-row-section-hdr">${m(_.label)}</div>`,$=_.tasks.map(S=>Y(S,is,t,o)).join("");return f+$}).join(""),v=n.length?`
         <div class="fh-row-section-hdr">WAITING FOR APPROVAL</div>
-        ${n.map(w=>Y(w,is,t,o)).join("")}`:"";return`
+        ${n.map(_=>Y(_,is,t,o)).join("")}`:"";return`
         ${Ee(e)}
         ${Ce(e)}
         <div class="fh-row-list">
             ${u}
-            ${x}
-        </div>`}function Ai(e,t,a,o){let s=e.store_items||[];if(!s.length)return'<div class="fh-dbz-empty">No power-ups available yet!</div>';let i=o._attrs("sensor.family_hub_needs_attention"),n=(i.redemption_queue||[]).filter(c=>c.person_id===t.person_id),l=new Set(n.map(c=>c.item_id).filter(Boolean)),d=new Set(n.filter(c=>!c.item_id).map(c=>c.item_name)),p=new Set((e.subscriptions||[]).map(c=>c.item_id));return`
+            ${v}
+        </div>`}function Ai(e,t,a,o){let s=e.store_items||[];if(!s.length)return'<div class="fh-dbz-empty">No power-ups available yet!</div>';let i=o._attrs("sensor.family_hub_needs_attention"),n=(i.redemption_queue||[]).filter(c=>c.person_id===t.person_id),r=new Set(n.map(c=>c.item_id).filter(Boolean)),d=new Set(n.filter(c=>!c.item_id).map(c=>c.item_name)),p=new Set((e.subscriptions||[]).map(c=>c.item_id));return`
         <div class="fh-store-with-rail">
         <div class="fh-store-main">
         ${Pe(e.group_proposals,t.person_id)}
         ${ze(e)}
         <div class="fh-dbz-powerup-list">
-            ${s.map(c=>{let b=!!c.is_group_reward,g=c.item_type==="subscription",u=g&&p.has(c.item_id),x=a>=c.points_cost,w=l.has(c.item_id)||d.has(c.name),m=!!c.next_available,$={weekly:"wk",monthly:"mo",quarterly:"qtr",biannual:"6mo",annual:"yr"}[c.subscription_period]||"mo";return`
-                <div class="fh-dbz-powerup-row ${!b&&!g&&!x?"locked":""}">
+            ${s.map(c=>{let b=!!c.is_group_reward,g=c.item_type==="subscription",u=g&&p.has(c.item_id),v=a>=c.points_cost,_=r.has(c.item_id)||d.has(c.name),f=!!c.next_available,$={weekly:"wk",monthly:"mo",quarterly:"qtr",biannual:"6mo",annual:"yr"}[c.subscription_period]||"mo";return`
+                <div class="fh-dbz-powerup-row ${!b&&!g&&!v?"locked":""}">
                     ${me(c)}
                     <div class="fh-dbz-powerup-body">
-                        <div class="fh-dbz-powerup-name">${f(c.name)}</div>
+                        <div class="fh-dbz-powerup-name">${m(c.name)}</div>
                         ${b?"":`<div class="fh-dbz-powerup-cost">${O(c.points_cost)}\u26A1</div>`}
                         ${Ae(c)}
                         ${Be(c,t.person_id)}
                     </div>
                     ${Me(c,e,t.person_id)}
-                    ${b?Fe(c,t.person_id,a):c.locked&&!w&&!(g&&u)?Re(c):g?u?`<span style="color:${le.orange};font-weight:800;font-size:.9rem">SUB \u2713</span>`:w?`<span style="color:${le.orange};font-weight:800;font-size:.9rem">SENT \u2713</span>`:`<button class="fh-dbz-go-btn ${x?"":"locked"}"
+                    ${b?Fe(c,t.person_id,a):c.locked&&!_&&!(g&&u)?Re(c):g?u?`<span style="color:${le.orange};font-weight:800;font-size:.9rem">SUB \u2713</span>`:_?`<span style="color:${le.orange};font-weight:800;font-size:.9rem">SENT \u2713</span>`:`<button class="fh-dbz-go-btn ${v?"":"locked"}"
                                        data-act="redeem"
                                        data-iid="${C(c.item_id)}"
                                        data-pid="${C(t.person_id)}"
-                                       ${x?"":'disabled style="opacity:.35;cursor:not-allowed"'}>
-                                   ${x?`SUB \xB7 ${c.points_cost}/${$}`:"NEED \u26A1"}
-                               </button>`:w?`<span style="color:${le.orange};font-weight:800;font-size:.9rem">SENT \u2713</span>`:m?'<span style="color:var(--fh-overdue);font-weight:700;font-size:.8rem">NOT YET</span>':`<button class="fh-dbz-go-btn ${x?"":"locked"}"
+                                       ${v?"":'disabled style="opacity:.35;cursor:not-allowed"'}>
+                                   ${v?`SUB \xB7 ${c.points_cost}/${$}`:"NEED \u26A1"}
+                               </button>`:_?`<span style="color:${le.orange};font-weight:800;font-size:.9rem">SENT \u2713</span>`:f?'<span style="color:var(--fh-overdue);font-weight:700;font-size:.8rem">NOT YET</span>':`<button class="fh-dbz-go-btn ${v?"":"locked"}"
                                    data-act="redeem" data-iid="${C(c.item_id)}" data-pid="${C(t.person_id)}"
-                                   ${x?"":'disabled style="opacity:.35;cursor:not-allowed"'}>
-                               ${x?"GET!":"NEED \u26A1"}
+                                   ${v?"":'disabled style="opacity:.35;cursor:not-allowed"'}>
+                               ${v?"GET!":"NEED \u26A1"}
                            </button>`}
                 </div>`}).join("")}
         </div>
@@ -6557,25 +6569,25 @@ FUNDS`}
                ${e.points_delta>0?"+":""}${e.points_delta}\u26A1
            </span>`:"";return`
         <div class="fh-dbz-log-row">
-            <div class="fh-dbz-log-type" style="color:${t.color}">${f(t.label)}</div>
-            <div class="fh-dbz-log-name">${f(e.chore_name||e.note||"\u2014")}</div>
+            <div class="fh-dbz-log-type" style="color:${t.color}">${m(t.label)}</div>
+            <div class="fh-dbz-log-name">${m(e.chore_name||e.note||"\u2014")}</div>
             ${a}
         </div>`}function Fi(e,t){let a=t._expandedSkippedDates.has(e.key),o=e.totalPenalty>0?`\u2212${e.totalPenalty}\u26A1`:"ok";return`
         <div class="fh-dbz-log-row"
              data-act="toggle-skipped-group" data-key="${C(e.key)}" style="cursor:pointer">
             <div class="fh-dbz-log-type" style="color:${le.red}">MISSED</div>
-            <div class="fh-dbz-log-name">${f(e.dateDisplay)} \xB7 ${o}</div>
+            <div class="fh-dbz-log-name">${m(e.dateDisplay)} \xB7 ${o}</div>
             <span style="color:${le.mute};font-size:.75rem">${a?"\u25B2":"\u25BC"}</span>
         </div>
         ${a?e.items.map(s=>`
             <div class="fh-dbz-log-row" style="padding-left:20px;opacity:.75">
                 <div class="fh-dbz-log-type" style="color:${le.mute}">Item</div>
-                <div class="fh-dbz-log-name">${f(s.chore_name||"")}</div>
+                <div class="fh-dbz-log-name">${m(s.chore_name||"")}</div>
                 ${s.points_delta?`<span style="color:${le.red};font-weight:800">${s.points_delta}\u26A1</span>`:""}
                 ${fe(s)}
-            </div>`).join(""):""}`}var le,is,wt,ns,rs=N(()=>{Q();K();et();le={sky:"#3FAAD9",orange:"#FF6A1A",yellow:"#FFE03A",navy:"#0F1E2E",white:"#FFFFFF",mute:"rgba(15,30,46,.6)",red:"#CC2200"},is={themeKey:"dbz",btnLabel:"GO!",btnPendingLabel:"PENDING",reminderBtnLabel:"OK",streakIcon:"\u26A1",statusFormat:{breach:e=>`!OVERDUE ${e.days_overdue}D`,resetSoon:()=>"RESETS 1D",firing:e=>`\u2212${e.penalty_points}\u26A1/D`,expiry:e=>e<=0?"EXPIRES TODAY":`EXPIRES ${e}D`},iconColor:(e,t)=>t?le.red:le.navy},wt=[{minXP:0,name:"Saibaman"},{minXP:100,name:"Saiyan"},{minXP:300,name:"Super Saiyan"},{minXP:700,name:"SSJ2"},{minXP:1200,name:"SSJ Blue"}],ns={key:"dbz",tint:"#3FAAD9",sigil:"\u25CE",ranks:wt,handlesNavigation:!1,rankTitle(e){return U(e,wt).name},homeTileSubLabel(){return"SAIYAN WARRIOR"},render(e,t){var F;let a=t.child_mode?" kid-large":"",o=e._personEntityId(t.name),s=e._attrs(o),i=e._attrs("sensor.family_hub_needs_attention"),n=parseInt(((F=e._states(o))==null?void 0:F.state)||"0"),l=t.rank_index!==void 0?t.rank_index:0,{dropThr:d,gainThr:p}=ge(t,i,l),c=be(t.person_id,i.history_log,i.rank_eval_weekday),b=ue(t.person_id,i.history_log,i.rank_eval_weekday),g=ve(s),u=U(l,wt),x=[{key:"tasks",label:"\u{1F4AA} TRAIN"},{key:"store",label:"\u{1F48E} SHOP"},{key:"history",label:"\u{1F3C6} WINS"}],w=e._tab||"tasks",m=x.map(D=>`
-            <div class="fh-dbz-tab ${w===D.key?"active":""}"
-                 data-act="tab" data-tab="${D.key}">${D.label}</div>`).join(""),$="";w==="tasks"&&($=zi(s,t,i,e)),w==="store"&&($=Ai(s,t,n,e)),w==="history"&&($=Mi(t,e));let S=(s.tasks_due_today_list||[]).filter(D=>D.status==="pending").length,v=s.store_items||[],h=v.find(D=>D.points_cost>n)||v[0]||null,k=h?Math.min(100,Math.round(n/h.points_cost*100)):100,A=w==="tasks",E=A?wi({attr:s,naAttr:i,person:t,balance:n,weekly:c,lost:b,atRisk:g,openCount:S,rankIdx:l,dropThr:d,gainThr:p,nextItem:h,fillPct:k,card:e}):"";return`
+            </div>`).join(""):""}`}var le,is,kt,ns,rs=N(()=>{Q();K();et();le={sky:"#3FAAD9",orange:"#FF6A1A",yellow:"#FFE03A",navy:"#0F1E2E",white:"#FFFFFF",mute:"rgba(15,30,46,.6)",red:"#CC2200"},is={themeKey:"dbz",btnLabel:"GO!",btnPendingLabel:"PENDING",reminderBtnLabel:"OK",streakIcon:"\u26A1",statusFormat:{breach:e=>`!OVERDUE ${e.days_overdue}D`,resetSoon:()=>"RESETS 1D",firing:e=>`\u2212${e.penalty_points}\u26A1/D`,expiry:e=>e<=0?"EXPIRES TODAY":`EXPIRES ${e}D`},iconColor:(e,t)=>t?le.red:le.navy},kt=[{minXP:0,name:"Saibaman"},{minXP:100,name:"Saiyan"},{minXP:300,name:"Super Saiyan"},{minXP:700,name:"SSJ2"},{minXP:1200,name:"SSJ Blue"}],ns={key:"dbz",tint:"#3FAAD9",sigil:"\u25CE",ranks:kt,handlesNavigation:!1,rankTitle(e){return U(e,kt).name},homeTileSubLabel(){return"SAIYAN WARRIOR"},render(e,t){var F;let a=t.child_mode?" kid-large":"",o=e._personEntityId(t.name),s=e._attrs(o),i=e._attrs("sensor.family_hub_needs_attention"),n=parseInt(((F=e._states(o))==null?void 0:F.state)||"0"),r=t.rank_index!==void 0?t.rank_index:0,{dropThr:d,gainThr:p}=ge(t,i,r),c=be(t.person_id,i.history_log,i.rank_eval_weekday),b=ue(t.person_id,i.history_log,i.rank_eval_weekday),g=ve(s),u=U(r,kt),v=[{key:"tasks",label:"\u{1F4AA} TRAIN"},{key:"store",label:"\u{1F48E} SHOP"},{key:"history",label:"\u{1F3C6} WINS"}],_=e._tab||"tasks",f=v.map(D=>`
+            <div class="fh-dbz-tab ${_===D.key?"active":""}"
+                 data-act="tab" data-tab="${D.key}">${D.label}</div>`).join(""),$="";_==="tasks"&&($=zi(s,t,i,e)),_==="store"&&($=Ai(s,t,n,e)),_==="history"&&($=Mi(t,e));let S=(s.tasks_due_today_list||[]).filter(D=>D.status==="pending").length,x=s.store_items||[],h=x.find(D=>D.points_cost>n)||x[0]||null,w=h?Math.min(100,Math.round(n/h.points_cost*100)):100,z=_==="tasks",E=z?ki({attr:s,naAttr:i,person:t,balance:n,weekly:c,lost:b,atRisk:g,openCount:S,rankIdx:r,dropThr:d,gainThr:p,nextItem:h,fillPct:w,card:e}):"";return`
             <div class="fh-dbz-page${a}">
                 <div class="fh-dbz-speedlines"></div>
                 <div class="fh-dbz-halftone"></div>
@@ -6584,7 +6596,7 @@ FUNDS`}
                     <div class="fh-dbz-avatar">${j(t.name)}</div>
                     <div class="fh-dbz-identity">
                         <div class="fh-dbz-codename">SAIYAN TRAINEE \xB7 CODENAME KAMEHA</div>
-                        <div class="fh-dbz-name">${f(t.name).toUpperCase()}</div>
+                        <div class="fh-dbz-name">${m(t.name).toUpperCase()}</div>
                     </div>
                     <div class="fh-dbz-power-badge">
                         <div class="fh-dbz-power-num">${O(n)}</div>
@@ -6600,31 +6612,31 @@ FUNDS`}
                     <span class="fh-dbz-strip-count" style="color:#FF5A4A">\u2212${g}\u26A1</span>`:""}
                 </div>
 
-                <div class="fh-dbz-tabs">${m}</div>
+                <div class="fh-dbz-tabs">${f}</div>
 
-                <div class="fh-dbz-body ${A?"has-rail":""}">
+                <div class="fh-dbz-body ${z?"has-rail":""}">
                     <div class="fh-dbz-body-main">${$}</div>
-                    ${A?`<aside class="fh-dbz-rail">${E}</aside>`:""}
+                    ${z?`<aside class="fh-dbz-rail">${E}</aside>`:""}
                 </div>
 
-                ${A||!h?"":`
+                ${z||!h?"":`
                 <div class="fh-dbz-next-bar">
                     <span style="font-size:1.6rem">\u{1F3AF}</span>
                     <div class="fh-dbz-next-bar-body">
                         <div class="fh-dbz-next-bar-lbl">NEXT POWER-UP</div>
-                        <div class="fh-dbz-next-bar-name">${f(h.name)} \xB7 ${O(h.points_cost)}\u26A1</div>
-                        <div class="fh-dbz-next-bar-track"><div class="fh-dbz-next-bar-fill" style="width:${k}%"></div></div>
+                        <div class="fh-dbz-next-bar-name">${m(h.name)} \xB7 ${O(h.points_cost)}\u26A1</div>
+                        <div class="fh-dbz-next-bar-track"><div class="fh-dbz-next-bar-fill" style="width:${w}%"></div></div>
                     </div>
                 </div>`}
-            </div>`}}});function tt(e){return ls[e]||ls.classic}var ls,_t=N(()=>{qa();Va();Qa();ts();os();rs();ls={classic:Ua,engineer:Ka,baker:Xa,dinos:es,hp:ss,dbz:ns}});function oa(e){let t=e._findPerson(e._viewPersonId||e._cfg.person);return t?tt(t.theme_key||"classic").render(e,t):`<div class="fh-empty">Person "${e._viewPersonId||e._cfg.person||"(unknown)"}" not found.<br>Check spelling in card config.</div>`}var ds=N(()=>{_t()});function ps(e){let t=e._attrs("sensor.family_hub_claimable_tasks"),a=e._attrs("sensor.family_hub_needs_attention"),o=e._people().filter(F=>F.active!==!1),s=t.all_tasks||[],i=t.tasks||[],n=a.approval_queue||[],l=a.category_labels||[],d=!!a.penalties_paused_global,p=a.family_name||"Family Hub";e._mcLastTasks||(e._mcLastTasks=new Map);let c=new Set(s.map(F=>F.task_id));for(let F of s)e._mcLastTasks.set(F.task_id,F);let b=e._pendingSubmit||new Set,g=[];for(let F of b)!c.has(F)&&e._mcLastTasks.has(F)&&g.push({...e._mcLastTasks.get(F),_phantom:!0});let u=[...s,...g],x=new Map(o.map(F=>[F.person_id,F])),w=F=>{let D=x.get(F.assigned_to);return{...F,_agentColor:(D==null?void 0:D.avatar_color)||H,_agentCode:((D==null?void 0:D.code)||(D==null?void 0:D.name)||"?").toUpperCase(),_agentName:(D==null?void 0:D.name)||"?",_agentPersonId:(D==null?void 0:D.person_id)||F.assigned_to}},m=(e._filter?u.filter(F=>F.assigned_to===e._filter):u).map(w),$=m.filter(F=>F.days_delta<0),S=m.filter(F=>F.days_delta>=0),v=cs($),h=cs(S),k=v.length+h.length,A=n.length,E=Ri();return`
+            </div>`}}});function tt(e){return ls[e]||ls.classic}var ls,_t=N(()=>{qa();Va();Qa();ts();os();rs();ls={classic:Ua,engineer:Ka,baker:Xa,dinos:es,hp:ss,dbz:ns}});function oa(e){let t=e._findPerson(e._viewPersonId||e._cfg.person);return t?tt(t.theme_key||"classic").render(e,t):`<div class="fh-empty">Person "${e._viewPersonId||e._cfg.person||"(unknown)"}" not found.<br>Check spelling in card config.</div>`}var ds=N(()=>{_t()});function ps(e){let t=e._attrs("sensor.family_hub_claimable_tasks"),a=e._attrs("sensor.family_hub_needs_attention"),o=e._people().filter(F=>F.active!==!1),s=t.all_tasks||[],i=t.tasks||[],n=a.approval_queue||[],r=a.category_labels||[],d=!!a.penalties_paused_global,p=a.family_name||"Family Hub";e._mcLastTasks||(e._mcLastTasks=new Map);let c=new Set(s.map(F=>F.task_id));for(let F of s)e._mcLastTasks.set(F.task_id,F);let b=e._pendingSubmit||new Set,g=[];for(let F of b)!c.has(F)&&e._mcLastTasks.has(F)&&g.push({...e._mcLastTasks.get(F),_phantom:!0});let u=[...s,...g],v=new Map(o.map(F=>[F.person_id,F])),_=F=>{let D=v.get(F.assigned_to);return{...F,_agentColor:(D==null?void 0:D.avatar_color)||H,_agentCode:((D==null?void 0:D.code)||(D==null?void 0:D.name)||"?").toUpperCase(),_agentName:(D==null?void 0:D.name)||"?",_agentPersonId:(D==null?void 0:D.person_id)||F.assigned_to}},f=(e._filter?u.filter(F=>F.assigned_to===e._filter):u).map(_),$=f.filter(F=>F.days_delta<0),S=f.filter(F=>F.days_delta>=0),x=cs($),h=cs(S),w=x.length+h.length,z=n.length,E=Ri();return`
         <div class="fh-mc">
-            ${Di(p,k,A,E,d)}
+            ${Di(p,w,z,E,d)}
             <div class="fh-mc-body">
                 <main class="fh-mc-main">
                     ${Ii(o,u,n,e)}
-                    ${Ti(v,e)}
-                    ${Pi(h,l,e)}
-                    ${!v.length&&!h.length?`<div class="fh-mc-empty">
+                    ${Ti(x,e)}
+                    ${Pi(h,r,e)}
+                    ${!x.length&&!h.length?`<div class="fh-mc-empty">
                                <div class="fh-mc-empty-title">\u2713 ALL MISSIONS COMPLETE</div>
                                <div class="fh-mc-empty-sub">HQ STANDING DOWN \xB7 NICE WORK</div>
                            </div>`:""}
@@ -6636,12 +6648,12 @@ FUNDS`}
                 </aside>
             </div>
         </div>
-    `}function cs(e){let t=new Map;for(let a of e){let o=a.chore_id||a.task_id;t.has(o)||t.set(o,{chore_id:a.chore_id,name:a.name,icon:a.icon,description:a.description,category_label:a.category_label,points:a.points,penalty_enabled:a.penalty_enabled,penalty_points:a.penalty_points,daily_penalty_firing:a.daily_penalty_firing,days_until_reset:a.days_until_reset,recurrence_type:a.recurrence_type,anyBreach:!1,maxOverdue:0,assignees:[]});let s=t.get(o),i=a.days_delta<0;i&&(s.anyBreach=!0,s.maxOverdue=Math.max(s.maxOverdue,Math.abs(a.days_delta))),a.daily_penalty_firing&&(s.daily_penalty_firing=!0),s.assignees.push({person_id:a._agentPersonId,task_id:a.task_id,color:a._agentColor,code:a._agentCode,name:a._agentName,streak:a.streak||0,milestone:a.streak_milestone||0,status:a.status,days_overdue:i?Math.abs(a.days_delta):0,isBreach:i,isPhantom:!!a._phantom})}return[...t.values()]}function Ri(){let e=new Date(2025,8,1);return Math.max(1,Math.floor((Date.now()-e.getTime())/864e5))}function Di(e,t,a,o,s){let i=new Date,n=i.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"}).toUpperCase(),l=i.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit",hour12:!1});return`
+    `}function cs(e){let t=new Map;for(let a of e){let o=a.chore_id||a.task_id;t.has(o)||t.set(o,{chore_id:a.chore_id,name:a.name,icon:a.icon,description:a.description,category_label:a.category_label,points:a.points,penalty_enabled:a.penalty_enabled,penalty_points:a.penalty_points,daily_penalty_firing:a.daily_penalty_firing,days_until_reset:a.days_until_reset,recurrence_type:a.recurrence_type,anyBreach:!1,maxOverdue:0,assignees:[]});let s=t.get(o),i=a.days_delta<0;i&&(s.anyBreach=!0,s.maxOverdue=Math.max(s.maxOverdue,Math.abs(a.days_delta))),a.daily_penalty_firing&&(s.daily_penalty_firing=!0),s.assignees.push({person_id:a._agentPersonId,task_id:a.task_id,color:a._agentColor,code:a._agentCode,name:a._agentName,streak:a.streak||0,milestone:a.streak_milestone||0,status:a.status,days_overdue:i?Math.abs(a.days_delta):0,isBreach:i,isPhantom:!!a._phantom})}return[...t.values()]}function Ri(){let e=new Date(2025,8,1);return Math.max(1,Math.floor((Date.now()-e.getTime())/864e5))}function Di(e,t,a,o,s){let i=new Date,n=i.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"}).toUpperCase(),r=i.toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit",hour12:!1});return`
         <header class="fh-mc-header">
             <div class="fh-mc-brand">
                 <div class="fh-mc-logo">FH</div>
                 <div class="fh-mc-wordmark">
-                    <div class="fh-mc-wordmark-name">${f(e).toUpperCase()}</div>
+                    <div class="fh-mc-wordmark-name">${m(e).toUpperCase()}</div>
                     <div class="fh-mc-wordmark-tag">OPERATIONS \xB7 COMMAND</div>
                 </div>
             </div>
@@ -6652,7 +6664,7 @@ FUNDS`}
                 ${ia("OPS DAY",o,"gold")}
                 <div class="fh-mc-clock">
                     <div class="fh-mc-stat-lbl">${n}</div>
-                    <div class="fh-mc-clock-num">${l}</div>
+                    <div class="fh-mc-clock-num">${r}</div>
                 </div>
             </div>
         </header>
@@ -6664,10 +6676,10 @@ FUNDS`}
                 <span class="fh-mc-stat-num">${t}</span>
             </div>
         </div>
-    `}function Ii(e,t,a,o){if(!e.length)return"";let s=e.map(i=>{var $;let n=i.avatar_color||H,l=o._filter===i.person_id,d=o._filter&&!l,p=t.filter(S=>S.assigned_to===i.person_id).length,c=a.filter(S=>S.person_id===i.person_id).length,b=(i.code||i.name||"AGT").toUpperCase(),g=parseInt((($=o._states(o._personEntityId(i.name)))==null?void 0:$.state)||"0"),u=i.completion_milestone||0,x=i.completion_streak||0,w=i.completion_threshold_pct||80,m=u>0&&x>0?`<div class="fh-mc-agent-streak" title="${w}% of daily chores for ${x} days running">
-                   \u{1F525} ${x}d \xB7 ${w}%
+    `}function Ii(e,t,a,o){if(!e.length)return"";let s=e.map(i=>{var $;let n=i.avatar_color||H,r=o._filter===i.person_id,d=o._filter&&!r,p=t.filter(S=>S.assigned_to===i.person_id).length,c=a.filter(S=>S.person_id===i.person_id).length,b=(i.code||i.name||"AGT").toUpperCase(),g=parseInt((($=o._states(o._personEntityId(i.name)))==null?void 0:$.state)||"0"),u=i.completion_milestone||0,v=i.completion_streak||0,_=i.completion_threshold_pct||80,f=u>0&&v>0?`<div class="fh-mc-agent-streak" title="${_}% of daily chores for ${v} days running">
+                   \u{1F525} ${v}d \xB7 ${_}%
                </div>`:"";return`
-            <button class="fh-mc-agent ${l?"active":""} ${d?"dim":""}"
+            <button class="fh-mc-agent ${r?"active":""} ${d?"dim":""}"
                     style="--agent-color:${n}"
                     data-act="filter" data-pid="${C(i.person_id)}">
                 <div class="fh-mc-agent-head">
@@ -6676,11 +6688,11 @@ FUNDS`}
                         ${c>0?`<span class="fh-mc-agent-alert">${c}</span>`:""}
                     </div>
                     <div class="fh-mc-agent-id">
-                        <div class="fh-mc-agent-code">${f(b)}</div>
-                        <div class="fh-mc-agent-name">${f(i.name)}</div>
+                        <div class="fh-mc-agent-code">${m(b)}</div>
+                        <div class="fh-mc-agent-name">${m(i.name)}</div>
                     </div>
                 </div>
-                ${m}
+                ${f}
                 <div class="fh-mc-agent-foot">
                     <span class="fh-mc-agent-bal">${O(g)}<span class="fh-mc-agent-lbl">pts</span></span>
                     <span class="fh-mc-agent-open ${p>0?"live":""}">${p} OPEN</span>
@@ -6701,19 +6713,19 @@ FUNDS`}
                 ${e.map(a=>hs(a,t)).join("")}
             </div>
         </section>
-    `:""}function Pi(e,t,a){if(!e.length)return"";let o=new Map(t.map((n,l)=>[n,l])),s=new Map;for(let n of e){let l=n.category_label||"";s.has(l)||s.set(l,[]),s.get(l).push(n)}return[...s.keys()].sort((n,l)=>{if(n===""&&l!=="")return 1;if(n!==""&&l==="")return-1;let d=o.has(n)?o.get(n):1/0,p=o.has(l)?o.get(l):1/0;return d!==p?d-p:n.localeCompare(l)}).map(n=>{let l=s.get(n)||[];return`
+    `:""}function Pi(e,t,a){if(!e.length)return"";let o=new Map(t.map((n,r)=>[n,r])),s=new Map;for(let n of e){let r=n.category_label||"";s.has(r)||s.set(r,[]),s.get(r).push(n)}return[...s.keys()].sort((n,r)=>{if(n===""&&r!=="")return 1;if(n!==""&&r==="")return-1;let d=o.has(n)?o.get(n):1/0,p=o.has(r)?o.get(r):1/0;return d!==p?d-p:n.localeCompare(r)}).map(n=>{let r=s.get(n)||[];return`
             <section class="fh-mc-missions">
-                ${n?fs(n.toUpperCase(),`${l.length} ACTIVE`,"gold"):""}
+                ${n?fs(n.toUpperCase(),`${r.length} ACTIVE`,"gold"):""}
                 <div class="fh-row-list">
-                    ${l.map(p=>hs(p,a)).join("")}
+                    ${r.map(p=>hs(p,a)).join("")}
                 </div>
             </section>
-        `}).join("")}function hs(e,t){var c;let a=String(e.chore_id||"").slice(0,4).toUpperCase(),o="";e.anyBreach?o=`<span class="fh-row-chip fh-row-chip--breach">BREACH \xB7 ${e.maxOverdue}D</span>`:e.days_until_reset===1&&(o='<span class="fh-row-chip fh-row-chip--reset">RESETS 1D</span>'),e.daily_penalty_firing&&(o+=`<span class="fh-row-chip fh-row-chip--firing">ACCRUING \u2212${e.penalty_points}/D</span>`);let s=o?`<div class="fh-row-chips">${o}</div>`:'<div class="fh-row-chips"></div>',i=e.description?`<div class="fh-row-desc">${f(e.description)}</div>`:"",n=e.penalty_enabled&&e.penalty_points>0?`<div class="fh-row-penalty">\u2212${e.penalty_points}pts if skipped</div>`:"",l=e.assignees.map(b=>{var x;let g=((x=t._pendingSubmit)==null?void 0:x.has(b.task_id))||b.status==="pending_approval"||b.isPhantom,u=["fh-mc-go-mini"];return b.isBreach&&u.push("breach"),g&&u.push("pending"),g?`
+        `}).join("")}function hs(e,t){var c;let a=String(e.chore_id||"").slice(0,4).toUpperCase(),o="";e.anyBreach?o=`<span class="fh-row-chip fh-row-chip--breach">BREACH \xB7 ${e.maxOverdue}D</span>`:e.days_until_reset===1&&(o='<span class="fh-row-chip fh-row-chip--reset">RESETS 1D</span>'),e.daily_penalty_firing&&(o+=`<span class="fh-row-chip fh-row-chip--firing">ACCRUING \u2212${e.penalty_points}/D</span>`);let s=o?`<div class="fh-row-chips">${o}</div>`:'<div class="fh-row-chips"></div>',i=e.description?`<div class="fh-row-desc">${m(e.description)}</div>`:"",n=e.penalty_enabled&&e.penalty_points>0?`<div class="fh-row-penalty">\u2212${e.penalty_points}pts if skipped</div>`:"",r=e.assignees.map(b=>{var v;let g=((v=t._pendingSubmit)==null?void 0:v.has(b.task_id))||b.status==="pending_approval"||b.isPhantom,u=["fh-mc-go-mini"];return b.isBreach&&u.push("breach"),g&&u.push("pending"),g?`
                 <div class="${u.join(" ")}"
                      style="--mc-accent:${b.color}"
                      aria-disabled="true"
                      title="Pending approval \u2014 ${C(b.name)}">
-                    <span class="fh-mc-go-code">${f(b.code)}</span>
+                    <span class="fh-mc-go-code">${m(b.code)}</span>
                     <span class="fh-mc-go-check">\u23F1</span>
                 </div>`:`
             <button class="${u.join(" ")}"
@@ -6725,7 +6737,7 @@ FUNDS`}
                     data-milestone="${b.milestone}"
                     data-name="${C(e.name)}"
                     title="GO \u2014 ${C(b.name)}">
-                <span class="fh-mc-go-code">${f(b.code)}</span>
+                <span class="fh-mc-go-code">${m(b.code)}</span>
                 <span class="fh-mc-go-check">\u2713</span>
             </button>`}).join(""),d=((c=e.assignees[0])==null?void 0:c.color)||H;return`
         <div class="fh-row fh-row--mc${e.assignees.some(b=>{var g;return(g=t._flashing)==null?void 0:g.has(b.task_id)})?" flash":""}${e.anyBreach?" overdue":""}"
@@ -6733,20 +6745,20 @@ FUNDS`}
             <div class="fh-row-icon">${pe(e.icon||"",d)}</div>
             <div class="fh-row-body">
                 <div class="fh-row-kicker">OP-${a}</div>
-                <div class="fh-row-name">${f(e.name)}</div>
+                <div class="fh-row-name">${m(e.name)}</div>
                 ${i}
                 ${n}
             </div>
             ${s}
             <div class="fh-row-pts">+${e.points||0}</div>
-            <div class="fh-mc-go-group">${l}</div>
+            <div class="fh-mc-go-group">${r}</div>
         </div>
     `}function fs(e,t,a,o=!1){return`
         <div class="fh-mc-section-hdr" data-accent="${a}">
             ${o?'<span class="fh-mc-pulse"></span>':""}
-            <span class="fh-mc-section-lbl">// ${f(e)}</span>
+            <span class="fh-mc-section-lbl">// ${m(e)}</span>
             <span class="fh-mc-section-rule"></span>
-            ${t?`<span class="fh-mc-section-sub">${f(t)}</span>`:""}
+            ${t?`<span class="fh-mc-section-sub">${m(t)}</span>`:""}
         </div>
     `}function Li(e){if(!e.length)return`
             <section class="fh-mc-panel fh-mc-panel--quiet">
@@ -6759,8 +6771,8 @@ FUNDS`}
             <div class="fh-mc-intel-row" style="--mc-accent:${o}">
                 <div class="fh-mc-intel-avatar">${j(a.person_name||"?")}</div>
                 <div class="fh-mc-intel-body">
-                    <div class="fh-mc-intel-code">${f(s)}</div>
-                    <div class="fh-mc-intel-name">${f(a.chore_name||"Task")}</div>
+                    <div class="fh-mc-intel-code">${m(s)}</div>
+                    <div class="fh-mc-intel-name">${m(a.chore_name||"Task")}</div>
                     <div class="fh-mc-intel-meta">+${a.points||0}pts</div>
                 </div>
                 <div class="fh-mc-intel-status">REVIEW</div>
@@ -6785,8 +6797,8 @@ FUNDS`}
                 <div class="fh-mc-ops-kicker">${a.claim_mode==="multi_claim"?"MULTI":"FCFS"} \xB7 OP-${o}</div>
                 <div class="fh-mc-ops-icon">${pe(a.icon||"","var(--mc-cyan)","22px")}</div>
                 <div class="fh-mc-ops-body">
-                    <div class="fh-mc-ops-name">${f(a.name)}</div>
-                    ${a.category_label?`<div class="fh-mc-ops-cat">${f(a.category_label)}</div>`:""}
+                    <div class="fh-mc-ops-name">${m(a.name)}</div>
+                    ${a.category_label?`<div class="fh-mc-ops-cat">${m(a.category_label)}</div>`:""}
                 </div>
                 <div class="fh-mc-ops-pts">+${a.points||0}</div>
                 <button class="fh-mc-ops-claim"
@@ -6803,7 +6815,7 @@ FUNDS`}
                     <span class="fh-mc-panel-sub">NONE LISTED</span>
                 </div>
             </section>
-        `}function Ni(e,t){let o=new Date().toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit",hour12:!1}),s=e.reduce((n,l)=>{let d=parseInt(l.lifetime_points||0);return n+(isNaN(d)?0:d)},0),i=(t.store_items||[]).length;return`
+        `}function Ni(e,t){let o=new Date().toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit",hour12:!1}),s=e.reduce((n,r)=>{let d=parseInt(r.lifetime_points||0);return n+(isNaN(d)?0:d)},0),i=(t.store_items||[]).length;return`
         <div class="fh-mc-status">
             <div class="fh-mc-status-row"><span class="fh-mc-status-dot ok"></span>LINK \xB7 STABLE</div>
             <div class="fh-mc-status-row">SYNC \xB7 ${o}</div>
@@ -6816,7 +6828,7 @@ FUNDS`}
                 <div class="fh-celebration-star">\u2605</div>
                 <div class="fh-celebration-title">MILESTONE!</div>
                 <div class="fh-celebration-streak">\u25B2 ${e.streak}</div>
-                <div class="fh-celebration-name">${f(e.name)}</div>
+                <div class="fh-celebration-name">${m(e.name)}</div>
             </div>
         </div>
     `}var na=N(()=>{ut();Q();K()});function Dt(e){let t=e._attrs("sensor.family_hub_maintenance_due"),a=t.overdue||0,o=t.due_this_week||0,s=t.due_next_week||0,i=t.items||[],n=`
@@ -6830,7 +6842,7 @@ FUNDS`}
                 <div class="fh-maint-empty-icon">\u{1F3E0}</div>
                 <div class="fh-maint-empty-text">All caught up!</div>
                 <div class="fh-maint-empty-sub">Nothing due in the next 14 days.</div>
-            </div>`;let l=`
+            </div>`;let r=`
         <div class="fh-maint-stat-strip">
             <div class="fh-maint-stat ${a?"fh-maint-stat--bad":""}">
                 <span class="fh-maint-stat-num">${a}</span>
@@ -6846,19 +6858,19 @@ FUNDS`}
                 <span class="fh-maint-stat-num">${s}</span>
                 <span class="fh-maint-stat-lbl">next week</span>
             </div>
-        </div>`,d=i.filter(u=>u.days_delta<0),p=i.filter(u=>u.days_delta>=0&&u.days_delta<=7),c=i.filter(u=>u.days_delta>7),g=[{label:"OVERDUE",items:d,cls:"overdue"},{label:"DUE THIS WEEK",items:p,cls:"this-week"},{label:"DUE NEXT WEEK",items:c,cls:"next-week"}].filter(u=>u.items.length).map(({label:u,items:x,cls:w})=>`
+        </div>`,d=i.filter(u=>u.days_delta<0),p=i.filter(u=>u.days_delta>=0&&u.days_delta<=7),c=i.filter(u=>u.days_delta>7),g=[{label:"OVERDUE",items:d,cls:"overdue"},{label:"DUE THIS WEEK",items:p,cls:"this-week"},{label:"DUE NEXT WEEK",items:c,cls:"next-week"}].filter(u=>u.items.length).map(({label:u,items:v,cls:_})=>`
         <div class="fh-maint-section">
-            <div class="fh-maint-section-hdr ${w}">
+            <div class="fh-maint-section-hdr ${_}">
                 ${u}
-                <span class="fh-maint-section-count">${x.length}</span>
+                <span class="fh-maint-section-count">${v.length}</span>
             </div>
-            ${x.map(m=>Hi(m,e)).join("")}
-        </div>`).join("");return n+l+g}function Hi(e,t){let a=t._expandedDescs.has(e.task_id),o=e.days_delta<0?"overdue":e.days_delta<=7?"soon":"ok";return`
+            ${v.map(f=>Hi(f,e)).join("")}
+        </div>`).join("");return n+r+g}function Hi(e,t){let a=t._expandedDescs.has(e.task_id),o=e.days_delta<0?"overdue":e.days_delta<=7?"soon":"ok";return`
         <div class="fh-maint-row ${o}">
             ${e.person_name?`<div class="fh-avatar" style="background:${e.person_color||H};width:26px;height:26px;font-size:.72rem;flex-shrink:0">${j(e.person_name)}</div>`:""}
             <div class="fh-maint-row-body">
-                <div class="fh-maint-row-name">${f(e.name)}</div>
-                ${a&&e.description?`<div class="fh-maint-row-desc">${f(e.description)}</div>`:""}
+                <div class="fh-maint-row-name">${m(e.name)}</div>
+                ${a&&e.description?`<div class="fh-maint-row-desc">${m(e.description)}</div>`:""}
             </div>
             ${e.description?`<button class="fh-desc-btn" data-act="toggle-desc" data-id="${e.task_id}" title="Toggle description">?</button>`:""}
             <span class="fh-maint-days-badge ${o}">${Oa(e.days_delta)}</span>
@@ -6885,22 +6897,22 @@ FUNDS`}
                 <div class="fh-room-feature-name">${t}</div>
                 <div class="fh-room-feature-desc">${a}</div>
             </div>
-        </div>`}var bs=N(()=>{});var jt={};bo(jt,{AISLES:()=>nt,DOW:()=>Pt,DOW_SHORT:()=>rt,GROUPS:()=>Le,GROUP_ORDER:()=>Xe,HEALTHY_FAT_FOODS:()=>Gi,HEALTHY_FAT_INGS:()=>ji,HORIZON_DAYS:()=>St,IDEAS_POOL:()=>us,INGREDIENTS:()=>la,ING_SECTIONS:()=>pt,MEALS:()=>da,MON:()=>Lt,MON_SHORT:()=>ht,PASTA_ROTATION:()=>Wi,PIZZA_ROTATION:()=>ca,PROTEINS:()=>de,PROTEIN_ORDER:()=>$t,SIDES:()=>at,THEMES:()=>Tt,addDays:()=>Je,allMeals:()=>ot,dinnerGroups:()=>Nt,fetchRecipeIdeas:()=>qi,fmtDayLong:()=>mt,fmtDayShort:()=>fa,getIngredients:()=>Oe,getRecipe:()=>Ke,ingById:()=>xs,iso:()=>Z,mealById:()=>V,mealHealthyFats:()=>pa,mealIngredients:()=>Ot,mealWholeGrain:()=>ha,nextEmptyDinner:()=>ma,parseISO:()=>ft,rankIdeas:()=>Ht,sideById:()=>it,startOfWeek:()=>Et,today:()=>st,variantFor:()=>Ui,weekIdx:()=>vs});function Z(e){return e.getFullYear()+"-"+String(e.getMonth()+1).padStart(2,"0")+"-"+String(e.getDate()).padStart(2,"0")}function ft(e){let t=e.split("-");return new Date(+t[0],+t[1]-1,+t[2])}function Je(e,t){let a=new Date(e.getFullYear(),e.getMonth(),e.getDate());return a.setDate(a.getDate()+t),a}function st(){let e=new Date;return new Date(e.getFullYear(),e.getMonth(),e.getDate())}function Et(e,t){return Je(e,-((e.getDay()-t+7)%7))}function vs(e){return Math.floor((e.getTime()/864e5+4)/7)}function ot(e){return e&&e.length?da.concat(e):da}function V(e,t){return ot(t).find(a=>a.id===e)||null}function it(e){return at.find(t=>t.id===e)||null}function Oe(e){return e&&e.length?la.concat(e):la}function xs(e,t){return Oe(t).find(a=>a.id===e)||null}function Ke(e,t){return t&&e&&t[e.id]||e&&e.recipe||null}function Ot(e,t){if(!e)return[];let a=(e.ing||[]).slice();if(e.proteinPick){let o=t&&t.protein||e.defaultPick,s=e.proteinIng[o];s&&a.indexOf(s)===-1&&(a=a.concat(s))}return a}function pa(e){if(!e)return[];let t={eggs:"eggs",cheese:"full-fat dairy",milk:"full-fat dairy"},a=[];return(e.ing||[]).forEach(o=>{t[o]&&a.indexOf(t[o])===-1&&a.push(t[o])}),a}function ha(e,t){if(!e||(e.groups||[]).indexOf("grain")===-1)return!1;let a=(e.ing||[]).map(o=>xs(o,t)).filter(o=>o&&o.cat==="grain");return a.length?a.every(o=>o.whole):!1}function Nt(e,t){if(!e)return[];let a=new Set,o=V(e.main,t);return o&&(o.groups||[]).forEach(s=>a.add(s)),(e.sides||[]).forEach(s=>{let i=it(s);i&&i.groups.forEach(n=>a.add(n))}),[...a]}function mt(e){return`${Pt[e.getDay()]}, ${Lt[e.getMonth()]} ${e.getDate()}`}function fa(e){return`${rt[e.getDay()]} ${e.getDate()}`}function ma(e){let t=st();for(let a=0;a<St;a++){let o=Je(t,a),s=e[Z(o)];if(!s||!s.d)return o}return null}function Ui(e,t,a){return e?e.rotates?ca[vs(t)%ca.length]:e.proteinPick&&a?`with ${de[a].label.toLowerCase()}`:"":""}function Ht(e){let t=e||[];return us.map(a=>({idea:a,hits:a.ing.filter(o=>t.indexOf(o)!==-1)})).sort((a,o)=>o.hits.length-a.hits.length)}function qi(e){return Promise.resolve(Ht(e))}var Le,Xe,de,$t,nt,la,pt,at,da,us,ji,Gi,ca,Wi,Tt,Pt,rt,Lt,ht,St,Ct=N(()=>{Le={protein:{label:"Protein",color:"#8B3A2A",icon:"\u{1F357}"},veg:{label:"Veggies",color:"#3A6A28",icon:"\u{1F966}"},grain:{label:"Grains",color:"#B07818",icon:"\u{1F33E}"},fruit:{label:"Fruit",color:"#A02828",icon:"\u{1F34E}"},dairy:{label:"Dairy",color:"#5D7A8C",icon:"\u{1F95B}"}},Xe=["protein","veg","grain","fruit","dairy"],de={beef:{label:"Beef",glyph:"\u{1F969}",cuts:[{id:"ground",label:"Ground beef"},{id:"steak",label:"Steak"},{id:"roast",label:"Roast & stew meat"},{id:"brisket",label:"Brisket"}]},chicken:{label:"Chicken",glyph:"\u{1F357}",cuts:[{id:"breasts",label:"Breasts"},{id:"thighs",label:"Thighs"},{id:"whole",label:"Whole bird"}]},pork:{label:"Pork",glyph:"\u{1F953}",cuts:[{id:"chops",label:"Chops"},{id:"pulled",label:"Shoulder / pulled"},{id:"bacon",label:"Bacon & sausage"}]},turkey:{label:"Turkey",glyph:"\u{1F983}",cuts:[{id:"ground",label:"Ground turkey"},{id:"deli",label:"Deli sliced"}]},meatless:{label:"Meatless",glyph:"\u{1FAD8}",cuts:[{id:"eggs",label:"Eggs"},{id:"beans",label:"Beans & lentils"},{id:"cheesepasta",label:"Pasta & cheese"}]}},$t=["beef","chicken","pork","turkey","meatless"],nt={produce:"Produce",meat:"Meat & Seafood",dairy:"Dairy & Eggs",bakery:"Bakery",pantry:"Pantry"},la=[{id:"chicken",label:"Chicken",glyph:"\u{1F357}",aisle:"meat",cat:"protein"},{id:"gbeef",label:"Ground beef",glyph:"\u{1F969}",aisle:"meat",cat:"protein"},{id:"pork",label:"Pork",glyph:"\u{1F953}",aisle:"meat",cat:"protein"},{id:"turkey",label:"Turkey",glyph:"\u{1F983}",aisle:"meat",cat:"protein"},{id:"eggs",label:"Eggs",glyph:"\u{1F95A}",aisle:"dairy",cat:"protein"},{id:"beans",label:"Beans",glyph:"\u{1FAD8}",aisle:"pantry",cat:"protein"},{id:"potatoes",label:"Potatoes",glyph:"\u{1F954}",aisle:"produce",cat:"veg"},{id:"greens",label:"Salad greens",glyph:"\u{1F96C}",aisle:"produce",cat:"veg"},{id:"broccoli",label:"Broccoli",glyph:"\u{1F966}",aisle:"produce",cat:"veg"},{id:"tomatoes",label:"Tomatoes",glyph:"\u{1F345}",aisle:"produce",cat:"veg"},{id:"carrots",label:"Carrots",glyph:"\u{1F955}",aisle:"produce",cat:"veg"},{id:"corn",label:"Corn",glyph:"\u{1F33D}",aisle:"produce",cat:"veg"},{id:"onions",label:"Onions",glyph:"\u{1F9C5}",aisle:"produce",cat:"veg"},{id:"fruit",label:"Fruit",glyph:"\u{1F34E}",aisle:"produce",cat:"fruit"},{id:"tortillas",label:"Tortillas",glyph:"\u{1FAD3}",aisle:"bakery",cat:"grain",whole:!0},{id:"bread",label:"Bread",glyph:"\u{1F35E}",aisle:"bakery",cat:"grain",whole:!0},{id:"pasta",label:"Pasta",glyph:"\u{1F35D}",aisle:"pantry",cat:"grain",whole:!0},{id:"rice",label:"Rice",glyph:"\u{1F35A}",aisle:"pantry",cat:"grain",whole:!0},{id:"cheese",label:"Cheese",glyph:"\u{1F9C0}",aisle:"dairy",cat:"dairy"},{id:"milk",label:"Milk",glyph:"\u{1F95B}",aisle:"dairy",cat:"dairy"}],pt=[["protein","Proteins"],["veg","Veggies"],["fruit","Fruit"],["grain","Grains & starches"],["dairy","Dairy"]],at=[{id:"side-salad",name:"Garden Salad",glyph:"\u{1F957}",groups:["veg"],ing:["greens","tomatoes"],pairs:["beef","meatless","chicken"]},{id:"broc-side",name:"Roasted Broccoli",glyph:"\u{1F966}",groups:["veg"],ing:["broccoli"],pairs:["chicken","beef"]},{id:"green-beans",name:"Green Beans",glyph:"\u{1FADB}",groups:["veg"],ing:[],pairs:["chicken","pork","beef"]},{id:"corn-cob",name:"Corn on the Cob",glyph:"\u{1F33D}",groups:["veg"],ing:["corn"],pairs:["beef","chicken","pork","turkey"]},{id:"carrots-side",name:"Glazed Carrots",glyph:"\u{1F955}",groups:["veg"],ing:["carrots"],pairs:["chicken","pork"]},{id:"mashed",name:"Mashed Potatoes",glyph:"\u{1F954}",groups:["veg"],ing:["potatoes","milk"],pairs:["beef","chicken","pork","turkey"]},{id:"fries",name:"Oven Fries",glyph:"\u{1F35F}",groups:["veg"],ing:["potatoes"],pairs:["beef","turkey"]},{id:"coleslaw",name:"Coleslaw",glyph:"\u{1F96C}",groups:["veg"],ing:["greens","carrots"],pairs:["pork","turkey"]},{id:"rice-side",name:"Steamed Rice",glyph:"\u{1F35A}",groups:["grain"],ing:["rice"],pairs:["chicken","meatless"]},{id:"garlic-bread",name:"Garlic Bread",glyph:"\u{1F956}",groups:["grain"],ing:["bread"],pairs:["meatless","beef"]},{id:"cornbread",name:"Cornbread",glyph:"\u{1FAD3}",groups:["grain"],ing:[],pairs:["beef","pork"]},{id:"beans-side",name:"Refried Beans",glyph:"\u{1FAD8}",groups:["protein"],ing:["beans"],pairs:["beef","chicken","meatless"]},{id:"fruit-salad",name:"Fruit Salad",glyph:"\u{1F353}",groups:["fruit"],ing:["fruit"],pairs:["turkey","chicken","meatless"]},{id:"apple-slices",name:"Apple Slices",glyph:"\u{1F34E}",groups:["fruit"],ing:["fruit"],pairs:["pork","meatless"]},{id:"milk-glass",name:"Milk",glyph:"\u{1F95B}",groups:["dairy"],ing:["milk"],pairs:[]},{id:"yogurt-cup",name:"Yogurt Cups",glyph:"\u{1F368}",groups:["dairy"],ing:["milk"],pairs:[]},{id:"roasted-veg",name:"Roasted Veggies",glyph:"\u{1FAD1}",groups:["veg"],ing:["onions","carrots"],pairs:["beef","chicken","pork"]},{id:"baked-potato",name:"Baked Potato",glyph:"\u{1F954}",groups:["veg"],ing:["potatoes"],pairs:["beef","chicken"]},{id:"sweet-potato",name:"Baked Sweet Potato",glyph:"\u{1F360}",groups:["veg"],ing:[],pairs:["pork","turkey","chicken"]},{id:"asparagus",name:"Roasted Asparagus",glyph:"\u{1F33F}",groups:["veg"],ing:[],pairs:["chicken","beef"]},{id:"peas",name:"Buttered Peas",glyph:"\u{1F7E2}",groups:["veg"],ing:[],pairs:["chicken","turkey","beef"]},{id:"brussels",name:"Brussels Sprouts",glyph:"\u{1F96C}",groups:["veg"],ing:[],pairs:["pork","beef","chicken"]},{id:"dinner-rolls",name:"Dinner Rolls",glyph:"\u{1F950}",groups:["grain"],ing:["bread"],pairs:["beef","chicken","turkey"]},{id:"buttered-noodles",name:"Buttered Noodles",glyph:"\u{1F35D}",groups:["grain"],ing:["pasta"],pairs:["beef","chicken"]},{id:"biscuits",name:"Biscuits",glyph:"\u{1FAD3}",groups:["grain"],ing:[],pairs:["pork","chicken"]},{id:"quinoa",name:"Quinoa",glyph:"\u{1F35A}",groups:["grain"],ing:[],pairs:["chicken","meatless"]},{id:"grapes",name:"Grapes",glyph:"\u{1F347}",groups:["fruit"],ing:["fruit"],pairs:["turkey","chicken","meatless"]},{id:"orange-slices",name:"Orange Slices",glyph:"\u{1F34A}",groups:["fruit"],ing:["fruit"],pairs:["pork","chicken"]},{id:"berries",name:"Mixed Berries",glyph:"\u{1FAD0}",groups:["fruit"],ing:["fruit"],pairs:["chicken","meatless"]},{id:"watermelon",name:"Melon Wedges",glyph:"\u{1F349}",groups:["fruit"],ing:[],pairs:["turkey","meatless"]},{id:"cheese-cubes",name:"Cheese Cubes",glyph:"\u{1F9C0}",groups:["dairy"],ing:["cheese"],pairs:[]},{id:"cottage-cheese",name:"Cottage Cheese",glyph:"\u{1F963}",groups:["dairy"],ing:["milk"],pairs:[]},{id:"eggs-side",name:"Hard-Boiled Eggs",glyph:"\u{1F95A}",groups:["protein"],ing:["eggs"],pairs:["meatless"]},{id:"edamame",name:"Edamame",glyph:"\u{1FADB}",groups:["protein"],ing:[],pairs:["chicken","meatless"]},{id:"hummus",name:"Hummus & Veggies",glyph:"\u{1F9C6}",groups:["protein","veg"],ing:["beans","carrots"],pairs:["meatless","chicken"]}],da=[{id:"eggs-toast",name:"Scrambled Eggs & Toast",glyph:"\u{1F373}",types:["b"],groups:["protein","grain"],ing:["eggs","bread"],fav:!0},{id:"oatmeal",name:"Oatmeal & Berries",glyph:"\u{1F963}",types:["b"],groups:["grain","fruit"],ing:["fruit"],fav:!0},{id:"pancakes",name:"Pancake Morning",glyph:"\u{1F95E}",types:["b"],groups:["grain"],ing:["eggs","milk"],fav:!1},{id:"yogurt",name:"Yogurt & Granola",glyph:"\u{1FAD0}",types:["b"],groups:["dairy","grain","fruit"],ing:["milk","fruit"],fav:!1},{id:"bfast-burritos",name:"Breakfast Burritos",glyph:"\u{1F32F}",types:["b"],groups:["protein","grain","dairy"],ing:["eggs","tortillas","cheese"],fav:!1},{id:"smoothies",name:"Fruit Smoothies",glyph:"\u{1F964}",types:["b"],groups:["fruit","dairy"],ing:["fruit","milk"],fav:!1},{id:"french-toast",name:"French Toast",glyph:"\u{1F35E}",types:["b"],groups:["grain","dairy"],ing:["bread","eggs","milk"],fav:!1},{id:"cereal",name:"Cereal & Fruit",glyph:"\u{1F95B}",types:["b"],groups:["grain","dairy","fruit"],ing:["milk","fruit"],fav:!1},{id:"turkey-sand",name:"Turkey Sandwiches",glyph:"\u{1F96A}",types:["l"],groups:["protein","grain","veg"],ing:["turkey","bread","cheese","greens"],fav:!0,protein:"turkey",cut:"deli"},{id:"grilled-cheese",name:"Grilled Cheese & Soup",glyph:"\u{1F9C0}",types:["l"],groups:["grain","dairy","veg"],ing:["bread","cheese","tomatoes"],fav:!1,protein:"meatless",cut:"cheesepasta"},{id:"quesadillas",name:"Cheese Quesadillas",glyph:"\u{1FAD3}",types:["l"],groups:["grain","dairy"],ing:["tortillas","cheese"],fav:!0,protein:"meatless",cut:"cheesepasta"},{id:"caesar-wrap",name:"Chicken Caesar Wraps",glyph:"\u{1F32F}",types:["l"],groups:["protein","veg","grain"],ing:["chicken","tortillas","greens"],fav:!1,protein:"chicken",cut:"breasts"},{id:"pbj",name:"PB&J + Apple Slices",glyph:"\u{1F95C}",types:["l"],groups:["grain","fruit"],ing:["bread","fruit"],fav:!1},{id:"mac-cheese",name:"Mac & Cheese",glyph:"\u{1F958}",types:["l"],groups:["grain","dairy"],ing:["pasta","cheese","milk"],fav:!1,protein:"meatless",cut:"cheesepasta"},{id:"soup-bread",name:"Soup & Crusty Bread",glyph:"\u{1F372}",types:["l"],groups:["veg","grain"],ing:["tomatoes","bread","onions"],fav:!1},{id:"snack-plate",name:"Picnic Snack Plate",glyph:"\u{1F9FA}",types:["l"],groups:["veg","dairy","grain","fruit"],ing:["cheese","greens","fruit","bread"],fav:!1},{id:"spaghetti",name:"Spaghetti & Meatballs",glyph:"\u{1F35D}",types:["d"],groups:["protein","grain"],ing:["pasta","gbeef","tomatoes","onions"],fav:!0,protein:"beef",cut:"ground",sides:["side-salad","garlic-bread"]},{id:"taco-night",name:"Taco Night",glyph:"\u{1F32E}",types:["d"],groups:["protein","grain","veg","dairy"],ing:["tortillas","cheese","tomatoes","greens"],fav:!0,protein:"beef",cut:"ground",sides:["corn-cob"],proteinPick:["beef","chicken","pork"],proteinIng:{beef:"gbeef",chicken:"chicken",pork:"pork"},defaultPick:"beef",recipe:{time:"30 min",serves:5,ingredients:["2 lb of your protein (beef, chicken, or pork)","10 taco shells or tortillas","Shredded cheese","Lettuce, tomato, salsa","Taco seasoning"],steps:["Cook your protein, drain, add seasoning + \xBD cup water.","Simmer 5 min while you chop toppings.","Warm shells in the oven, 5 min at 325\xB0.","Set out everything build-your-own style."]}},{id:"meatloaf",name:"Meatloaf",glyph:"\u{1F9C6}",types:["d"],groups:["protein","grain"],ing:["gbeef","bread","onions"],fav:!1,protein:"beef",cut:"ground",sides:["mashed","green-beans"]},{id:"burgers",name:"Burger Night",glyph:"\u{1F354}",types:["d"],groups:["protein","grain"],ing:["gbeef","bread","cheese","tomatoes","onions"],fav:!1,protein:"beef",cut:"ground",sides:["fries","corn-cob"]},{id:"chili",name:"Slow-Cooker Chili",glyph:"\u{1F336}\uFE0F",types:["d"],groups:["protein","veg"],ing:["gbeef","beans","tomatoes","onions"],fav:!1,protein:"beef",cut:"ground",sides:["cornbread"],recipe:{time:"15 min + 6 hr slow cook",serves:5,ingredients:["2 lb ground beef","2 cans beans","1 can crushed tomatoes","Onion, chili powder, cumin"],steps:["Brown beef with onion, drain.","Everything into the slow cooker.","Low 6 hours. Stir when you walk past.","Cheese + cornbread on the side."]}},{id:"shepherds",name:"Shepherd's Pie",glyph:"\u{1F967}",types:["d"],groups:["protein","veg"],ing:["gbeef","potatoes","carrots","onions"],fav:!1,protein:"beef",cut:"ground",sides:["green-beans"],recipe:{time:"50 min",serves:5,ingredients:["2 lb ground beef","4 cups mashed potatoes","Frozen peas + carrots","Onion, broth, Worcestershire"],steps:["Brown beef + onion, add veg and a splash of broth.","Into a baking dish, mash on top.","Bake 25 min at 400\xB0 until golden.","Rest 5 min before scooping."]}},{id:"steak-night",name:"Steak Night",glyph:"\u{1F969}",types:["d"],groups:["protein"],ing:["potatoes"],fav:!1,protein:"beef",cut:"steak",sides:["mashed","side-salad"]},{id:"beef-stew",name:"Beef Stew",glyph:"\u{1F356}",types:["d"],groups:["protein","veg"],ing:["potatoes","carrots","onions"],fav:!1,protein:"beef",cut:"roast",sides:["garlic-bread"]},{id:"brisket",name:"Slow-Smoked Brisket",glyph:"\u{1F969}",types:["d"],groups:["protein"],ing:["gbeef","onions"],fav:!1,protein:"beef",cut:"brisket",sides:["cornbread","coleslaw"],recipe:{time:"20 min + 6 hr low",serves:5,ingredients:["3\u20134 lb beef brisket","Dry rub (salt, pepper, paprika, garlic)","Onions","BBQ sauce to finish"],steps:["Rub the brisket well, let it sit while the oven heats to 300\xB0.","Bed of onions in the pan, brisket on top, cover tight.","Low and slow ~6 hours until it pulls apart.","Rest 20 min, slice against the grain."]}},{id:"grilled-chx",name:"Grilled Chicken & Veg",glyph:"\u{1F357}",types:["d"],groups:["protein"],ing:["chicken","broccoli"],fav:!0,protein:"chicken",cut:"breasts",sides:["broc-side","rice-side"]},{id:"fajitas",name:"Chicken Fajitas",glyph:"\u{1FAD1}",types:["d"],groups:["protein","veg","grain"],ing:["chicken","tortillas","onions"],fav:!1,protein:"chicken",cut:"breasts",sides:["beans-side"]},{id:"chx-soup",name:"Chicken Noodle Soup",glyph:"\u{1F35C}",types:["l","d"],groups:["protein","grain","veg"],ing:["chicken","pasta","carrots","onions"],fav:!1,protein:"chicken",cut:"breasts",sides:["garlic-bread"]},{id:"stirfry",name:"Chicken Stir-Fry",glyph:"\u{1F962}",types:["d"],groups:["protein","veg"],ing:["chicken","rice","broccoli","carrots"],fav:!0,protein:"chicken",cut:"thighs",sides:["rice-side"],recipe:{time:"25 min",serves:5,ingredients:["2 lb chicken thighs, sliced","Broccoli, carrots, whatever veg is around","Soy sauce, garlic, ginger","Rice for the table"],steps:["Start the rice first.","Sear chicken hot and fast, set aside.","Stir-fry veg 3\u20134 min, return chicken.","Sauce in, toss 1 min, serve over rice."]}},{id:"roast-chx",name:"Roast Chicken Dinner",glyph:"\u{1F414}",types:["d"],groups:["protein"],ing:["chicken","potatoes","carrots"],fav:!1,protein:"chicken",cut:"whole",sides:["mashed","carrots-side"]},{id:"porkchops",name:"Pork Chops & Apples",glyph:"\u{1F953}",types:["d"],groups:["protein","fruit"],ing:["pork","potatoes","fruit"],fav:!1,protein:"pork",cut:"chops",sides:["mashed","green-beans"]},{id:"pulled-pork",name:"Pulled Pork Sandwiches",glyph:"\u{1F96A}",types:["d"],groups:["protein","grain"],ing:["pork","bread"],fav:!1,protein:"pork",cut:"pulled",sides:["coleslaw","fries"]},{id:"turkey-burgers",name:"Turkey Burgers",glyph:"\u{1F354}",types:["d"],groups:["protein","grain","veg"],ing:["turkey","bread","greens","tomatoes"],fav:!1,protein:"turkey",cut:"ground",sides:["fries","side-salad"]},{id:"brinner",name:"Breakfast for Dinner",glyph:"\u{1F373}",types:["d"],groups:["protein","grain"],ing:["eggs","bread"],fav:!1,protein:"meatless",cut:"eggs",sides:["fruit-salad"]},{id:"veg-curry",name:"Veggie Curry & Rice",glyph:"\u{1F35B}",types:["d"],groups:["veg","grain"],ing:["rice","broccoli","beans","onions"],fav:!1,protein:"meatless",cut:"beans",sides:["rice-side"],recipe:{time:"35 min",serves:5,ingredients:["1 can coconut milk","Curry paste or powder","Broccoli, carrots, chickpeas","Rice for the table"],steps:["Start the rice.","Soften onion, bloom curry paste 1 min.","Coconut milk + veg, simmer 15 min.","Taste, salt, serve over rice."]}},{id:"ziti",name:"Baked Ziti",glyph:"\u{1F345}",types:["d"],groups:["grain","dairy","protein"],ing:["pasta","cheese","tomatoes"],fav:!1,protein:"meatless",cut:"cheesepasta",sides:["side-salad","garlic-bread"]},{id:"pizza",name:"Pizza Night",glyph:"\u{1F355}",types:["d"],groups:["grain","dairy"],ing:["cheese","tomatoes"],fav:!0,protein:"meatless",cut:"cheesepasta",sides:["side-salad"],rotates:!0},{id:"leftovers",name:"Leftovers",glyph:"\u{1F961}",types:["b","l","d"],groups:[],ing:[],fav:!1,special:!0},{id:"eat-out",name:"Eating Out",glyph:"\u{1F37D}\uFE0F",types:["l","d"],groups:[],ing:[],fav:!1,special:!0}],us=[{id:"idea-butter-chx",name:"Butter Chicken",glyph:"\u{1F35B}",groups:["protein","grain"],ing:["chicken","rice","onions"],protein:"chicken",cut:"thighs",sides:["rice-side"],area:"Indian"},{id:"idea-carbonara",name:"Spaghetti Carbonara",glyph:"\u{1F35D}",groups:["grain","protein","dairy"],ing:["pasta","eggs","cheese","pork"],protein:"pork",cut:"bacon",sides:["side-salad"],area:"Italian"},{id:"idea-greek-bowl",name:"Greek Chicken Bowls",glyph:"\u{1F959}",groups:["protein","veg","grain"],ing:["chicken","rice","tomatoes","greens"],protein:"chicken",cut:"breasts",sides:["side-salad"],area:"Greek"},{id:"idea-pork-ramen",name:"Quick Pork Ramen",glyph:"\u{1F35C}",groups:["protein","grain","veg"],ing:["pork","pasta","eggs","broccoli"],protein:"pork",cut:"chops",sides:[],area:"Japanese"},{id:"idea-chx-curry",name:"Coconut Chicken Curry",glyph:"\u{1F35B}",groups:["protein","grain","veg"],ing:["chicken","rice","carrots","onions"],protein:"chicken",cut:"thighs",sides:["rice-side"],area:"Thai"},{id:"idea-beef-bowl",name:"Korean Beef Bowls",glyph:"\u{1F372}",groups:["protein","grain"],ing:["gbeef","rice","onions"],protein:"beef",cut:"ground",sides:["broc-side"],area:"Korean"},{id:"idea-turkey-chili",name:"Turkey White Chili",glyph:"\u{1F372}",groups:["protein","veg"],ing:["turkey","beans","onions"],protein:"turkey",cut:"ground",sides:["cornbread"],area:"Tex-Mex"},{id:"idea-veg-stirfry",name:"Tofu Veggie Stir-Fry",glyph:"\u{1F961}",groups:["veg","grain"],ing:["rice","broccoli","carrots","onions"],protein:"meatless",cut:"beans",sides:["rice-side"],area:"Chinese"}],ji=["eggs","cheese","milk"],Gi=["olive oil","avocado","nuts","seeds","eggs","full-fat dairy","olives"],ca=["Marco's \xB7 pepperoni","Homemade \xB7 margherita","Slice House \xB7 supreme"],Wi=["spaghetti","ziti"],Tt={pizza:{label:"Pizza Night",glyph:"\u{1F355}"},leftovers:{label:"Leftovers",glyph:"\u{1F961}"},taco:{label:"Taco Night",glyph:"\u{1F32E}"},pasta:{label:"Pasta Night",glyph:"\u{1F35D}"}},Pt=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],rt=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],Lt=["January","February","March","April","May","June","July","August","September","October","November","December"],ht=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],St=30});function $s(e){let t=e._attrs("sensor.family_hub_meals"),a=t.plan||{},o=t.rhythm||{},s=t.favs||[],i=t.groc||{},n=t.custom||[],l=t.customIng||[],d=t.recipes||{},p=t.have||[],c=e._mealsTab||"week",g=`
+        </div>`}var bs=N(()=>{});var jt={};bo(jt,{AISLES:()=>nt,DOW:()=>Pt,DOW_SHORT:()=>rt,GROUPS:()=>Le,GROUP_ORDER:()=>Xe,HEALTHY_FAT_FOODS:()=>Gi,HEALTHY_FAT_INGS:()=>ji,HORIZON_DAYS:()=>St,IDEAS_POOL:()=>us,INGREDIENTS:()=>la,ING_SECTIONS:()=>pt,MEALS:()=>da,MON:()=>Lt,MON_SHORT:()=>ht,PASTA_ROTATION:()=>Wi,PIZZA_ROTATION:()=>ca,PROTEINS:()=>de,PROTEIN_ORDER:()=>$t,SIDES:()=>at,THEMES:()=>Tt,addDays:()=>Je,allMeals:()=>ot,dinnerGroups:()=>Nt,fetchRecipeIdeas:()=>qi,fmtDayLong:()=>mt,fmtDayShort:()=>fa,getIngredients:()=>Oe,getRecipe:()=>Ke,ingById:()=>xs,iso:()=>Z,mealById:()=>V,mealHealthyFats:()=>pa,mealIngredients:()=>Ot,mealWholeGrain:()=>ha,nextEmptyDinner:()=>ma,parseISO:()=>ft,rankIdeas:()=>Ht,sideById:()=>it,startOfWeek:()=>Et,today:()=>st,variantFor:()=>Ui,weekIdx:()=>vs});function Z(e){return e.getFullYear()+"-"+String(e.getMonth()+1).padStart(2,"0")+"-"+String(e.getDate()).padStart(2,"0")}function ft(e){let t=e.split("-");return new Date(+t[0],+t[1]-1,+t[2])}function Je(e,t){let a=new Date(e.getFullYear(),e.getMonth(),e.getDate());return a.setDate(a.getDate()+t),a}function st(){let e=new Date;return new Date(e.getFullYear(),e.getMonth(),e.getDate())}function Et(e,t){return Je(e,-((e.getDay()-t+7)%7))}function vs(e){return Math.floor((e.getTime()/864e5+4)/7)}function ot(e){return e&&e.length?da.concat(e):da}function V(e,t){return ot(t).find(a=>a.id===e)||null}function it(e){return at.find(t=>t.id===e)||null}function Oe(e){return e&&e.length?la.concat(e):la}function xs(e,t){return Oe(t).find(a=>a.id===e)||null}function Ke(e,t){return t&&e&&t[e.id]||e&&e.recipe||null}function Ot(e,t){if(!e)return[];let a=(e.ing||[]).slice();if(e.proteinPick){let o=t&&t.protein||e.defaultPick,s=e.proteinIng[o];s&&a.indexOf(s)===-1&&(a=a.concat(s))}return a}function pa(e){if(!e)return[];let t={eggs:"eggs",cheese:"full-fat dairy",milk:"full-fat dairy"},a=[];return(e.ing||[]).forEach(o=>{t[o]&&a.indexOf(t[o])===-1&&a.push(t[o])}),a}function ha(e,t){if(!e||(e.groups||[]).indexOf("grain")===-1)return!1;let a=(e.ing||[]).map(o=>xs(o,t)).filter(o=>o&&o.cat==="grain");return a.length?a.every(o=>o.whole):!1}function Nt(e,t){if(!e)return[];let a=new Set,o=V(e.main,t);return o&&(o.groups||[]).forEach(s=>a.add(s)),(e.sides||[]).forEach(s=>{let i=it(s);i&&i.groups.forEach(n=>a.add(n))}),[...a]}function mt(e){return`${Pt[e.getDay()]}, ${Lt[e.getMonth()]} ${e.getDate()}`}function fa(e){return`${rt[e.getDay()]} ${e.getDate()}`}function ma(e){let t=st();for(let a=0;a<St;a++){let o=Je(t,a),s=e[Z(o)];if(!s||!s.d)return o}return null}function Ui(e,t,a){return e?e.rotates?ca[vs(t)%ca.length]:e.proteinPick&&a?`with ${de[a].label.toLowerCase()}`:"":""}function Ht(e){let t=e||[];return us.map(a=>({idea:a,hits:a.ing.filter(o=>t.indexOf(o)!==-1)})).sort((a,o)=>o.hits.length-a.hits.length)}function qi(e){return Promise.resolve(Ht(e))}var Le,Xe,de,$t,nt,la,pt,at,da,us,ji,Gi,ca,Wi,Tt,Pt,rt,Lt,ht,St,Ct=N(()=>{Le={protein:{label:"Protein",color:"#8B3A2A",icon:"\u{1F357}"},veg:{label:"Veggies",color:"#3A6A28",icon:"\u{1F966}"},grain:{label:"Grains",color:"#B07818",icon:"\u{1F33E}"},fruit:{label:"Fruit",color:"#A02828",icon:"\u{1F34E}"},dairy:{label:"Dairy",color:"#5D7A8C",icon:"\u{1F95B}"}},Xe=["protein","veg","grain","fruit","dairy"],de={beef:{label:"Beef",glyph:"\u{1F969}",cuts:[{id:"ground",label:"Ground beef"},{id:"steak",label:"Steak"},{id:"roast",label:"Roast & stew meat"},{id:"brisket",label:"Brisket"}]},chicken:{label:"Chicken",glyph:"\u{1F357}",cuts:[{id:"breasts",label:"Breasts"},{id:"thighs",label:"Thighs"},{id:"whole",label:"Whole bird"}]},pork:{label:"Pork",glyph:"\u{1F953}",cuts:[{id:"chops",label:"Chops"},{id:"pulled",label:"Shoulder / pulled"},{id:"bacon",label:"Bacon & sausage"}]},turkey:{label:"Turkey",glyph:"\u{1F983}",cuts:[{id:"ground",label:"Ground turkey"},{id:"deli",label:"Deli sliced"}]},meatless:{label:"Meatless",glyph:"\u{1FAD8}",cuts:[{id:"eggs",label:"Eggs"},{id:"beans",label:"Beans & lentils"},{id:"cheesepasta",label:"Pasta & cheese"}]}},$t=["beef","chicken","pork","turkey","meatless"],nt={produce:"Produce",meat:"Meat & Seafood",dairy:"Dairy & Eggs",bakery:"Bakery",pantry:"Pantry"},la=[{id:"chicken",label:"Chicken",glyph:"\u{1F357}",aisle:"meat",cat:"protein"},{id:"gbeef",label:"Ground beef",glyph:"\u{1F969}",aisle:"meat",cat:"protein"},{id:"pork",label:"Pork",glyph:"\u{1F953}",aisle:"meat",cat:"protein"},{id:"turkey",label:"Turkey",glyph:"\u{1F983}",aisle:"meat",cat:"protein"},{id:"eggs",label:"Eggs",glyph:"\u{1F95A}",aisle:"dairy",cat:"protein"},{id:"beans",label:"Beans",glyph:"\u{1FAD8}",aisle:"pantry",cat:"protein"},{id:"potatoes",label:"Potatoes",glyph:"\u{1F954}",aisle:"produce",cat:"veg"},{id:"greens",label:"Salad greens",glyph:"\u{1F96C}",aisle:"produce",cat:"veg"},{id:"broccoli",label:"Broccoli",glyph:"\u{1F966}",aisle:"produce",cat:"veg"},{id:"tomatoes",label:"Tomatoes",glyph:"\u{1F345}",aisle:"produce",cat:"veg"},{id:"carrots",label:"Carrots",glyph:"\u{1F955}",aisle:"produce",cat:"veg"},{id:"corn",label:"Corn",glyph:"\u{1F33D}",aisle:"produce",cat:"veg"},{id:"onions",label:"Onions",glyph:"\u{1F9C5}",aisle:"produce",cat:"veg"},{id:"fruit",label:"Fruit",glyph:"\u{1F34E}",aisle:"produce",cat:"fruit"},{id:"tortillas",label:"Tortillas",glyph:"\u{1FAD3}",aisle:"bakery",cat:"grain",whole:!0},{id:"bread",label:"Bread",glyph:"\u{1F35E}",aisle:"bakery",cat:"grain",whole:!0},{id:"pasta",label:"Pasta",glyph:"\u{1F35D}",aisle:"pantry",cat:"grain",whole:!0},{id:"rice",label:"Rice",glyph:"\u{1F35A}",aisle:"pantry",cat:"grain",whole:!0},{id:"cheese",label:"Cheese",glyph:"\u{1F9C0}",aisle:"dairy",cat:"dairy"},{id:"milk",label:"Milk",glyph:"\u{1F95B}",aisle:"dairy",cat:"dairy"}],pt=[["protein","Proteins"],["veg","Veggies"],["fruit","Fruit"],["grain","Grains & starches"],["dairy","Dairy"]],at=[{id:"side-salad",name:"Garden Salad",glyph:"\u{1F957}",groups:["veg"],ing:["greens","tomatoes"],pairs:["beef","meatless","chicken"]},{id:"broc-side",name:"Roasted Broccoli",glyph:"\u{1F966}",groups:["veg"],ing:["broccoli"],pairs:["chicken","beef"]},{id:"green-beans",name:"Green Beans",glyph:"\u{1FADB}",groups:["veg"],ing:[],pairs:["chicken","pork","beef"]},{id:"corn-cob",name:"Corn on the Cob",glyph:"\u{1F33D}",groups:["veg"],ing:["corn"],pairs:["beef","chicken","pork","turkey"]},{id:"carrots-side",name:"Glazed Carrots",glyph:"\u{1F955}",groups:["veg"],ing:["carrots"],pairs:["chicken","pork"]},{id:"mashed",name:"Mashed Potatoes",glyph:"\u{1F954}",groups:["veg"],ing:["potatoes","milk"],pairs:["beef","chicken","pork","turkey"]},{id:"fries",name:"Oven Fries",glyph:"\u{1F35F}",groups:["veg"],ing:["potatoes"],pairs:["beef","turkey"]},{id:"coleslaw",name:"Coleslaw",glyph:"\u{1F96C}",groups:["veg"],ing:["greens","carrots"],pairs:["pork","turkey"]},{id:"rice-side",name:"Steamed Rice",glyph:"\u{1F35A}",groups:["grain"],ing:["rice"],pairs:["chicken","meatless"]},{id:"garlic-bread",name:"Garlic Bread",glyph:"\u{1F956}",groups:["grain"],ing:["bread"],pairs:["meatless","beef"]},{id:"cornbread",name:"Cornbread",glyph:"\u{1FAD3}",groups:["grain"],ing:[],pairs:["beef","pork"]},{id:"beans-side",name:"Refried Beans",glyph:"\u{1FAD8}",groups:["protein"],ing:["beans"],pairs:["beef","chicken","meatless"]},{id:"fruit-salad",name:"Fruit Salad",glyph:"\u{1F353}",groups:["fruit"],ing:["fruit"],pairs:["turkey","chicken","meatless"]},{id:"apple-slices",name:"Apple Slices",glyph:"\u{1F34E}",groups:["fruit"],ing:["fruit"],pairs:["pork","meatless"]},{id:"milk-glass",name:"Milk",glyph:"\u{1F95B}",groups:["dairy"],ing:["milk"],pairs:[]},{id:"yogurt-cup",name:"Yogurt Cups",glyph:"\u{1F368}",groups:["dairy"],ing:["milk"],pairs:[]},{id:"roasted-veg",name:"Roasted Veggies",glyph:"\u{1FAD1}",groups:["veg"],ing:["onions","carrots"],pairs:["beef","chicken","pork"]},{id:"baked-potato",name:"Baked Potato",glyph:"\u{1F954}",groups:["veg"],ing:["potatoes"],pairs:["beef","chicken"]},{id:"sweet-potato",name:"Baked Sweet Potato",glyph:"\u{1F360}",groups:["veg"],ing:[],pairs:["pork","turkey","chicken"]},{id:"asparagus",name:"Roasted Asparagus",glyph:"\u{1F33F}",groups:["veg"],ing:[],pairs:["chicken","beef"]},{id:"peas",name:"Buttered Peas",glyph:"\u{1F7E2}",groups:["veg"],ing:[],pairs:["chicken","turkey","beef"]},{id:"brussels",name:"Brussels Sprouts",glyph:"\u{1F96C}",groups:["veg"],ing:[],pairs:["pork","beef","chicken"]},{id:"dinner-rolls",name:"Dinner Rolls",glyph:"\u{1F950}",groups:["grain"],ing:["bread"],pairs:["beef","chicken","turkey"]},{id:"buttered-noodles",name:"Buttered Noodles",glyph:"\u{1F35D}",groups:["grain"],ing:["pasta"],pairs:["beef","chicken"]},{id:"biscuits",name:"Biscuits",glyph:"\u{1FAD3}",groups:["grain"],ing:[],pairs:["pork","chicken"]},{id:"quinoa",name:"Quinoa",glyph:"\u{1F35A}",groups:["grain"],ing:[],pairs:["chicken","meatless"]},{id:"grapes",name:"Grapes",glyph:"\u{1F347}",groups:["fruit"],ing:["fruit"],pairs:["turkey","chicken","meatless"]},{id:"orange-slices",name:"Orange Slices",glyph:"\u{1F34A}",groups:["fruit"],ing:["fruit"],pairs:["pork","chicken"]},{id:"berries",name:"Mixed Berries",glyph:"\u{1FAD0}",groups:["fruit"],ing:["fruit"],pairs:["chicken","meatless"]},{id:"watermelon",name:"Melon Wedges",glyph:"\u{1F349}",groups:["fruit"],ing:[],pairs:["turkey","meatless"]},{id:"cheese-cubes",name:"Cheese Cubes",glyph:"\u{1F9C0}",groups:["dairy"],ing:["cheese"],pairs:[]},{id:"cottage-cheese",name:"Cottage Cheese",glyph:"\u{1F963}",groups:["dairy"],ing:["milk"],pairs:[]},{id:"eggs-side",name:"Hard-Boiled Eggs",glyph:"\u{1F95A}",groups:["protein"],ing:["eggs"],pairs:["meatless"]},{id:"edamame",name:"Edamame",glyph:"\u{1FADB}",groups:["protein"],ing:[],pairs:["chicken","meatless"]},{id:"hummus",name:"Hummus & Veggies",glyph:"\u{1F9C6}",groups:["protein","veg"],ing:["beans","carrots"],pairs:["meatless","chicken"]}],da=[{id:"eggs-toast",name:"Scrambled Eggs & Toast",glyph:"\u{1F373}",types:["b"],groups:["protein","grain"],ing:["eggs","bread"],fav:!0},{id:"oatmeal",name:"Oatmeal & Berries",glyph:"\u{1F963}",types:["b"],groups:["grain","fruit"],ing:["fruit"],fav:!0},{id:"pancakes",name:"Pancake Morning",glyph:"\u{1F95E}",types:["b"],groups:["grain"],ing:["eggs","milk"],fav:!1},{id:"yogurt",name:"Yogurt & Granola",glyph:"\u{1FAD0}",types:["b"],groups:["dairy","grain","fruit"],ing:["milk","fruit"],fav:!1},{id:"bfast-burritos",name:"Breakfast Burritos",glyph:"\u{1F32F}",types:["b"],groups:["protein","grain","dairy"],ing:["eggs","tortillas","cheese"],fav:!1},{id:"smoothies",name:"Fruit Smoothies",glyph:"\u{1F964}",types:["b"],groups:["fruit","dairy"],ing:["fruit","milk"],fav:!1},{id:"french-toast",name:"French Toast",glyph:"\u{1F35E}",types:["b"],groups:["grain","dairy"],ing:["bread","eggs","milk"],fav:!1},{id:"cereal",name:"Cereal & Fruit",glyph:"\u{1F95B}",types:["b"],groups:["grain","dairy","fruit"],ing:["milk","fruit"],fav:!1},{id:"turkey-sand",name:"Turkey Sandwiches",glyph:"\u{1F96A}",types:["l"],groups:["protein","grain","veg"],ing:["turkey","bread","cheese","greens"],fav:!0,protein:"turkey",cut:"deli"},{id:"grilled-cheese",name:"Grilled Cheese & Soup",glyph:"\u{1F9C0}",types:["l"],groups:["grain","dairy","veg"],ing:["bread","cheese","tomatoes"],fav:!1,protein:"meatless",cut:"cheesepasta"},{id:"quesadillas",name:"Cheese Quesadillas",glyph:"\u{1FAD3}",types:["l"],groups:["grain","dairy"],ing:["tortillas","cheese"],fav:!0,protein:"meatless",cut:"cheesepasta"},{id:"caesar-wrap",name:"Chicken Caesar Wraps",glyph:"\u{1F32F}",types:["l"],groups:["protein","veg","grain"],ing:["chicken","tortillas","greens"],fav:!1,protein:"chicken",cut:"breasts"},{id:"pbj",name:"PB&J + Apple Slices",glyph:"\u{1F95C}",types:["l"],groups:["grain","fruit"],ing:["bread","fruit"],fav:!1},{id:"mac-cheese",name:"Mac & Cheese",glyph:"\u{1F958}",types:["l"],groups:["grain","dairy"],ing:["pasta","cheese","milk"],fav:!1,protein:"meatless",cut:"cheesepasta"},{id:"soup-bread",name:"Soup & Crusty Bread",glyph:"\u{1F372}",types:["l"],groups:["veg","grain"],ing:["tomatoes","bread","onions"],fav:!1},{id:"snack-plate",name:"Picnic Snack Plate",glyph:"\u{1F9FA}",types:["l"],groups:["veg","dairy","grain","fruit"],ing:["cheese","greens","fruit","bread"],fav:!1},{id:"spaghetti",name:"Spaghetti & Meatballs",glyph:"\u{1F35D}",types:["d"],groups:["protein","grain"],ing:["pasta","gbeef","tomatoes","onions"],fav:!0,protein:"beef",cut:"ground",sides:["side-salad","garlic-bread"]},{id:"taco-night",name:"Taco Night",glyph:"\u{1F32E}",types:["d"],groups:["protein","grain","veg","dairy"],ing:["tortillas","cheese","tomatoes","greens"],fav:!0,protein:"beef",cut:"ground",sides:["corn-cob"],proteinPick:["beef","chicken","pork"],proteinIng:{beef:"gbeef",chicken:"chicken",pork:"pork"},defaultPick:"beef",recipe:{time:"30 min",serves:5,ingredients:["2 lb of your protein (beef, chicken, or pork)","10 taco shells or tortillas","Shredded cheese","Lettuce, tomato, salsa","Taco seasoning"],steps:["Cook your protein, drain, add seasoning + \xBD cup water.","Simmer 5 min while you chop toppings.","Warm shells in the oven, 5 min at 325\xB0.","Set out everything build-your-own style."]}},{id:"meatloaf",name:"Meatloaf",glyph:"\u{1F9C6}",types:["d"],groups:["protein","grain"],ing:["gbeef","bread","onions"],fav:!1,protein:"beef",cut:"ground",sides:["mashed","green-beans"]},{id:"burgers",name:"Burger Night",glyph:"\u{1F354}",types:["d"],groups:["protein","grain"],ing:["gbeef","bread","cheese","tomatoes","onions"],fav:!1,protein:"beef",cut:"ground",sides:["fries","corn-cob"]},{id:"chili",name:"Slow-Cooker Chili",glyph:"\u{1F336}\uFE0F",types:["d"],groups:["protein","veg"],ing:["gbeef","beans","tomatoes","onions"],fav:!1,protein:"beef",cut:"ground",sides:["cornbread"],recipe:{time:"15 min + 6 hr slow cook",serves:5,ingredients:["2 lb ground beef","2 cans beans","1 can crushed tomatoes","Onion, chili powder, cumin"],steps:["Brown beef with onion, drain.","Everything into the slow cooker.","Low 6 hours. Stir when you walk past.","Cheese + cornbread on the side."]}},{id:"shepherds",name:"Shepherd's Pie",glyph:"\u{1F967}",types:["d"],groups:["protein","veg"],ing:["gbeef","potatoes","carrots","onions"],fav:!1,protein:"beef",cut:"ground",sides:["green-beans"],recipe:{time:"50 min",serves:5,ingredients:["2 lb ground beef","4 cups mashed potatoes","Frozen peas + carrots","Onion, broth, Worcestershire"],steps:["Brown beef + onion, add veg and a splash of broth.","Into a baking dish, mash on top.","Bake 25 min at 400\xB0 until golden.","Rest 5 min before scooping."]}},{id:"steak-night",name:"Steak Night",glyph:"\u{1F969}",types:["d"],groups:["protein"],ing:["potatoes"],fav:!1,protein:"beef",cut:"steak",sides:["mashed","side-salad"]},{id:"beef-stew",name:"Beef Stew",glyph:"\u{1F356}",types:["d"],groups:["protein","veg"],ing:["potatoes","carrots","onions"],fav:!1,protein:"beef",cut:"roast",sides:["garlic-bread"]},{id:"brisket",name:"Slow-Smoked Brisket",glyph:"\u{1F969}",types:["d"],groups:["protein"],ing:["gbeef","onions"],fav:!1,protein:"beef",cut:"brisket",sides:["cornbread","coleslaw"],recipe:{time:"20 min + 6 hr low",serves:5,ingredients:["3\u20134 lb beef brisket","Dry rub (salt, pepper, paprika, garlic)","Onions","BBQ sauce to finish"],steps:["Rub the brisket well, let it sit while the oven heats to 300\xB0.","Bed of onions in the pan, brisket on top, cover tight.","Low and slow ~6 hours until it pulls apart.","Rest 20 min, slice against the grain."]}},{id:"grilled-chx",name:"Grilled Chicken & Veg",glyph:"\u{1F357}",types:["d"],groups:["protein"],ing:["chicken","broccoli"],fav:!0,protein:"chicken",cut:"breasts",sides:["broc-side","rice-side"]},{id:"fajitas",name:"Chicken Fajitas",glyph:"\u{1FAD1}",types:["d"],groups:["protein","veg","grain"],ing:["chicken","tortillas","onions"],fav:!1,protein:"chicken",cut:"breasts",sides:["beans-side"]},{id:"chx-soup",name:"Chicken Noodle Soup",glyph:"\u{1F35C}",types:["l","d"],groups:["protein","grain","veg"],ing:["chicken","pasta","carrots","onions"],fav:!1,protein:"chicken",cut:"breasts",sides:["garlic-bread"]},{id:"stirfry",name:"Chicken Stir-Fry",glyph:"\u{1F962}",types:["d"],groups:["protein","veg"],ing:["chicken","rice","broccoli","carrots"],fav:!0,protein:"chicken",cut:"thighs",sides:["rice-side"],recipe:{time:"25 min",serves:5,ingredients:["2 lb chicken thighs, sliced","Broccoli, carrots, whatever veg is around","Soy sauce, garlic, ginger","Rice for the table"],steps:["Start the rice first.","Sear chicken hot and fast, set aside.","Stir-fry veg 3\u20134 min, return chicken.","Sauce in, toss 1 min, serve over rice."]}},{id:"roast-chx",name:"Roast Chicken Dinner",glyph:"\u{1F414}",types:["d"],groups:["protein"],ing:["chicken","potatoes","carrots"],fav:!1,protein:"chicken",cut:"whole",sides:["mashed","carrots-side"]},{id:"porkchops",name:"Pork Chops & Apples",glyph:"\u{1F953}",types:["d"],groups:["protein","fruit"],ing:["pork","potatoes","fruit"],fav:!1,protein:"pork",cut:"chops",sides:["mashed","green-beans"]},{id:"pulled-pork",name:"Pulled Pork Sandwiches",glyph:"\u{1F96A}",types:["d"],groups:["protein","grain"],ing:["pork","bread"],fav:!1,protein:"pork",cut:"pulled",sides:["coleslaw","fries"]},{id:"turkey-burgers",name:"Turkey Burgers",glyph:"\u{1F354}",types:["d"],groups:["protein","grain","veg"],ing:["turkey","bread","greens","tomatoes"],fav:!1,protein:"turkey",cut:"ground",sides:["fries","side-salad"]},{id:"brinner",name:"Breakfast for Dinner",glyph:"\u{1F373}",types:["d"],groups:["protein","grain"],ing:["eggs","bread"],fav:!1,protein:"meatless",cut:"eggs",sides:["fruit-salad"]},{id:"veg-curry",name:"Veggie Curry & Rice",glyph:"\u{1F35B}",types:["d"],groups:["veg","grain"],ing:["rice","broccoli","beans","onions"],fav:!1,protein:"meatless",cut:"beans",sides:["rice-side"],recipe:{time:"35 min",serves:5,ingredients:["1 can coconut milk","Curry paste or powder","Broccoli, carrots, chickpeas","Rice for the table"],steps:["Start the rice.","Soften onion, bloom curry paste 1 min.","Coconut milk + veg, simmer 15 min.","Taste, salt, serve over rice."]}},{id:"ziti",name:"Baked Ziti",glyph:"\u{1F345}",types:["d"],groups:["grain","dairy","protein"],ing:["pasta","cheese","tomatoes"],fav:!1,protein:"meatless",cut:"cheesepasta",sides:["side-salad","garlic-bread"]},{id:"pizza",name:"Pizza Night",glyph:"\u{1F355}",types:["d"],groups:["grain","dairy"],ing:["cheese","tomatoes"],fav:!0,protein:"meatless",cut:"cheesepasta",sides:["side-salad"],rotates:!0},{id:"leftovers",name:"Leftovers",glyph:"\u{1F961}",types:["b","l","d"],groups:[],ing:[],fav:!1,special:!0},{id:"eat-out",name:"Eating Out",glyph:"\u{1F37D}\uFE0F",types:["l","d"],groups:[],ing:[],fav:!1,special:!0}],us=[{id:"idea-butter-chx",name:"Butter Chicken",glyph:"\u{1F35B}",groups:["protein","grain"],ing:["chicken","rice","onions"],protein:"chicken",cut:"thighs",sides:["rice-side"],area:"Indian"},{id:"idea-carbonara",name:"Spaghetti Carbonara",glyph:"\u{1F35D}",groups:["grain","protein","dairy"],ing:["pasta","eggs","cheese","pork"],protein:"pork",cut:"bacon",sides:["side-salad"],area:"Italian"},{id:"idea-greek-bowl",name:"Greek Chicken Bowls",glyph:"\u{1F959}",groups:["protein","veg","grain"],ing:["chicken","rice","tomatoes","greens"],protein:"chicken",cut:"breasts",sides:["side-salad"],area:"Greek"},{id:"idea-pork-ramen",name:"Quick Pork Ramen",glyph:"\u{1F35C}",groups:["protein","grain","veg"],ing:["pork","pasta","eggs","broccoli"],protein:"pork",cut:"chops",sides:[],area:"Japanese"},{id:"idea-chx-curry",name:"Coconut Chicken Curry",glyph:"\u{1F35B}",groups:["protein","grain","veg"],ing:["chicken","rice","carrots","onions"],protein:"chicken",cut:"thighs",sides:["rice-side"],area:"Thai"},{id:"idea-beef-bowl",name:"Korean Beef Bowls",glyph:"\u{1F372}",groups:["protein","grain"],ing:["gbeef","rice","onions"],protein:"beef",cut:"ground",sides:["broc-side"],area:"Korean"},{id:"idea-turkey-chili",name:"Turkey White Chili",glyph:"\u{1F372}",groups:["protein","veg"],ing:["turkey","beans","onions"],protein:"turkey",cut:"ground",sides:["cornbread"],area:"Tex-Mex"},{id:"idea-veg-stirfry",name:"Tofu Veggie Stir-Fry",glyph:"\u{1F961}",groups:["veg","grain"],ing:["rice","broccoli","carrots","onions"],protein:"meatless",cut:"beans",sides:["rice-side"],area:"Chinese"}],ji=["eggs","cheese","milk"],Gi=["olive oil","avocado","nuts","seeds","eggs","full-fat dairy","olives"],ca=["Marco's \xB7 pepperoni","Homemade \xB7 margherita","Slice House \xB7 supreme"],Wi=["spaghetti","ziti"],Tt={pizza:{label:"Pizza Night",glyph:"\u{1F355}"},leftovers:{label:"Leftovers",glyph:"\u{1F961}"},taco:{label:"Taco Night",glyph:"\u{1F32E}"},pasta:{label:"Pasta Night",glyph:"\u{1F35D}"}},Pt=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"],rt=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],Lt=["January","February","March","April","May","June","July","August","September","October","November","December"],ht=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],St=30});function $s(e){let t=e._attrs("sensor.family_hub_meals"),a=t.plan||{},o=t.rhythm||{},s=t.favs||[],i=t.groc||{},n=t.custom||[],r=t.customIng||[],d=t.recipes||{},p=t.have||[],c=e._mealsTab||"week",g=`
         <div class="fh-bk-tabs">
             ${[{key:"today",label:"Today",sub:"tonight"},{key:"week",label:"This Week",sub:"menu board"},{key:"plan",label:"Plan",sub:"day builder"},{key:"pantry",label:"What Can We Make",sub:"pantry"},{key:"library",label:"Library",sub:"recipes"},{key:"groceries",label:"Groceries",sub:"shopping"}].map($=>`
                 <button class="fh-bk-tab${c===$.key?" active":""}"
                         data-act="meals-tab" data-tab="${$.key}">
-                    ${f($.label)}
+                    ${m($.label)}
                     <span class="fh-bk-tab-sub">${$.sub}</span>
                 </button>`).join("")}
-        </div>`,u="";c==="today"?u=Ji(a,n,l,p,d):c==="week"?u=Ki(e,a,n):c==="plan"?u=Yi(e,a,n,s,o):c==="pantry"?u=tn(e,a,n,l,s,p):c==="library"?u=an(e,a,n,s,d,p):c==="groceries"&&(u=sn(e,a,n,l,i));let x=e._mealsRecipe?on(e._mealsRecipe,n,d,a):"",w=c==="plan"&&e._mealsDrawer?en(e,a,n,s):"",m=e._mealsDayPick?nn(e._mealsDayPick,a,n):"";return`
+        </div>`,u="";c==="today"?u=Ji(a,n,r,p,d):c==="week"?u=Ki(e,a,n):c==="plan"?u=Yi(e,a,n,s,o):c==="pantry"?u=tn(e,a,n,r,s,p):c==="library"?u=an(e,a,n,s,d,p):c==="groceries"&&(u=sn(e,a,n,r,i));let v=e._mealsRecipe?on(e._mealsRecipe,n,d,a):"",_=c==="plan"&&e._mealsDrawer?en(e,a,n,s):"",f=e._mealsDayPick?nn(e._mealsDayPick,a,n):"";return`
         <div class="fh-bk-page fh-ml-room" style="display:flex;flex-direction:column;min-height:0;height:calc(100vh - 72px);max-height:920px;overflow:hidden;padding:14px 20px 10px;">
             ${g}
             <div style="flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;position:relative;">
                 ${u}
-                ${w}
-                ${x}
-                ${m}
+                ${_}
+                ${v}
+                ${f}
             </div>
         </div>`}function Ji(e,t,a,o,s){let i=st(),n=Je(i,1);return`
         <div class="fh-ml-content">
@@ -6908,16 +6920,16 @@ FUNDS`}
                 ${ys("Today",i,e[Z(i)]||{},t,a,o,s)}
                 ${ys("Tomorrow",n,e[Z(n)]||{},t,a,o,s)}
             </div>
-        </div>`}function ys(e,t,a,o,s,i,n){let l=a.d,d=l?V(l.main,o):null,p=l?(l.sides||[]).map(it).filter(Boolean):[],c=a.b?V(a.b,o):null,b=a.l?V(a.l,o):null,g=l&&l.protein&&de[l.protein]?de[l.protein].label.toLowerCase():null,u=e==="Today",x="";if(u&&(c||b||d)){let m=Oe(s),$=new Set(i||[]),S=[],v=E=>(E||[]).forEach(F=>{!$.has(F)&&!S.includes(F)&&S.push(F)});c&&!c.special&&v(c.ing),b&&!b.special&&v(b.ing),d&&!d.special&&v(Ot(d,l)),p.forEach(E=>v(E.ing));let h=S.map(E=>{let F=m.find(D=>D.id===E);return F?`<span class="fh-tdy-need"><span class="fh-tdy-need-g">${F.glyph}</span>${f(F.label)}</span>`:""}).join(""),k=d?Ke(d,n):null,A=k?`<div class="fh-tdy-prep">Dinner: <b>${f(k.time)}</b> \xB7 serves ${k.serves}</div>`:"";x=`
+        </div>`}function ys(e,t,a,o,s,i,n){let r=a.d,d=r?V(r.main,o):null,p=r?(r.sides||[]).map(it).filter(Boolean):[],c=a.b?V(a.b,o):null,b=a.l?V(a.l,o):null,g=r&&r.protein&&de[r.protein]?de[r.protein].label.toLowerCase():null,u=e==="Today",v="";if(u&&(c||b||d)){let f=Oe(s),$=new Set(i||[]),S=[],x=E=>(E||[]).forEach(F=>{!$.has(F)&&!S.includes(F)&&S.push(F)});c&&!c.special&&x(c.ing),b&&!b.special&&x(b.ing),d&&!d.special&&x(Ot(d,r)),p.forEach(E=>x(E.ing));let h=S.map(E=>{let F=f.find(D=>D.id===E);return F?`<span class="fh-tdy-need"><span class="fh-tdy-need-g">${F.glyph}</span>${m(F.label)}</span>`:""}).join(""),w=d?Ke(d,n):null,z=w?`<div class="fh-tdy-prep">Dinner: <b>${m(w.time)}</b> \xB7 serves ${w.serves}</div>`:"";v=`
             <div class="fh-tdy-needs">
                 <div class="fh-tdy-needs-hdr">What's needed today</div>
                 ${S.length?`<div class="fh-tdy-needs-list">${h}</div>`:`<div class="fh-tdy-needs-none">\u2713 everything's on hand</div>`}
-                ${A}
-            </div>`}let w=d?`
+                ${z}
+            </div>`}let _=d?`
         <span class="fh-tdy-glyph">${d.glyph}</span>
-        <span class="fh-tdy-name">${f(d.name)}</span>
-        ${l.variant?`<span class="fh-tdy-variant">${f(l.variant)}</span>`:g?`<span class="fh-tdy-variant">with ${f(g)}</span>`:""}
-        ${p.length?`<span class="fh-tdy-sides">${p.map(m=>f(m.name)).join(" \xB7 ")}</span>`:""}
+        <span class="fh-tdy-name">${m(d.name)}</span>
+        ${r.variant?`<span class="fh-tdy-variant">${m(r.variant)}</span>`:g?`<span class="fh-tdy-variant">with ${m(g)}</span>`:""}
+        ${p.length?`<span class="fh-tdy-sides">${p.map(f=>m(f.name)).join(" \xB7 ")}</span>`:""}
     `:'<span class="fh-tdy-empty">not planned yet</span>';return`
         <div class="fh-tdy-panel${u?" is-today":""}">
             <div class="fh-tdy-head">
@@ -6926,52 +6938,52 @@ FUNDS`}
             </div>
             <div class="fh-tdy-dinner">
                 <span class="fh-tdy-dinner-kicker">Dinner</span>
-                ${w}
+                ${_}
             </div>
             <div class="fh-tdy-bl">
                 <div class="fh-tdy-bl-row">
                     <span class="fh-tdy-bl-k">Breakfast</span>
-                    ${c?`<span class="fh-tdy-bl-v">${c.glyph} ${f(c.name)}</span>`:'<span class="fh-tdy-bl-v empty">\u2014</span>'}
+                    ${c?`<span class="fh-tdy-bl-v">${c.glyph} ${m(c.name)}</span>`:'<span class="fh-tdy-bl-v empty">\u2014</span>'}
                 </div>
                 <div class="fh-tdy-bl-row">
                     <span class="fh-tdy-bl-k">Lunch</span>
-                    ${b?`<span class="fh-tdy-bl-v">${b.glyph} ${f(b.name)}</span>`:'<span class="fh-tdy-bl-v empty">\u2014</span>'}
+                    ${b?`<span class="fh-tdy-bl-v">${b.glyph} ${m(b.name)}</span>`:'<span class="fh-tdy-bl-v empty">\u2014</span>'}
                 </div>
             </div>
-            ${x}
-        </div>`}function Ki(e,t,a){let o=e._mealsWeekPage||0,s=0,i=st(),n=Et(i,s),l=Je(n,o*7),d=Math.floor((St-1)/7),p=o>0,c=o<d,b=Array.from({length:7},(v,h)=>Je(l,h)),g=b[6],u=l.getMonth()===g.getMonth()?`${Lt[l.getMonth()]} ${l.getDate()} \u2013 ${g.getDate()}`:`${ht[l.getMonth()]} ${l.getDate()} \u2013 ${ht[g.getMonth()]} ${g.getDate()}`,x=o===0?"this week":o===1?"next week":`${o} weeks out`,w=ma(t),m=`
+            ${v}
+        </div>`}function Ki(e,t,a){let o=e._mealsWeekPage||0,s=0,i=st(),n=Et(i,s),r=Je(n,o*7),d=Math.floor((St-1)/7),p=o>0,c=o<d,b=Array.from({length:7},(x,h)=>Je(r,h)),g=b[6],u=r.getMonth()===g.getMonth()?`${Lt[r.getMonth()]} ${r.getDate()} \u2013 ${g.getDate()}`:`${ht[r.getMonth()]} ${r.getDate()} \u2013 ${ht[g.getMonth()]} ${g.getDate()}`,v=o===0?"this week":o===1?"next week":`${o} weeks out`,_=ma(t),f=`
         <div class="fh-ml-pager">
-            <div class="fh-ml-range">${u}<em>~ ${x} ~</em></div>
+            <div class="fh-ml-range">${u}<em>~ ${v} ~</em></div>
             <span class="fh-ml-pager-spacer"></span>
             ${o!==0?'<button class="fh-ml-ghost-btn" data-act="meals-week-today">Today</button>':""}
             <button class="fh-ml-pgbtn" data-act="meals-week-prev"${p?"":" disabled"}>\u2039</button>
             <button class="fh-ml-pgbtn" data-act="meals-week-next"${c?"":" disabled"}>\u203A</button>
         </div>`,$=`
         <div class="fh-ml-week">
-            ${b.map(v=>Vi(v,t[Z(v)]||{},a,i)).join("")}
+            ${b.map(x=>Vi(x,t[Z(x)]||{},a,i)).join("")}
         </div>`,S=`
         <div class="fh-ml-legendrow">
             <span class="fh-ml-legend">
                 <span class="fh-ml-legend-cap">on the plate:</span>
-                ${Xe.map(v=>`
+                ${Xe.map(x=>`
                     <span class="fh-ml-lgd">
-                        <span class="fh-ml-gicon on">${Le[v].icon}</span>
-                        ${f(Le[v].label)}
+                        <span class="fh-ml-gicon on">${Le[x].icon}</span>
+                        ${m(Le[x].label)}
                     </span>`).join("")}
             </span>
             <span class="fh-ml-weeknote-inline">
-                ${w?`next open dinner: <b>${f(mt(w))}</b> \u2014 tap any day to plan`:"every dinner is planned for the next month \u2014 <b>nicely done</b>"}
+                ${_?`next open dinner: <b>${m(mt(_))}</b> \u2014 tap any day to plan`:"every dinner is planned for the next month \u2014 <b>nicely done</b>"}
             </span>
         </div>`;return`
         <div class="fh-ml-content">
-            ${m}
+            ${f}
             ${$}
             ${S}
-        </div>`}function Vi(e,t,a,o){let s=Z(e),i=s===Z(o),n=e<o&&!i,l=t.d,d=l?V(l.main,a):null,p=l?(l.sides||[]).map(it).filter(Boolean):[],c=Nt(l,a),b=d?`
+        </div>`}function Vi(e,t,a,o){let s=Z(e),i=s===Z(o),n=e<o&&!i,r=t.d,d=r?V(r.main,a):null,p=r?(r.sides||[]).map(it).filter(Boolean):[],c=Nt(r,a),b=d?`
         <span class="fh-ml-dglyph">${d.glyph}</span>
-        <span class="fh-ml-dname">${f(d.name)}</span>
-        ${l.variant?`<span class="fh-ml-dvariant">${f(l.variant)}</span>`:""}
-        ${p.length?`<span class="fh-ml-dsides">${p.map(u=>f(u.name)).join(" \xB7 ")}</span>`:""}
+        <span class="fh-ml-dname">${m(d.name)}</span>
+        ${r.variant?`<span class="fh-ml-dvariant">${m(r.variant)}</span>`:""}
+        ${p.length?`<span class="fh-ml-dsides">${p.map(u=>m(u.name)).join(" \xB7 ")}</span>`:""}
         ${c.length?Gt(c):""}
     `:`
         <span class="fh-ml-dempty"><span>${n?"":"\uFF0B"}</span>${n?"\u2014":"nothing yet"}</span>
@@ -6985,48 +6997,48 @@ FUNDS`}
                 ${b}
             </div>
             <div class="fh-ml-bl" ${g}>
-                ${ks("BREAKFAST",t.b,a)}
-                ${ks("LUNCH",t.l,a)}
+                ${ws("BREAKFAST",t.b,a)}
+                ${ws("LUNCH",t.l,a)}
             </div>
-        </div>`}function ks(e,t,a){let o=t?V(t,a):null;return`
+        </div>`}function ws(e,t,a){let o=t?V(t,a):null;return`
         <div class="fh-ml-bl-slot">
             <span class="fh-ml-bl-kicker">${e}</span>
             ${o?`
                 <span class="fh-ml-bl-meal">
                     <span class="fh-ml-bl-glyph">${o.glyph}</span>
-                    <span class="fh-ml-bl-name">${f(o.name)}</span>
+                    <span class="fh-ml-bl-name">${m(o.name)}</span>
                 </span>`:`
                 <span class="fh-ml-bl-name empty">open</span>`}
-        </div>`}function Yi(e,t,a,o,s){let i=st(),n=e._mealsJumpDate||Z(i),l=ft(n),d=t[n]||{},p=0,c=Array.from({length:St},(S,v)=>Je(i,v)),b=[];c.forEach(S=>{let v=Z(Et(S,p)),h=b[b.length-1];if(!h||h.key!==v){let k=b.length===0?"This week":b.length===1?"Next week":`Week of ${ht[S.getMonth()]} ${Et(S,p).getDate()}`;h={key:v,label:k,days:[]},b.push(h)}h.days.push(S)});let g=`
+        </div>`}function Yi(e,t,a,o,s){let i=st(),n=e._mealsJumpDate||Z(i),r=ft(n),d=t[n]||{},p=0,c=Array.from({length:St},(S,x)=>Je(i,x)),b=[];c.forEach(S=>{let x=Z(Et(S,p)),h=b[b.length-1];if(!h||h.key!==x){let w=b.length===0?"This week":b.length===1?"Next week":`Week of ${ht[S.getMonth()]} ${Et(S,p).getDate()}`;h={key:x,label:w,days:[]},b.push(h)}h.days.push(S)});let g=`
         <div class="fh-ml-rail">
             ${b.map(S=>`
                 <div class="fh-ml-rail-wk">${S.label}</div>
-                ${S.days.map(v=>{let h=Z(v),k=t[h]||{};return`
+                ${S.days.map(x=>{let h=Z(x),w=t[h]||{};return`
                         <div class="${"fh-ml-rail-day"+(h===n?" active":"")+(h===Z(i)?" is-today":"")}" data-act="meals-plan-select-day" data-date="${h}">
-                            <span class="fh-ml-rail-date">${fa(v)}</span>
+                            <span class="fh-ml-rail-date">${fa(x)}</span>
                             <span class="fh-ml-rail-dots">
-                                <span class="fh-ml-rail-dot${k.b?" filled":""}"></span>
-                                <span class="fh-ml-rail-dot${k.l?" filled":""}"></span>
-                                <span class="fh-ml-rail-dot${k.d?" filled":""}"></span>
+                                <span class="fh-ml-rail-dot${w.b?" filled":""}"></span>
+                                <span class="fh-ml-rail-dot${w.l?" filled":""}"></span>
+                                <span class="fh-ml-rail-dot${w.d?" filled":""}"></span>
                             </span>
                         </div>`}).join("")}
             `).join("")}
-        </div>`,u=d.b||d.l||d.d,x=`
+        </div>`,u=d.b||d.l||d.d,v=`
         <div class="fh-ml-dayhdr">
-            <span class="fh-ml-dayhdr-title">${mt(l)}</span>
+            <span class="fh-ml-dayhdr-title">${mt(r)}</span>
             ${Z(i)===n?'<span class="fh-ml-dayhdr-sub">~ today ~</span>':""}
             <span class="fh-ml-pager-spacer"></span>
             ${u?`<button class="fh-ml-ghost-btn" data-act="meals-clear-day" data-date="${n}">Clear day</button>`:""}
-        </div>`,w=Qi(d,a,n),m=Zi(d,a,n),$=Xi(s,p);return`
+        </div>`,_=Qi(d,a,n),f=Zi(d,a,n),$=Xi(s,p);return`
         <div class="fh-ml-content">
             <div class="fh-ml-bld">
                 ${g}
                 <div class="fh-ml-main">
                     ${$}
-                    ${x}
+                    ${v}
                     <div class="fh-ml-slots">
-                        ${w}
-                        ${m}
+                        ${_}
+                        ${f}
                     </div>
                 </div>
             </div>
@@ -7042,27 +7054,27 @@ FUNDS`}
                             <button class="fh-ml-rh-chip${n?" set":""}"
                                     data-act="meals-rhythm-pop" data-weekday="${s}">
                                 <span class="fh-ml-rh-dow">${rt[s].toUpperCase()}</span>
-                                ${n?`<span class="fh-ml-rh-val">${n.glyph}</span><span class="fh-ml-rh-name">${f(n.label)}</span>`:'<span class="fh-ml-rh-set">\uFF0B set</span>'}
+                                ${n?`<span class="fh-ml-rh-val">${n.glyph}</span><span class="fh-ml-rh-name">${m(n.label)}</span>`:'<span class="fh-ml-rh-set">\uFF0B set</span>'}
                             </button>
                             <div class="fh-ml-rh-pop" id="fh-rh-pop-${s}" style="display:none;left:0;">
                                 <div class="fh-ml-rh-opt${i?"":" on"}"
                                      data-act="meals-set-rhythm" data-weekday="${s}" data-theme="">
                                     <span class="rh-g">\u2205</span> No theme
                                 </div>
-                                ${Object.entries(Tt).map(([l,d])=>`
-                                    <div class="fh-ml-rh-opt${i===l?" on":""}"
-                                         data-act="meals-set-rhythm" data-weekday="${s}" data-theme="${l}">
-                                        <span class="rh-g">${d.glyph}</span> ${f(d.label)}
+                                ${Object.entries(Tt).map(([r,d])=>`
+                                    <div class="fh-ml-rh-opt${i===r?" on":""}"
+                                         data-act="meals-set-rhythm" data-weekday="${s}" data-theme="${r}">
+                                        <span class="rh-g">${d.glyph}</span> ${m(d.label)}
                                     </div>`).join("")}
                             </div>
                         </div>`}).join("")}
             </div>
-        </div>`}function Qi(e,t,a){let o=e.d,s=o?V(o.main,t):null,i=o?(o.sides||[]).map(it).filter(Boolean):[],n=Nt(o,t);if(s){let l=s.special?"":`
+        </div>`}function Qi(e,t,a){let o=e.d,s=o?V(o.main,t):null,i=o?(o.sides||[]).map(it).filter(Boolean):[],n=Nt(o,t);if(s){let r=s.special?"":`
             <div class="fh-ml-sides-row">
                 ${i.map(d=>`
                     <span class="fh-ml-schip"
                           data-act="meals-remove-side" data-date="${a}" data-side="${d.id}">
-                        ${d.glyph} ${f(d.name)} <span class="x">\u2715</span>
+                        ${d.glyph} ${m(d.name)} <span class="x">\u2715</span>
                     </span>`).join("")}
                 <span class="fh-ml-schip add"
                       data-act="meals-open-sides" data-date="${a}">\uFF0B side</span>
@@ -7073,10 +7085,10 @@ FUNDS`}
                 <button class="fh-ml-xbtn" data-act="meals-clear-dinner" data-date="${a}" title="Clear dinner">\u2715</button>
                 <div class="fh-ml-dcard-body">
                     <span class="fh-ml-dcard-glyph">${s.glyph}</span>
-                    <span class="fh-ml-dcard-name">${f(s.name)}</span>
-                    ${o.variant?`<span class="fh-ml-dcard-variant">${f(o.variant)}</span>`:""}
+                    <span class="fh-ml-dcard-name">${m(s.name)}</span>
+                    ${o.variant?`<span class="fh-ml-dcard-variant">${m(o.variant)}</span>`:""}
                     ${o.via==="rhythm"?'<span class="fh-ml-via-tag">~ set by your weekly rhythm ~</span>':""}
-                    ${l}
+                    ${r}
                     ${n.length?`<div style="padding-top:6px">${Gt(n)}</div>`:""}
                 </div>
                 <div class="fh-ml-dcard-actions">
@@ -7097,15 +7109,15 @@ FUNDS`}
             </div>
         </div>`}function Zi(e,t,a){return`
         <div class="fh-ml-blcol">
-            ${ws("Breakfast","b",e.b,t,a)}
-            ${ws("Lunch","l",e.l,t,a)}
-        </div>`}function ws(e,t,a,o,s){let i=a?V(a,o):null;return`
+            ${ks("Breakfast","b",e.b,t,a)}
+            ${ks("Lunch","l",e.l,t,a)}
+        </div>`}function ks(e,t,a,o,s){let i=a?V(a,o):null;return`
         <div class="fh-ml-blcard">
             <span class="fh-ml-slot-kicker">${e}</span>
             <div class="fh-ml-blcard-body">
                 ${i?`
                     <span class="fh-ml-blcard-glyph">${i.glyph}</span>
-                    <span class="fh-ml-blcard-name">${f(i.name)}</span>
+                    <span class="fh-ml-blcard-name">${m(i.name)}</span>
                     <button class="fh-ml-xbtn"
                             data-act="meals-clear-bl" data-date="${s}" data-slot="${t}"
                             title="Clear ${e.toLowerCase()}">\u2715</button>
@@ -7119,69 +7131,69 @@ FUNDS`}
                     ${i?"Change":"\uFF0B Choose"}
                 </button>
             </div>
-        </div>`}function en(e,t,a,o){let s=e._mealsDrawer,{kind:i,dateISO:n,step:l}=s,d=ft(n),p=t[n]||{},c=i==="b"||i==="l",b=c?i:"d",g=i==="b"?"breakfast":i==="l"?"lunch":"dinner",u=ot(a),x=s.pendingMainId?V(s.pendingMainId,a):null,w=s.pickedProtein||null,m=new Set(s.selSides||[]),$=u.filter(z=>z.special&&z.types.includes(b));function S(z,B){return u.filter(L=>L.types.includes("d")&&!L.special&&L.protein===z&&(!B||L.cut===B))}function v(z){var B;return(((B=de[z])==null?void 0:B.cuts)||[]).filter(L=>S(z,L.id).length>0)}let h=s.cat||null,k=s.cut||null,A=s.scope||"today",E=s.favOnly||!1,F=s.nudgeOff||!1,D=s.fatsOff||!1,R=h?de[h].label:"",T=h&&k&&(de[h].cuts.find(z=>z.id===k)||{}).label||"",P=l==="protein"?"What's the protein?":l==="cut"?`Which ${R.toLowerCase()}?`:l==="make"?`${T||R} \u2014 what are we making?`:l==="sides"?x?`${x.glyph} ${x.name} \xB7 round out the plate`:"Round out the plate":l==="tacoprotein"?x?`${x.glyph} ${x.name} \u2014 pick the protein`:"Pick the protein":l==="confirm"?"All set \u2713":c?`Choosing ${g}`:"The whole library",y=`
+        </div>`}function en(e,t,a,o){let s=e._mealsDrawer,{kind:i,dateISO:n,step:r}=s,d=ft(n),p=t[n]||{},c=i==="b"||i==="l",b=c?i:"d",g=i==="b"?"breakfast":i==="l"?"lunch":"dinner",u=ot(a),v=s.pendingMainId?V(s.pendingMainId,a):null,_=s.pickedProtein||null,f=new Set(s.selSides||[]),$=u.filter(A=>A.special&&A.types.includes(b));function S(A,B){return u.filter(L=>L.types.includes("d")&&!L.special&&L.protein===A&&(!B||L.cut===B))}function x(A){var B;return(((B=de[A])==null?void 0:B.cuts)||[]).filter(L=>S(A,L.id).length>0)}let h=s.cat||null,w=s.cut||null,z=s.scope||"today",E=s.favOnly||!1,F=s.nudgeOff||!1,D=s.fatsOff||!1,R=h?de[h].label:"",T=h&&w&&(de[h].cuts.find(A=>A.id===w)||{}).label||"",P=r==="protein"?"What's the protein?":r==="cut"?`Which ${R.toLowerCase()}?`:r==="make"?`${T||R} \u2014 what are we making?`:r==="sides"?v?`${v.glyph} ${v.name} \xB7 round out the plate`:"Round out the plate":r==="tacoprotein"?v?`${v.glyph} ${v.name} \u2014 pick the protein`:"Pick the protein":r==="confirm"?"All set \u2713":c?`Choosing ${g}`:"The whole library",y=`
         <div class="fh-ml-dr-head">
-            ${!c&&i!=="d-sides"&&(l==="cut"||l==="make"||l==="browse"||l==="tacoprotein"||l==="sides"&&x)?'<button class="fh-ml-ghost-btn" data-act="meals-drawer-back">\u2039 Back</button>':""}
-            <span class="fh-ml-dr-title">${f(P)}</span>
+            ${!c&&i!=="d-sides"&&(r==="cut"||r==="make"||r==="browse"||r==="tacoprotein"||r==="sides"&&v)?'<button class="fh-ml-ghost-btn" data-act="meals-drawer-back">\u2039 Back</button>':""}
+            <span class="fh-ml-dr-title">${m(P)}</span>
             <span class="fh-ml-dr-date">~ ${mt(d)} ~</span>
             <span class="fh-ml-dr-spacer"></span>
             ${c?`
                 <div class="fh-ml-scope">
-                    ${[["today","Just today"],["week","All week"],["2weeks","2 weeks"]].map(([z,B])=>`
-                        <button class="fh-ml-scope-opt${A===z?" on":""}"
-                                data-act="meals-drawer-scope" data-scope="${z}">${B}</button>`).join("")}
+                    ${[["today","Just today"],["week","All week"],["2weeks","2 weeks"]].map(([A,B])=>`
+                        <button class="fh-ml-scope-opt${z===A?" on":""}"
+                                data-act="meals-drawer-scope" data-scope="${A}">${B}</button>`).join("")}
                 </div>`:""}
             <button class="fh-ml-xbtn" data-act="meals-close-drawer">\u2715</button>
-        </div>`,_=`
+        </div>`,k=`
         <div class="fh-ml-dr-quick">
-            ${$.map(z=>`
+            ${$.map(A=>`
                 <button class="fh-ml-qchip"
-                        data-act="meals-drawer-pick-special" data-meal="${z.id}">
-                    ${z.glyph} ${f(z.name)}
+                        data-act="meals-drawer-pick-special" data-meal="${A.id}">
+                    ${A.glyph} ${m(A.name)}
                 </button>`).join("")}
             <span class="fh-ml-pager-spacer" style="flex:1"></span>
-            ${l==="protein"?'<button class="fh-ml-qchip" data-act="meals-drawer-browse">Browse everything \u203A</button>':""}
-            ${l==="browse"?`<button class="fh-ml-qchip${E?" on":""}" data-act="meals-drawer-favonly">\u2665 Favorites</button>`:""}
-        </div>`,M="";if(l==="protein")M=`
-            ${_}
+            ${r==="protein"?'<button class="fh-ml-qchip" data-act="meals-drawer-browse">Browse everything \u203A</button>':""}
+            ${r==="browse"?`<button class="fh-ml-qchip${E?" on":""}" data-act="meals-drawer-favonly">\u2665 Favorites</button>`:""}
+        </div>`,M="";if(r==="protein")M=`
+            ${k}
             <div class="fh-ml-grid fh-ml-pgrid">
-                ${$t.map(z=>{let B=de[z],L=S(z).length;return L===0?"":`
+                ${$t.map(A=>{let B=de[A],L=S(A).length;return L===0?"":`
                         <div class="fh-ml-mealcard fh-ml-pcard"
-                             data-act="meals-drawer-pick-cat" data-cat="${z}">
+                             data-act="meals-drawer-pick-cat" data-cat="${A}">
                             <span class="fh-ml-mealcard-glyph" style="font-size:calc(2.4rem * var(--fh-text-scale,1))">${B.glyph}</span>
-                            <span class="fh-ml-mealcard-name" style="font-size:var(--fh-text-base)">${f(B.label)}</span>
+                            <span class="fh-ml-mealcard-name" style="font-size:var(--fh-text-base)">${m(B.label)}</span>
                             <span class="fh-ml-pcount">${L} ${L===1?"idea":"ideas"}</span>
                         </div>`}).join("")}
-            </div>`;else if(l==="cut"&&h)M=`
+            </div>`;else if(r==="cut"&&h)M=`
             <div class="fh-ml-grid fh-ml-pgrid">
-                ${v(h).map(z=>{let B=S(h,z.id).length;return`
+                ${x(h).map(A=>{let B=S(h,A.id).length;return`
                         <div class="fh-ml-mealcard fh-ml-pcard"
-                             data-act="meals-drawer-pick-cut" data-cut="${z.id}">
+                             data-act="meals-drawer-pick-cut" data-cut="${A.id}">
                             <span class="fh-ml-mealcard-glyph" style="font-size:calc(2rem * var(--fh-text-scale,1))">${de[h].glyph}</span>
-                            <span class="fh-ml-mealcard-name" style="font-size:var(--fh-text-sm)">${f(z.label)}</span>
+                            <span class="fh-ml-mealcard-name" style="font-size:var(--fh-text-sm)">${m(A.label)}</span>
                             <span class="fh-ml-pcount">${B} ${B===1?"idea":"ideas"}</span>
                         </div>`}).join("")}
-            </div>`;else if(l==="make"&&h)M=`
+            </div>`;else if(r==="make"&&h)M=`
             <div class="fh-ml-grid">
-                ${(S(h,k).length?S(h,k):S(h)).map(B=>_s(B,o.includes(B.id),"meals-drawer-pick-main",{meal:B.id},!0)).join("")}
-            </div>`;else if(l==="browse"){let z=u.filter(B=>B.types.includes(b)&&!B.special).filter(B=>E?o.includes(B.id):!0).sort((B,L)=>{let q=o.includes(B.id)?0:1,J=o.includes(L.id)?0:1;return q-J||B.name.localeCompare(L.name)});M=`
-            ${_}
+                ${(S(h,w).length?S(h,w):S(h)).map(B=>_s(B,o.includes(B.id),"meals-drawer-pick-main",{meal:B.id},!0)).join("")}
+            </div>`;else if(r==="browse"){let A=u.filter(B=>B.types.includes(b)&&!B.special).filter(B=>E?o.includes(B.id):!0).sort((B,L)=>{let q=o.includes(B.id)?0:1,J=o.includes(L.id)?0:1;return q-J||B.name.localeCompare(L.name)});M=`
+            ${k}
             <div class="fh-ml-grid">
-                ${z.length?z.map(B=>_s(B,o.includes(B.id),c?"meals-drawer-pick-bl":"meals-drawer-pick-main",{meal:B.id},!1)).join(""):`<div class="fh-ml-empty-note" style="grid-column:1/-1">
+                ${A.length?A.map(B=>_s(B,o.includes(B.id),c?"meals-drawer-pick-bl":"meals-drawer-pick-main",{meal:B.id},!1)).join(""):`<div class="fh-ml-empty-note" style="grid-column:1/-1">
                     no favorites yet \u2014 tap \u2665 Favorites to see everything
                    </div>`}
-            </div>`}else if(l==="tacoprotein"&&x)M=`
+            </div>`}else if(r==="tacoprotein"&&v)M=`
             <div class="fh-ml-grid fh-ml-pgrid">
-                ${(x.proteinPick||[]).map(z=>`
-                    <div class="fh-ml-mealcard fh-ml-pcard${w===z?" on":""}"
-                         data-act="meals-drawer-pick-taco-protein" data-protein="${z}">
-                        <span class="fh-ml-mealcard-glyph" style="font-size:calc(2.4rem * var(--fh-text-scale,1))">${de[z].glyph}</span>
-                        <span class="fh-ml-mealcard-name" style="font-size:var(--fh-text-base)">${f(de[z].label)}</span>
+                ${(v.proteinPick||[]).map(A=>`
+                    <div class="fh-ml-mealcard fh-ml-pcard${_===A?" on":""}"
+                         data-act="meals-drawer-pick-taco-protein" data-protein="${A}">
+                        <span class="fh-ml-mealcard-glyph" style="font-size:calc(2.4rem * var(--fh-text-scale,1))">${de[A].glyph}</span>
+                        <span class="fh-ml-mealcard-name" style="font-size:var(--fh-text-base)">${m(de[A].label)}</span>
                     </div>`).join("")}
             </div>
             <div class="fh-ml-dr-foot">
-                <span class="fh-ml-dr-foot-note">${f(x.name)} works with any of these \u2014 tap tonight's protein and it flows to the shopping list</span>
-            </div>`;else if(l==="sides"){let z=x||(p.d?V(p.d.main,a):null),B=z?z.protein:h,L=(()=>{let ee=new Set(z?z.groups||[]:[]);return m.forEach(te=>{let Ve=it(te);Ve&&Ve.groups.forEach(Zt=>ee.add(Zt))}),[...ee]})(),q=!L.includes("veg")&&!L.includes("fruit"),J=pa(z),Ze=ee=>{let te=0;return(z&&z.sides||[]).includes(ee.id)&&(te+=100),(ee.pairs||[]).includes(B)&&(te+=10),te},bt=Xe.map(ee=>({g:ee,sides:at.filter(te=>te.groups[0]===ee).sort((te,Ve)=>Ze(Ve)-Ze(te)||te.name.localeCompare(Ve.name))})).filter(ee=>ee.sides.length),he=`
+                <span class="fh-ml-dr-foot-note">${m(v.name)} works with any of these \u2014 tap tonight's protein and it flows to the shopping list</span>
+            </div>`;else if(r==="sides"){let A=v||(p.d?V(p.d.main,a):null),B=A?A.protein:h,L=(()=>{let ee=new Set(A?A.groups||[]:[]);return f.forEach(te=>{let Ve=it(te);Ve&&Ve.groups.forEach(Zt=>ee.add(Zt))}),[...ee]})(),q=!L.includes("veg")&&!L.includes("fruit"),J=pa(A),Ze=ee=>{let te=0;return(A&&A.sides||[]).includes(ee.id)&&(te+=100),(ee.pairs||[]).includes(B)&&(te+=10),te},bt=Xe.map(ee=>({g:ee,sides:at.filter(te=>te.groups[0]===ee).sort((te,Ve)=>Ze(Ve)-Ze(te)||te.name.localeCompare(Ve.name))})).filter(ee=>ee.sides.length),he=`
             <div class="fh-ml-plateso">
                 <span class="fh-ml-legend-cap">the plate so far:</span>
                 ${Gt(L)}
@@ -7193,10 +7205,10 @@ FUNDS`}
                     <span class="fh-ml-plateso-note good">~ something fresh on the plate \u2713 ~</span>`:""}
                 ${J.length&&!D?`
                     <span class="fh-ml-fats">
-                        \u{1FAD2} healthy fats here: ${f(J.join(", "))}
+                        \u{1FAD2} healthy fats here: ${m(J.join(", "))}
                         <button class="fh-ml-nudge-x" data-act="meals-dismiss-fats">got it</button>
                     </span>`:""}
-            </div>`,fo=z&&z.sides&&z.sides.length?`the usual sides are pre-picked \xB7 PAIRS = goes well with ${B?de[B].label.toLowerCase():"this"}`:"tap anything that should join the plate";M=`
+            </div>`,fo=A&&A.sides&&A.sides.length?`the usual sides are pre-picked \xB7 PAIRS = goes well with ${B?de[B].label.toLowerCase():"this"}`:"tap anything that should join the plate";M=`
             ${he}
             <div class="fh-ml-sides-scroll">
                 <div class="fh-ml-side-cols">
@@ -7204,32 +7216,32 @@ FUNDS`}
                         <div class="fh-ml-side-col${ee.g==="veg"&&q&&!F?" cue":""}">
                             <div class="fh-ml-side-sec-hdr">
                                 <span class="fh-ml-gicon on">${Le[ee.g].icon}</span>
-                                ${f(Le[ee.g].label)}
+                                ${m(Le[ee.g].label)}
                             </div>
                             ${ee.g==="veg"&&q&&!F?'<div class="fh-ml-side-sec-cue">a fresh pick rounds out the plate</div>':""}
                             <div class="fh-ml-side-colgrid">
-                                ${ee.sides.map(te=>{let Ve=m.has(te.id),Zt=(te.pairs||[]).includes(B);return`
+                                ${ee.sides.map(te=>{let Ve=f.has(te.id),Zt=(te.pairs||[]).includes(B);return`
                                         <div class="fh-ml-mealcard fh-ml-sidecard${Ve?" on":""}"
                                              data-act="meals-toggle-side" data-side="${te.id}">
                                             ${Ve?'<span class="ck">\u2713</span>':""}
                                             ${!Ve&&Zt?'<span class="fh-ml-pairtag">PAIRS</span>':""}
                                             <span class="fh-ml-mealcard-glyph" style="font-size:calc(1.6rem * var(--fh-text-scale,1))">${te.glyph}</span>
-                                            <span class="fh-ml-mealcard-name" style="font-size:var(--fh-text-xs)">${f(te.name)}</span>
+                                            <span class="fh-ml-mealcard-name" style="font-size:var(--fh-text-xs)">${m(te.name)}</span>
                                         </div>`}).join("")}
                             </div>
                         </div>`).join("")}
                 </div>
             </div>
             <div class="fh-ml-dr-foot">
-                <span class="fh-ml-dr-foot-note">${f(fo)}</span>
+                <span class="fh-ml-dr-foot-note">${m(fo)}</span>
                 <span class="fh-ml-pager-spacer" style="flex:1"></span>
                 ${i!=="d-sides"?'<button class="fh-ml-ghost-btn" data-act="meals-drawer-no-sides">No sides</button>':""}
                 <button class="fh-bk-go-btn" data-act="meals-drawer-done-sides">Done \u2713</button>
-            </div>`}else l==="confirm"&&(M=`
+            </div>`}else r==="confirm"&&(M=`
             <div class="fh-ml-confirm">
                 <div class="fh-ml-confirm-icon">${s.savedGlyph||"\u2713"}</div>
                 <div class="fh-ml-confirm-msg">
-                    <b>${f(s.savedName||"Dinner")}</b> is planned for ${f(mt(d))}.
+                    <b>${m(s.savedName||"Dinner")}</b> is planned for ${m(mt(d))}.
                 </div>
                 <div class="fh-ml-confirm-sub">Keep going, or you're all set.</div>
                 <div class="fh-ml-confirm-actions">
@@ -7241,25 +7253,25 @@ FUNDS`}
         <div class="fh-ml-drawer">
             ${y}
             ${M}
-        </div>`}function tn(e,t,a,o,s,i){let n=new Set(i),l=Oe(o),d=`
+        </div>`}function tn(e,t,a,o,s,i){let n=new Set(i),r=Oe(o),d=`
         <div class="fh-ml-panel">
             <div class="fh-ml-panel-hdr">
                 What's in the kitchen?
                 <small>~ tap everything you've got \u2014 proteins first, no typing ~</small>
             </div>
             <div class="fh-ml-ingscroll">
-                ${pt.map(([g,u])=>{let x=l.filter(w=>w.cat===g);return x.length?`
+                ${pt.map(([g,u])=>{let v=r.filter(_=>_.cat===g);return v.length?`
                         <div class="fh-ml-ing-sec-hdr">
                             <span class="fh-ml-gicon on">${(Le[g]||{}).icon||"\u2022"}</span>
-                            ${f(u)}
+                            ${m(u)}
                         </div>
                         <div class="fh-ml-ingrid">
-                            ${x.map(w=>{let m=n.has(w.id);return`
-                                    <div class="fh-ml-ing-chip${m?" on":""}"
-                                         data-act="meals-toggle-have" data-ing="${w.id}">
-                                        ${m?'<span class="ck">\u2713</span>':""}
-                                        <span class="fh-ml-ing-glyph">${w.glyph}</span>
-                                        <span class="fh-ml-ing-lbl">${f(w.label)}</span>
+                            ${v.map(_=>{let f=n.has(_.id);return`
+                                    <div class="fh-ml-ing-chip${f?" on":""}"
+                                         data-act="meals-toggle-have" data-ing="${_.id}">
+                                        ${f?'<span class="ck">\u2713</span>':""}
+                                        <span class="fh-ml-ing-glyph">${_.glyph}</span>
+                                        <span class="fh-ml-ing-lbl">${m(_.label)}</span>
                                     </div>`}).join("")}
                         </div>`:""}).join("")}
             </div>
@@ -7269,14 +7281,14 @@ FUNDS`}
                 We could make\u2026
                 <small>~ best matches first \xB7 tap one to put it on a night ~</small>
             </div>
-            <div class="fh-ml-matches">${n.size===0?'<div class="fh-ml-empty-note">tap a few ingredients on the left<br>and dinner ideas show up here</div>':p.length===0?'<div class="fh-ml-empty-note">nothing matches yet \u2014 keep tapping</div>':p.map(({meal:g,hits:u})=>{let x=Oe(o);return`
+            <div class="fh-ml-matches">${n.size===0?'<div class="fh-ml-empty-note">tap a few ingredients on the left<br>and dinner ideas show up here</div>':p.length===0?'<div class="fh-ml-empty-note">nothing matches yet \u2014 keep tapping</div>':p.map(({meal:g,hits:u})=>{let v=Oe(o);return`
                     <div class="fh-ml-match-row"
                          data-act="meals-pantry-pick" data-meal="${g.id}">
                         <span class="fh-ml-match-glyph">${g.glyph}</span>
                         <div class="fh-ml-match-body">
-                            <div class="fh-ml-match-name">${f(g.name)}${s.includes(g.id)?" \u2665":""}</div>
+                            <div class="fh-ml-match-name">${m(g.name)}${s.includes(g.id)?" \u2665":""}</div>
                             <div class="fh-ml-match-uses">
-                                ${(g.ing||[]).map(w=>{let m=x.find(S=>S.id===w);if(!m)return"";let $=u.includes(w);return`<span class="${$?"hit":""}">${$?"\u2713":"\xB7"}${f(m.label.toLowerCase())} </span>`}).join("")}
+                                ${(g.ing||[]).map(_=>{let f=v.find(S=>S.id===_);if(!f)return"";let $=u.includes(_);return`<span class="${$?"hit":""}">${$?"\u2713":"\xB7"}${m(f.label.toLowerCase())} </span>`}).join("")}
                             </div>
                         </div>
                         <button class="fh-ml-ghost-btn" style="min-height:38px;padding:6px 14px">\uFF0B plan</button>
@@ -7287,26 +7299,26 @@ FUNDS`}
                 ${d}
                 ${b}
             </div>
-        </div>`}function an(e,t,a,o,s,i){let n=e._mealsLibFilter||"all",l=new Set(a.map(u=>u.id)),d=ot(a).filter(u=>!u.special).filter(u=>n==="all"?!0:u.types.includes(n)).sort((u,x)=>{let w=o.includes(u.id)?0:1,m=o.includes(x.id)?0:1;return w-m||u.name.localeCompare(x.name)}),p=`
+        </div>`}function an(e,t,a,o,s,i){let n=e._mealsLibFilter||"all",r=new Set(a.map(u=>u.id)),d=ot(a).filter(u=>!u.special).filter(u=>n==="all"?!0:u.types.includes(n)).sort((u,v)=>{let _=o.includes(u.id)?0:1,f=o.includes(v.id)?0:1;return _-f||u.name.localeCompare(v.name)}),p=`
         <div class="fh-ml-libfilters">
-            ${[["all","Everything"],["b","Breakfast"],["l","Lunch"],["d","Dinner"]].map(([u,x])=>`
+            ${[["all","Everything"],["b","Breakfast"],["l","Lunch"],["d","Dinner"]].map(([u,v])=>`
                 <button class="fh-ml-qchip${n===u?" on":""}"
-                        data-act="meals-lib-filter" data-filter="${u}">${x}</button>`).join("")}
+                        data-act="meals-lib-filter" data-filter="${u}">${v}</button>`).join("")}
             <span class="fh-ml-libhint">~ tap \u2665 to keep family staples on top \xB7 \u{1F33E} marks whole-grain meals \xB7 RECIPE opens the card ~</span>
         </div>`,c=`
         <div class="fh-ml-libgrid">
-            ${d.map(u=>{let x=o.includes(u.id),w=!!Ke(u,s),m=ha(u,[]),$=w?"meals-open-recipe":u.types.includes("d")?"meals-lib-plan-meal":"";return`
+            ${d.map(u=>{let v=o.includes(u.id),_=!!Ke(u,s),f=ha(u,[]),$=_?"meals-open-recipe":u.types.includes("d")?"meals-lib-plan-meal":"";return`
                     <div class="fh-ml-mealcard fh-ml-libcard"
                          ${$?`data-act="${$}" data-meal="${u.id}"`:""}>
-                        <button class="fh-ml-fav-btn${x?" on":""}"
+                        <button class="fh-ml-fav-btn${v?" on":""}"
                                 data-act="meals-toggle-fav" data-meal="${u.id}"
                                 style="pointer-events:auto">
-                            ${x?"\u2665":"\u2661"}
+                            ${v?"\u2665":"\u2661"}
                         </button>
                         <span class="fh-ml-mealcard-glyph">${u.glyph}</span>
-                        <span class="fh-ml-mealcard-name">${f(u.name)}</span>
-                        ${w?'<span class="fh-ml-rbadge">RECIPE</span>':""}
-                        ${m?'<span class="fh-ml-wgbadge">\u{1F33E} whole grain</span>':""}
+                        <span class="fh-ml-mealcard-name">${m(u.name)}</span>
+                        ${_?'<span class="fh-ml-rbadge">RECIPE</span>':""}
+                        ${f?'<span class="fh-ml-wgbadge">\u{1F33E} whole grain</span>':""}
                     </div>`}).join("")}
         </div>`,b=Ht(i),g=`
         <div class="fh-ml-disc-hdr">
@@ -7316,15 +7328,15 @@ FUNDS`}
         </div>
         ${i.length===0?'<div class="fh-ml-idea-hint">tip: tap what you have over in <b>What Can We Make</b> and these reorder around it</div>':""}
         <div class="fh-ml-discrow">
-            ${b.map(({idea:u,hits:x})=>{let w=l.has(u.id);return`
+            ${b.map(({idea:u,hits:v})=>{let _=r.has(u.id);return`
                     <div class="fh-ml-mealcard fh-ml-disccard">
-                        <span class="fh-ml-disc-area">${f(u.area||"")}</span>
+                        <span class="fh-ml-disc-area">${m(u.area||"")}</span>
                         <span class="fh-ml-mealcard-glyph">${u.glyph}</span>
-                        <span class="fh-ml-mealcard-name">${f(u.name)}</span>
-                        ${x.length?`<span class="fh-ml-idea-uses">uses ${x.length} you have</span>`:""}
-                        <button class="fh-ml-disc-save${w?" saved":""}"
-                                ${w?"disabled":`data-act="meals-save-idea" data-meal="${C(u.id)}"`}>
-                            ${w?"In the library \u2713":"\uFF0B Save to library"}
+                        <span class="fh-ml-mealcard-name">${m(u.name)}</span>
+                        ${v.length?`<span class="fh-ml-idea-uses">uses ${v.length} you have</span>`:""}
+                        <button class="fh-ml-disc-save${_?" saved":""}"
+                                ${_?"disabled":`data-act="meals-save-idea" data-meal="${C(u.id)}"`}>
+                            ${_?"In the library \u2713":"\uFF0B Save to library"}
                         </button>
                     </div>`}).join("")}
         </div>`;return`
@@ -7336,19 +7348,19 @@ FUNDS`}
                     ${g}
                 </div>
             </div>
-        </div>`}function sn(e,t,a,o,s){let i=st(),n=Z(i),l=Oe(o),d={};for(let x=0;x<7;x++){let w=Je(i,x),m=t[Z(w)];if(!m)continue;let $=rt[w.getDay()],S=(v,h)=>{v.forEach(k=>{let A=l.find(E=>E.id===k);A&&(d[k]||(d[k]={ing:A,sources:[]}),d[k].sources.length<2&&!d[k].sources.includes(h)&&d[k].sources.push(h))})};if(["b","l"].forEach(v=>{let h=m[v]?V(m[v],a):null;h&&!h.special&&S(h.ing||[],`${h.name} \xB7 ${$}`)}),m.d){let v=V(m.d.main,a);v&&!v.special&&S(Ot(v,m.d),`${v.name} \xB7 ${$}`),(m.d.sides||[]).forEach(h=>{let k=it(h);k&&S(k.ing||[],`${k.name} \xB7 ${$}`)})}}let p={};Object.values(d).forEach(x=>{let w=x.ing.aisle;p[w]||(p[w]=[]),p[w].push(x)}),Object.values(p).forEach(x=>x.sort((w,m)=>w.ing.label.localeCompare(m.ing.label)));let c=["produce","meat","dairy","bakery","pantry"].filter(x=>p[x]),b=Object.keys(d).length,g=Object.keys(d).filter(x=>s[n+":"+x]).length,u=b===0?`<div class="fh-ml-empty-note">plan a few meals first \u2014 the list builds itself from the week's menu</div>`:`
+        </div>`}function sn(e,t,a,o,s){let i=st(),n=Z(i),r=Oe(o),d={};for(let v=0;v<7;v++){let _=Je(i,v),f=t[Z(_)];if(!f)continue;let $=rt[_.getDay()],S=(x,h)=>{x.forEach(w=>{let z=r.find(E=>E.id===w);z&&(d[w]||(d[w]={ing:z,sources:[]}),d[w].sources.length<2&&!d[w].sources.includes(h)&&d[w].sources.push(h))})};if(["b","l"].forEach(x=>{let h=f[x]?V(f[x],a):null;h&&!h.special&&S(h.ing||[],`${h.name} \xB7 ${$}`)}),f.d){let x=V(f.d.main,a);x&&!x.special&&S(Ot(x,f.d),`${x.name} \xB7 ${$}`),(f.d.sides||[]).forEach(h=>{let w=it(h);w&&S(w.ing||[],`${w.name} \xB7 ${$}`)})}}let p={};Object.values(d).forEach(v=>{let _=v.ing.aisle;p[_]||(p[_]=[]),p[_].push(v)}),Object.values(p).forEach(v=>v.sort((_,f)=>_.ing.label.localeCompare(f.ing.label)));let c=["produce","meat","dairy","bakery","pantry"].filter(v=>p[v]),b=Object.keys(d).length,g=Object.keys(d).filter(v=>s[n+":"+v]).length,u=b===0?`<div class="fh-ml-empty-note">plan a few meals first \u2014 the list builds itself from the week's menu</div>`:`
             <div class="fh-ml-groc-cols">
-                ${c.map(x=>`
+                ${c.map(v=>`
                     <div class="fh-ml-groc-sec">
-                        <div class="fh-ml-groc-sec-hdr">${f(nt[x]||x)}</div>
-                        ${p[x].map(({ing:w,sources:m})=>{let $=n+":"+w.id,S=!!s[$];return`
+                        <div class="fh-ml-groc-sec-hdr">${m(nt[v]||v)}</div>
+                        ${p[v].map(({ing:_,sources:f})=>{let $=n+":"+_.id,S=!!s[$];return`
                                 <div class="fh-ml-groc-row${S?" done":""}"
                                      data-act="meals-toggle-groc" data-key="${C($)}" data-checked="${!S}">
                                     <span class="fh-ml-check">\u2713</span>
-                                    <span class="fh-ml-groc-g">${w.glyph}</span>
+                                    <span class="fh-ml-groc-g">${_.glyph}</span>
                                     <div class="fh-ml-groc-body">
-                                        <div class="fh-ml-groc-lbl">${f(w.label)}</div>
-                                        <div class="fh-ml-groc-from">${f(m.join("  \xB7  "))}</div>
+                                        <div class="fh-ml-groc-lbl">${m(_.label)}</div>
+                                        <div class="fh-ml-groc-from">${m(f.join("  \xB7  "))}</div>
                                     </div>
                                 </div>`}).join("")}
                     </div>`).join("")}
@@ -7369,8 +7381,8 @@ FUNDS`}
                 <div style="display:flex;align-items:center;gap:14px">
                     <span style="font-size:calc(2.4rem * var(--fh-text-scale,1));line-height:1">${s.glyph}</span>
                     <div style="flex:1">
-                        <div class="fh-ml-modal-title">${f(s.name)}</div>
-                        <div class="fh-ml-recipe-meta">${f(i.time)} \xB7 serves ${f(String(i.serves))}</div>
+                        <div class="fh-ml-modal-title">${m(s.name)}</div>
+                        <div class="fh-ml-recipe-meta">${m(i.time)} \xB7 serves ${m(String(i.serves))}</div>
                     </div>
                     <button class="fh-ml-xbtn" data-act="meals-close-recipe">\u2715</button>
                 </div>
@@ -7378,13 +7390,13 @@ FUNDS`}
                     <div>
                         <div class="fh-ml-recipe-h">~ what you need ~</div>
                         <ul class="fh-ml-recipe-ing">
-                            ${(i.ingredients||[]).map(n=>`<li>${f(n)}</li>`).join("")}
+                            ${(i.ingredients||[]).map(n=>`<li>${m(n)}</li>`).join("")}
                         </ul>
                     </div>
                     <div>
                         <div class="fh-ml-recipe-h">~ how it goes ~</div>
                         <ol class="fh-ml-recipe-steps">
-                            ${(i.steps||[]).map(n=>`<li>${f(n)}</li>`).join("")}
+                            ${(i.steps||[]).map(n=>`<li>${m(n)}</li>`).join("")}
                         </ol>
                     </div>
                 </div>
@@ -7393,18 +7405,18 @@ FUNDS`}
                     <button class="fh-ml-ghost-btn" data-act="meals-close-recipe">Close</button>
                 </div>
             </div>
-        </div>`:""}function nn(e,t,a){let o=V(e,a);if(!o)return"";let s=st(),i=Array.from({length:7},(n,l)=>Je(s,l));return`
+        </div>`:""}function nn(e,t,a){let o=V(e,a);if(!o)return"";let s=st(),i=Array.from({length:7},(n,r)=>Je(s,r));return`
         <div class="fh-ml-modal-scrim" data-act="meals-close-daypick">
             <div class="fh-ml-modal" style="width:min(700px,92vw)">
                 <div class="fh-ml-modal-title">
-                    ${o.glyph} ${f(o.name)}
+                    ${o.glyph} ${m(o.name)}
                     <em>~ which night? ~</em>
                 </div>
                 <div class="fh-ml-daypick">
-                    ${i.map(n=>{let l=Z(n),d=t[l],p=d&&d.d?V(d.d.main,a):null,c=l===Z(s)?"TONIGHT":rt[n.getDay()].toUpperCase()+" "+n.getDate();return`
-                            <div class="fh-ml-dpick" data-act="meals-daypick-pick" data-date="${l}" data-meal="${o.id}">
+                    ${i.map(n=>{let r=Z(n),d=t[r],p=d&&d.d?V(d.d.main,a):null,c=r===Z(s)?"TONIGHT":rt[n.getDay()].toUpperCase()+" "+n.getDate();return`
+                            <div class="fh-ml-dpick" data-act="meals-daypick-pick" data-date="${r}" data-meal="${o.id}">
                                 <span class="fh-ml-dpick-dow">${c}</span>
-                                ${p?`<span class="fh-ml-dpick-cur">${p.glyph} ${f(p.name)}</span>`:'<span class="fh-ml-dpick-cur open">open</span>'}
+                                ${p?`<span class="fh-ml-dpick-cur">${p.glyph} ${m(p.name)}</span>`:'<span class="fh-ml-dpick-cur open">open</span>'}
                             </div>`}).join("")}
                 </div>
                 <div class="fh-ml-modal-actions">
@@ -7414,11 +7426,11 @@ FUNDS`}
         </div>`}function Gt(e){return`
         <div class="fh-ml-plate" title="Food groups on the plate">
             ${Xe.map(t=>{let a=e.includes(t);return`<span class="fh-ml-gicon${a?" on":""}" title="${C(Le[t].label)}${a?"":" \u2014 not yet"}">${Le[t].icon}</span>`}).join("")}
-        </div>`}function _s(e,t,a,o,s){let i=Object.entries(o).map(([l,d])=>`data-${l}="${C(d)}"`).join(" "),n=s?e.groups||[]:[];return`
+        </div>`}function _s(e,t,a,o,s){let i=Object.entries(o).map(([r,d])=>`data-${r}="${C(d)}"`).join(" "),n=s?e.groups||[]:[];return`
         <div class="fh-ml-mealcard" data-act="${a}" ${i}>
             ${t?'<span class="fh-ml-mealcard-fav">\u2665</span>':""}
             <span class="fh-ml-mealcard-glyph">${e.glyph}</span>
-            <span class="fh-ml-mealcard-name">${f(e.name)}</span>
+            <span class="fh-ml-mealcard-name">${m(e.name)}</span>
             ${s&&n.length?Gt(n):""}
         </div>`}var Ss=N(()=>{Q();Ct()});function Es(e){return`
         <div class="fh-home-coming-screen">
@@ -7486,7 +7498,7 @@ FUNDS`}
             <span style="font-size:.78rem;opacity:.85">${s} pts</span>
           </button>`}).join("");return`
       <div class="fh-modal">
-        <div class="fh-modal-title">Partial credit \u2014 ${f(e.data.name)}</div>
+        <div class="fh-modal-title">Partial credit \u2014 ${m(e.data.name)}</div>
         <p style="font-size:.85rem;color:var(--fh-text-sec);margin:0;line-height:1.5">
           "You tried, but didn't finish." Award part of the ${t} points and approve.
         </p>
@@ -7495,7 +7507,7 @@ FUNDS`}
           <button class="fh-btn fh-btn-ghost" data-act="close-modal">Cancel</button>
         </div>
       </div>`}function dn(e){let t=new Map;for(let a of sa){let o=a.category||"Other";t.has(o)||t.set(o,[]),t.get(o).push(a)}return[...t.entries()].map(([a,o])=>`
-        <div class="fh-icon-picker-cat-hdr">${f(a)}</div>
+        <div class="fh-icon-picker-cat-hdr">${m(a)}</div>
         <div class="fh-icon-picker-cat-grid">
           ${o.map(({key:s,label:i})=>`
             <button class="fh-icon-cell${e===s?" selected":""}"
@@ -7505,7 +7517,7 @@ FUNDS`}
               <span class="fh-icon-cell-label">${i}</span>
             </button>`).join("")}
         </div>`).join("")}function cn(e){let t=new Map;for(let a of Ha){let o=a.category||"Other";t.has(o)||t.set(o,[]),t.get(o).push(a)}return[...t.entries()].map(([a,o])=>`
-        <div class="fh-icon-picker-cat-hdr">${f(a)}</div>
+        <div class="fh-icon-picker-cat-hdr">${m(a)}</div>
         <div class="fh-icon-picker-cat-grid">
           ${o.map(({key:s,label:i})=>`
             <button class="fh-icon-cell${e===s?" selected":""}"
@@ -7534,21 +7546,21 @@ FUNDS`}
           </button>
           <span style="font-size:.78rem;color:var(--fh-text-sec)">PNG/JPG, max ~256 KB</span>
         </div>
-      </div>`}function hn(e,t,a,o,s="details"){let i=e||{},n=i.recurrence||{},l=n.type||"daily",d=i.assigned_to||[],p=dn(i.icon),c=sa.find(T=>T.key===i.icon),b=c?c.label:i.icon||"",g=Array.isArray(n.days_of_month)&&n.days_of_month.length?n.days_of_month:n.day_of_month?[n.day_of_month]:[1],u=l==="one_time"?"daily":l,w=`
+      </div>`}function hn(e,t,a,o,s="details"){let i=e||{},n=i.recurrence||{},r=n.type||"daily",d=i.assigned_to||[],p=dn(i.icon),c=sa.find(T=>T.key===i.icon),b=c?c.label:i.icon||"",g=Array.isArray(n.days_of_month)&&n.days_of_month.length?n.days_of_month:n.day_of_month?[n.day_of_month]:[1],u=r==="one_time"?"daily":r,_=`
       <div class="fh-chore-tabs">
         ${[{key:"details",label:"Details"},{key:"schedule",label:"Schedule"},{key:"rewards",label:"Points & Rewards"}].map(T=>`
           <button class="fh-chore-tab${s===T.key?" active":""}"
                   data-act="chore-tab" data-tab="${T.key}" type="button">
             ${T.label}
           </button>`).join("")}
-      </div>`,m=(T,P)=>`
+      </div>`,f=(T,P)=>`
       <div class="fh-chore-tab-pane" data-tab="${T}"
            style="${s===T?"":"display:none"}">
         ${P}
       </div>`,$=new Map;for(let T of Ft){let P=T.category||"Other";$.has(P)||$.set(P,[]),$.get(P).push(T)}let S=[...$.entries()].map(([T,P])=>`
         <optgroup label="${C(T)}">
-          ${P.map(r=>`<option value="${C(r.key)}">${f(r.name)}</option>`).join("")}
-        </optgroup>`).join(""),h=m("details",`
+          ${P.map(l=>`<option value="${C(l.key)}">${m(l.name)}</option>`).join("")}
+        </optgroup>`).join(""),h=f("details",`
         ${t?"":`
         <div class="fh-field fh-tpl-picker-field">
           <label class="fh-label">From template (optional)</label>
@@ -7582,7 +7594,7 @@ FUNDS`}
           <label class="fh-label">Description (optional)</label>
           <textarea class="fh-input" id="m-cdesc" rows="3"
                     style="min-height:64px;resize:vertical;line-height:1.4"
-                    placeholder="More detail\u2026">${f(i.description||"")}</textarea>
+                    placeholder="More detail\u2026">${m(i.description||"")}</textarea>
         </div>
         <div class="fh-row">
           <div class="fh-field">
@@ -7603,7 +7615,7 @@ FUNDS`}
           <summary class="fh-icon-summary">
             <span class="fh-icon-summary-title">Icon</span>
             <span class="fh-icon-selected-wrap" id="m-icon-selected">
-              ${i.icon?`<span class="fh-icon-sel-icon" style="display:inline-flex;width:20px;height:20px;color:var(--fh-accent)">${pe(i.icon,null,"20px")}</span> <span class="fh-icon-sel-lbl">${f(b)}</span>`:'<span class="fh-icon-sel-none">Tap to choose</span>'}
+              ${i.icon?`<span class="fh-icon-sel-icon" style="display:inline-flex;width:20px;height:20px;color:var(--fh-accent)">${pe(i.icon,null,"20px")}</span> <span class="fh-icon-sel-lbl">${m(b)}</span>`:'<span class="fh-icon-sel-none">Tap to choose</span>'}
             </span>
           </summary>
           <input type="hidden" id="m-cicon" value="${C(i.icon||"")}">
@@ -7624,7 +7636,7 @@ FUNDS`}
             is reached and it's still pending.
           </div>
         </div>
-    `),k=i.rotation_pool||[],A=i.assigned_to&&i.assigned_to[0]||k[i.rotation_index||0]||k[0],E=k.indexOf(A);E<0&&(E=0);let F=k.length?k.slice(E).concat(k.slice(0,E)):[],D=m("schedule",`
+    `),w=i.rotation_pool||[],z=i.assigned_to&&i.assigned_to[0]||w[i.rotation_index||0]||w[0],E=w.indexOf(z);E<0&&(E=0);let F=w.length?w.slice(E).concat(w.slice(0,E)):[],D=f("schedule",`
         <div class="fh-form-group-lbl">Who's doing it</div>
         <div class="fh-field">
           <div class="fh-checkbox-row" style="margin-bottom:4px">
@@ -7722,7 +7734,7 @@ FUNDS`}
             </div>
           </div>
         </div>
-    `),R=m("rewards",`
+    `),R=f("rewards",`
         <div class="fh-field">
           <label class="fh-label">Points awarded on completion</label>
           <input class="fh-input" id="m-cpts" type="number" min="0"
@@ -7775,21 +7787,21 @@ FUNDS`}
         </div>
     `);return`
         ${t?`<input type="hidden" id="m-cid" value="${i.chore_id}">`:""}
-        ${w}
+        ${_}
         <div class="fh-chore-tab-panes">
           ${h}
           ${D}
           ${R}
-        </div>`}function ga(e,t,a,o,s="details"){let n=t?`Edit \u2014 ${(e||{}).name}`:"Add chore",l=t?"ok-edit-chore":"ok-add-chore";return At(n,hn(e,t,a,o,s),t?"Save changes":"Add chore",l)}function Jt(e,t,a,o){let s=(e==null?void 0:e.name)||"",i=(e==null?void 0:e.description)||"",n=(e==null?void 0:e.dollar_value)??"",l=(e==null?void 0:e.scope)||"common",d=(e==null?void 0:e.person_ids)||[],p=(e==null?void 0:e.icon)||"",c=(e==null?void 0:e.category_label)||"",b=(e==null?void 0:e.max_per_period)??0,g=(e==null?void 0:e.period)||"week",u=(e==null?void 0:e.active)!==!1,x=!!(e!=null&&e.is_group_reward),w=(e==null?void 0:e.item_type)==="subscription",m=(e==null?void 0:e.subscription_period)||"monthly",$=(e==null?void 0:e.require_daily_pct)??0,S=(e==null?void 0:e.min_rank_index)??0,v=[0,1,2,3,4].map(_=>`<option value="${_}" ${S===_?"selected":""}>${_===0?"No requirement":_===4?"Rank 5 (max)":`Rank ${_+1}+`}</option>`).join(""),h=o.map(_=>`<option value="${C(_)}" ${c===_?"selected":""}>${f(_)}</option>`).join(""),k=a.filter(_=>_.type!=="parent"),A={};for(let _ of(e==null?void 0:e.contributors)||[])A[_.person_id]=_.share_pct||0;let E="((sel)=>{const r=sel.getRootNode();const grp=r.getElementById('m-sgroup');if(grp&&grp.checked)return;const pSec=r.getElementById('m-sperson-section');if(pSec)pSec.style.display=sel.value==='personal'?'':'none';})(this)",F="((cb)=>{const r=cb.getRootNode();const sec=r.getElementById('m-sgroup-section');const pSec=r.getElementById('m-sperson-section');if(sec)sec.style.display=cb.checked?'':'none';if(pSec)pSec.style.display=cb.checked?'none':'';})(this)",D="((btn)=>{const inputs=[...btn.closest('#m-sgroup-section').querySelectorAll('.m-scontrib')];if(!inputs.length)return;const each=Math.floor(100/inputs.length),rem=100-each*inputs.length;inputs.forEach((inp,i)=>{inp.value=each+(i===0?rem:0);});const tot=btn.closest('#m-sgroup-section').querySelector('#m-sgroup-total');if(tot){tot.textContent='Total: 100%';tot.style.color='var(--fh-success)';}})(this)",R="((inp)=>{const sec=inp.closest('#m-sgroup-section');if(!sec)return;const tot=[...sec.querySelectorAll('.m-scontrib')].reduce((s,i)=>s+(parseInt(i.value)||0),0);const el=sec.querySelector('#m-sgroup-total');if(el){el.textContent='Total: '+tot+'%';el.style.color=tot===100?'var(--fh-success)':tot>100?'var(--fh-overdue)':'var(--fh-text-sec)';}})(this)",T="((cb)=>{const r=cb.getRootNode();const s=r.getElementById('m-ssub-section');if(s)s.style.display=cb.checked?'':'none';})(this)",P=k.map(_=>{let M=A[_.person_id]??"";return`
+        </div>`}function ga(e,t,a,o,s="details"){let n=t?`Edit \u2014 ${(e||{}).name}`:"Add chore",r=t?"ok-edit-chore":"ok-add-chore";return At(n,hn(e,t,a,o,s),t?"Save changes":"Add chore",r)}function Jt(e,t,a,o){let s=(e==null?void 0:e.name)||"",i=(e==null?void 0:e.description)||"",n=(e==null?void 0:e.dollar_value)??"",r=(e==null?void 0:e.scope)||"common",d=(e==null?void 0:e.person_ids)||[],p=(e==null?void 0:e.icon)||"",c=(e==null?void 0:e.category_label)||"",b=(e==null?void 0:e.max_per_period)??0,g=(e==null?void 0:e.period)||"week",u=(e==null?void 0:e.active)!==!1,v=!!(e!=null&&e.is_group_reward),_=(e==null?void 0:e.item_type)==="subscription",f=(e==null?void 0:e.subscription_period)||"monthly",$=(e==null?void 0:e.require_daily_pct)??0,S=(e==null?void 0:e.min_rank_index)??0,x=[0,1,2,3,4].map(k=>`<option value="${k}" ${S===k?"selected":""}>${k===0?"No requirement":k===4?"Rank 5 (max)":`Rank ${k+1}+`}</option>`).join(""),h=o.map(k=>`<option value="${C(k)}" ${c===k?"selected":""}>${m(k)}</option>`).join(""),w=a.filter(k=>k.type!=="parent"),z={};for(let k of(e==null?void 0:e.contributors)||[])z[k.person_id]=k.share_pct||0;let E="((sel)=>{const r=sel.getRootNode();const grp=r.getElementById('m-sgroup');if(grp&&grp.checked)return;const pSec=r.getElementById('m-sperson-section');if(pSec)pSec.style.display=sel.value==='personal'?'':'none';})(this)",F="((cb)=>{const r=cb.getRootNode();const sec=r.getElementById('m-sgroup-section');const pSec=r.getElementById('m-sperson-section');if(sec)sec.style.display=cb.checked?'':'none';if(pSec)pSec.style.display=cb.checked?'none':'';})(this)",D="((btn)=>{const inputs=[...btn.closest('#m-sgroup-section').querySelectorAll('.m-scontrib')];if(!inputs.length)return;const each=Math.floor(100/inputs.length),rem=100-each*inputs.length;inputs.forEach((inp,i)=>{inp.value=each+(i===0?rem:0);});const tot=btn.closest('#m-sgroup-section').querySelector('#m-sgroup-total');if(tot){tot.textContent='Total: 100%';tot.style.color='var(--fh-success)';}})(this)",R="((inp)=>{const sec=inp.closest('#m-sgroup-section');if(!sec)return;const tot=[...sec.querySelectorAll('.m-scontrib')].reduce((s,i)=>s+(parseInt(i.value)||0),0);const el=sec.querySelector('#m-sgroup-total');if(el){el.textContent='Total: '+tot+'%';el.style.color=tot===100?'var(--fh-success)':tot>100?'var(--fh-overdue)':'var(--fh-text-sec)';}})(this)",T="((cb)=>{const r=cb.getRootNode();const s=r.getElementById('m-ssub-section');if(s)s.style.display=cb.checked?'':'none';})(this)",P=w.map(k=>{let M=z[k.person_id]??"";return`
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-            <span style="flex:1;font-size:.85rem">${f(_.name)}</span>
+            <span style="flex:1;font-size:.85rem">${m(k.name)}</span>
             <input type="number" class="fh-input m-scontrib"
-                   data-pid="${C(_.person_id)}"
+                   data-pid="${C(k.person_id)}"
                    style="width:72px;text-align:right"
                    min="0" max="100" step="1" value="${M}"
                    oninput="${R}">
             <span style="font-size:.85rem">%</span>
-          </div>`}).join(""),r=k.reduce((_,M)=>_+(A[M.person_id]||0),0),y=r===100?"var(--fh-success)":r>100?"var(--fh-overdue)":"var(--fh-text-sec)";return`
+          </div>`}).join(""),l=w.reduce((k,M)=>k+(z[M.person_id]||0),0),y=l===100?"var(--fh-success)":l>100?"var(--fh-overdue)":"var(--fh-text-sec)";return`
       ${t?`<input type="hidden" id="m-eiid" value="${e.item_id}">`:""}
       <div class="fh-field">
         <label class="fh-label">Item name *</label>
@@ -7808,12 +7820,12 @@ FUNDS`}
         <div class="fh-field">
           <label class="fh-label">Scope</label>
           <select class="fh-select" id="m-sscope" oninput="${E}">
-            <option value="common"   ${l==="common"?"selected":""}>All kids</option>
-            <option value="personal" ${l==="personal"?"selected":""}>Specific people</option>
+            <option value="common"   ${r==="common"?"selected":""}>All kids</option>
+            <option value="personal" ${r==="personal"?"selected":""}>Specific people</option>
           </select>
         </div>
       </div>
-      <div id="m-sperson-section" class="fh-field" style="${l==="personal"&&!x?"":"display:none"}">
+      <div id="m-sperson-section" class="fh-field" style="${r==="personal"&&!v?"":"display:none"}">
         <label class="fh-label">Who can see this reward?</label>
         ${js(a,d,"m-sp-person")}
       </div>
@@ -7822,41 +7834,41 @@ FUNDS`}
       <div class="fh-field" style="border-top:1px solid var(--fh-border);padding-top:10px;margin-top:4px">
         <label class="fh-label" style="display:flex;align-items:center;gap:10px;cursor:pointer">
           <label class="fh-toggle">
-            <input type="checkbox" id="m-sgroup" ${x?"checked":""} oninput="${F}">
+            <input type="checkbox" id="m-sgroup" ${v?"checked":""} oninput="${F}">
             <span class="fh-toggle-slider"></span>
           </label>
           \u{1F91D} Group reward \u2014 kids chip in together
         </label>
       </div>
-      <div id="m-sgroup-section" class="fh-field" style="${x?"":"display:none"}">
+      <div id="m-sgroup-section" class="fh-field" style="${v?"":"display:none"}">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <label class="fh-label" style="margin:0">Contributors &amp; share %</label>
           <button type="button" class="fh-btn fh-btn-ghost fh-btn-sm"
                   onclick="${D}">Equal split</button>
         </div>
-        ${k.length?P+`<div id="m-sgroup-total" style="font-size:.8rem;color:${y}">Total: ${r}%</div>`:'<span style="font-size:.82rem;color:var(--fh-text-sec)">No kids found \u2014 add people first.</span>'}
+        ${w.length?P+`<div id="m-sgroup-total" style="font-size:.8rem;color:${y}">Total: ${l}%</div>`:'<span style="font-size:.82rem;color:var(--fh-text-sec)">No kids found \u2014 add people first.</span>'}
       </div>
 
       <!-- v0.6.5: subscription type toggle + period (anchor set at subscription-approval time) -->
       <div class="fh-field" style="border-top:1px solid var(--fh-border);padding-top:10px;margin-top:4px">
         <label class="fh-label" style="display:flex;align-items:center;gap:10px;cursor:pointer">
           <label class="fh-toggle">
-            <input type="checkbox" id="m-ssubtype" ${w?"checked":""} oninput="${T}">
+            <input type="checkbox" id="m-ssubtype" ${_?"checked":""} oninput="${T}">
             <span class="fh-toggle-slider"></span>
           </label>
           Subscription \u2014 recurring deduction
         </label>
       </div>
-      <div id="m-ssub-section" ${w?"":'style="display:none"'}>
+      <div id="m-ssub-section" ${_?"":'style="display:none"'}>
         <div class="fh-field">
           <label class="fh-label">Subscription period</label>
           <select class="fh-select" id="m-ssperiod">
-            <option value="daily"     ${m==="daily"?"selected":""}>Daily</option>
-            <option value="weekly"    ${m==="weekly"?"selected":""}>Weekly</option>
-            <option value="monthly"   ${m==="monthly"?"selected":""}>Monthly</option>
-            <option value="quarterly" ${m==="quarterly"?"selected":""}>Quarterly</option>
-            <option value="biannual"  ${m==="biannual"?"selected":""}>Bi-annual</option>
-            <option value="annual"    ${m==="annual"?"selected":""}>Annual</option>
+            <option value="daily"     ${f==="daily"?"selected":""}>Daily</option>
+            <option value="weekly"    ${f==="weekly"?"selected":""}>Weekly</option>
+            <option value="monthly"   ${f==="monthly"?"selected":""}>Monthly</option>
+            <option value="quarterly" ${f==="quarterly"?"selected":""}>Quarterly</option>
+            <option value="biannual"  ${f==="biannual"?"selected":""}>Bi-annual</option>
+            <option value="annual"    ${f==="annual"?"selected":""}>Annual</option>
           </select>
           <div class="fh-field-help">The renewal anchor day is set by the parent when approving a child's subscription request.</div>
         </div>
@@ -7907,10 +7919,10 @@ FUNDS`}
         </div>
         <div class="fh-field">
           <label class="fh-label">Minimum rank</label>
-          <select class="fh-select" id="m-sminrank">${v}</select>
+          <select class="fh-select" id="m-sminrank">${x}</select>
         </div>
       </div>
-      ${pn(p)}`}function Bs(e,t=[]){return gt("Add reward item",Jt(null,!1,e,t),"Add reward","ok-add-store-item")}function Fs(e,t,a=[]){return gt(`Edit \u2014 ${f(e.name)}`,Jt(e,!0,t,a),"Save changes","ok-edit-store-item")}function Rs(){return gt("Add person",`<div class="fh-field">
+      ${pn(p)}`}function Bs(e,t=[]){return gt("Add reward item",Jt(null,!1,e,t),"Add reward","ok-add-store-item")}function Fs(e,t,a=[]){return gt(`Edit \u2014 ${m(e.name)}`,Jt(e,!0,t,a),"Save changes","ok-edit-store-item")}function Rs(){return gt("Add person",`<div class="fh-field">
          <label class="fh-label">Name *</label>
          <input class="fh-input" id="m-pname" type="text" autofocus>
        </div>
@@ -7927,14 +7939,14 @@ FUNDS`}
            <input class="fh-input" id="m-pcolor" type="color"
                   value="${H}" style="height:42px;padding:4px">
          </div>
-       </div>`,"Add person","ok-add-person")}function Ds(e){let a=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].map((d,p)=>`<option value="${p}" ${e.allowanceWday===p?"selected":""}>${d}</option>`).join(""),o=Array.from({length:28},(d,p)=>p+1).map(d=>`<option value="${d}" ${e.allowanceMday===d?"selected":""}>${d}</option>`).join(""),s=[{value:"classic",label:"Classic",accent:e.pcolor||"#4A90E2"},{value:"engineer",label:"Engineer",accent:"#E0B84C"},{value:"baker",label:"Baker",accent:"#8B3A2A"},{value:"dinos",label:"Dinos",accent:"#8B6A20"},{value:"hp",label:"Harry Potter",accent:"#1F4F3C"},{value:"dbz",label:"Dragon Ball Z",accent:"#FF6A1A"}],i=s.find(d=>d.value===e.theme)||s[0],n=s.map(d=>`<option value="${d.value}" ${e.theme===d.value?"selected":""}>${d.label}</option>`).join(""),l=(d,p,c)=>`
+       </div>`,"Add person","ok-add-person")}function Ds(e){let a=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].map((d,p)=>`<option value="${p}" ${e.allowanceWday===p?"selected":""}>${d}</option>`).join(""),o=Array.from({length:28},(d,p)=>p+1).map(d=>`<option value="${d}" ${e.allowanceMday===d?"selected":""}>${d}</option>`).join(""),s=[{value:"classic",label:"Classic",accent:e.pcolor||"#4A90E2"},{value:"engineer",label:"Engineer",accent:"#E0B84C"},{value:"baker",label:"Baker",accent:"#8B3A2A"},{value:"dinos",label:"Dinos",accent:"#8B6A20"},{value:"hp",label:"Harry Potter",accent:"#1F4F3C"},{value:"dbz",label:"Dragon Ball Z",accent:"#FF6A1A"}],i=s.find(d=>d.value===e.theme)||s[0],n=s.map(d=>`<option value="${d.value}" ${e.theme===d.value?"selected":""}>${d.label}</option>`).join(""),r=(d,p,c)=>`
       <div class="fh-modal-section">
         <div class="fh-modal-section-hdr">
-          <span class="fh-modal-section-lbl">${f(d)}</span>
-          ${p?`<span class="fh-modal-section-sub">${f(p)}</span>`:""}
+          <span class="fh-modal-section-lbl">${m(d)}</span>
+          ${p?`<span class="fh-modal-section-sub">${m(p)}</span>`:""}
         </div>
         ${c}
-      </div>`;return At(`Edit \u2014 ${e.pname}`,`${l("Identity","name, codename, avatar color",`
+      </div>`;return At(`Edit \u2014 ${e.pname}`,`${r("Identity","name, codename, avatar color",`
            <div class="fh-field">
              <label class="fh-label">Name *</label>
              <input class="fh-input" id="m-pname" type="text" value="${C(e.pname)}" autofocus>
@@ -7964,7 +7976,7 @@ FUNDS`}
            </div>
         `)}
 
-        ${l("Theme","personal-page look & feel",`
+        ${r("Theme","personal-page look & feel",`
            <div class="fh-field">
              <label class="fh-label">Theme</label>
              <div class="fh-theme-pick">
@@ -7987,7 +7999,7 @@ FUNDS`}
            </div>
         `)}
 
-        ${l("Allowance","scheduled point payouts",`
+        ${r("Allowance","scheduled point payouts",`
            <div class="fh-row">
              <div class="fh-field">
                <label class="fh-label">Amount (pts, 0 = off)</label>
@@ -8015,7 +8027,7 @@ FUNDS`}
            </div>
         `)}
 
-        ${l("Success streak","bonus for consistent days",`
+        ${r("Success streak","bonus for consistent days",`
            <div class="fh-row">
              <div class="fh-field">
                <label class="fh-label">Threshold (% of the day's chore points)</label>
@@ -8041,7 +8053,7 @@ FUNDS`}
            </div>
         `)}
 
-        ${l("Weekly streak","bonus for consistent weeks",`
+        ${r("Weekly streak","bonus for consistent weeks",`
            <div class="fh-row">
              <div class="fh-field">
                <label class="fh-label">Target (% of the week's chore points)</label>
@@ -8067,7 +8079,7 @@ FUNDS`}
            </div>
         `)}
 
-        ${l("Notifications","push targets for approvals & reminders",`
+        ${r("Notifications","push targets for approvals & reminders",`
            <div class="fh-field">
              <label class="fh-label">Notify target (HA service name, blank = off)</label>
              <input class="fh-input" id="m-pnotify" type="text"
@@ -8081,9 +8093,9 @@ FUNDS`}
 
         <input type="hidden" id="m-pid" value="${e.pid}">`,"Save","ok-edit-person")}function Is(e){return`
       <div class="fh-modal">
-        <div class="fh-modal-title">Remove ${f(e.pname)}?</div>
+        <div class="fh-modal-title">Remove ${m(e.pname)}?</div>
         <p style="font-size:.88rem;color:var(--fh-text-sec);margin:0;line-height:1.5">
-          This will deactivate <strong>${f(e.pname)}</strong> and remove their pending tasks.
+          This will deactivate <strong>${m(e.pname)}</strong> and remove their pending tasks.
           Historical data and point history are preserved.
           This cannot be undone from the card.
         </p>
@@ -8091,14 +8103,14 @@ FUNDS`}
         <div class="fh-modal-footer">
           <button class="fh-btn fh-btn-ghost" data-act="close-modal">Cancel</button>
           <button class="fh-btn fh-btn-danger" data-act="ok-remove-person">
-            Remove ${f(e.pname)}
+            Remove ${m(e.pname)}
           </button>
         </div>
       </div>`}function Ts(e){return`
       <div class="fh-modal">
-        <div class="fh-modal-title">Permanently delete ${f(e.pname)}?</div>
+        <div class="fh-modal-title">Permanently delete ${m(e.pname)}?</div>
         <p style="font-size:.88rem;color:var(--fh-text-sec);margin:0;line-height:1.5">
-          This permanently removes <strong>${f(e.pname)}</strong> and purges ALL of their data \u2014
+          This permanently removes <strong>${m(e.pname)}</strong> and purges ALL of their data \u2014
           task instances, redemptions, subscriptions, group contributions, and activity-log entries.
           <strong style="color:var(--fh-overdue)">This cannot be undone.</strong>
           To keep them recoverable (e.g. away at camp), use Reactivate instead.
@@ -8110,19 +8122,19 @@ FUNDS`}
             Delete permanently
           </button>
         </div>
-      </div>`}function Ps(e,t,a,o){let i=a.filter(n=>n.chore_type==="assigned").map(n=>{let l=o[n.chore_id]||0;return`
+      </div>`}function Ps(e,t,a,o){let i=a.filter(n=>n.chore_type==="assigned").map(n=>{let r=o[n.chore_id]||0;return`
           <div class="fh-point-row" style="gap:8px">
             <span style="flex:1;font-size:.88rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"
-                  title="${C(n.name)}">${f(n.name)}</span>
+                  title="${C(n.name)}">${m(n.name)}</span>
             <input class="fh-input" id="m-streak-${C(n.chore_id)}" type="number" min="0"
-                   value="${l}" style="width:64px;text-align:center">
+                   value="${r}" style="width:64px;text-align:center">
             <button class="fh-btn fh-btn-primary fh-btn-sm"
                     data-act="set-streak" data-pid="${e}" data-cid="${C(n.chore_id)}">
               Set
             </button>
           </div>`}).join("")||'<div class="fh-empty">No assigned chores.</div>';return`
       <div class="fh-modal">
-        <div class="fh-modal-title">\u{1F525} Edit streaks \u2014 ${f(t)}</div>
+        <div class="fh-modal-title">\u{1F525} Edit streaks \u2014 ${m(t)}</div>
         <p style="font-size:.8rem;color:var(--fh-text-sec);margin:0 0 8px">
           Enter the correct streak count and press Set. Changes save immediately.
         </p>
@@ -8144,18 +8156,18 @@ FUNDS`}
          <input class="fh-input" id="m-alert-time" type="number" min="-1" max="2359"
                 placeholder="800" value="${e.penaltyAlertTime!==void 0?e.penaltyAlertTime:800}">
        </div>
-       <div class="fh-field-help">Rank evaluation &amp; reward-per-rank settings now live in the <strong>Ranks</strong> panel.</div>`,"Save","ok-edit-settings")}function ba(e){let t=e._attrs("sensor.family_hub_needs_attention"),a=(t.people||[]).filter(v=>v.type==="kid"),o=e._ranksTab||"global",s=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],i=`
+       <div class="fh-field-help">Rank evaluation &amp; reward-per-rank settings now live in the <strong>Ranks</strong> panel.</div>`,"Save","ok-edit-settings")}function ba(e){let t=e._attrs("sensor.family_hub_needs_attention"),a=(t.people||[]).filter(x=>x.type==="kid"),o=e._ranksTab||"global",s=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],i=`
       <div class="fh-drawer-tabs">
         <button class="fh-drawer-tab ${o==="global"?"active":""}"
                 data-act="ranks-tab" data-tab="global">Global</button>
-        ${a.map(v=>`
-          <button class="fh-drawer-tab ${o===v.person_id?"active":""}"
-                  data-act="ranks-tab" data-tab="${C(v.person_id)}">${f(v.name)}</button>`).join("")}
-      </div>`;if(o==="global"){let v=t.rank_eval_weekday??0,h=t.rank_default_cap??100,k=t.rank_default_drop_pct??60,A=t.rank_default_gain_pct??80,E=t.rank_dynamic_capacity!==!1,F=t.rank_ppd_ladder||[3,3.5,4,4.5,5],D=s.map((P,r)=>`<option value="${r}" ${v==r?"selected":""}>${P}</option>`).join(""),R=F.map((P,r)=>`
+        ${a.map(x=>`
+          <button class="fh-drawer-tab ${o===x.person_id?"active":""}"
+                  data-act="ranks-tab" data-tab="${C(x.person_id)}">${m(x.name)}</button>`).join("")}
+      </div>`;if(o==="global"){let x=t.rank_eval_weekday??0,h=t.rank_default_cap??100,w=t.rank_default_drop_pct??60,z=t.rank_default_gain_pct??80,E=t.rank_dynamic_capacity!==!1,F=t.rank_ppd_ladder||[3,3.5,4,4.5,5],D=s.map((P,l)=>`<option value="${l}" ${x==l?"selected":""}>${P}</option>`).join(""),R=F.map((P,l)=>`
           <div class="fh-row" style="gap:6px;align-items:center">
-            <span style="font-size:.8rem;color:var(--fh-text-sec);width:54px;flex-shrink:0">Rank ${r}</span>
+            <span style="font-size:.8rem;color:var(--fh-text-sec);width:54px;flex-shrink:0">Rank ${l}</span>
             <input class="fh-input fh-ad-rank-ladder-input" type="number"
-                   min="0.1" max="100" step="0.1" data-rank-idx="${r}"
+                   min="0.1" max="100" step="0.1" data-rank-idx="${l}"
                    value="${P}" style="flex:1">
             <span style="font-size:.8rem;color:var(--fh-text-sec)">\xA2/pt</span>
           </div>`).join(""),T=`
@@ -8172,11 +8184,11 @@ FUNDS`}
           <div class="fh-row">
             <div class="fh-field">
               <label class="fh-label">Default drop &lt; %</label>
-              <input class="fh-input" id="m-rank-drop" type="number" min="0" max="100" value="${k}">
+              <input class="fh-input" id="m-rank-drop" type="number" min="0" max="100" value="${w}">
             </div>
             <div class="fh-field">
               <label class="fh-label">Default gain \u2265 %</label>
-              <input class="fh-input" id="m-rank-gain" type="number" min="0" max="100" value="${A}">
+              <input class="fh-input" id="m-rank-gain" type="number" min="0" max="100" value="${z}">
             </div>
           </div>
           <div class="fh-field-help">Default bands for any kid without their own per-rank curve (% of their weekly assigned points).</div>
@@ -8187,24 +8199,24 @@ FUNDS`}
               Higher rank \u2192 more cents per point \u2192 fewer points to redeem rewards.
             </div>
             ${R}
-          </div>`;return At("Ranks",T,"Save","save-ranks-global")}let n=a.find(v=>v.person_id===o);if(!n)return e._ranksTab="global",ba(e);let l=tt(n.theme_key||"classic").ranks,d=n.rank_index??0,p=n.rank_curve||{},c=p.cap??100,b=t.rank_dynamic_capacity!==!1,g=n.assigned_ppw??0,u=b?g:c,x=Array.isArray(p.gain_pcts)&&p.gain_pcts.length===5?p.gain_pcts:rn.slice(),w=Array.isArray(p.drop_pcts)&&p.drop_pcts.length===5?p.drop_pcts:ln.slice(),m=qt(u,x,w),$=l.map((v,h)=>{let k=h===l.length-1,A=h===0;return`
+          </div>`;return At("Ranks",T,"Save","save-ranks-global")}let n=a.find(x=>x.person_id===o);if(!n)return e._ranksTab="global",ba(e);let r=tt(n.theme_key||"classic").ranks,d=n.rank_index??0,p=n.rank_curve||{},c=p.cap??100,b=t.rank_dynamic_capacity!==!1,g=n.assigned_ppw??0,u=b?g:c,v=Array.isArray(p.gain_pcts)&&p.gain_pcts.length===5?p.gain_pcts:rn.slice(),_=Array.isArray(p.drop_pcts)&&p.drop_pcts.length===5?p.drop_pcts:ln.slice(),f=qt(u,v,_),$=r.map((x,h)=>{let w=h===r.length-1,z=h===0;return`
           <div class="fh-rank-grid-row">
-            <span class="fh-rank-grid-name">${h===d?"\u25B6 ":""}${f(v.name)}</span>
+            <span class="fh-rank-grid-name">${h===d?"\u25B6 ":""}${m(x.name)}</span>
             <span class="fh-rank-grid-cell">
               <input class="fh-input" id="m-drop-pct-${h}" type="number" min="0" max="100"
-                     value="${A?"":w[h]}" ${A?"disabled placeholder='\u2014'":""}>
-              <span class="fh-rank-grid-pts" id="m-drop-pts-${h}">${A?"\u2014":m.drop[h]}</span>
+                     value="${z?"":_[h]}" ${z?"disabled placeholder='\u2014'":""}>
+              <span class="fh-rank-grid-pts" id="m-drop-pts-${h}">${z?"\u2014":f.drop[h]}</span>
             </span>
             <span class="fh-rank-grid-cell">
               <input class="fh-input" id="m-gain-pct-${h}" type="number" min="0" max="100"
-                     value="${k?"":x[h]}" ${k?"disabled placeholder='\u2014'":""}>
-              <span class="fh-rank-grid-pts" id="m-gain-pts-${h}">${k?"\u2014":m.gain[h]}</span>
+                     value="${w?"":v[h]}" ${w?"disabled placeholder='\u2014'":""}>
+              <span class="fh-rank-grid-pts" id="m-gain-pts-${h}">${w?"\u2014":f.gain[h]}</span>
             </span>
           </div>`}).join(""),S=`
       ${i}
       <div class="fh-field-help">
-        Theme <strong>${f(n.theme_key||"classic")}</strong> \xB7 currently
-        <strong>${f(U(d,l).name)}</strong>
+        Theme <strong>${m(n.theme_key||"classic")}</strong> \xB7 currently
+        <strong>${m(U(d,r).name)}</strong>
       </div>
       <div class="fh-field">
         <label class="fh-label">Set current rank (0\u20134)</label>
@@ -8225,13 +8237,13 @@ FUNDS`}
         </div>
       </div>
       <div class="fh-field-help">
-        Bands are a % of ${f(n.name)}'s directly-assigned chores \u2014
+        Bands are a % of ${m(n.name)}'s directly-assigned chores \u2014
         about <strong>${u} pts this week</strong> (rotations included; no bonus
         chores or streak bonuses). The point ranges below scale from that and recompute
         every week.
       </div>
       <div class="fh-rank-summary" style="font-size:var(--fh-text-sm);margin:6px 0 2px;padding:8px 10px;border:1px solid var(--fh-border);border-radius:8px;background:var(--fh-surface)">
-        Now: <strong>${f(U(d,l).name)}</strong>${b&&u<=0?" \xB7 no assigned chores \u2014 rank won't move":`${d<l.length-1?` \xB7 ranks up at <strong>\u2265 ${m.gain[d]} pts/wk</strong>`:" \xB7 top rank"}${d>0?` \xB7 drops below <strong>${m.drop[d]} pts/wk</strong>`:" \xB7 can't drop"}`}
+        Now: <strong>${m(U(d,r).name)}</strong>${b&&u<=0?" \xB7 no assigned chores \u2014 rank won't move":`${d<r.length-1?` \xB7 ranks up at <strong>\u2265 ${f.gain[d]} pts/wk</strong>`:" \xB7 top rank"}${d>0?` \xB7 drops below <strong>${f.drop[d]} pts/wk</strong>`:" \xB7 can't drop"}`}
       </div>
 
       <div class="fh-modal-section">
@@ -8249,9 +8261,9 @@ FUNDS`}
         </div>
       </div>
 
-      <input type="hidden" id="m-rank-pid" value="${C(n.person_id)}">`;return At(`Ranks \u2014 ${f(n.name)}`,S,"Save","save-ranks-kid")}function Os(e,t){let a=t.filter(s=>s.type==="kid");if(!a.length)return`
+      <input type="hidden" id="m-rank-pid" value="${C(n.person_id)}">`;return At(`Ranks \u2014 ${m(n.name)}`,S,"Save","save-ranks-kid")}function Os(e,t){let a=t.filter(s=>s.type==="kid");if(!a.length)return`
           <div class="fh-modal">
-            <div class="fh-modal-title">Claim \u2014 ${f(e.data.name)}</div>
+            <div class="fh-modal-title">Claim \u2014 ${m(e.data.name)}</div>
             <p class="fh-empty">No eligible people to claim this chore.</p>
             <div class="fh-modal-footer">
               <button class="fh-btn fh-btn-ghost" data-act="close-modal">Close</button>
@@ -8261,11 +8273,11 @@ FUNDS`}
                   data-tid="${e.data.tid}" data-pid="${s.person_id}"
                   style="--tile-color:${i}">
             <div class="fh-claim-tile-avatar" style="background:${i}">${j(s.name)}</div>
-            ${s.code?`<div class="fh-claim-tile-code">${f(s.code)}</div>`:""}
-            <div class="fh-claim-tile-name">${f(s.name)}</div>
+            ${s.code?`<div class="fh-claim-tile-code">${m(s.code)}</div>`:""}
+            <div class="fh-claim-tile-name">${m(s.name)}</div>
           </button>`}).join("");return`
       <div class="fh-modal">
-        <div class="fh-modal-title">Claim \u2014 ${f(e.data.name)}</div>
+        <div class="fh-modal-title">Claim \u2014 ${m(e.data.name)}</div>
         <p style="font-size:.88rem;color:var(--fh-text-sec);margin:0 0 12px;line-height:1.4">
           Who's claiming this chore?
         </p>
@@ -8284,7 +8296,7 @@ FUNDS`}
            <label class="fh-label">Who?</label>
            <select class="fh-select" id="m-rperson">
              ${t.map(a=>{var o;return`<option value="${a.person_id}"
-                          ${((o=e.data)==null?void 0:o.pid)===a.person_id?"selected":""}>${f(a.name)}</option>`}).join("")}
+                          ${((o=e.data)==null?void 0:o.pid)===a.person_id?"selected":""}>${m(a.name)}</option>`}).join("")}
            </select>
          </div>
          <div class="fh-field">
@@ -8296,7 +8308,7 @@ FUNDS`}
        </div>`,"Add","ok-add-reminder")}function ua(e,t){let a=new Map(e.map(d=>[d.person_id,d])),o=t.map(d=>a.get(d)).filter(Boolean),s=new Set(t),i=e.filter(d=>!s.has(d.person_id)),n=o.length?o.map((d,p)=>{let c=d.avatar_color||H,b=p===0?"disabled":"",g=p===o.length-1?"disabled":"";return`${p===0?'<div class="fh-rot-section-hdr">Current</div>':p===1?'<div class="fh-rot-section-hdr">Up Next</div>':""}
               <div class="fh-rot-item${p===0?" fh-rot-item--current":""}" data-pid="${C(d.person_id)}" style="--chip-color:${c}">
                 <span class="fh-avatar" style="background:${c};width:22px;height:22px;font-size:.7rem">${j(d.name)}</span>
-                <span class="fh-rot-name">${f(d.name)}</span>
+                <span class="fh-rot-name">${m(d.name)}</span>
                 <button type="button" class="fh-rot-ctrl" data-act="rot-pool-up"
                         data-pid="${C(d.person_id)}" ${b} aria-label="Move up">\u2191</button>
                 <button type="button" class="fh-rot-ctrl" data-act="rot-pool-down"
@@ -8304,18 +8316,18 @@ FUNDS`}
                 <button type="button" class="fh-rot-ctrl fh-rot-ctrl-remove"
                         data-act="rot-pool-remove" data-pid="${C(d.person_id)}"
                         aria-label="Remove from pool">\xD7</button>
-              </div>`}).join(""):'<div class="fh-rot-empty">No one in the pool yet \u2014 add a kid below.</div>',l=i.length?i.map(d=>{let p=d.avatar_color||H;return`
+              </div>`}).join(""):'<div class="fh-rot-empty">No one in the pool yet \u2014 add a kid below.</div>',r=i.length?i.map(d=>{let p=d.avatar_color||H;return`
               <button type="button" class="fh-rot-add"
                       data-act="rot-pool-add" data-pid="${C(d.person_id)}"
                       style="--chip-color:${p}">
                 <span class="fh-avatar" style="background:${p};width:18px;height:18px;font-size:.6rem">${j(d.name)}</span>
-                + ${f(d.name)}
+                + ${m(d.name)}
               </button>`}).join(""):'<div class="fh-rot-add-empty">Everyone is in the pool.</div>';return`
       <div class="fh-rot-ordered">${n}</div>
       <div class="fh-rot-available-lbl">Add to pool:</div>
-      <div class="fh-rot-available">${l}</div>`}function Hs(e,t,a,o){let s=Math.min(a,o),i=`
+      <div class="fh-rot-available">${r}</div>`}function Hs(e,t,a,o){let s=Math.min(a,o),i=`
         <div class="fh-field">
-            <label>Chip in toward <strong>${f((e==null?void 0:e.name)||"reward")}</strong></label>
+            <label>Chip in toward <strong>${m((e==null?void 0:e.name)||"reward")}</strong></label>
             <div style="font-size:.8rem;color:var(--fh-text-sec);margin-bottom:8px">
                 Your share remaining: ${o} pts \xB7 Your balance: ${a} pts
             </div>
@@ -8333,18 +8345,18 @@ FUNDS`}
             <span class="fh-avatar" style="background:${i};width:18px;height:18px;font-size:.6rem">
               ${j(o.name)}
             </span>
-            ${f(o.name)}
+            ${m(o.name)}
           </label>`}).join("")}
-    </div>`:'<span style="font-size:.82rem;color:var(--fh-text-sec)">No people found.</span>'}var rn,ln,Kt=N(()=>{K();K();Q();ut();_t();et();rn=[50,60,75,95,0],ln=[0,40,55,75,95]});function mn(e){if(!e)return"";let t=/^(\d{4})-(\d{2})-(\d{2})/.exec(e);return t?new Date(+t[1],+t[2]-1,+t[3]).toLocaleDateString(void 0,{weekday:"short",month:"short",day:"numeric"}):e}function gn(e){var t;switch((t=e.recurrence)==null?void 0:t.type){case"daily":case"every_n_days":return"daily";case"weekly":case"every_n_weeks":return"weekly";case"monthly_on_date":return"monthly";case"one_time":return"one_time";default:return"other"}}function Us(e){let t=e._attrs("sensor.family_hub_needs_attention"),a=t.people||[],o=t.approval_queue||[],s=t.redemption_queue||[],i=t.group_proposal_queue||[],n=t.subscription_cancel_queue||[],l=t.active_chores||[],d=t.all_chores||l,p=t.category_labels||[],c=t.family_name||"Family Hub",b=t.store_items||[],u=[{id:"today",label:"Today",icon:"\u25D0",badge:o.length+s.length+i.length+n.length},{id:"family",label:"Family",icon:"\u25CD",badge:0},{id:"tasks",label:"Chores",icon:"\u25C9",badge:0},{id:"rewards",label:"Rewards",icon:"\u25C8",badge:0},{id:"meals",label:"Meals",icon:"\u25C7",badge:0},{id:"history",label:"History",icon:"\u25D1",badge:0},{id:"settings",label:"Settings",icon:"\u25CE",badge:0}],x=e._adminSec,w="";switch(x){case"today":w=Gs(o,s,i,n,t);break;case"family":w=bn(a,t,e);break;case"tasks":w=un(d,a,p,e);break;case"rewards":w=Sn(b,a,p,e);break;case"meals":w=Bn(e);break;case"history":w=zn(t,e);break;case"settings":w=An(t,a,e);break;default:w=Gs(o,s,i,[],t)}let m={today:{crumb:"OVERVIEW",title:"Today",actions:`<button class="fh-ad-btn fh-ad-btn--ghost" data-act="export-backup">Export backup</button>
+    </div>`:'<span style="font-size:.82rem;color:var(--fh-text-sec)">No people found.</span>'}var rn,ln,Kt=N(()=>{K();K();Q();ut();_t();et();rn=[50,60,75,95,0],ln=[0,40,55,75,95]});function mn(e){if(!e)return"";let t=/^(\d{4})-(\d{2})-(\d{2})/.exec(e);return t?new Date(+t[1],+t[2]-1,+t[3]).toLocaleDateString(void 0,{weekday:"short",month:"short",day:"numeric"}):e}function gn(e){var t;switch((t=e.recurrence)==null?void 0:t.type){case"daily":case"every_n_days":return"daily";case"weekly":case"every_n_weeks":return"weekly";case"monthly_on_date":return"monthly";case"one_time":return"one_time";default:return"other"}}function Us(e){let t=e._attrs("sensor.family_hub_needs_attention"),a=t.people||[],o=t.approval_queue||[],s=t.redemption_queue||[],i=t.group_proposal_queue||[],n=t.subscription_cancel_queue||[],r=t.active_chores||[],d=t.all_chores||r,p=t.category_labels||[],c=t.family_name||"Family Hub",b=t.store_items||[],u=[{id:"today",label:"Today",icon:"\u25D0",badge:o.length+s.length+i.length+n.length},{id:"family",label:"Family",icon:"\u25CD",badge:0},{id:"tasks",label:"Chores",icon:"\u25C9",badge:0},{id:"rewards",label:"Rewards",icon:"\u25C8",badge:0},{id:"meals",label:"Meals",icon:"\u25C7",badge:0},{id:"history",label:"History",icon:"\u25D1",badge:0},{id:"settings",label:"Settings",icon:"\u25CE",badge:0}],v=e._adminSec,_="";switch(v){case"today":_=Gs(o,s,i,n,t);break;case"family":_=bn(a,t,e);break;case"tasks":_=un(d,a,p,e);break;case"rewards":_=Sn(b,a,p,e);break;case"meals":_=Bn(e);break;case"history":_=zn(t,e);break;case"settings":_=An(t,a,e);break;default:_=Gs(o,s,i,[],t)}let f={today:{crumb:"OVERVIEW",title:"Today",actions:`<button class="fh-ad-btn fh-ad-btn--ghost" data-act="export-backup">Export backup</button>
                               <button class="fh-ad-btn fh-ad-btn--primary" data-act="open-add-chore">${W.plus} Add chore</button>`},family:{crumb:"PEOPLE",title:"Family",actions:`<button class="fh-ad-btn fh-ad-btn--primary" data-act="open-add-person">${W.person} Add person</button>`},tasks:{crumb:"CHORES",title:"Chores",actions:`<button class="fh-ad-btn fh-ad-btn--ghost" data-act="print-chore-list" title="Open a printable chore list in a new tab">${W.print} Print</button>
-                              <button class="fh-ad-btn fh-ad-btn--primary" data-act="open-add-chore">${W.plus} Add chore</button>`},rewards:{crumb:"REWARDS",title:"Rewards",actions:`<button class="fh-ad-btn fh-ad-btn--primary" data-act="open-add-store-item">${W.plus} Add reward</button>`},meals:{crumb:"MEAL PLANNER",title:"Meals",actions:""},history:{crumb:"ACTIVITY",title:"History",actions:""},settings:{crumb:"CONFIGURATION",title:"Settings",actions:""}},$=m[x]||m.today,S=u.map(h=>`
-      <div class="fh-ad-nav-item ${x===h.id?"active":""}"
+                              <button class="fh-ad-btn fh-ad-btn--primary" data-act="open-add-chore">${W.plus} Add chore</button>`},rewards:{crumb:"REWARDS",title:"Rewards",actions:`<button class="fh-ad-btn fh-ad-btn--primary" data-act="open-add-store-item">${W.plus} Add reward</button>`},meals:{crumb:"MEAL PLANNER",title:"Meals",actions:""},history:{crumb:"ACTIVITY",title:"History",actions:""},settings:{crumb:"CONFIGURATION",title:"Settings",actions:""}},$=f[v]||f.today,S=u.map(h=>`
+      <div class="fh-ad-nav-item ${v===h.id?"active":""}"
            data-act="admin-sec" data-sec="${h.id}">
         <span class="fh-ad-nav-icon">${h.icon}</span>
         <span class="fh-ad-nav-label">${h.label}</span>
         ${h.badge>0?`<span class="fh-ad-nav-badge">${h.badge}</span>`:""}
-      </div>`).join(""),v=u.map(h=>`
-      <div class="fh-ad-bottom-item ${x===h.id?"active":""}"
+      </div>`).join(""),x=u.map(h=>`
+      <div class="fh-ad-bottom-item ${v===h.id?"active":""}"
            data-act="admin-sec" data-sec="${h.id}">
         <span class="fh-ad-bottom-icon">${h.icon}</span>
         <span class="fh-ad-bottom-label">${h.label}</span>
@@ -8356,7 +8368,7 @@ FUNDS`}
           <div class="fh-ad-brand">
             <div class="fh-ad-brand-icon">FH</div>
             <div>
-              <div class="fh-ad-brand-name">${f(c)}</div>
+              <div class="fh-ad-brand-name">${m(c)}</div>
               <div class="fh-ad-brand-sub">v${lt} \xB7 ADMIN</div>
             </div>
           </div>
@@ -8371,24 +8383,24 @@ FUNDS`}
             </div>
             <div class="fh-ad-topbar-actions">${$.actions}</div>
           </div>
-          <div class="fh-ad-body">${w}</div>
+          <div class="fh-ad-body">${_}</div>
         </div>
 
-        <nav class="fh-ad-bottom-nav">${v}</nav>
+        <nav class="fh-ad-bottom-nav">${x}</nav>
 
-      </div>`}function Gs(e,t,a,o,s){let i=s.people||[],n=s.active_chores||[],l=s.history_log||[],p=(s.store_items||[]).filter(h=>{if(!h.is_group_reward||!h.active)return!1;let k=h.contributors||[];return k.length>0&&k.every(A=>(A.contributed_pts||0)>=(A.target_pts||0))}),b=[{label:"APPROVAL QUEUE",value:e.length,accent:e.length>0?"#F5C24A":"#58D38A"},{label:"REDEEM QUEUE",value:t.length,accent:t.length>0?"#E36DA4":"#58D38A"},{label:"GROUP PROPOSALS",value:a.length+p.length,accent:a.length+p.length>0?"#58D38A":"#A6B3CC"},{label:"ACTIVE CHORES",value:n.filter(h=>h.active!==!1).length,accent:"#5B8DEF"}].map(h=>`
+      </div>`}function Gs(e,t,a,o,s){let i=s.people||[],n=s.active_chores||[],r=s.history_log||[],p=(s.store_items||[]).filter(h=>{if(!h.is_group_reward||!h.active)return!1;let w=h.contributors||[];return w.length>0&&w.every(z=>(z.contributed_pts||0)>=(z.target_pts||0))}),b=[{label:"APPROVAL QUEUE",value:e.length,accent:e.length>0?"#F5C24A":"#58D38A"},{label:"REDEEM QUEUE",value:t.length,accent:t.length>0?"#E36DA4":"#58D38A"},{label:"GROUP PROPOSALS",value:a.length+p.length,accent:a.length+p.length>0?"#58D38A":"#A6B3CC"},{label:"ACTIVE CHORES",value:n.filter(h=>h.active!==!1).length,accent:"#5B8DEF"}].map(h=>`
       <div class="fh-ad-stat">
         <div class="fh-ad-stat-val" style="color:${h.accent}">${h.value}</div>
         <div class="fh-ad-stat-lbl">${h.label}</div>
-      </div>`).join(""),g=[...e.map(h=>({...h,kind:"approval"})),...t.map(h=>({...h,kind:"redemption"})),...a.map(h=>({...h,kind:"group-proposal"})),...p.map(h=>({...h,kind:"group-funded"})),...o.map(h=>({...h,kind:"cancel-sub"}))],u=g.length>0?g.map(h=>{if(h.kind==="group-proposal"){let r=h.proposer_color||H,y=(h.invitees||[]).map(_=>_.person_name||"?").join(", ");return`
+      </div>`).join(""),g=[...e.map(h=>({...h,kind:"approval"})),...t.map(h=>({...h,kind:"redemption"})),...a.map(h=>({...h,kind:"group-proposal"})),...p.map(h=>({...h,kind:"group-funded"})),...o.map(h=>({...h,kind:"cancel-sub"}))],u=g.length>0?g.map(h=>{if(h.kind==="group-proposal"){let l=h.proposer_color||H,y=(h.invitees||[]).map(k=>k.person_name||"?").join(", ");return`
                   <div class="fh-ad-queue-row">
-                    <div class="fh-avatar" style="background:${r};width:32px;height:32px;font-size:.75rem;flex-shrink:0">${j(h.proposer_name)}</div>
+                    <div class="fh-avatar" style="background:${l};width:32px;height:32px;font-size:.75rem;flex-shrink:0">${j(h.proposer_name)}</div>
                     <div class="fh-ad-queue-info">
                       <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
                         <span class="fh-ad-pill" style="background:#4CAF7D">GROUP</span>
                       </div>
-                      <div class="fh-ad-queue-name">${f(h.item_name||"")}</div>
-                      <div class="fh-ad-queue-meta">${f(h.proposer_name)} + ${f(y)}</div>
+                      <div class="fh-ad-queue-name">${m(h.item_name||"")}</div>
+                      <div class="fh-ad-queue-meta">${m(h.proposer_name)} + ${m(y)}</div>
                     </div>
                     <button class="fh-btn fh-btn-success fh-btn-sm"
                             data-act="approve-group-proposal"
@@ -8398,30 +8410,30 @@ FUNDS`}
                             data-act="decline-group-proposal-parent"
                             data-propid="${C(h.proposal_id)}"
                             data-by="admin">${W.close}</button>
-                  </div>`}if(h.kind==="group-funded"){let r=(h.contributors||[]).reduce((_,M)=>_+(M.contributed_pts||0),0),y=(h.contributors||[]).map(_=>_.person_name||"?").join(", ");return`
+                  </div>`}if(h.kind==="group-funded"){let l=(h.contributors||[]).reduce((k,M)=>k+(M.contributed_pts||0),0),y=(h.contributors||[]).map(k=>k.person_name||"?").join(", ");return`
                   <div class="fh-ad-queue-row">
                     <div style="width:32px;height:32px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.2rem">\u{1F91D}</div>
                     <div class="fh-ad-queue-info">
                       <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
                         <span class="fh-ad-pill" style="background:#4CAF7D">FUNDED</span>
                       </div>
-                      <div class="fh-ad-queue-name">${f(h.name||"")}</div>
-                      <div class="fh-ad-queue-meta">${f(y)} \xB7 ${O(r)} pts pooled</div>
+                      <div class="fh-ad-queue-name">${m(h.name||"")}</div>
+                      <div class="fh-ad-queue-meta">${m(y)} \xB7 ${O(l)} pts pooled</div>
                     </div>
                     <button class="fh-btn fh-btn-success fh-btn-sm"
                             data-act="redeem-group-reward"
                             data-iid="${C(h.item_id)}"
                             data-iname="${C(h.name||"")}">Redeem</button>
-                  </div>`}if(h.kind==="cancel-sub"){let r=h.person_color||H,y=(h.period||"").replace("_"," ");return`
+                  </div>`}if(h.kind==="cancel-sub"){let l=h.person_color||H,y=(h.period||"").replace("_"," ");return`
                   <div class="fh-ad-queue-row">
-                    <div class="fh-avatar" style="background:${r};width:32px;height:32px;font-size:.75rem;flex-shrink:0">${j(h.person_name||"?")}</div>
+                    <div class="fh-avatar" style="background:${l};width:32px;height:32px;font-size:.75rem;flex-shrink:0">${j(h.person_name||"?")}</div>
                     <div class="fh-ad-queue-info">
                       <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
                         <span class="fh-ad-pill" style="background:#9B59B6">CANCEL</span>
                         <span class="fh-ad-queue-time">${ne(h.cancellation_requested_at||"")}</span>
                       </div>
-                      <div class="fh-ad-queue-name">${f(h.item_name||"")}</div>
-                      <div class="fh-ad-queue-meta">${f(h.person_name||"")} \xB7 ${f(y)} subscription</div>
+                      <div class="fh-ad-queue-name">${m(h.item_name||"")}</div>
+                      <div class="fh-ad-queue-meta">${m(h.person_name||"")} \xB7 ${m(y)} subscription</div>
                     </div>
                     <button class="fh-btn fh-btn-success fh-btn-sm"
                             data-act="approve-cancel-subscription"
@@ -8429,10 +8441,10 @@ FUNDS`}
                     <button class="fh-btn fh-btn-danger fh-btn-sm"
                             data-act="decline-cancel-subscription"
                             data-subid="${C(h.subscription_id||h.id||"")}">${W.close}</button>
-                  </div>`}let k=h.person_color||H,A=h.kind==="approval",E=A?h.chore_name||"":h.item_name||"",F=A?h.chore_points:h.points_cost,D=A?'<span class="fh-ad-pill fh-ad-pill--amber">CHORE</span>':'<span class="fh-ad-pill fh-ad-pill--rose">REWARD</span>',R=s.store_items||[],T=A?null:R.find(r=>r.item_id===h.item_id);if(!A&&(T==null?void 0:T.item_type)==="subscription"){let r=T.subscription_period||"monthly",y=C(h.redemption_id),M=r==="daily"?"":r==="weekly"?`<div style="display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap">
+                  </div>`}let w=h.person_color||H,z=h.kind==="approval",E=z?h.chore_name||"":h.item_name||"",F=z?h.chore_points:h.points_cost,D=z?'<span class="fh-ad-pill fh-ad-pill--amber">CHORE</span>':'<span class="fh-ad-pill fh-ad-pill--rose">REWARD</span>',R=s.store_items||[],T=z?null:R.find(l=>l.item_id===h.item_id);if(!z&&(T==null?void 0:T.item_type)==="subscription"){let l=T.subscription_period||"monthly",y=C(h.redemption_id),M=l==="daily"?"":l==="weekly"?`<div style="display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap">
                          <span style="font-size:.78rem;color:var(--fh-text-sec)">Renews on:</span>
                          <select id="m-sub-wday-${y}" class="fh-select" style="width:auto">
-                           ${["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map((z,B)=>`<option value="${B}">${z}</option>`).join("")}
+                           ${["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map((A,B)=>`<option value="${B}">${A}</option>`).join("")}
                          </select>
                        </div>`:`<div style="display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap">
                          <span style="font-size:.78rem;color:var(--fh-text-sec)">Renews day of month:</span>
@@ -8440,62 +8452,62 @@ FUNDS`}
                                 min="1" max="31" value="1" style="width:64px">
                        </div>`;return`
                   <div class="fh-ad-queue-row" style="flex-wrap:wrap;row-gap:4px">
-                    <div class="fh-avatar" style="background:${k};width:32px;height:32px;font-size:.75rem;flex-shrink:0">${j(h.person_name)}</div>
+                    <div class="fh-avatar" style="background:${w};width:32px;height:32px;font-size:.75rem;flex-shrink:0">${j(h.person_name)}</div>
                     <div class="fh-ad-queue-info" style="flex:1;min-width:0">
                       <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
                         <span class="fh-ad-pill" style="background:#9B59B6">SUBSCRIBE</span>
                         <span class="fh-ad-queue-time">${h.when||""}</span>
                       </div>
-                      <div class="fh-ad-queue-name">${f(h.item_name||"")}</div>
-                      <div class="fh-ad-queue-meta">${f(h.person_name||"")} \xB7 ${f(r)} \xB7 \u2212${O(F)}pts</div>
+                      <div class="fh-ad-queue-name">${m(h.item_name||"")}</div>
+                      <div class="fh-ad-queue-meta">${m(h.person_name||"")} \xB7 ${m(l)} \xB7 \u2212${O(F)}pts</div>
                       ${M}
                     </div>
                     <button class="fh-btn fh-btn-success fh-btn-sm"
                             data-act="approve-subscription-redemption"
                             data-rid="${y}"
-                            data-period="${C(r)}">${W.check}</button>
+                            data-period="${C(l)}">${W.check}</button>
                     <button class="fh-btn fh-btn-danger fh-btn-sm"
                             data-act="decline-redemption"
                             data-rid="${y}">${W.close}</button>
                   </div>`}return`
               <div class="fh-ad-queue-row">
-                <div class="fh-avatar" style="background:${k};width:32px;height:32px;font-size:.75rem;flex-shrink:0">${j(h.person_name)}</div>
+                <div class="fh-avatar" style="background:${w};width:32px;height:32px;font-size:.75rem;flex-shrink:0">${j(h.person_name)}</div>
                 <div class="fh-ad-queue-info">
                   <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
                     ${D}
                     <span class="fh-ad-queue-time">${h.when||""}</span>
                   </div>
-                  <div class="fh-ad-queue-name">${f(E)}</div>
-                  <div class="fh-ad-queue-meta">${f(h.person_name||"")} \xB7 ${A?"+":"\u2212"}${O(F)}${A&&h.due_date?` \xB7 for ${f(mn(h.due_date))}`:""}</div>
+                  <div class="fh-ad-queue-name">${m(E)}</div>
+                  <div class="fh-ad-queue-meta">${m(h.person_name||"")} \xB7 ${z?"+":"\u2212"}${O(F)}${z&&h.due_date?` \xB7 for ${m(mn(h.due_date))}`:""}</div>
                 </div>
-                <button class="fh-btn fh-btn-success fh-btn-sm" data-act="${A?"approve-task":"approve-redemption"}" data-${A?"tid":"rid"}="${A?h.task_id:h.redemption_id}">${W.check}</button>
-                ${A?`<button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="open-partial"
+                <button class="fh-btn fh-btn-success fh-btn-sm" data-act="${z?"approve-task":"approve-redemption"}" data-${z?"tid":"rid"}="${z?h.task_id:h.redemption_id}">${W.check}</button>
+                ${z?`<button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="open-partial"
                         data-tid="${h.task_id}" data-name="${C(E)}" data-pts="${F}"
                         title="Partial credit" style="font-weight:800;font-size:1rem">\xBD</button>`:""}
-                <button class="fh-btn fh-btn-danger  fh-btn-sm" data-act="${A?"deny-task":"decline-redemption"}" data-${A?"tid":"rid"}="${A?h.task_id:h.redemption_id}">${W.close}</button>
-              </div>`}).join(""):'<div class="fh-empty fh-ad-empty">Nothing needs your attention right now. \u2713</div>',x=Date.now()-1728e5,w=l.filter(h=>new Date(h.timestamp).getTime()>x),m=new Map,$=[];for(let h of w)if(h.type==="task_skipped"){let k=h.skipped_date||(h.timestamp||"").slice(0,10)||"",A=`${h.person_id}:${k}`;m.has(A)||m.set(A,{personName:h.person_name||"",color:h.person_color||H,date:k,totalPts:0,count:0,timestamp:h.timestamp||""});let E=m.get(A);E.totalPts+=Math.abs(h.points_delta||0),E.count++,(h.timestamp||"")>E.timestamp&&(E.timestamp=h.timestamp)}else $.push(h);let S=[...$.map(h=>({kind:"entry",e:h})),...[...m.values()].map(h=>({kind:"skip",g:h}))].sort((h,k)=>{let A=h.kind==="entry"?h.e.timestamp||"":h.g.timestamp||"";return(k.kind==="entry"?k.e.timestamp||"":k.g.timestamp||"").localeCompare(A)}).slice(0,15),v=S.length>0?S.map(h=>{if(h.kind==="skip"){let{personName:T,color:P,date:r,totalPts:y,count:_}=h.g;return`
+                <button class="fh-btn fh-btn-danger  fh-btn-sm" data-act="${z?"deny-task":"decline-redemption"}" data-${z?"tid":"rid"}="${z?h.task_id:h.redemption_id}">${W.close}</button>
+              </div>`}).join(""):'<div class="fh-empty fh-ad-empty">Nothing needs your attention right now. \u2713</div>',v=Date.now()-1728e5,_=r.filter(h=>new Date(h.timestamp).getTime()>v),f=new Map,$=[];for(let h of _)if(h.type==="task_skipped"){let w=h.skipped_date||(h.timestamp||"").slice(0,10)||"",z=`${h.person_id}:${w}`;f.has(z)||f.set(z,{personName:h.person_name||"",color:h.person_color||H,date:w,totalPts:0,count:0,timestamp:h.timestamp||""});let E=f.get(z);E.totalPts+=Math.abs(h.points_delta||0),E.count++,(h.timestamp||"")>E.timestamp&&(E.timestamp=h.timestamp)}else $.push(h);let S=[...$.map(h=>({kind:"entry",e:h})),...[...f.values()].map(h=>({kind:"skip",g:h}))].sort((h,w)=>{let z=h.kind==="entry"?h.e.timestamp||"":h.g.timestamp||"";return(w.kind==="entry"?w.e.timestamp||"":w.g.timestamp||"").localeCompare(z)}).slice(0,15),x=S.length>0?S.map(h=>{if(h.kind==="skip"){let{personName:T,color:P,date:l,totalPts:y,count:k}=h.g;return`
                   <div class="fh-ad-activity-row">
                     <div class="fh-avatar" style="background:${P};width:28px;height:28px;font-size:var(--fh-text-xs);flex-shrink:0">${T?j(T):"\u2014"}</div>
                     <div style="flex:1;min-width:0">
                       <div class="fh-ad-activity-name">
-                        <span style="font-weight:700">${f(T)}</span>
-                        missed ${_} task${_!==1?"s":""}
+                        <span style="font-weight:700">${m(T)}</span>
+                        missed ${k} task${k!==1?"s":""}
                       </div>
-                      <div class="fh-ad-activity-meta" style="color:var(--fh-warning)">Skipped \xB7 ${f(r)}</div>
+                      <div class="fh-ad-activity-meta" style="color:var(--fh-warning)">Skipped \xB7 ${m(l)}</div>
                     </div>
                     ${y>0?`<span style="font-family:'JetBrains Mono',monospace;font-size:var(--fh-text-xs);font-weight:700;color:var(--fh-overdue);flex-shrink:0">\u2212${y}pts</span>`:""}
-                  </div>`}let k=h.e,A=ie[k.type]||{label:k.type,color:"#6F7E9C"},E=k.person_color||H,F=k.points_delta,D=F>0?"#58D38A":F<0?"#E8553E":"#6F7E9C",R=F?`<span style="font-family:'JetBrains Mono',monospace;font-size:var(--fh-text-xs);font-weight:700;color:${D};flex-shrink:0">${F>0?"+":""}${F}pts</span>`:"";return`
+                  </div>`}let w=h.e,z=ie[w.type]||{label:w.type,color:"#6F7E9C"},E=w.person_color||H,F=w.points_delta,D=F>0?"#58D38A":F<0?"#E8553E":"#6F7E9C",R=F?`<span style="font-family:'JetBrains Mono',monospace;font-size:var(--fh-text-xs);font-weight:700;color:${D};flex-shrink:0">${F>0?"+":""}${F}pts</span>`:"";return`
               <div class="fh-ad-activity-row">
-                <div class="fh-avatar" style="background:${E};width:28px;height:28px;font-size:var(--fh-text-xs);flex-shrink:0">${k.person_name?j(k.person_name):"\u2014"}</div>
+                <div class="fh-avatar" style="background:${E};width:28px;height:28px;font-size:var(--fh-text-xs);flex-shrink:0">${w.person_name?j(w.person_name):"\u2014"}</div>
                 <div style="flex:1;min-width:0">
                   <div class="fh-ad-activity-name">
-                    <span style="font-weight:700">${f(k.person_name||"")}</span>
-                    ${f(k.chore_name||k.note||"")}
+                    <span style="font-weight:700">${m(w.person_name||"")}</span>
+                    ${m(w.chore_name||w.note||"")}
                   </div>
-                  <div class="fh-ad-activity-meta" style="color:${A.color}">${f(A.label)}</div>
+                  <div class="fh-ad-activity-meta" style="color:${z.color}">${m(z.label)}</div>
                 </div>
                 ${R}
-                <span class="fh-ad-activity-time">${ne(k.timestamp)}</span>
+                <span class="fh-ad-activity-time">${ne(w.timestamp)}</span>
               </div>`}).join(""):'<div class="fh-empty fh-ad-empty">No recent activity.</div>';return`
       <div class="fh-ad-stat-row">${b}</div>
       <div class="fh-ad-today-grid">
@@ -8511,95 +8523,95 @@ FUNDS`}
             <span class="fh-ad-panel-title">Recent activity</span>
             <span class="fh-ad-panel-sub">last 48 hours</span>
           </div>
-          ${v}
+          ${x}
         </div>
-      </div>`}function bn(e,t,a){let o=t.points_per_dollar||10,s=t.penalties_paused_global||!1,i=e.map(m=>{let $=m.avatar_color||H,S=m.penalties_paused||!1,v=m.type==="kid",h,k;return s?(h="Penalties & streaks off (global)",k="off-global"):S?(h="Penalties & streaks off",k="off"):(h="Penalties & streaks on",k=""),`
+      </div>`}function bn(e,t,a){let o=t.points_per_dollar||10,s=t.penalties_paused_global||!1,i=e.map(f=>{let $=f.avatar_color||H,S=f.penalties_paused||!1,x=f.type==="kid",h,w;return s?(h="Penalties & streaks off (global)",w="off-global"):S?(h="Penalties & streaks off",w="off"):(h="Penalties & streaks on",w=""),`
           <div class="fh-ad-person-card">
             <div class="fh-ad-person-top">
-              <div class="fh-avatar" style="background:${$};width:40px;height:40px;font-size:1rem;flex-shrink:0">${j(m.name)}</div>
+              <div class="fh-avatar" style="background:${$};width:40px;height:40px;font-size:1rem;flex-shrink:0">${j(f.name)}</div>
               <div style="flex:1;min-width:0">
                 <div class="fh-ad-person-name">
-                  ${f(m.name)}
-                  <span class="fh-ad-person-type">${ea(m.type)}</span>
-                  ${m.code?`<span class="fh-ad-person-code">${f(m.code)}</span>`:""}
+                  ${m(f.name)}
+                  <span class="fh-ad-person-type">${ea(f.type)}</span>
+                  ${f.code?`<span class="fh-ad-person-code">${m(f.code)}</span>`:""}
                 </div>
                 <div class="fh-ad-person-bal">
-                  ${O(m.points_balance)}pts \xB7 ${G(m.points_balance/o)} \xB7 lifetime ${O(m.points_lifetime)}${m.allowance_points>0?` \xB7 ${m.allowance_points}pts/${m.allowance_schedule==="monthly"?"mo":m.allowance_schedule==="biweekly"?"2wk":"wk"} allowance`:""}
+                  ${O(f.points_balance)}pts \xB7 ${G(f.points_balance/o)} \xB7 lifetime ${O(f.points_lifetime)}${f.allowance_points>0?` \xB7 ${f.allowance_points}pts/${f.allowance_schedule==="monthly"?"mo":f.allowance_schedule==="biweekly"?"2wk":"wk"} allowance`:""}
                 </div>
               </div>
             </div>
             <div class="fh-ad-person-btns">
                 <button class="fh-btn fh-btn-success fh-btn-sm" data-act="open-award"
-                        data-pid="${m.person_id}" data-pname="${C(m.name)}"
+                        data-pid="${f.person_id}" data-pname="${C(f.name)}"
                         title="Award points">${W.award}</button>
                 <button class="fh-btn fh-btn-danger fh-btn-sm" data-act="open-deduct"
-                        data-pid="${m.person_id}" data-pname="${C(m.name)}"
+                        data-pid="${f.person_id}" data-pname="${C(f.name)}"
                         title="Deduct points">${W.minus}</button>
                 <button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="open-edit-person"
-                        data-pid="${m.person_id}"
-                        data-pname="${C(m.name)}"
-                        data-ptype="${m.type}"
-                        data-pcolor="${m.avatar_color||H}"
-                        data-pallowpts="${m.allowance_points||0}"
-                        data-pallowsched="${m.allowance_schedule||"weekly"}"
-                        data-pallowwday="${m.allowance_weekday??5}"
-                        data-pallowmday="${m.allowance_monthday||1}"
-                        data-pnotify="${C(m.notify_target||"")}"
-                        data-pcode="${C(m.code||"")}"
-                        data-ptheme="${C(m.theme_key||"classic")}"
-                        data-pchildmode="${m.child_mode===!0}"
-                        data-pcompletionthreshold="${m.completion_threshold_pct??80}"
-                        data-pcompletionmilestone="${m.completion_milestone??7}"
-                        data-pcompletionbonus="${m.completion_bonus_points??50}"
-                        data-pweeklythreshold="${m.weekly_completion_threshold_pct??80}"
-                        data-pweeklymilestone="${m.weekly_completion_milestone??4}"
-                        data-pweeklybonus="${m.weekly_completion_bonus_points??100}"
+                        data-pid="${f.person_id}"
+                        data-pname="${C(f.name)}"
+                        data-ptype="${f.type}"
+                        data-pcolor="${f.avatar_color||H}"
+                        data-pallowpts="${f.allowance_points||0}"
+                        data-pallowsched="${f.allowance_schedule||"weekly"}"
+                        data-pallowwday="${f.allowance_weekday??5}"
+                        data-pallowmday="${f.allowance_monthday||1}"
+                        data-pnotify="${C(f.notify_target||"")}"
+                        data-pcode="${C(f.code||"")}"
+                        data-ptheme="${C(f.theme_key||"classic")}"
+                        data-pchildmode="${f.child_mode===!0}"
+                        data-pcompletionthreshold="${f.completion_threshold_pct??80}"
+                        data-pcompletionmilestone="${f.completion_milestone??7}"
+                        data-pcompletionbonus="${f.completion_bonus_points??50}"
+                        data-pweeklythreshold="${f.weekly_completion_threshold_pct??80}"
+                        data-pweeklymilestone="${f.weekly_completion_milestone??4}"
+                        data-pweeklybonus="${f.weekly_completion_bonus_points??100}"
                         title="Edit person">${W.edit}</button>
             </div>
-            ${v?`
+            ${x?`
               <div class="fh-ad-person-foot">
-                <span class="fh-penalty-pause-label ${k}">${h}</span>
+                <span class="fh-penalty-pause-label ${w}">${h}</span>
                 <button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="open-edit-streaks"
-                        data-pid="${m.person_id}" data-pname="${C(m.name)}">\u{1F525} Streaks</button>
+                        data-pid="${f.person_id}" data-pname="${C(f.name)}">\u{1F525} Streaks</button>
                 <button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="open-ranks"
-                        data-pid="${m.person_id}">\u{1F3C5} Ranks</button>
+                        data-pid="${f.person_id}">\u{1F3C5} Ranks</button>
                 <label class="fh-toggle" style="width:36px;height:20px"
                        title="${S?"Resume":"Pause"} penalties &amp; streaks">
                   <input type="checkbox" data-act="toggle-person-penalty"
-                         data-pid="${m.person_id}" ${S?"":"checked"}>
+                         data-pid="${f.person_id}" ${S?"":"checked"}>
                   <span class="fh-toggle-slider"></span>
                 </label>
               </div>`:""}
             <button class="fh-ad-person-del" data-act="open-confirm-remove-person"
-                    data-pid="${m.person_id}" data-pname="${C(m.name)}"
-                    title="Remove ${C(m.name)}">${W.trash}</button>
-          </div>`}).join("")||'<div class="fh-empty fh-ad-empty">No people found.</div>',n=t.all_subscriptions||[],l=a._editingSubId||null,d=new Map;for(let m of n)d.has(m.person_id)||d.set(m.person_id,[]),d.get(m.person_id).push(m);let p={daily:"Daily",weekly:"Weekly",monthly:"Monthly",quarterly:"Quarterly",biannual:"Biannual",annual:"Annual"},c=[{v:"weekly",l:"Weekly"},{v:"monthly",l:"Monthly"},{v:"quarterly",l:"Quarterly"},{v:"biannual",l:"Biannual"},{v:"annual",l:"Annual"}],b={active:"Active",lapsed:"Lapsed",cancel_pending:"Cancel pending"},g={active:"var(--fh-success)",lapsed:"var(--fh-overdue)",cancel_pending:"var(--fh-warning)"},u=n.length===0?'<div class="fh-empty fh-ad-empty">No active subscriptions.</div>':[...d.entries()].map(([m,$])=>{let S=$[0].person_color||H,v=$[0].person_name||"Unknown",h=$.map(k=>{let A=k.subscription_id,E=A===l,F=g[k.status]||"var(--fh-text-sec)",D=b[k.status]||k.status,R=p[k.period]||k.period,T=k.accumulated_debt>0?`<span style="color:var(--fh-overdue);font-size:.75rem"> \xB7 owes ${O(k.accumulated_debt)}pts</span>`:"",P=k.dollar_cost_override!=null?`${G(k.effective_dollar)} (override) \xB7 ${O(k.effective_cost)}pts`:`${G(k.effective_dollar)} \xB7 ${O(k.effective_cost)}pts`;if(E){let r=c.map(y=>`<option value="${y.v}"${k.period===y.v?" selected":""}>${y.l}</option>`).join("");return`
+                    data-pid="${f.person_id}" data-pname="${C(f.name)}"
+                    title="Remove ${C(f.name)}">${W.trash}</button>
+          </div>`}).join("")||'<div class="fh-empty fh-ad-empty">No people found.</div>',n=t.all_subscriptions||[],r=a._editingSubId||null,d=new Map;for(let f of n)d.has(f.person_id)||d.set(f.person_id,[]),d.get(f.person_id).push(f);let p={daily:"Daily",weekly:"Weekly",monthly:"Monthly",quarterly:"Quarterly",biannual:"Biannual",annual:"Annual"},c=[{v:"weekly",l:"Weekly"},{v:"monthly",l:"Monthly"},{v:"quarterly",l:"Quarterly"},{v:"biannual",l:"Biannual"},{v:"annual",l:"Annual"}],b={active:"Active",lapsed:"Lapsed",cancel_pending:"Cancel pending"},g={active:"var(--fh-success)",lapsed:"var(--fh-overdue)",cancel_pending:"var(--fh-warning)"},u=n.length===0?'<div class="fh-empty fh-ad-empty">No active subscriptions.</div>':[...d.entries()].map(([f,$])=>{let S=$[0].person_color||H,x=$[0].person_name||"Unknown",h=$.map(w=>{let z=w.subscription_id,E=z===r,F=g[w.status]||"var(--fh-text-sec)",D=b[w.status]||w.status,R=p[w.period]||w.period,T=w.accumulated_debt>0?`<span style="color:var(--fh-overdue);font-size:.75rem"> \xB7 owes ${O(w.accumulated_debt)}pts</span>`:"",P=w.dollar_cost_override!=null?`${G(w.effective_dollar)} (override) \xB7 ${O(w.effective_cost)}pts`:`${G(w.effective_dollar)} \xB7 ${O(w.effective_cost)}pts`;if(E){let l=c.map(y=>`<option value="${y.v}"${w.period===y.v?" selected":""}>${y.l}</option>`).join("");return`
                       <div style="padding:10px 0;border-bottom:1px solid var(--fh-border)">
-                        <div style="font-size:.88rem;font-weight:600;margin-bottom:8px">${f(k.item_name)}</div>
+                        <div style="font-size:.88rem;font-weight:600;margin-bottom:8px">${m(w.item_name)}</div>
                         <div style="display:grid;grid-template-columns:90px 1fr;gap:5px 10px;align-items:center;margin-bottom:8px">
                           <label style="font-size:.75rem;color:var(--fh-text-sec)">Period</label>
-                          <select id="sub-edit-period-${C(A)}" class="fh-input" style="height:28px;font-size:.8rem;padding:0 6px">
-                            ${r}
+                          <select id="sub-edit-period-${C(z)}" class="fh-input" style="height:28px;font-size:.8rem;padding:0 6px">
+                            ${l}
                           </select>
                           <label style="font-size:.75rem;color:var(--fh-text-sec)">Cost override $</label>
-                          <input id="sub-edit-cost-${C(A)}"
+                          <input id="sub-edit-cost-${C(z)}"
                                  type="number" min="0" step="0.01"
-                                 value="${k.dollar_cost_override??""}"
-                                 placeholder="${G(k.item_dollar_value)}"
+                                 value="${w.dollar_cost_override??""}"
+                                 placeholder="${G(w.item_dollar_value)}"
                                  class="fh-input" style="height:28px;font-size:.8rem;padding:0 6px">
                           <label style="font-size:.75rem;color:var(--fh-text-sec)">Next renewal</label>
-                          <input id="sub-edit-date-${C(A)}"
+                          <input id="sub-edit-date-${C(z)}"
                                  type="date"
-                                 value="${C(k.next_renewal_date||"")}"
+                                 value="${C(w.next_renewal_date||"")}"
                                  class="fh-input" style="height:28px;font-size:.8rem;padding:0 6px">
                         </div>
                         <div style="font-size:.7rem;color:var(--fh-text-sec);margin-bottom:8px">
-                          Leave cost blank to use item default (${G(k.item_dollar_value)})
+                          Leave cost blank to use item default (${G(w.item_dollar_value)})
                         </div>
                         <div style="display:flex;gap:6px">
                           <button class="fh-btn fh-btn-success fh-btn-sm"
                                   data-act="admin-update-subscription"
-                                  data-subid="${C(A)}"
+                                  data-subid="${C(z)}"
                                   title="Save changes">\u2713 Save</button>
                           <button class="fh-btn fh-btn-ghost fh-btn-sm"
                                   data-act="admin-edit-subscription-cancel"
@@ -8609,37 +8621,37 @@ FUNDS`}
                   <div class="fh-point-row" style="gap:8px;padding:8px 0;border-bottom:1px solid var(--fh-border)">
                     <div style="flex:1;min-width:0">
                       <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
-                        <span style="font-size:.88rem;font-weight:600">${f(k.item_name)}</span>
-                        <span style="font-size:.7rem;font-weight:700;color:${F}">${f(D)}</span>
+                        <span style="font-size:.88rem;font-weight:600">${m(w.item_name)}</span>
+                        <span style="font-size:.7rem;font-weight:700;color:${F}">${m(D)}</span>
                       </div>
                       <div style="font-size:.75rem;color:var(--fh-text-sec)">
-                        ${f(R)} \xB7 ${P}${T}
+                        ${m(R)} \xB7 ${P}${T}
                       </div>
                       <div style="font-size:.72rem;color:var(--fh-text-sec);margin-top:1px">
-                        Renews ${f(k.next_renewal_date||"\u2014")}
+                        Renews ${m(w.next_renewal_date||"\u2014")}
                       </div>
                     </div>
                     <button class="fh-btn fh-btn-ghost fh-btn-sm"
                             data-act="admin-edit-subscription-open"
-                            data-subid="${C(A)}"
+                            data-subid="${C(z)}"
                             title="Edit period / cost">\u270E</button>
                     <button class="fh-btn fh-btn-danger fh-btn-sm"
                             data-act="admin-cancel-subscription"
-                            data-subid="${C(A)}"
-                            data-sname="${C(k.item_name)}"
+                            data-subid="${C(z)}"
+                            data-sname="${C(w.item_name)}"
                             title="Cancel subscription">\u2715</button>
                   </div>`}).join("");return`
               <div style="margin-bottom:12px">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-                  <div class="fh-avatar" style="background:${S};width:26px;height:26px;font-size:.7rem;flex-shrink:0">${j(v)}</div>
-                  <span style="font-size:.9rem;font-weight:600">${f(v)}</span>
+                  <div class="fh-avatar" style="background:${S};width:26px;height:26px;font-size:.7rem;flex-shrink:0">${j(x)}</div>
+                  <span style="font-size:.9rem;font-weight:600">${m(x)}</span>
                 </div>
                 ${h}
-              </div>`}).join(""),x=t.inactive_people||[],w=x.length===0?"":`
+              </div>`}).join(""),v=t.inactive_people||[],_=v.length===0?"":`
       <div class="fh-ad-panel" style="margin-top:4px">
         <div class="fh-ad-panel-hdr">
           <span class="fh-ad-panel-title">Inactive members</span>
-          <span class="fh-ad-panel-sub">${x.length} deactivated</span>
+          <span class="fh-ad-panel-sub">${v.length} deactivated</span>
         </div>
         <div class="fh-ad-panel-body">
           <div style="font-size:var(--fh-text-sm);color:var(--fh-text-sec);margin-bottom:10px">
@@ -8647,19 +8659,19 @@ FUNDS`}
             (e.g. a kid away at camp). Reactivate to bring them back, or permanently delete to purge
             them and all their data.
           </div>
-          ${x.map(m=>`
+          ${v.map(f=>`
             <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--fh-border)">
-              <div class="fh-avatar" style="background:${m.avatar_color||H};width:30px;height:30px;font-size:.85rem;flex-shrink:0">${j(m.name)}</div>
+              <div class="fh-avatar" style="background:${f.avatar_color||H};width:30px;height:30px;font-size:.85rem;flex-shrink:0">${j(f.name)}</div>
               <div style="flex:1;min-width:0">
-                <span style="font-weight:600;font-size:var(--fh-text-base)">${f(m.name)}</span>
-                <span style="font-size:var(--fh-text-xs);color:var(--fh-text-sec)"> \xB7 ${ea(m.type)} \xB7 lifetime ${O(m.points_lifetime)}</span>
+                <span style="font-weight:600;font-size:var(--fh-text-base)">${m(f.name)}</span>
+                <span style="font-size:var(--fh-text-xs);color:var(--fh-text-sec)"> \xB7 ${ea(f.type)} \xB7 lifetime ${O(f.points_lifetime)}</span>
               </div>
               <button class="fh-btn fh-btn-success fh-btn-sm" data-act="reactivate-person"
-                      data-pid="${m.person_id}" data-pname="${C(m.name)}"
-                      title="Reactivate ${C(m.name)}">\u21BA Reactivate</button>
+                      data-pid="${f.person_id}" data-pname="${C(f.name)}"
+                      title="Reactivate ${C(f.name)}">\u21BA Reactivate</button>
               <button class="fh-btn fh-btn-danger fh-btn-sm" data-act="open-confirm-hard-delete-person"
-                      data-pid="${m.person_id}" data-pname="${C(m.name)}"
-                      title="Permanently delete ${C(m.name)}">${W.trash}</button>
+                      data-pid="${f.person_id}" data-pname="${C(f.name)}"
+                      title="Permanently delete ${C(f.name)}">${W.trash}</button>
             </div>
           `).join("")}
         </div>
@@ -8687,7 +8699,7 @@ FUNDS`}
               </div>
             </div>
           </div>
-          ${w}
+          ${_}
         </div>
 
         <div class="fh-ad-tasks-panel" style="flex:1 1 420px;min-width:360px;max-width:460px">
@@ -8702,46 +8714,46 @@ FUNDS`}
           </div>
         </div>
 
-      </div>`}function un(e,t,a,o){o._sortedChores=e;let s=o._choreStatusFilter||"",i=o._choreRecFilter||"",n=o._choreFilter||"",l=[{val:"",label:"All"},{val:"active",label:"Active"},{val:"inactive",label:"Inactive"}],d=[{val:"",label:"All types"},{val:"daily",label:"Daily"},{val:"weekly",label:"Weekly"},{val:"monthly",label:"Monthly"},{val:"one_time",label:"One-Time"}],p=[{val:"",label:"Everyone"},...t.map(R=>({val:R.person_id,label:R.name}))],c=(R,T,P)=>`
+      </div>`}function un(e,t,a,o){o._sortedChores=e;let s=o._choreStatusFilter||"",i=o._choreRecFilter||"",n=o._choreFilter||"",r=[{val:"",label:"All"},{val:"active",label:"Active"},{val:"inactive",label:"Inactive"}],d=[{val:"",label:"All types"},{val:"daily",label:"Daily"},{val:"weekly",label:"Weekly"},{val:"monthly",label:"Monthly"},{val:"one_time",label:"One-Time"}],p=[{val:"",label:"Everyone"},...t.map(R=>({val:R.person_id,label:R.name}))],c=(R,T,P)=>`
       <select class="fh-select fh-ad-filter-select" data-act="${R}">
-        ${T.map(r=>`<option value="${C(r.val)}" ${String(P)===String(r.val)?"selected":""}>${f(r.label)}</option>`).join("")}
+        ${T.map(l=>`<option value="${C(l.val)}" ${String(P)===String(l.val)?"selected":""}>${m(l.label)}</option>`).join("")}
       </select>`,b=`
       <div class="fh-ad-filter-bar">
-        <label class="fh-ad-filter-lbl">Status ${c("chore-status-filter",l,s)}</label>
+        <label class="fh-ad-filter-lbl">Status ${c("chore-status-filter",r,s)}</label>
         <label class="fh-ad-filter-lbl">Type ${c("chore-rec-filter",d,i)}</label>
         <label class="fh-ad-filter-lbl">Assignee ${c("chore-filter",p,n)}</label>
-      </div>`,g=e;s==="active"&&(g=e.filter(R=>R.active!==!1)),s==="inactive"&&(g=e.filter(R=>R.active===!1)),i&&(g=g.filter(R=>gn(R)===i)),o._choreFilter&&(g=g.filter(R=>(R.assigned_to||[]).includes(o._choreFilter)));let u=o._adminSort||{col:null,dir:"asc"},x=[...g];u.col&&x.sort((R,T)=>{let P,r;switch(u.col){case"name":P=R.name.toLowerCase(),r=T.name.toLowerCase();break;case"pts":P=R.points,r=T.points;break;case"cat":P=R.category_label||"",r=T.category_label||"";break;case"asgn":{P=(R.assigned_to||[]).map(y=>{var _;return((_=t.find(M=>M.person_id===y))==null?void 0:_.name)||""}).sort().join(","),r=(T.assigned_to||[]).map(y=>{var _;return((_=t.find(M=>M.person_id===y))==null?void 0:_.name)||""}).sort().join(",");break}default:P=r=""}return P<r?u.dir==="asc"?-1:1:P>r?u.dir==="asc"?1:-1:0});let m=`
+      </div>`,g=e;s==="active"&&(g=e.filter(R=>R.active!==!1)),s==="inactive"&&(g=e.filter(R=>R.active===!1)),i&&(g=g.filter(R=>gn(R)===i)),o._choreFilter&&(g=g.filter(R=>(R.assigned_to||[]).includes(o._choreFilter)));let u=o._adminSort||{col:null,dir:"asc"},v=[...g];u.col&&v.sort((R,T)=>{let P,l;switch(u.col){case"name":P=R.name.toLowerCase(),l=T.name.toLowerCase();break;case"pts":P=R.points,l=T.points;break;case"cat":P=R.category_label||"",l=T.category_label||"";break;case"asgn":{P=(R.assigned_to||[]).map(y=>{var k;return((k=t.find(M=>M.person_id===y))==null?void 0:k.name)||""}).sort().join(","),l=(T.assigned_to||[]).map(y=>{var k;return((k=t.find(M=>M.person_id===y))==null?void 0:k.name)||""}).sort().join(",");break}default:P=l=""}return P<l?u.dir==="asc"?-1:1:P>l?u.dir==="asc"?1:-1:0});let f=`
       <div class="fh-ad-sort-bar">
         <span class="fh-ad-sort-lbl">Sort:</span>
-        ${[{col:"name",label:"Name"},{col:"pts",label:"Pts"},{col:"cat",label:"Category"},{col:"asgn",label:"Assignees"}].map(({col:R,label:T})=>{let P=u.col===R,r=P?u.dir==="asc"?" \u2191":" \u2193":"";return`<button class="fh-ad-sort-btn${P?" active":""}"
-                            data-act="sort-admin-chores" data-col="${R}">${T}${r}</button>`}).join("")}
+        ${[{col:"name",label:"Name"},{col:"pts",label:"Pts"},{col:"cat",label:"Category"},{col:"asgn",label:"Assignees"}].map(({col:R,label:T})=>{let P=u.col===R,l=P?u.dir==="asc"?" \u2191":" \u2193":"";return`<button class="fh-ad-sort-btn${P?" active":""}"
+                            data-act="sort-admin-chores" data-col="${R}">${T}${l}</button>`}).join("")}
         ${u.col?'<button class="fh-ad-sort-btn" data-act="sort-admin-chores" data-col="">\u2715 Clear</button>':""}
-      </div>`,$=new Map;for(let R of a)$.set(R,[]);for(let R of x){let T=R.category_label||"Uncategorized";$.has(T)||$.set(T,[]),$.get(T).push(R)}for(let[R,T]of[...$.entries()])T.length||$.delete(R);let S=o._adminSelectedChoreId||null,v=o._adminCollapsedCats||new Set,h=e.filter(R=>R.active!==!1).length,k=e.filter(R=>R.active===!1).length,A=k?`${h} active \xB7 ${k} inactive`:`${h} total`,E=o._choreFilter||i||s,F="";x.length?F=[...$.entries()].map(([R,T])=>{let P=v.has(R),r=P?"":T.map(y=>xn(y,t,o,S)).join("");return`
+      </div>`,$=new Map;for(let R of a)$.set(R,[]);for(let R of v){let T=R.category_label||"Uncategorized";$.has(T)||$.set(T,[]),$.get(T).push(R)}for(let[R,T]of[...$.entries()])T.length||$.delete(R);let S=o._adminSelectedChoreId||null,x=o._adminCollapsedCats||new Set,h=e.filter(R=>R.active!==!1).length,w=e.filter(R=>R.active===!1).length,z=w?`${h} active \xB7 ${w} inactive`:`${h} total`,E=o._choreFilter||i||s,F="";v.length?F=[...$.entries()].map(([R,T])=>{let P=x.has(R),l=P?"":T.map(y=>xn(y,t,o,S)).join("");return`
               <div class="fh-ad-cat-group">
                 <div class="fh-ad-cat-hdr" data-act="toggle-admin-cat" data-cat="${C(R)}">
                   <span class="fh-ad-cat-chevron${P?" collapsed":""}">\u25BC</span>
-                  <span class="fh-ad-cat-name">${f(R)}</span>
+                  <span class="fh-ad-cat-name">${m(R)}</span>
                   <span class="fh-ad-cat-count">${T.length}</span>
                 </div>
-                ${P?"":`<div class="fh-task-list">${r}</div>`}
+                ${P?"":`<div class="fh-task-list">${l}</div>`}
               </div>`}).join(""):F=`<div class="fh-empty fh-ad-empty">${E?"No chores match this filter.":"No active chores. Add one above."}</div>`;let D=$n(o);return`
       <div class="fh-ad-tasks-wrap">
 
         <div class="fh-ad-panel fh-ad-tasks-list-panel">
           <div class="fh-ad-panel-hdr">
             <span class="fh-ad-panel-title">Chore definitions</span>
-            <span class="fh-ad-panel-sub">${A}</span>
+            <span class="fh-ad-panel-sub">${z}</span>
           </div>
           <div class="fh-ad-panel-body">
             ${b}
-            ${m}
+            ${f}
             ${F}
           </div>
         </div>
 
         ${D}
 
-      </div>`}function vn(e,t){let a=qs(e,t);if(!a)return null;let o=(i,n)=>{let l=t.find(c=>c.person_id===i),d=(l==null?void 0:l.name)||"?",p=(l==null?void 0:l.avatar_color)||H;return`<div class="fh-avatar ${n}" title="${C(d)}" style="background:${p};width:26px;height:26px;font-size:var(--fh-text-xs)">${j(d)}</div>`};return`<span class="fh-rot-glyph" title="Rotates between kids">\u21BB</span><div class="fh-avatars fh-avatars--rot">${a.orderedIds.map((i,n)=>o(i,n===0?"fh-avatar--current":n===1?"fh-avatar--next":"fh-avatar--dim")).join("")}</div>`}function xn(e,t,a,o){var m,$,S,v;let s=(e.assigned_to||[]).map(h=>t.find(k=>k.person_id===h)).filter(Boolean),i=vn(e,t),n=i??(s.length?`<div class="fh-avatars">${s.map(h=>`<div class="fh-avatar" style="background:${h.avatar_color||H};width:26px;height:26px;font-size:var(--fh-text-xs)">${j(h.name)}</div>`).join("")}</div>`:""),l=a._expandedDescs.has(e.chore_id),d=((m=s[0])==null?void 0:m.avatar_color)||H,p=(($=e.recurrence)==null?void 0:$.type)||"daily",c={daily:"Daily",weekly:"Weekly",every_n_days:`Every ${((S=e.recurrence)==null?void 0:S.interval)||2}d`,every_n_weeks:`Every ${((v=e.recurrence)==null?void 0:v.interval)||2}wk`,monthly_on_date:"Monthly",one_time:"One-time"}[p]||p,b=e.expires_after_days?`<span class="fh-badge fh-badge-expiry" style="margin-left:4px">Expires in ${e.expires_after_days}d</span>`:"",g=e.streak_milestone||0,u=e.streak_bonus_points||0,x=g>0&&u>0?`<span class="fh-task-streak" title="Bonus: +${u}pts every ${g} completions">\u{1F525} ${g} \u2192 +${u}</span>`:'<span class="fh-task-streak fh-task-streak--off" title="No streak bonus set">no streak</span>';return`
+      </div>`}function vn(e,t){let a=qs(e,t);if(!a)return null;let o=(i,n)=>{let r=t.find(c=>c.person_id===i),d=(r==null?void 0:r.name)||"?",p=(r==null?void 0:r.avatar_color)||H;return`<div class="fh-avatar ${n}" title="${C(d)}" style="background:${p};width:26px;height:26px;font-size:var(--fh-text-xs)">${j(d)}</div>`};return`<span class="fh-rot-glyph" title="Rotates between kids">\u21BB</span><div class="fh-avatars fh-avatars--rot">${a.orderedIds.map((i,n)=>o(i,n===0?"fh-avatar--current":n===1?"fh-avatar--next":"fh-avatar--dim")).join("")}</div>`}function xn(e,t,a,o){var f,$,S,x;let s=(e.assigned_to||[]).map(h=>t.find(w=>w.person_id===h)).filter(Boolean),i=vn(e,t),n=i??(s.length?`<div class="fh-avatars">${s.map(h=>`<div class="fh-avatar" style="background:${h.avatar_color||H};width:26px;height:26px;font-size:var(--fh-text-xs)">${j(h.name)}</div>`).join("")}</div>`:""),r=a._expandedDescs.has(e.chore_id),d=((f=s[0])==null?void 0:f.avatar_color)||H,p=(($=e.recurrence)==null?void 0:$.type)||"daily",c={daily:"Daily",weekly:"Weekly",every_n_days:`Every ${((S=e.recurrence)==null?void 0:S.interval)||2}d`,every_n_weeks:`Every ${((x=e.recurrence)==null?void 0:x.interval)||2}wk`,monthly_on_date:"Monthly",one_time:"One-time"}[p]||p,b=e.expires_after_days?`<span class="fh-badge fh-badge-expiry" style="margin-left:4px">Expires in ${e.expires_after_days}d</span>`:"",g=e.streak_milestone||0,u=e.streak_bonus_points||0,v=g>0&&u>0?`<span class="fh-task-streak" title="Bonus: +${u}pts every ${g} completions">\u{1F525} ${g} \u2192 +${u}</span>`:'<span class="fh-task-streak fh-task-streak--off" title="No streak bonus set">no streak</span>';return`
       <div class="fh-task-row${e.chore_id===o?" fh-task-row--selected":""}"
            style="--row-color:${d}"
            draggable="true" data-drag-id="${e.chore_id}"
@@ -8749,8 +8761,8 @@ FUNDS`}
         <span class="fh-drag-handle" title="Drag to reorder">\u283F</span>
         ${n}
         <div class="fh-task-body">
-          <span class="fh-task-name">${f(e.name)}${e.active===!1?' <span style="font-size:.72rem;color:#6F7E9C;font-weight:400">[inactive]</span>':""}</span>
-          ${l&&e.description?`<span class="fh-desc-inline">${f(e.description)}</span>`:""}
+          <span class="fh-task-name">${m(e.name)}${e.active===!1?' <span style="font-size:.72rem;color:#6F7E9C;font-weight:400">[inactive]</span>':""}</span>
+          ${r&&e.description?`<span class="fh-desc-inline">${m(e.description)}</span>`:""}
           <span class="fh-task-sub">${c}${e.penalty_enabled?` \xB7 -${e.penalty_points}pts penalty`:""}</span>
         </div>
         ${e.description?`<button class="fh-desc-btn" data-act="toggle-desc" data-id="${e.chore_id}"
@@ -8758,7 +8770,7 @@ FUNDS`}
         ${b}
         <div class="fh-task-pts-col">
           <span class="fh-badge fh-badge-pts" style="--row-color:${d}">${e.points}pts</span>
-          ${x}
+          ${v}
         </div>
         <button class="fh-btn fh-btn-ghost fh-btn-sm fh-ad-tasks-edit-btn"
                 data-act="open-edit-chore" data-cid="${e.chore_id}"
@@ -8767,63 +8779,63 @@ FUNDS`}
                 data-act="delete-chore"
                 data-cid="${e.chore_id}" data-cname="${C(e.name)}"
                 title="Delete chore">${W.trash}</button>
-      </div>`}function yn(e){let t=e.recurrence||{};switch(t.type||"daily"){case"daily":return(t.day_filter||[]).length||7;case"weekly":return(t.weekdays||[]).length||1;case"every_n_days":{let a=t.interval||1;return a>0?7/a:0}case"every_n_weeks":{let a=t.interval||1;return a>0?1/a:0}case"monthly_on_date":return(t.days_of_month&&t.days_of_month.length?t.days_of_month.length:1)*12/52;default:return 0}}function qs(e,t){let a=e.rotation_pool||[];if(!a.length||!e.rotation_cadence)return null;let o=d=>{let p=t.find(c=>c.person_id===d);return p&&p.active!==!1},s=a.filter(o);if(!s.length)return null;let i=e.assigned_to&&e.assigned_to[0]||s[0],n=s.indexOf(i);n<0&&(n=0);let l=s.slice(n).concat(s.slice(0,n));return{activeIds:s,orderedIds:l,currentId:l[0],nextId:s.length>1?l[1]:null,cadence:e.rotation_cadence,switchWeekday:e.rotation_switch_weekday??0}}function kn(e,t){for(e=Math.round(e),t=Math.round(t);t;)[e,t]=[t,e%t];return e||1}function wn(e,t){return Math.abs(e*t)/kn(e,t)}function Js(e,t){let a=yn(e);if(a<=0)return 0;let o=a*(e.points||0)*t.comp;return t.includeStreaks&&e.streak_milestone>0&&e.streak_bonus_points>0&&(o+=a*(e.streak_bonus_points/e.streak_milestone)*t.streakPct),o}function _n(e,t,a){let o=t.filter(v=>v.type==="kid"&&v.active!==!1),s=o.map(v=>v.person_id),i={},n={};s.forEach(v=>{i[v]=0,n[v]=0});let l=[];for(let v of e){let h=Js(v,a);if(h<=0)continue;let k=qs(v,t);if(k&&k.cadence==="weekly")l.push({eff:h,ordered:k.orderedIds,name:v.name}),n[k.currentId]!=null&&(n[k.currentId]+=1);else if(k){let A=h/k.activeIds.length;k.activeIds.forEach(E=>{i[E]!=null&&(i[E]+=A)}),n[k.currentId]!=null&&(n[k.currentId]+=1)}else for(let A of v.assigned_to||[])i[A]!=null&&(i[A]+=h,n[A]+=1)}let d={};s.forEach(v=>d[v]=i[v]);for(let v of l){let h=v.eff/v.ordered.length;v.ordered.forEach(k=>{d[k]!=null&&(d[k]+=h)})}let p=1;for(let v of l)p=wn(p,v.ordered.length);p=Math.max(1,Math.min(p,12));let c={},b={},g={};s.forEach(v=>{c[v]=i[v],b[v]=i[v],g[v]=i[v]});for(let v=0;v<p;v++){let h={};s.forEach(k=>h[k]=i[k]);for(let k of l){let A=k.ordered[v%k.ordered.length];h[A]!=null&&(h[A]+=k.eff)}s.forEach(k=>{v===0?(g[k]=h[k],c[k]=h[k],b[k]=h[k]):(h[k]<c[k]&&(c[k]=h[k]),h[k]>b[k]&&(b[k]=h[k]))})}let u={},x={};o.forEach(v=>{let h=v.allowance_points||0,k=v.allowance_schedule||"weekly";k==="biweekly"?(u[v.person_id]=h/2,x[v.person_id]=h*2):k==="monthly"?(u[v.person_id]=h/4,x[v.person_id]=h):(u[v.person_id]=h,x[v.person_id]=h*4)});let w=a.ladder,m=v=>{let h=a.rankOverride!=null?a.rankOverride:v.rank_index||0;return w&&w.length?w[Math.max(0,Math.min(h,w.length-1))]:a.ppd>0?100/a.ppd:0},$=(v,h)=>h*m(v)/100,S=o.map(v=>{let h=v.person_id,k=d[h]*4;return{person:v,chores:n[h],month:k,monthUSD:$(v,k),weekAvg:d[h],weekAvgUSD:$(v,d[h]),weekMin:c[h],weekMax:b[h],weekThis:g[h],weekThisUSD:$(v,g[h]),swingUSD:$(v,b[h]-c[h]),allowMo:x[h],allowMoUSD:$(v,x[h]),allowWkUSD:$(v,u[h]),takeHomeMoUSD:$(v,k+x[h]),takeHomeWkUSD:$(v,d[h]+u[h])}});return{rows:S,famWeek:S.reduce((v,h)=>v+h.weekAvg,0),famMonth:S.reduce((v,h)=>v+h.month,0),famWeekUSD:S.reduce((v,h)=>v+h.weekAvgUSD,0),famMonthUSD:S.reduce((v,h)=>v+h.monthUSD,0),maxWeekMax:Math.max(1,...S.map(v=>v.weekMax)),maxMonth:Math.max(1,...S.map(v=>v.month)),weeklyRotChores:l.map(v=>v.name),centsOfRank:v=>w&&w.length?w[Math.max(0,Math.min(v,w.length-1))]:a.ppd>0?100/a.ppd:0}}function $n(e){var k;let t=e._attrs("sensor.family_hub_needs_attention"),a=t.people||[],o=t.active_chores||[],s=t.points_per_dollar||0,i=t.rank_ppd_ladder&&t.rank_ppd_ladder.length?t.rank_ppd_ladder:[3,3.5,4,4.5,5],n=e._statsCompletionPct??100,l=!!e._statsIncludeStreaks,d=e._statsStreakPct??50,p=e._statsRankOverride==null||e._statsRankOverride===""?null:Number(e._statsRankOverride),c={comp:n/100,includeStreaks:l,streakPct:d/100,rankOverride:p,ladder:i,ppd:s},b=o.filter(A=>A.chore_type==="assigned"),g=o.filter(A=>A.chore_type==="claimable"),u=_n(b,a,c),x=A=>O(Math.round(A||0)),w=[`<option value="" ${p==null?"selected":""}>Current</option>`].concat(i.map((A,E)=>`<option value="${E}" ${p===E?"selected":""}>Rank ${E+1}</option>`)).join(""),m=[100,95,90,85,80,75,70,60,50].map(A=>`<option value="${A}" ${n===A?"selected":""}>${A}%</option>`).join(""),$=[100,75,50,25].map(A=>`<option value="${A}" ${d===A?"selected":""}>${A}%</option>`).join(""),S=`
+      </div>`}function yn(e){let t=e.recurrence||{};switch(t.type||"daily"){case"daily":return(t.day_filter||[]).length||7;case"weekly":return(t.weekdays||[]).length||1;case"every_n_days":{let a=t.interval||1;return a>0?7/a:0}case"every_n_weeks":{let a=t.interval||1;return a>0?1/a:0}case"monthly_on_date":return(t.days_of_month&&t.days_of_month.length?t.days_of_month.length:1)*12/52;default:return 0}}function qs(e,t){let a=e.rotation_pool||[];if(!a.length||!e.rotation_cadence)return null;let o=d=>{let p=t.find(c=>c.person_id===d);return p&&p.active!==!1},s=a.filter(o);if(!s.length)return null;let i=e.assigned_to&&e.assigned_to[0]||s[0],n=s.indexOf(i);n<0&&(n=0);let r=s.slice(n).concat(s.slice(0,n));return{activeIds:s,orderedIds:r,currentId:r[0],nextId:s.length>1?r[1]:null,cadence:e.rotation_cadence,switchWeekday:e.rotation_switch_weekday??0}}function wn(e,t){for(e=Math.round(e),t=Math.round(t);t;)[e,t]=[t,e%t];return e||1}function kn(e,t){return Math.abs(e*t)/wn(e,t)}function Js(e,t){let a=yn(e);if(a<=0)return 0;let o=a*(e.points||0)*t.comp;return t.includeStreaks&&e.streak_milestone>0&&e.streak_bonus_points>0&&(o+=a*(e.streak_bonus_points/e.streak_milestone)*t.streakPct),o}function _n(e,t,a){let o=t.filter(x=>x.type==="kid"&&x.active!==!1),s=o.map(x=>x.person_id),i={},n={};s.forEach(x=>{i[x]=0,n[x]=0});let r=[];for(let x of e){let h=Js(x,a);if(h<=0)continue;let w=qs(x,t);if(w&&w.cadence==="weekly")r.push({eff:h,ordered:w.orderedIds,name:x.name}),n[w.currentId]!=null&&(n[w.currentId]+=1);else if(w){let z=h/w.activeIds.length;w.activeIds.forEach(E=>{i[E]!=null&&(i[E]+=z)}),n[w.currentId]!=null&&(n[w.currentId]+=1)}else for(let z of x.assigned_to||[])i[z]!=null&&(i[z]+=h,n[z]+=1)}let d={};s.forEach(x=>d[x]=i[x]);for(let x of r){let h=x.eff/x.ordered.length;x.ordered.forEach(w=>{d[w]!=null&&(d[w]+=h)})}let p=1;for(let x of r)p=kn(p,x.ordered.length);p=Math.max(1,Math.min(p,12));let c={},b={},g={};s.forEach(x=>{c[x]=i[x],b[x]=i[x],g[x]=i[x]});for(let x=0;x<p;x++){let h={};s.forEach(w=>h[w]=i[w]);for(let w of r){let z=w.ordered[x%w.ordered.length];h[z]!=null&&(h[z]+=w.eff)}s.forEach(w=>{x===0?(g[w]=h[w],c[w]=h[w],b[w]=h[w]):(h[w]<c[w]&&(c[w]=h[w]),h[w]>b[w]&&(b[w]=h[w]))})}let u={},v={};o.forEach(x=>{let h=x.allowance_points||0,w=x.allowance_schedule||"weekly";w==="biweekly"?(u[x.person_id]=h/2,v[x.person_id]=h*2):w==="monthly"?(u[x.person_id]=h/4,v[x.person_id]=h):(u[x.person_id]=h,v[x.person_id]=h*4)});let _=a.ladder,f=x=>{let h=a.rankOverride!=null?a.rankOverride:x.rank_index||0;return _&&_.length?_[Math.max(0,Math.min(h,_.length-1))]:a.ppd>0?100/a.ppd:0},$=(x,h)=>h*f(x)/100,S=o.map(x=>{let h=x.person_id,w=d[h]*4;return{person:x,chores:n[h],month:w,monthUSD:$(x,w),weekAvg:d[h],weekAvgUSD:$(x,d[h]),weekMin:c[h],weekMax:b[h],weekThis:g[h],weekThisUSD:$(x,g[h]),swingUSD:$(x,b[h]-c[h]),allowMo:v[h],allowMoUSD:$(x,v[h]),allowWkUSD:$(x,u[h]),takeHomeMoUSD:$(x,w+v[h]),takeHomeWkUSD:$(x,d[h]+u[h])}});return{rows:S,famWeek:S.reduce((x,h)=>x+h.weekAvg,0),famMonth:S.reduce((x,h)=>x+h.month,0),famWeekUSD:S.reduce((x,h)=>x+h.weekAvgUSD,0),famMonthUSD:S.reduce((x,h)=>x+h.monthUSD,0),maxWeekMax:Math.max(1,...S.map(x=>x.weekMax)),maxMonth:Math.max(1,...S.map(x=>x.month)),weeklyRotChores:r.map(x=>x.name),centsOfRank:x=>_&&_.length?_[Math.max(0,Math.min(x,_.length-1))]:a.ppd>0?100/a.ppd:0}}function $n(e){var w;let t=e._attrs("sensor.family_hub_needs_attention"),a=t.people||[],o=t.active_chores||[],s=t.points_per_dollar||0,i=t.rank_ppd_ladder&&t.rank_ppd_ladder.length?t.rank_ppd_ladder:[3,3.5,4,4.5,5],n=e._statsCompletionPct??100,r=!!e._statsIncludeStreaks,d=e._statsStreakPct??50,p=e._statsRankOverride==null||e._statsRankOverride===""?null:Number(e._statsRankOverride),c={comp:n/100,includeStreaks:r,streakPct:d/100,rankOverride:p,ladder:i,ppd:s},b=o.filter(z=>z.chore_type==="assigned"),g=o.filter(z=>z.chore_type==="claimable"),u=_n(b,a,c),v=z=>O(Math.round(z||0)),_=[`<option value="" ${p==null?"selected":""}>Current</option>`].concat(i.map((z,E)=>`<option value="${E}" ${p===E?"selected":""}>Rank ${E+1}</option>`)).join(""),f=[100,95,90,85,80,75,70,60,50].map(z=>`<option value="${z}" ${n===z?"selected":""}>${z}%</option>`).join(""),$=[100,75,50,25].map(z=>`<option value="${z}" ${d===z?"selected":""}>${z}%</option>`).join(""),S=`
       <div class="fh-es-controls">
-        <label class="fh-es-ctl">Rank <select class="fh-select" data-act="stats-rank">${w}</select></label>
-        <label class="fh-es-ctl">Done <select class="fh-select" data-act="stats-completion">${m}</select></label>
-        <label class="fh-es-ctl fh-es-ctl-chk"><input type="checkbox" data-act="toggle-stats-streaks" ${l?"checked":""}> Streaks</label>
-        ${l?`<label class="fh-es-ctl">Streak <select class="fh-select" data-act="stats-streak-pct">${$}</select></label>`:""}
-      </div>`,v=[`${b.length} chore${b.length===1?"":"s"}`,`${n}% done`];l&&v.push(`streaks ${d}%`),p!=null&&v.push(`at Rank ${p+1}`);let h;if(!u.rows.length)h=`
+        <label class="fh-es-ctl">Rank <select class="fh-select" data-act="stats-rank">${_}</select></label>
+        <label class="fh-es-ctl">Done <select class="fh-select" data-act="stats-completion">${f}</select></label>
+        <label class="fh-es-ctl fh-es-ctl-chk"><input type="checkbox" data-act="toggle-stats-streaks" ${r?"checked":""}> Streaks</label>
+        ${r?`<label class="fh-es-ctl">Streak <select class="fh-select" data-act="stats-streak-pct">${$}</select></label>`:""}
+      </div>`,x=[`${b.length} chore${b.length===1?"":"s"}`,`${n}% done`];r&&x.push(`streaks ${d}%`),p!=null&&x.push(`at Rank ${p+1}`);let h;if(!u.rows.length)h=`
           <div class="fh-ad-tasks-panel-empty">
             <div class="fh-ad-tasks-panel-empty-icon">\u{1F4CA}</div>
             <div class="fh-ad-tasks-panel-empty-text">No kids to report on yet.</div>
-          </div>`;else{let A=u.maxWeekMax||1,E=u.rows.map(r=>{let y=r.person.avatar_color||H,_=Math.max(0,r.weekMax-r.weekMin),M=_>.5,z=Math.max(0,Math.min(100,r.weekMin/A*100)),B=Math.max(0,Math.min(100,_/A*100)),L=Math.max(0,Math.min(100,r.weekThis/A*100)),q=M?`<span class="fh-es-week-this">this wk ${G(r.weekThisUSD)}</span>`:"",J=r.allowMo>0?`<div class="fh-es-allow">+${G(r.allowWkUSD)}/wk allowance \u2192 <b>${G(r.takeHomeWkUSD)}</b>/wk take-home</div>`:"";return`
+          </div>`;else{let z=u.maxWeekMax||1,E=u.rows.map(l=>{let y=l.person.avatar_color||H,k=Math.max(0,l.weekMax-l.weekMin),M=k>.5,A=Math.max(0,Math.min(100,l.weekMin/z*100)),B=Math.max(0,Math.min(100,k/z*100)),L=Math.max(0,Math.min(100,l.weekThis/z*100)),q=M?`<span class="fh-es-week-this">this wk ${G(l.weekThisUSD)}</span>`:"",J=l.allowMo>0?`<div class="fh-es-allow">+${G(l.allowWkUSD)}/wk allowance \u2192 <b>${G(l.takeHomeWkUSD)}</b>/wk take-home</div>`:"";return`
               <div class="fh-es-kid">
                 <div class="fh-es-kid-hdr">
-                  <div class="fh-avatar" style="background:${y};width:26px;height:26px;font-size:var(--fh-text-xs)">${j(r.person.name)}</div>
-                  <span class="fh-es-kid-name">${f(r.person.name)}</span>
-                  <span class="fh-es-kid-count">${r.chores} chore${r.chores===1?"":"s"}</span>
-                  <span class="fh-es-kid-rank" style="margin-left:auto;font-size:var(--fh-text-xs);font-weight:700;color:var(--fh-text-sec)">Rank ${(p??(r.person.rank_index||0))+1}${p!=null?" (what-if)":""}</span>
+                  <div class="fh-avatar" style="background:${y};width:26px;height:26px;font-size:var(--fh-text-xs)">${j(l.person.name)}</div>
+                  <span class="fh-es-kid-name">${m(l.person.name)}</span>
+                  <span class="fh-es-kid-count">${l.chores} chore${l.chores===1?"":"s"}</span>
+                  <span class="fh-es-kid-rank" style="margin-left:auto;font-size:var(--fh-text-xs);font-weight:700;color:var(--fh-text-sec)">Rank ${(p??(l.person.rank_index||0))+1}${p!=null?" (what-if)":""}</span>
                 </div>
                 <div class="fh-es-week">
-                  <span class="fh-es-week-usd">${G(r.weekAvgUSD)}</span><span class="fh-es-week-lbl">/wk</span>
-                  <span class="fh-es-week-pts">${x(r.weekAvg)} pts</span>
+                  <span class="fh-es-week-usd">${G(l.weekAvgUSD)}</span><span class="fh-es-week-lbl">/wk</span>
+                  <span class="fh-es-week-pts">${v(l.weekAvg)} pts</span>
                   ${q}
                 </div>
                 <div class="fh-es-rng-track">
-                  <div class="fh-es-rng-span" style="left:${z}%;width:${B}%;background:${y}"></div>
+                  <div class="fh-es-rng-span" style="left:${A}%;width:${B}%;background:${y}"></div>
                   <div class="fh-es-rng-dot" style="left:${L}%;background:${y}"></div>
                 </div>
-                <div class="fh-es-month-sub">${x(r.month)} pts \xB7 ${G(r.monthUSD)} / month</div>
+                <div class="fh-es-month-sub">${v(l.month)} pts \xB7 ${G(l.monthUSD)} / month</div>
                 ${J}
               </div>`}).join(""),F=`
           <div class="fh-es-section">
             <div class="fh-es-section-hdr">Monthly balance</div>
-            ${u.rows.map(r=>{let y=Math.round(r.month/u.maxMonth*100);return`
+            ${u.rows.map(l=>{let y=Math.round(l.month/u.maxMonth*100);return`
                   <div class="fh-es-bar-row">
-                    <span class="fh-es-bar-name">${f(r.person.name)}</span>
-                    <div class="fh-es-bar-track"><div class="fh-es-bar-fill" style="width:${y}%;background:${r.person.avatar_color||H}"></div></div>
-                    <span class="fh-es-bar-val">${G(r.monthUSD)}</span>
+                    <span class="fh-es-bar-name">${m(l.person.name)}</span>
+                    <div class="fh-es-bar-track"><div class="fh-es-bar-fill" style="width:${y}%;background:${l.person.avatar_color||H}"></div></div>
+                    <span class="fh-es-bar-val">${G(l.monthUSD)}</span>
                   </div>`}).join("")}
           </div>`,D=`
           <div class="fh-es-section">
             <div class="fh-es-section-hdr">Family payout</div>
-            <div class="fh-es-tot-row"><span>Per week</span><span>${x(u.famWeek)} pts \xB7 ${G(u.famWeekUSD)}</span></div>
-            <div class="fh-es-tot-row"><span>Per month</span><span>${x(u.famMonth)} pts \xB7 ${G(u.famMonthUSD)}</span></div>
-          </div>`,R="";if(g.length){let r=g.reduce((M,z)=>M+Js(z,c),0),y=u.centsOfRank(p??(((k=u.rows[0])==null?void 0:k.person.rank_index)||0)),_=M=>M*y/100;R=`
+            <div class="fh-es-tot-row"><span>Per week</span><span>${v(u.famWeek)} pts \xB7 ${G(u.famWeekUSD)}</span></div>
+            <div class="fh-es-tot-row"><span>Per month</span><span>${v(u.famMonth)} pts \xB7 ${G(u.famMonthUSD)}</span></div>
+          </div>`,R="";if(g.length){let l=g.reduce((M,A)=>M+Js(A,c),0),y=u.centsOfRank(p??(((w=u.rows[0])==null?void 0:w.person.rank_index)||0)),k=M=>M*y/100;R=`
               <div class="fh-es-section">
                 <div class="fh-es-section-hdr">Bonus pool \xB7 up for grabs</div>
-                <div class="fh-es-tot-row"><span>Per week</span><span>${x(r)} pts \xB7 ${G(_(r))}</span></div>
-                <div class="fh-es-tot-row"><span>Per month</span><span>${x(r*4)} pts \xB7 ${G(_(r*4))}</span></div>
-              </div>`}let T="",P=u.rows.filter(r=>r.swingUSD>=1);if(P.length&&u.weeklyRotChores.length){let r=P.map(z=>z.person.name).join(" & "),y=Math.max(...P.map(z=>z.swingUSD)),_=u.weeklyRotChores,M=_.length<=3?_.join(", "):`${_.slice(0,3).join(", ")} +${_.length-3} more`;T=`
+                <div class="fh-es-tot-row"><span>Per week</span><span>${v(l)} pts \xB7 ${G(k(l))}</span></div>
+                <div class="fh-es-tot-row"><span>Per month</span><span>${v(l*4)} pts \xB7 ${G(k(l*4))}</span></div>
+              </div>`}let T="",P=u.rows.filter(l=>l.swingUSD>=1);if(P.length&&u.weeklyRotChores.length){let l=P.map(A=>A.person.name).join(" & "),y=Math.max(...P.map(A=>A.swingUSD)),k=u.weeklyRotChores,M=k.length<=3?k.join(", "):`${k.slice(0,3).join(", ")} +${k.length-3} more`;T=`
               <div class="fh-es-tip">
-                <b>Weekly pay varies up to ${G(y)}</b> week-to-week for ${f(r)} (anti-phased) from ${_.length} weekly rotation${_.length===1?"":"s"} \u2014 ${f(M)}. Switch those to per-instance rotation to even the weeks out.
+                <b>Weekly pay varies up to ${G(y)}</b> week-to-week for ${m(l)} (anti-phased) from ${k.length} weekly rotation${k.length===1?"":"s"} \u2014 ${m(M)}. Switch those to per-instance rotation to even the weeks out.
               </div>`}h=`<div class="fh-es-rail">${E}${F}${D}${R}${T}</div>`}return`
       <div class="fh-ad-tasks-panel">
         <div class="fh-ad-tasks-panel-hdr">
           <div style="flex:1;min-width:0">
             <div class="fh-ad-tasks-panel-title">Earning &amp; Balance</div>
-            <div class="fh-ad-tasks-panel-sub">${f(v.join(" \xB7 "))}</div>
+            <div class="fh-ad-tasks-panel-sub">${m(x.join(" \xB7 "))}</div>
           </div>
         </div>
         <div class="fh-ad-tasks-panel-body">
@@ -8838,27 +8850,27 @@ FUNDS`}
              data-act="store-item-filter" data-fval="active">Active</div>
         <div class="fh-chip ${o._storeItemFilter==="inactive"?"active":""}"
              data-act="store-item-filter" data-fval="inactive">Inactive</div>
-      </div>`,i=e;o._storeItemFilter==="active"&&(i=e.filter(m=>m.active!==!1)),o._storeItemFilter==="inactive"&&(i=e.filter(m=>m.active===!1));let n=o._adminSortItems||{col:null,dir:"asc"},l=[...i];n.col&&l.sort((m,$)=>{let S,v;switch(n.col){case"name":S=m.name.toLowerCase(),v=$.name.toLowerCase();break;case"pts":S=m.points_cost,v=$.points_cost;break;case"cat":S=m.category_label||"",v=$.category_label||"";break;case"scope":S=m.scope||"",v=$.scope||"";break;default:S=v=""}return S<v?n.dir==="asc"?-1:1:S>v?n.dir==="asc"?1:-1:0});let p=`
+      </div>`,i=e;o._storeItemFilter==="active"&&(i=e.filter(f=>f.active!==!1)),o._storeItemFilter==="inactive"&&(i=e.filter(f=>f.active===!1));let n=o._adminSortItems||{col:null,dir:"asc"},r=[...i];n.col&&r.sort((f,$)=>{let S,x;switch(n.col){case"name":S=f.name.toLowerCase(),x=$.name.toLowerCase();break;case"pts":S=f.points_cost,x=$.points_cost;break;case"cat":S=f.category_label||"",x=$.category_label||"";break;case"scope":S=f.scope||"",x=$.scope||"";break;default:S=x=""}return S<x?n.dir==="asc"?-1:1:S>x?n.dir==="asc"?1:-1:0});let p=`
       <div class="fh-ad-sort-bar">
         <span class="fh-ad-sort-lbl">Sort:</span>
-        ${[{col:"name",label:"Name"},{col:"pts",label:"Pts"},{col:"cat",label:"Category"},{col:"scope",label:"Scope"}].map(({col:m,label:$})=>{let S=n.col===m,v=S?n.dir==="asc"?" \u2191":" \u2193":"";return`<button class="fh-ad-sort-btn${S?" active":""}"
-                            data-act="sort-admin-store-items" data-col="${m}">${$}${v}</button>`}).join("")}
+        ${[{col:"name",label:"Name"},{col:"pts",label:"Pts"},{col:"cat",label:"Category"},{col:"scope",label:"Scope"}].map(({col:f,label:$})=>{let S=n.col===f,x=S?n.dir==="asc"?" \u2191":" \u2193":"";return`<button class="fh-ad-sort-btn${S?" active":""}"
+                            data-act="sort-admin-store-items" data-col="${f}">${$}${x}</button>`}).join("")}
         ${n.col?'<button class="fh-ad-sort-btn" data-act="sort-admin-store-items" data-col="">\u2715 Clear</button>':""}
-      </div>`,c=new Map;for(let m of a)c.set(m,[]);for(let m of l){let $=m.category_label||"Uncategorized";c.has($)||c.set($,[]),c.get($).push(m)}for(let[m,$]of[...c.entries()])$.length||c.delete(m);let b=o._adminSelectedItemId||null,g=o._adminCollapsedRewardCats||new Set,u="";l.length?u=[...c.entries()].map(([m,$])=>{let S=g.has(m),v=S?"":$.map(h=>En(h,t,o,b)).join("");return`
+      </div>`,c=new Map;for(let f of a)c.set(f,[]);for(let f of r){let $=f.category_label||"Uncategorized";c.has($)||c.set($,[]),c.get($).push(f)}for(let[f,$]of[...c.entries()])$.length||c.delete(f);let b=o._adminSelectedItemId||null,g=o._adminCollapsedRewardCats||new Set,u="";r.length?u=[...c.entries()].map(([f,$])=>{let S=g.has(f),x=S?"":$.map(h=>En(h,t,o,b)).join("");return`
               <div class="fh-ad-cat-group">
-                <div class="fh-ad-cat-hdr" data-act="toggle-admin-reward-cat" data-cat="${C(m)}">
+                <div class="fh-ad-cat-hdr" data-act="toggle-admin-reward-cat" data-cat="${C(f)}">
                   <span class="fh-ad-cat-chevron${S?" collapsed":""}">\u25BC</span>
-                  <span class="fh-ad-cat-name">${f(m)}</span>
+                  <span class="fh-ad-cat-name">${m(f)}</span>
                   <span class="fh-ad-cat-count">${$.length}</span>
                 </div>
-                ${S?"":`<div class="fh-task-list">${v}</div>`}
-              </div>`}).join(""):u=`<div class="fh-empty fh-ad-empty">${o._storeItemFilter?"No rewards match this filter.":"No rewards yet. Add one above."}</div>`;let x=b?e.find(m=>m.item_id===b):null,w=Cn(x,t,a,o);return`
+                ${S?"":`<div class="fh-task-list">${x}</div>`}
+              </div>`}).join(""):u=`<div class="fh-empty fh-ad-empty">${o._storeItemFilter?"No rewards match this filter.":"No rewards yet. Add one above."}</div>`;let v=b?e.find(f=>f.item_id===b):null,_=Cn(v,t,a,o);return`
       <div class="fh-ad-rewards-wrap">
 
         <div class="fh-ad-panel fh-ad-rewards-list-panel">
           <div class="fh-ad-panel-hdr">
             <span class="fh-ad-panel-title">Reward catalog</span>
-            <span class="fh-ad-panel-sub">${e.filter(m=>m.active!==!1).length} active</span>
+            <span class="fh-ad-panel-sub">${e.filter(f=>f.active!==!1).length} active</span>
           </div>
           <div class="fh-ad-panel-body">
             ${s}
@@ -8867,9 +8879,9 @@ FUNDS`}
           </div>
         </div>
 
-        ${w}
+        ${_}
 
-      </div>`}function En(e,t,a,o){let s=(e.person_ids||[]).map(d=>{var p;return(p=t.find(c=>c.person_id===d))==null?void 0:p.name}).filter(Boolean).join(", "),i=e.item_id===o,n=e.active===!1,l=e.max_per_period>0?`<span class="fh-badge fh-badge-expiry" style="margin-left:4px">Max ${e.max_per_period}/${e.period}</span>`:"";return`
+      </div>`}function En(e,t,a,o){let s=(e.person_ids||[]).map(d=>{var p;return(p=t.find(c=>c.person_id===d))==null?void 0:p.name}).filter(Boolean).join(", "),i=e.item_id===o,n=e.active===!1,r=e.max_per_period>0?`<span class="fh-badge fh-badge-expiry" style="margin-left:4px">Max ${e.max_per_period}/${e.period}</span>`:"";return`
       <div class="fh-task-row${i?" fh-task-row--selected":""}${n?" fh-store-row--inactive":""}"
            draggable="true" data-drag-id="${e.item_id}"
            data-drag-type="store-item"
@@ -8877,13 +8889,13 @@ FUNDS`}
         <span class="fh-drag-handle" title="Drag to reorder">\u283F</span>
         ${e.icon?`<span style="width:24px;height:24px;flex-shrink:0">${pe(e.icon,null,"24px")}</span>`:""}
         <div class="fh-task-body">
-          <span class="fh-task-name">${f(e.name)}${n?' <span style="font-size:.72rem;color:#6F7E9C;font-weight:400">[inactive]</span>':""}</span>
+          <span class="fh-task-name">${m(e.name)}${n?' <span style="font-size:.72rem;color:#6F7E9C;font-weight:400">[inactive]</span>':""}</span>
           <span class="fh-task-sub">
             ${G(e.dollar_value)} \xB7
-            ${e.scope==="personal"?`Personal${s?` (${f(s)})`:""}`:"All kids"}
+            ${e.scope==="personal"?`Personal${s?` (${m(s)})`:""}`:"All kids"}
           </span>
         </div>
-        ${l}
+        ${r}
         <span class="fh-badge fh-badge-pts">${O(e.points_cost)}pts</span>
         <button class="fh-btn fh-btn-ghost fh-btn-sm fh-ad-tasks-edit-btn"
                 data-act="open-edit-store-item" data-iid="${e.item_id}"
@@ -8896,7 +8908,7 @@ FUNDS`}
           <div class="fh-ad-tasks-panel-hdr">
             <div style="flex:1;min-width:0">
               <div class="fh-ad-tasks-panel-title">Edit reward</div>
-              <div class="fh-ad-tasks-panel-sub" title="${C(e.name)}">${f(e.name)}</div>
+              <div class="fh-ad-tasks-panel-sub" title="${C(e.name)}">${m(e.name)}</div>
             </div>
             <button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="close-store-panel"
                     style="flex-shrink:0" title="Close panel">\u2715</button>
@@ -8927,9 +8939,9 @@ FUNDS`}
           <div class="fh-chip ${t._histFilter===u.person_id?"active":""}"
                style="--chip-color:${u.avatar_color||H}"
                data-act="hist-filter" data-hpid="${u.person_id}">
-            <span class="fh-chip-dot"></span>${f(u.name)}
+            <span class="fh-chip-dot"></span>${m(u.name)}
           </div>`).join("")}
-      </div>`,l=t._histFilter?a.filter(u=>u.person_id===t._histFilter):a,d=l.filter(u=>i.has(u.type)),c=ce(d).map(u=>u.isGroup?Mn(u,s,t):Ws(u.entry,s)).join("")||'<div class="fh-empty fh-ad-empty">No chore history yet.</div>',g=l.filter(u=>!i.has(u.type)).map(u=>Ws(u,s)).join("")||'<div class="fh-empty fh-ad-empty">No reward history yet.</div>';return`
+      </div>`,r=t._histFilter?a.filter(u=>u.person_id===t._histFilter):a,d=r.filter(u=>i.has(u.type)),c=ce(d).map(u=>u.isGroup?Mn(u,s,t):Ws(u.entry,s)).join("")||'<div class="fh-empty fh-ad-empty">No chore history yet.</div>',g=r.filter(u=>!i.has(u.type)).map(u=>Ws(u,s)).join("")||'<div class="fh-empty fh-ad-empty">No reward history yet.</div>';return`
       <div class="fh-ad-history-wrap">
         <div class="fh-ad-panel fh-ad-history-main">
           <div class="fh-ad-panel-hdr">
@@ -8952,27 +8964,27 @@ FUNDS`}
             ${g}
           </div>
         </div>
-      </div>`}function An(e,t,a){let o=e.family_name||"Family Hub",s=e.points_per_dollar||10,i=e.show_dollar_value_to_kids||!1,n=e.category_labels||[],l=e.penalty_alert_time!==void 0?e.penalty_alert_time:800,d=e.rank_eval_weekday!==void 0?e.rank_eval_weekday:0,p=e.rooms_config||{},c=e.weather_entity||"",b=e.today_calendar_entities||[],g=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],u=n.map(w=>`
+      </div>`}function An(e,t,a){let o=e.family_name||"Family Hub",s=e.points_per_dollar||10,i=e.show_dollar_value_to_kids||!1,n=e.category_labels||[],r=e.penalty_alert_time!==void 0?e.penalty_alert_time:800,d=e.rank_eval_weekday!==void 0?e.rank_eval_weekday:0,p=e.rooms_config||{},c=e.weather_entity||"",b=e.today_calendar_entities||[],g=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],u=n.map(f=>`
       <div class="fh-cat-chip"
            draggable="true"
-           data-drag-id="${C(w)}"
+           data-drag-id="${C(f)}"
            data-drag-type="category"
            title="Drag to reorder">
         <span class="fh-cat-chip-handle">\u283F</span>
-        <span>${f(w)}</span>
+        <span>${m(f)}</span>
         <button class="fh-cat-chip-del" data-act="remove-cat-label"
-                data-label="${C(w)}" title="Remove">\xD7</button>
-      </div>`).join(""),x=zt.map(w=>{var v;let $=(((v=p[w.id])==null?void 0:v.status)??w.status)!=="hidden",S=w.status==="coming";return`
-          <div class="fh-hub-room-row" data-room-id="${C(w.id)}">
-            <div class="fh-hub-room-icon" style="color:${w.accent}">${w.icon}</div>
+                data-label="${C(f)}" title="Remove">\xD7</button>
+      </div>`).join(""),v=e.modules||{},_=zt.map(f=>{var z;let S=(((z=p[f.id])==null?void 0:z.status)??f.status)!=="hidden",x=f.status==="coming",h=v[f.id]===!1,w=h?" \xB7 <em>module off \u2014 manage in integration options</em>":x?" \xB7 <em>coming soon</em>":"";return`
+          <div class="fh-hub-room-row${h?" fh-hub-room-row--off":""}" data-room-id="${C(f.id)}">
+            <div class="fh-hub-room-icon" style="color:${f.accent}">${f.icon}</div>
             <div class="fh-hub-room-info">
-              <div class="fh-hub-room-name">${f(w.label)}</div>
-              <div class="fh-hub-room-sub">${f(w.sub)}${S?" \xB7 <em>coming soon</em>":""}</div>
+              <div class="fh-hub-room-name">${m(f.label)}</div>
+              <div class="fh-hub-room-sub">${m(f.sub)}${w}</div>
             </div>
             <label class="fh-toggle">
               <input type="checkbox" class="fh-hub-room-toggle"
-                     data-room-id="${C(w.id)}"
-                     ${$?"checked":""}>
+                     data-room-id="${C(f.id)}"
+                     ${S?"checked":""}${h?" disabled":""}>
               <span class="fh-toggle-slider"></span>
             </label>
           </div>`}).join("");return`
@@ -8992,12 +9004,12 @@ FUNDS`}
             </div>
             <div class="fh-point-row">
               <div style="flex:1;min-width:0">
-                <div style="font-size:.9rem;font-weight:600">${f(o)}</div>
+                <div style="font-size:.9rem;font-weight:600">${m(o)}</div>
                 <div style="font-size:.75rem;color:var(--fh-text-sec)">${s} points per dollar (base rate)</div>
               </div>
               <button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="open-edit-settings"
                       data-fname="${C(o)}" data-ppd="${s}"
-                      data-palerttime="${l}">
+                      data-palerttime="${r}">
                 ${W.settings} Edit
               </button>
             </div>
@@ -9051,7 +9063,7 @@ FUNDS`}
             <div class="fh-field-help" style="margin-bottom:10px">
               Toggle to hide a room from the Command Center home page. Hidden rooms still exist; they just don't render a tile.
             </div>
-            <div class="fh-hub-room-list">${x}</div>
+            <div class="fh-hub-room-list">${_}</div>
             <div class="fh-divider"></div>
             <div class="fh-field">
               <label class="fh-label">Weather entity</label>
@@ -9066,7 +9078,7 @@ FUNDS`}
               <label class="fh-label">Calendar entities</label>
               <textarea class="fh-input" id="m-hub-calendars" rows="3"
                         placeholder="calendar.family&#10;calendar.school"
-                        style="font-family:var(--fh-font-mono);font-size:.85rem;resize:vertical">${f(b.join(`
+                        style="font-family:var(--fh-font-mono);font-size:.85rem;resize:vertical">${m(b.join(`
 `))}</textarea>
               <div class="fh-field-help">
                 One <code>calendar.*</code> entity per line. Powers the today strip when the Calendar room ships in v0.8.0.
@@ -9101,16 +9113,16 @@ FUNDS`}
           ${e.person_name?j(e.person_name):"\u2014"}
         </div>
         <div class="fh-hist-info">
-          <div class="fh-hist-label">${f(a.label)}</div>
-          <div class="fh-hist-name">${f(e.chore_name||e.note||"")}</div>
+          <div class="fh-hist-label">${m(a.label)}</div>
+          <div class="fh-hist-name">${m(e.chore_name||e.note||"")}</div>
           <div class="fh-hist-meta">
-            ${e.person_name?f(e.person_name)+" \xB7 ":""}${ne(e.timestamp)}
-            ${e.actor?` \xB7 by ${f(e.actor)}`:""}
+            ${e.person_name?m(e.person_name)+" \xB7 ":""}${ne(e.timestamp)}
+            ${e.actor?` \xB7 by ${m(e.actor)}`:""}
             ${s}
           </div>
         </div>
         ${i?`<div class="fh-hist-actions">${i}</div>`:""}
-      </div>`}function Mn(e,t,a){let o=a._expandedSkippedDates.has(e.key),s=e.totalPenalty>0?`\u2212${e.totalPenalty}pts`:"no penalty",i=e.items.map(n=>{let l=n.person_color||H,d=n.points_delta?`<span style="color:var(--fh-overdue);font-weight:700">${n.points_delta}pts</span>`:"",p="";return t&&n.reversible==="excuse"&&(p=`<button class="fh-btn fh-btn-warning fh-btn-sm"
+      </div>`}function Mn(e,t,a){let o=a._expandedSkippedDates.has(e.key),s=e.totalPenalty>0?`\u2212${e.totalPenalty}pts`:"no penalty",i=e.items.map(n=>{let r=n.person_color||H,d=n.points_delta?`<span style="color:var(--fh-overdue);font-weight:700">${n.points_delta}pts</span>`:"",p="";return t&&n.reversible==="excuse"&&(p=`<button class="fh-btn fh-btn-warning fh-btn-sm"
                                  data-act="excuse-task"
                                  data-iid="${n.reference_id}"
                                  data-excused-by="${t.person_id}"
@@ -9118,11 +9130,11 @@ FUNDS`}
                            ${W.excuse} Excuse
                          </button>`),`
           <div class="fh-hist-subrow">
-            <div class="fh-avatar" style="background:${l};width:24px;height:24px;font-size:var(--fh-text-xs);flex-shrink:0">
+            <div class="fh-avatar" style="background:${r};width:24px;height:24px;font-size:var(--fh-text-xs);flex-shrink:0">
               ${n.person_name?j(n.person_name):"\u2014"}
             </div>
             <div class="fh-hist-info" style="flex:1;min-width:0">
-              <div class="fh-hist-name">${f(n.person_name?n.person_name+" \u2014 ":"")+f(n.chore_name||"")}</div>
+              <div class="fh-hist-name">${m(n.person_name?n.person_name+" \u2014 ":"")+m(n.chore_name||"")}</div>
               <div class="fh-hist-meta">${d}</div>
             </div>
             ${p}
@@ -9131,7 +9143,7 @@ FUNDS`}
         <div class="fh-hist-group-hdr" data-act="toggle-skipped-group" data-key="${e.key}">
           <div class="fh-hist-info" style="flex:1;min-width:0">
             <div class="fh-hist-label" style="color:var(--fh-warning)">Skipped chores</div>
-            <div class="fh-hist-name">${f(e.dateDisplay)} \xB7 ${s}</div>
+            <div class="fh-hist-name">${m(e.dateDisplay)} \xB7 ${s}</div>
           </div>
           ${t&&a._histFilter&&e.items.some(n=>n.reversible==="excuse")?`
             <button class="fh-btn fh-btn-warning fh-btn-sm" data-act="excuse-day"
@@ -9143,7 +9155,7 @@ FUNDS`}
         </div>
         <div class="fh-hist-subitems"${o?"":' style="display:none"'}>${i}</div>
       </div>`}function Ks(e){return fn.map(t=>`<option value="${t}"${t===e?" selected":""}>${t}</option>`).join("")}function Bn(e){let t=e._attrs("sensor.family_hub_meals"),a=t.custom||[],o=t.customIng||[],s=t.recipes||{},i=e._mealsAdminSubtab||"meals",n=(p,c)=>`
-        <button class="fh-ml-qchip${i===p?" on":""}" data-act="meals-admin-subtab" data-sub="${p}">${c}</button>`,l=`<div class="fh-ml-adm-tabs">${n("meals","Meals")}${n("ingredients","Ingredients")}${n("recipes","Recipes")}</div>`,d="";return i==="meals"?d=Fn(a,o):i==="ingredients"?d=Rn(o):d=Dn(e,a,s),`<div class="fh-ml-page" style="padding:4px 2px">${l}${d}</div>`}function Fn(e,t){let a=Oe(t),o=(l,d)=>`<label class="fh-ml-chk"><input type="checkbox" id="${l}">${f(d)}</label>`,s=$t.map(l=>{let d=de[l];return`<optgroup label="${C(d.label)}">`+d.cuts.map(p=>`<option value="${l}:${p.id}">${f(d.label)} \xB7 ${f(p.label)}</option>`).join("")+"</optgroup>"}).join(""),i=`
+        <button class="fh-ml-qchip${i===p?" on":""}" data-act="meals-admin-subtab" data-sub="${p}">${c}</button>`,r=`<div class="fh-ml-adm-tabs">${n("meals","Meals")}${n("ingredients","Ingredients")}${n("recipes","Recipes")}</div>`,d="";return i==="meals"?d=Fn(a,o):i==="ingredients"?d=Rn(o):d=Dn(e,a,s),`<div class="fh-ml-page" style="padding:4px 2px">${r}${d}</div>`}function Fn(e,t){let a=Oe(t),o=(r,d)=>`<label class="fh-ml-chk"><input type="checkbox" id="${r}">${m(d)}</label>`,s=$t.map(r=>{let d=de[r];return`<optgroup label="${C(d.label)}">`+d.cuts.map(p=>`<option value="${r}:${p.id}">${m(d.label)} \xB7 ${m(p.label)}</option>`).join("")+"</optgroup>"}).join(""),i=`
       <div class="fh-ml-panel">
         <div class="fh-ml-panel-hdr">Add a meal</div>
         <div class="fh-ml-form">
@@ -9160,11 +9172,11 @@ FUNDS`}
           <label class="fh-ml-flabel">Protein &amp; cut (for the guided builder)</label>
           <select class="fh-ml-input" id="ma-protcut"><option value="">\u2014 none \u2014</option>${s}</select>
           <label class="fh-ml-flabel">Food groups it covers</label>
-          <div class="fh-ml-chiprow">${Xe.map(l=>o("ma-grp-"+l,Le[l].label)).join("")}</div>
+          <div class="fh-ml-chiprow">${Xe.map(r=>o("ma-grp-"+r,Le[r].label)).join("")}</div>
           <label class="fh-ml-flabel">Usual sides (pre-picked when planned)</label>
-          <div class="fh-ml-chiprow">${at.map(l=>o("ma-side-"+l.id,`${l.glyph} ${l.name}`)).join("")}</div>
+          <div class="fh-ml-chiprow">${at.map(r=>o("ma-side-"+r.id,`${r.glyph} ${r.name}`)).join("")}</div>
           <label class="fh-ml-flabel">Pantry ingredients it uses (powers \u201CWhat Can We Make\u201D)</label>
-          <div class="fh-ml-chiprow">${a.map(l=>o("ma-ing-"+l.id,`${l.glyph} ${l.label}`)).join("")}</div>
+          <div class="fh-ml-chiprow">${a.map(r=>o("ma-ing-"+r.id,`${r.glyph} ${r.label}`)).join("")}</div>
           <div style="display:flex;justify-content:flex-end;padding-top:6px">
             <button class="fh-bk-go-btn" data-act="meals-admin-add-meal">Add to library \u2713</button>
           </div>
@@ -9173,14 +9185,14 @@ FUNDS`}
       <div class="fh-ml-panel">
         <div class="fh-ml-panel-hdr">Family-added meals</div>
         <div class="fh-ml-admin-list">
-          ${e.length===0?'<div class="fh-ml-empty-note">nothing added yet \u2014 meals you add (or save from Recipe Ideas) land here</div>':e.map(l=>`
+          ${e.length===0?'<div class="fh-ml-empty-note">nothing added yet \u2014 meals you add (or save from Recipe Ideas) land here</div>':e.map(r=>`
               <div class="fh-ml-admin-row">
-                <span class="g">${l.glyph||"\u{1F37D}\uFE0F"}</span>
-                <span class="nm">${f(l.name)}<div class="meta">${(l.types||[]).map(d=>d==="b"?"BREAKFAST":d==="l"?"LUNCH":"DINNER").join(" \xB7 ")}${l.source?" \xB7 "+f(String(l.source).toUpperCase()):""}</div></span>
-                <button class="fh-ml-xbtn" data-act="meals-admin-remove-meal" data-id="${C(l.id)}">\u2715</button>
+                <span class="g">${r.glyph||"\u{1F37D}\uFE0F"}</span>
+                <span class="nm">${m(r.name)}<div class="meta">${(r.types||[]).map(d=>d==="b"?"BREAKFAST":d==="l"?"LUNCH":"DINNER").join(" \xB7 ")}${r.source?" \xB7 "+m(String(r.source).toUpperCase()):""}</div></span>
+                <button class="fh-ml-xbtn" data-act="meals-admin-remove-meal" data-id="${C(r.id)}">\u2715</button>
               </div>`).join("")}
         </div>
-      </div>`;return`<div class="fh-ml-adm">${i}${n}</div>`}function Rn(e){let t=pt.map(([i,n])=>`<option value="${i}">${f(n)}</option>`).join(""),a=Object.keys(nt).map(i=>`<option value="${i}">${f(nt[i])}</option>`).join(""),o=`
+      </div>`;return`<div class="fh-ml-adm">${i}${n}</div>`}function Rn(e){let t=pt.map(([i,n])=>`<option value="${i}">${m(n)}</option>`).join(""),a=Object.keys(nt).map(i=>`<option value="${i}">${m(nt[i])}</option>`).join(""),o=`
       <div class="fh-ml-panel">
         <div class="fh-ml-panel-hdr">Add an ingredient</div>
         <div class="fh-ml-form">
@@ -9203,7 +9215,7 @@ FUNDS`}
           ${e.length===0?'<div class="fh-ml-empty-note">nothing added yet \u2014 new ingredients show up in the pantry chips and grocery aisles</div>':e.map(i=>`
               <div class="fh-ml-admin-row">
                 <span class="g">${i.glyph||"\u{1F955}"}</span>
-                <span class="nm">${f(i.label)}<div class="meta">${f((pt.find(([n])=>n===i.cat)||[])[1]||"")} \xB7 ${f(nt[i.aisle]||"")}</div></span>
+                <span class="nm">${m(i.label)}<div class="meta">${m((pt.find(([n])=>n===i.cat)||[])[1]||"")} \xB7 ${m(nt[i.aisle]||"")}</div></span>
                 <button class="fh-ml-xbtn" data-act="meals-admin-remove-ing" data-id="${C(i.id)}">\u2715</button>
               </div>`).join("")}
         </div>
@@ -9214,13 +9226,13 @@ FUNDS`}
           ${o.map(d=>{let p=!!Ke(d,a);return`
               <div class="fh-ml-admin-row"${e._mealsAdminRecipeId===d.id?' style="background:rgba(139,58,42,.08)"':""}>
                 <span class="g">${d.glyph||"\u{1F37D}\uFE0F"}</span>
-                <span class="nm">${f(d.name)}<div class="meta">${p?"HAS A RECIPE CARD":"NO RECIPE YET"}</div></span>
+                <span class="nm">${m(d.name)}<div class="meta">${p?"HAS A RECIPE CARD":"NO RECIPE YET"}</div></span>
                 <button class="fh-ml-ghost-btn" data-act="meals-admin-recipe-edit" data-id="${C(d.id)}">${p?"Edit":"\uFF0B Add"}</button>
               </div>`}).join("")}
         </div>
-      </div>`,i=e._mealsAdminRecipeId,n=i?o.find(d=>d.id===i):null,l;if(n){let d=Ke(n,a)||{time:"",serves:5,ingredients:[],steps:[]};l=`
+      </div>`,i=e._mealsAdminRecipeId,n=i?o.find(d=>d.id===i):null,r;if(n){let d=Ke(n,a)||{time:"",serves:5,ingredients:[],steps:[]};r=`
           <div class="fh-ml-panel">
-            <div class="fh-ml-panel-hdr">${n.glyph||"\u{1F37D}\uFE0F"} ${f(n.name)}</div>
+            <div class="fh-ml-panel-hdr">${n.glyph||"\u{1F37D}\uFE0F"} ${m(n.name)}</div>
             <div class="fh-ml-form">
               <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:10px">
                 <div><label class="fh-ml-flabel">Time</label>
@@ -9229,19 +9241,19 @@ FUNDS`}
                   <input class="fh-ml-input" id="mr-serves" inputmode="numeric" value="${C(String(d.serves||5))}"></div>
               </div>
               <label class="fh-ml-flabel">Ingredients \u2014 one per line</label>
-              <textarea class="fh-ml-input" id="mr-ing" rows="5" placeholder="2 lb ground beef&#10;1 can crushed tomatoes&#10;\u2026">${f((d.ingredients||[]).join(`
+              <textarea class="fh-ml-input" id="mr-ing" rows="5" placeholder="2 lb ground beef&#10;1 can crushed tomatoes&#10;\u2026">${m((d.ingredients||[]).join(`
 `))}</textarea>
               <label class="fh-ml-flabel">Steps \u2014 one per line, keep them short</label>
-              <textarea class="fh-ml-input" id="mr-steps" rows="5" placeholder="Brown the beef, drain.&#10;Everything in the pot, simmer 20 min.&#10;\u2026">${f((d.steps||[]).join(`
+              <textarea class="fh-ml-input" id="mr-steps" rows="5" placeholder="Brown the beef, drain.&#10;Everything in the pot, simmer 20 min.&#10;\u2026">${m((d.steps||[]).join(`
 `))}</textarea>
               <div style="display:flex;justify-content:flex-end;gap:10px;padding-top:6px">
                 <button class="fh-ml-ghost-btn" data-act="meals-admin-recipe-cancel">Cancel</button>
                 <button class="fh-bk-go-btn" data-act="meals-admin-recipe-save" data-id="${C(n.id)}">Save recipe \u2713</button>
               </div>
             </div>
-          </div>`}else l='<div class="fh-ml-panel"><div class="fh-ml-empty-note" style="margin:auto 0">pick a meal on the left to add or edit its recipe card</div></div>';return`<div class="fh-ml-adm">${s}${l}</div>`}var fn,Vs=N(()=>{K();K();Q();Ut();Kt();ut();Ct();fn=["\u{1F373}","\u{1F95E}","\u{1F963}","\u{1F96A}","\u{1F32E}","\u{1F32F}","\u{1F35D}","\u{1F355}","\u{1F354}","\u{1F357}","\u{1F969}","\u{1F356}","\u{1F953}","\u{1F983}","\u{1F35C}","\u{1F958}","\u{1F372}","\u{1F957}","\u{1F35B}","\u{1F967}","\u{1FAD3}","\u{1FAD8}","\u{1F966}","\u{1F955}","\u{1F34E}","\u{1F9C0}","\u{1F95A}","\u{1F954}","\u{1F33D}","\u{1F35A}"]});function In(e,t){let a=new Date,o=a.toLocaleDateString("en-US",{weekday:"long"}),s=a.toLocaleDateString("en-US",{month:"short",day:"numeric"});return`
+          </div>`}else r='<div class="fh-ml-panel"><div class="fh-ml-empty-note" style="margin:auto 0">pick a meal on the left to add or edit its recipe card</div></div>';return`<div class="fh-ml-adm">${s}${r}</div>`}var fn,Vs=N(()=>{K();K();Q();Ut();Kt();ut();Ct();fn=["\u{1F373}","\u{1F95E}","\u{1F963}","\u{1F96A}","\u{1F32E}","\u{1F32F}","\u{1F35D}","\u{1F355}","\u{1F354}","\u{1F357}","\u{1F969}","\u{1F356}","\u{1F953}","\u{1F983}","\u{1F35C}","\u{1F958}","\u{1F372}","\u{1F957}","\u{1F35B}","\u{1F967}","\u{1FAD3}","\u{1FAD8}","\u{1F966}","\u{1F955}","\u{1F34E}","\u{1F9C0}","\u{1F95A}","\u{1F954}","\u{1F33D}","\u{1F35A}"]});function In(e,t){let a=new Date,o=a.toLocaleDateString("en-US",{weekday:"long"}),s=a.toLocaleDateString("en-US",{month:"short",day:"numeric"});return`
         <div class="fh-home-header">
-            <div class="fh-home-family">${f(e)}</div>
+            <div class="fh-home-family">${m(e)}</div>
             <div class="fh-home-header-right">
                 <div class="fh-home-date">${o}, ${s}</div>
                 ${t?'<div class="fh-home-paused-pill">PAUSED</div>':""}
@@ -9250,21 +9262,21 @@ FUNDS`}
     `}function Tn(e,t,a){if(!e.length)return"";let o=a._attrs("sensor.family_hub_claimable_tasks").all_tasks||[];return`
         <div class="fh-home-section">
             <div class="fh-home-section-label">// AGENTS ON DUTY</div>
-            <div class="fh-home-agents-row">${e.map(i=>{var h;let n=i.avatar_color||H,l=i.code||"",d=tt(i.theme_key||"classic"),p=d.tint,c=d.sigil,b=a._personEntityId(i.name),g=a._attrs(b),u=parseInt(((h=a._states(b))==null?void 0:h.state)??i.lifetime_points??0),x=g.show_dollar_value?g.dollar_value:null,w=d.rankTitle(i.rank_index!==void 0?i.rank_index:0),m=d.homeTileSubLabel(i),$=o.filter(k=>k.assigned_to===i.person_id&&k.status==="pending").length,S=t.filter(k=>k.person_id===i.person_id).length,v=i.allowance_points&&i.allowance_schedule?`<div class="fh-home-agent-allowance">+${i.allowance_points}/${i.allowance_schedule==="weekly"?"wk":i.allowance_schedule==="bi_weekly"?"2wk":"mo"}</div>`:"";return`
+            <div class="fh-home-agents-row">${e.map(i=>{var h;let n=i.avatar_color||H,r=i.code||"",d=tt(i.theme_key||"classic"),p=d.tint,c=d.sigil,b=a._personEntityId(i.name),g=a._attrs(b),u=parseInt(((h=a._states(b))==null?void 0:h.state)??i.lifetime_points??0),v=g.show_dollar_value?g.dollar_value:null,_=d.rankTitle(i.rank_index!==void 0?i.rank_index:0),f=d.homeTileSubLabel(i),$=o.filter(w=>w.assigned_to===i.person_id&&w.status==="pending").length,S=t.filter(w=>w.person_id===i.person_id).length,x=i.allowance_points&&i.allowance_schedule?`<div class="fh-home-agent-allowance">+${i.allowance_points}/${i.allowance_schedule==="weekly"?"wk":i.allowance_schedule==="bi_weekly"?"2wk":"mo"}</div>`:"";return`
             <div class="fh-home-agent-tile"
                  data-act="nav" data-nav-view="person:${C(i.person_id)}"
                  style="--tile-color:${n};--tile-tint:${p}">
                 <div class="fh-home-agent-sigil">${c}</div>
                 ${S>0?`<div class="fh-home-agent-pending-dot" title="${S} pending"></div>`:""}
-                <div class="fh-home-agent-code">AGT &middot; ${l?f(l):f(i.name.toUpperCase())}</div>
-                <div class="fh-home-agent-name">${f(i.name)}</div>
-                <div class="fh-home-agent-sublabel">${f(w)} &middot; ${f(m)}</div>
+                <div class="fh-home-agent-code">AGT &middot; ${r?m(r):m(i.name.toUpperCase())}</div>
+                <div class="fh-home-agent-name">${m(i.name)}</div>
+                <div class="fh-home-agent-sublabel">${m(_)} &middot; ${m(f)}</div>
                 <div class="fh-home-agent-spacer"></div>
                 <div class="fh-home-agent-dual">
                     <div class="fh-home-agent-stat">
                         <span class="fh-home-agent-stat-num">${O(u)}</span>
                         <span class="fh-home-agent-stat-lbl">PTS</span>
-                        ${x!=null?`<span class="fh-home-agent-stat-dollar">${G(x)}</span>`:""}
+                        ${v!=null?`<span class="fh-home-agent-stat-dollar">${G(v)}</span>`:""}
                     </div>
                     <div class="fh-home-agent-stat-div"></div>
                     <div class="fh-home-agent-stat">
@@ -9272,39 +9284,48 @@ FUNDS`}
                         <span class="fh-home-agent-stat-lbl">OPEN</span>
                     </div>
                 </div>
-                ${v}
+                ${x}
             </div>`}).join("")}</div>
         </div>`}function Pn(e,t){let a=t.rooms_config||{};return`
         <div class="fh-home-section">
             <div class="fh-home-section-label">ROOMS</div>
-            <div class="fh-home-rooms-grid">${zt.map(s=>{var p;let i=((p=a[s.id])==null?void 0:p.status)||s.status;if(i==="hidden")return"";let n=i==="live",l=n?s.getStats(e):[],d=l.map(c=>`
+            <div class="fh-home-rooms-grid">${zt.map(s=>{var c,b;let i=((c=a[s.id])==null?void 0:c.status)||s.status;if(i==="hidden")return"";if(!(((b=t.modules)==null?void 0:b[s.id])!==!1))return`
+            <div class="fh-home-room-tile off" style="--room-accent:${s.accent}">
+                <div class="fh-home-room-icon" style="color:${s.accent}">${s.icon}</div>
+                <div class="fh-home-room-body">
+                    <div class="fh-home-room-label">${m(s.label)}</div>
+                    <div class="fh-home-room-sub">${m(s.sub)}</div>
+                    <div class="fh-home-room-off">MODULE OFF</div>
+                    <div class="fh-home-room-preview">Enable in HA \u2192 Family Hub \u2192 Configure</div>
+                </div>
+            </div>`;let r=i==="live",d=r?s.getStats(e):[],p=d.map(g=>`
             <div class="fh-home-room-stat">
-                <span class="fh-home-room-stat-num" style="color:${c.accent||s.accent}">${c.value}</span>
-                <span class="fh-home-room-stat-lbl">${f(c.label)}</span>
+                <span class="fh-home-room-stat-num" style="color:${g.accent||s.accent}">${g.value}</span>
+                <span class="fh-home-room-stat-lbl">${m(g.label)}</span>
             </div>
         `).join("");return`
-            <div class="fh-home-room-tile ${n?"live":"coming"}"
+            <div class="fh-home-room-tile ${r?"live":"coming"}"
                  data-act="nav" data-nav-view="room:${C(s.id)}"
                  style="--room-accent:${s.accent}">
                 <div class="fh-home-room-icon" style="color:${s.accent}">${s.icon}</div>
                 <div class="fh-home-room-body">
-                    <div class="fh-home-room-label">${f(s.label)}</div>
-                    <div class="fh-home-room-sub">${f(s.sub)}</div>
-                    ${n&&l.length?`<div class="fh-home-room-stats">${d}</div>`:""}
-                    ${n?"":`
+                    <div class="fh-home-room-label">${m(s.label)}</div>
+                    <div class="fh-home-room-sub">${m(s.sub)}</div>
+                    ${r&&d.length?`<div class="fh-home-room-stats">${p}</div>`:""}
+                    ${r?"":`
                         <div class="fh-home-room-coming">COMING SOON</div>
-                        ${s.preview?`<div class="fh-home-room-preview">${f(s.preview)}</div>`:""}
+                        ${s.preview?`<div class="fh-home-room-preview">${m(s.preview)}</div>`:""}
                     `}
                 </div>
             </div>
         `}).join("")}</div>
         </div>
-    `}function Ln(e,t,a){var i,n;let o=e.length,s="";if(t){let l=a._states(t);if(l){let d=l.state||"",p=(i=l.attributes)==null?void 0:i.temperature,c=((n=l.attributes)==null?void 0:n.temperature_unit)||"\xB0";s=`
+    `}function Ln(e,t,a){var i,n;let o=e.length,s="";if(t){let r=a._states(t);if(r){let d=r.state||"",p=(i=r.attributes)==null?void 0:i.temperature,c=((n=r.attributes)==null?void 0:n.temperature_unit)||"\xB0";s=`
                 <div class="fh-home-today-weather">
                     <div class="fh-home-today-weather-icon">${Nn(d)}</div>
                     <div>
                         <div class="fh-home-today-temp">${p!==void 0?`${Math.round(p)}${c}`:"\u2014"}</div>
-                        <div class="fh-home-today-cond">${f(On(d))}</div>
+                        <div class="fh-home-today-cond">${m(On(d))}</div>
                     </div>
                 </div>
             `}}return`
@@ -9321,7 +9342,7 @@ FUNDS`}
                 `}
             </div>
         </div>
-    `}function On(e){return{sunny:"Sunny",clear_night:"Clear",partlycloudy:"Partly Cloudy",cloudy:"Cloudy",fog:"Foggy",rainy:"Rain",pouring:"Heavy Rain",snowy:"Snow",snowy_rainy:"Sleet",windy:"Windy",windy_variant:"Windy",lightning:"Thunderstorm",lightning_rainy:"Thunderstorm",hail:"Hail",exceptional:"Unusual"}[e]||e.replace(/_/g," ").replace(/\b\w/g,a=>a.toUpperCase())}function Nn(e){return e==="sunny"||e==="clear_night"?'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .39-.39.39-1.03 0-1.41l-1.06-1.06zm1.06-12.37l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.39.39-1.03 0-1.41s-1.03-.39-1.41 0zM7.05 18.36l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.39.39-1.03 0-1.41s-1.03-.39-1.41 0z"/></svg>':e==="rainy"||e==="pouring"?'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19a4 4 0 0 0 4-4 4 4 0 0 0-4-4 4 4 0 0 0-4 4 4 4 0 0 0 4 4m0-6a2 2 0 0 1 2 2 2 2 0 0 1-2 2 2 2 0 0 1-2-2 2 2 0 0 1 2-2m12-3a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3M6 5a3 3 0 0 1 3 3 3 3 0 0 1-3 3 3 3 0 0 1-3-3 3 3 0 0 1 3-3m0 2a1 1 0 0 0-1 1 1 1 0 0 0 1 1 1 1 0 0 0 1-1 1 1 0 0 0-1-1z"/></svg>':e==="snowy"||e==="snowy_rainy"?'<svg viewBox="0 0 24 24" fill="currentColor"><path d="m22 11-1.5-1.5-2 2L17 10l2-2-1.5-1.5L16 8l-1.5-1.5.5-2-2.5-.5.5 2L11 7.5V5l-1.5-1.5L8 5v2.5L6.5 6.5 6 4l-2.5.5.5 2L2.5 8 1 9.5l1.5 1.5 2-2L6 10.5l-2 2L5.5 14 7 12.5 8.5 14l-.5 2 2.5.5-.5-2 1.5-1.5v2.5l1.5 1.5 1.5-1.5V13l1.5 1.5 1.5-1.5-1.5-1.5 2-2 1.5 1.5 1.5-1.5z"/></svg>':e.includes("cloud")||e==="fog"?'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>':e.includes("lightning")?'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg>':'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>'}var Ys,Xs=N(()=>{Ut();_t();Q();K();Ys={render(e){let t=e._attrs("sensor.family_hub_needs_attention"),a=e._people().filter(l=>l.active!==!1),o=t.family_name||"Family Hub",s=!!t.penalties_paused_global,i=t.approval_queue||[],n=t.weather_entity||"";return`
+    `}function On(e){return{sunny:"Sunny",clear_night:"Clear",partlycloudy:"Partly Cloudy",cloudy:"Cloudy",fog:"Foggy",rainy:"Rain",pouring:"Heavy Rain",snowy:"Snow",snowy_rainy:"Sleet",windy:"Windy",windy_variant:"Windy",lightning:"Thunderstorm",lightning_rainy:"Thunderstorm",hail:"Hail",exceptional:"Unusual"}[e]||e.replace(/_/g," ").replace(/\b\w/g,a=>a.toUpperCase())}function Nn(e){return e==="sunny"||e==="clear_night"?'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .39-.39.39-1.03 0-1.41l-1.06-1.06zm1.06-12.37l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.39.39-1.03 0-1.41s-1.03-.39-1.41 0zM7.05 18.36l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.39.39-1.03 0-1.41s-1.03-.39-1.41 0z"/></svg>':e==="rainy"||e==="pouring"?'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19a4 4 0 0 0 4-4 4 4 0 0 0-4-4 4 4 0 0 0-4 4 4 4 0 0 0 4 4m0-6a2 2 0 0 1 2 2 2 2 0 0 1-2 2 2 2 0 0 1-2-2 2 2 0 0 1 2-2m12-3a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3M6 5a3 3 0 0 1 3 3 3 3 0 0 1-3 3 3 3 0 0 1-3-3 3 3 0 0 1 3-3m0 2a1 1 0 0 0-1 1 1 1 0 0 0 1 1 1 1 0 0 0 1-1 1 1 0 0 0-1-1z"/></svg>':e==="snowy"||e==="snowy_rainy"?'<svg viewBox="0 0 24 24" fill="currentColor"><path d="m22 11-1.5-1.5-2 2L17 10l2-2-1.5-1.5L16 8l-1.5-1.5.5-2-2.5-.5.5 2L11 7.5V5l-1.5-1.5L8 5v2.5L6.5 6.5 6 4l-2.5.5.5 2L2.5 8 1 9.5l1.5 1.5 2-2L6 10.5l-2 2L5.5 14 7 12.5 8.5 14l-.5 2 2.5.5-.5-2 1.5-1.5v2.5l1.5 1.5 1.5-1.5V13l1.5 1.5 1.5-1.5-1.5-1.5 2-2 1.5 1.5 1.5-1.5z"/></svg>':e.includes("cloud")||e==="fog"?'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>':e.includes("lightning")?'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg>':'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>'}var Ys,Xs=N(()=>{Ut();_t();Q();K();Ys={render(e){let t=e._attrs("sensor.family_hub_needs_attention"),a=e._people().filter(r=>r.active!==!1),o=t.family_name||"Family Hub",s=!!t.penalties_paused_global,i=t.approval_queue||[],n=t.weather_entity||"";return`
             ${In(o,s)}
             ${Tn(a,i,e)}
             ${Pn(e,t)}
@@ -9329,7 +9350,7 @@ FUNDS`}
         `}}});function Zs(e){return Qs[e]||Qs.classic}var Qs,eo=N(()=>{Xs();Qs={classic:Ys}});function va(e){let t=e._attrs("sensor.family_hub_needs_attention"),a=e._cfg.hub_skin||t.hub_skin||"classic";return Zs(a).render(e)}function to(e){return`
         <div class="fh-nav-back-bar" data-act="nav-back">
             <span class="fh-nav-back-chevron">&#8592;</span>
-            <span class="fh-nav-back-label">${f(e)}</span>
+            <span class="fh-nav-back-label">${m(e)}</span>
         </div>
     `}var ao=N(()=>{eo();Q()});function so(e){let t=(e==null?void 0:e.type)||"daily";if(t==="daily"){let a=e.day_filter||[];if(!a.length||a.length===7)return"Every day";let o=[...a].sort((i,n)=>i-n),s=!0;for(let i=1;i<o.length;i++)if(o[i]!==o[i-1]+1){s=!1;break}return s&&o.length>=3?`${Vt[o[0]]}\u2013${Vt[o[o.length-1]]}`:o.map(i=>Vt[i]).join(" ")}if(t==="weekly"){let a=e.weekdays||[];return a.length?a.map(o=>Vt[o]).join(" "):"Weekly"}return t==="every_n_days"?`Every ${e.interval||2} days`:t==="every_n_weeks"?`Every ${e.interval||2} weeks`:t==="monthly_on_date"?"Monthly":t==="one_time"?"One time":t}function Hn(e){let t=(e==null?void 0:e.type)||"daily";if(t==="daily")return(e.day_filter||[]).length||7;if(t==="weekly")return(e.weekdays||[]).length||1;if(t==="every_n_days"){let a=e.interval||1;return a>0?7/a:0}if(t==="every_n_weeks"){let a=e.interval||1;return a>0?1/a:0}return t==="monthly_on_date"?(e.days_of_month&&e.days_of_month.length?e.days_of_month.length:1)*12/52:0}function jn(e){let t=e.rotation_cadence;return t==="weekly"?"Weekly":t==="per_instance"?"Each time":t==="daily"?"Daily":t||"\u2014"}function ya(e){let t=[];return e.points>0&&t.push(`<span class="pl-pts">+${e.points}</span>`),e.penalty_enabled&&e.penalty_points>0&&t.push(`<span class="pl-penalty">\u2212${e.penalty_points}</span>`),t.join("")}function Gn(e){let t=e.description?`<div class="pl-desc">${X(e.description)}</div>`:"";return`
       <tr>
@@ -9343,23 +9364,23 @@ FUNDS`}
           <thead><tr><th>Chore</th><th>When</th><th class="pl-points">Pts</th></tr></thead>
           <tbody>${t.map(Gn).join("")}</tbody>
         </table>
-      </section>`}function Wn(e){let t=(e==null?void 0:e.family_name)||"Family",a=(e==null?void 0:e.people)||[],o=(e==null?void 0:e.active_chores)||[],s=e!=null&&e.rank_ppd_ladder&&e.rank_ppd_ladder.length?e.rank_ppd_ladder:[3,3.5,4,4.5,5],i=Math.min(2,s.length-1),n=s[Math.max(0,i)],l=r=>`$${(r*n/100).toFixed(2)}`,d=new Date().toLocaleDateString(void 0,{weekday:"long",year:"numeric",month:"long",day:"numeric"}),p=a.filter(r=>r.type==="kid"&&r.active!==!1),c=p.map(r=>r.person_id),b=r=>{var y;return((y=a.find(_=>_.person_id===r))==null?void 0:y.name)||"\u2014"},g=r=>{var y;return((y=a.find(_=>_.person_id===r))==null?void 0:y.active)!==!1},u=r=>(r.rotation_pool||[]).length>1&&r.rotation_cadence,x=r=>c.length>0&&c.every(y=>(r.assigned_to||[]).includes(y)),w=[],m=[],$=[],S=[],v=new Map;p.forEach(r=>v.set(r.person_id,[]));for(let r of o){if(r.chore_type==="reminder"){let y=r.assigned_to||[];(!y.length||y.some(_=>c.includes(_)))&&S.push(r);continue}if(r.chore_type==="claimable"){$.push(r);continue}if(u(r)){m.push(r);continue}if(x(r)){w.push(r);continue}for(let y of r.assigned_to||[])v.has(y)&&v.get(y).push(r)}let h={};c.forEach(r=>h[r]=0);for(let r of o){if(r.chore_type!=="assigned")continue;let y=Hn(r.recurrence)*(r.points||0);if(!(y<=0))if(u(r)){let _=(r.rotation_pool||[]).filter(z=>c.includes(z)&&g(z));if(!_.length)continue;let M=y/_.length;_.forEach(z=>{h[z]+=M})}else for(let _ of r.assigned_to||[])h[_]!=null&&(h[_]+=y)}let k='<span class="pl-rot" title="Rotates">\u21BB</span> ',A=(r,y)=>{let _=r.description?`<div class="pl-desc">${X(r.description)}</div>`:"";return`
+      </section>`}function Wn(e){let t=(e==null?void 0:e.family_name)||"Family",a=(e==null?void 0:e.people)||[],o=(e==null?void 0:e.active_chores)||[],s=e!=null&&e.rank_ppd_ladder&&e.rank_ppd_ladder.length?e.rank_ppd_ladder:[3,3.5,4,4.5,5],i=Math.min(2,s.length-1),n=s[Math.max(0,i)],r=l=>`$${(l*n/100).toFixed(2)}`,d=new Date().toLocaleDateString(void 0,{weekday:"long",year:"numeric",month:"long",day:"numeric"}),p=a.filter(l=>l.type==="kid"&&l.active!==!1),c=p.map(l=>l.person_id),b=l=>{var y;return((y=a.find(k=>k.person_id===l))==null?void 0:y.name)||"\u2014"},g=l=>{var y;return((y=a.find(k=>k.person_id===l))==null?void 0:y.active)!==!1},u=l=>(l.rotation_pool||[]).length>1&&l.rotation_cadence,v=l=>c.length>0&&c.every(y=>(l.assigned_to||[]).includes(y)),_=[],f=[],$=[],S=[],x=new Map;p.forEach(l=>x.set(l.person_id,[]));for(let l of o){if(l.chore_type==="reminder"){let y=l.assigned_to||[];(!y.length||y.some(k=>c.includes(k)))&&S.push(l);continue}if(l.chore_type==="claimable"){$.push(l);continue}if(u(l)){f.push(l);continue}if(v(l)){_.push(l);continue}for(let y of l.assigned_to||[])x.has(y)&&x.get(y).push(l)}let h={};c.forEach(l=>h[l]=0);for(let l of o){if(l.chore_type!=="assigned")continue;let y=Hn(l.recurrence)*(l.points||0);if(!(y<=0))if(u(l)){let k=(l.rotation_pool||[]).filter(A=>c.includes(A)&&g(A));if(!k.length)continue;let M=y/k.length;k.forEach(A=>{h[A]+=M})}else for(let k of l.assigned_to||[])h[k]!=null&&(h[k]+=y)}let w='<span class="pl-rot" title="Rotates">\u21BB</span> ',z=(l,y)=>{let k=l.description?`<div class="pl-desc">${X(l.description)}</div>`:"";return`
           <tr>
-            <td class="pl-name"><div>${y?k:""}${X(r.name)}</div>${_}</td>
-            <td class="pl-when">${X(so(r.recurrence))}</td>
-            <td class="pl-points">${ya(r)}</td>
-          </tr>`},E=p.map(r=>{let y=v.get(r.person_id)||[],_=m.filter(B=>((B.assigned_to||[])[0]||null)===r.person_id),M=Math.round(h[r.person_id]||0),z=y.length||_.length?`<table class="pl-table">
+            <td class="pl-name"><div>${y?w:""}${X(l.name)}</div>${k}</td>
+            <td class="pl-when">${X(so(l.recurrence))}</td>
+            <td class="pl-points">${ya(l)}</td>
+          </tr>`},E=p.map(l=>{let y=x.get(l.person_id)||[],k=f.filter(B=>((B.assigned_to||[])[0]||null)===l.person_id),M=Math.round(h[l.person_id]||0),A=y.length||k.length?`<table class="pl-table">
                  <thead><tr><th>Chore</th><th>When</th><th class="pl-points">Pts</th></tr></thead>
-                 <tbody>${y.map(B=>A(B,!1)).join("")}${_.map(B=>A(B,!0)).join("")}</tbody>
+                 <tbody>${y.map(B=>z(B,!1)).join("")}${k.map(B=>z(B,!0)).join("")}</tbody>
                </table>`:'<div class="pl-section-note">Just the shared + rotation chores (see above &amp; below).</div>';return`
           <section class="pl-section">
             <header class="pl-section-head pl-kid-head">
-              <h2>${X(r.name)}</h2>
-              <span class="pl-kid-total">~${M} pts/wk \xB7 ${l(h[r.person_id]||0)}</span>
+              <h2>${X(l.name)}</h2>
+              <span class="pl-kid-total">~${M} pts/wk \xB7 ${r(h[l.person_id]||0)}</span>
             </header>
-            ${z}
-            <div class="pl-section-note">+ everyone chores (top of sheet)${_.length?" \xB7 \u21BB = rotates, see schedule":""}</div>
-          </section>`}).join(""),F="";m.length&&(F=`
+            ${A}
+            <div class="pl-section-note">+ everyone chores (top of sheet)${k.length?" \xB7 \u21BB = rotates, see schedule":""}</div>
+          </section>`}).join(""),F="";f.length&&(F=`
           <section class="pl-section">
             <header class="pl-section-head">
               <h2>Rotation schedule</h2>
@@ -9367,15 +9388,15 @@ FUNDS`}
             </header>
             <table class="pl-table pl-rot-table">
               <thead><tr><th>Chore</th><th class="pl-points">Pts</th><th>Rotates (in order)</th><th>Switches</th></tr></thead>
-              <tbody>${m.map(y=>{let _=(y.rotation_pool||[]).filter(g),M=(y.assigned_to||[])[0]||_[0],z=_.map(B=>B===M?`<b>${X(b(B))}</b>`:X(b(B))).join(" \u2192 ");return`
+              <tbody>${f.map(y=>{let k=(y.rotation_pool||[]).filter(g),M=(y.assigned_to||[])[0]||k[0],A=k.map(B=>B===M?`<b>${X(b(B))}</b>`:X(b(B))).join(" \u2192 ");return`
               <tr>
                 <td class="pl-name">${X(y.name)}</td>
                 <td class="pl-points">${ya(y)}</td>
-                <td>${z}</td>
+                <td>${A}</td>
                 <td class="pl-when">${X(jn(y))}</td>
               </tr>`}).join("")}</tbody>
             </table>
-          </section>`);let D=xa("Everyone \u2014 every kid does these",w),R=xa("Up for grabs",$,"Anyone can claim \u2014 first done gets the points."),T=xa("Reminders",S,"No points \u2014 just a daily nudge."),P=`${p.length} kid${p.length===1?"":"s"} \xB7 ${w.length} shared \xB7 ${m.length} rotating \xB7 +earned / \u2212penalty if skipped \xB7 $ shown at Rank 3 (mid-point rate)`;return`<!doctype html>
+          </section>`);let D=xa("Everyone \u2014 every kid does these",_),R=xa("Up for grabs",$,"Anyone can claim \u2014 first done gets the points."),T=xa("Reminders",S,"No points \u2014 just a daily nudge."),P=`${p.length} kid${p.length===1?"":"s"} \xB7 ${_.length} shared \xB7 ${f.length} rotating \xB7 +earned / \u2212penalty if skipped \xB7 $ shown at Rank 3 (mid-point rate)`;return`<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -9487,29 +9508,30 @@ FUNDS`}
     Generated by Family Hub \xB7 ${X(new Date().toLocaleString())}
   </footer>
 </body>
-</html>`}function oo(e){let t=e._attrs("sensor.family_hub_needs_attention"),a=Wn(t),o=window.open("","_blank");if(!o){let s=new Blob([a],{type:"text/html"}),i=URL.createObjectURL(s);if(!window.open(i,"_blank")){let l=document.createElement("div");l.style.cssText="position:fixed;top:12px;left:50%;transform:translateX(-50%);background:#1c1c1e;color:#fff;padding:12px 18px;border-radius:8px;z-index:9999;font:14px/1.5 sans-serif",l.innerHTML=`Pop-ups are blocked. <a href="${i}" target="_blank" style="color:#64d2ff">Open chore list</a>`,document.body.appendChild(l),setTimeout(()=>l.remove(),15e3)}return}o.document.open(),o.document.write(a),o.document.close(),o.document.title=`${(t==null?void 0:t.family_name)||"Family"} \u2014 Chore List`}var X,Vt,io=N(()=>{X=e=>String(e??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;"),Vt=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]});function wa(e,t,a){var l,d,p,c,b,g,u,x,w,m,$,S,v,h,k,A,E,F,D,R,T,P;let o=a.shadowRoot,s=r=>{var y;return((y=o.getElementById(r))==null?void 0:y.value)??""},i=r=>{var y;return((y=o.getElementById(r))==null?void 0:y.checked)??!1},n=r=>parseInt(s(r)||"0");switch(e){case"nav":{let r=t.dataset.navView;if(!r)break;a._backStack.push(a._view||"home"),a._view=r,a._doRender(!0);break}case"nav-back":a._view=a._backStack.pop()||"home",a._doRender(!0);break;case"filter":a._filter=a._filter===t.dataset.pid?null:t.dataset.pid,a._doRender(!0);break;case"tab":a._tab=t.dataset.tab,a._doRender(!0);break;case"admin-sec":a._adminSec=t.dataset.sec,a._doRender(!0);break;case"hist-filter":a._histFilter=t.dataset.hpid||null,a._doRender(!0);break;case"chore-filter":a._choreFilter=t.value||null,a._doRender(!0);break;case"chore-status-filter":a._choreStatusFilter=t.value||null,a._doRender(!0);break;case"chore-rec-filter":a._choreRecFilter=t.value||null,a._doRender(!0);break;case"stats-rank":a._statsRankOverride=t.value,a._doRender(!0);break;case"stats-completion":a._statsCompletionPct=Number(t.value)||100,a._doRender(!0);break;case"stats-streak-pct":a._statsStreakPct=Number(t.value)||50,a._doRender(!0);break;case"chore-tab":{let r=t.dataset.tab;if(!r)break;a._choreFormTab=r,o.querySelectorAll(".fh-chore-tab").forEach(y=>{y.classList.toggle("active",y.dataset.tab===r)}),o.querySelectorAll(".fh-chore-tab-pane").forEach(y=>{y.style.display=y.dataset.tab===r?"":"none"}),a._syncModalUI();break}case"sort-admin-chores":{let r=t.dataset.col||null;if(!r)a._adminSort={col:null,dir:"asc"};else{let y=a._adminSort||{col:null,dir:"asc"};y.col===r?a._adminSort=y.dir==="asc"?{col:r,dir:"desc"}:{col:null,dir:"asc"}:a._adminSort={col:r,dir:"asc"}}a._doRender(!0);break}case"select-store-row":a._adminSelectedItemId=t.dataset.iid||null,a._adminSelectedChoreId=null,a._doRender(!0);break;case"close-store-panel":a._adminSelectedItemId=null,a._doRender(!0);break;case"sort-admin-store-items":{let r=t.dataset.col||null;if(!r)a._adminSortItems={col:null,dir:"asc"};else{let y=a._adminSortItems||{col:null,dir:"asc"};y.col===r?a._adminSortItems=y.dir==="asc"?{col:r,dir:"desc"}:{col:null,dir:"asc"}:a._adminSortItems={col:r,dir:"asc"}}a._doRender(!0);break}case"store-item-filter":a._storeItemFilter=t.dataset.fval||null,a._doRender(!0);break;case"toggle-admin-reward-cat":{let r=t.dataset.cat;if(!r)break;a._adminCollapsedRewardCats||(a._adminCollapsedRewardCats=new Set),a._adminCollapsedRewardCats.has(r)?a._adminCollapsedRewardCats.delete(r):a._adminCollapsedRewardCats.add(r),a._doRender(!0);break}case"ok-edit-store-item-inline":{let r=s("m-eiid"),_=(a._attrs("sensor.family_hub_needs_attention").store_items||[]).find(z=>z.item_id===r),M=ka(s,o,!0,(_==null?void 0:_.is_group_reward)??!1);if(!M)break;a._svc("update_store_item",M),a._adminSelectedItemId=null,a._doRender(!0);break}case"open-ranks":a._ranksTab=t.dataset.pid||"global",a._modal={type:"ranks",surface:"drawer",data:{}},a._doRender(!0);break;case"ranks-tab":a._ranksTab=t.dataset.tab||"global",a._doRender(!0);break;case"ranks-preview":{let r=Math.max(0,parseInt(s("m-curve-cap")||"0")),y=[],_=[];for(let B=0;B<5;B++)y.push(Math.max(0,parseFloat(s(`m-gain-pct-${B}`))||0)),_.push(Math.max(0,parseFloat(s(`m-drop-pct-${B}`))||0));let{gain:M,drop:z}=qt(r,y,_);for(let B=0;B<5;B++){let L=o.getElementById(`m-gain-pct-${B}`),q=o.getElementById(`m-drop-pct-${B}`),J=o.getElementById(`m-gain-pts-${B}`),Ze=o.getElementById(`m-drop-pts-${B}`);J&&L&&!L.disabled&&(J.textContent=M[B]),Ze&&q&&!q.disabled&&(Ze.textContent=z[B])}break}case"save-ranks-global":{let r=o.querySelectorAll(".fh-ad-rank-ladder-input"),y=[],_=!0;r.forEach(L=>{let q=parseFloat(L.value);if(isNaN(q)||q<=0){_=!1;return}y.push(q)});let M=Math.max(0,parseInt(s("m-rank-drop")||"60")),z=Math.max(0,parseInt(s("m-rank-gain")||"80")),B={rank_eval_weekday:parseInt(s("m-rank-weekday")||"0"),rank_dynamic_capacity:!0,rank_default_drop_pct:M,rank_default_gain_pct:z};_&&y.length&&(B.rank_ppd_ladder=y),a._svc("update_settings",B),a._closeModal();break}case"save-ranks-kid":{let r=s("m-rank-pid");if(!r)break;let y=Math.max(0,parseInt(s("m-curve-cap")||"0")),_=[],M=[];for(let L=0;L<5;L++)_.push(Math.max(0,parseFloat(s(`m-gain-pct-${L}`))||0)),M.push(Math.max(0,parseFloat(s(`m-drop-pct-${L}`))||0));let{gain:z,drop:B}=qt(y,_,M);a._svc("update_person",{person_id:r,rank_index:Math.max(0,Math.min(4,parseInt(s("m-rank-idx")||"0"))),rank_locked:i("m-rank-lock"),rank_gain_thresholds:z,rank_drop_thresholds:B,rank_curve:{cap:y,gain_pcts:_,drop_pcts:M}}),a._closeModal();break}case"toggle-admin-cat":{let r=t.dataset.cat;if(!r)break;a._adminCollapsedCats||(a._adminCollapsedCats=new Set),a._adminCollapsedCats.has(r)?a._adminCollapsedCats.delete(r):a._adminCollapsedCats.add(r),a._doRender(!0);break}case"complete":{let r=t.dataset.tid,y=t.dataset.pid;if(!r||!y)break;let _=parseInt(t.dataset.streak||"0"),M=parseInt(t.dataset.milestone||"0");M>0&&(_+1)%M===0&&(a._celebration={name:t.dataset.name||"Mission",streak:_+1},setTimeout(()=>{a._celebration&&(a._celebration=null,a._doRender(!0))},3e3)),a._svc("complete_task",{task_id:r,person_id:y}),a._flashing.add(r),a._pendingSubmit.add(r),a._doRender(!0),setTimeout(()=>{a._flashing.delete(r),a._doRender(!1)},1450),setTimeout(()=>{a._pendingSubmit.has(r)&&(a._pendingSubmit.delete(r),a._doRender(!1))},35e3);break}case"dismiss-celebration":a._celebration=null,a._doRender(!0);break;case"toggle-desc":{let r=t.dataset.id;a._expandedDescs.has(r)?a._expandedDescs.delete(r):a._expandedDescs.add(r),a._doRender(!0);break}case"toggle-skipped-group":{let r=t.dataset.key,y=!a._expandedSkippedDates.has(r);y?a._expandedSkippedDates.add(r):a._expandedSkippedDates.delete(r);let _=t.closest(".fh-hist-group");if(_){let M=_.querySelector(".fh-hist-subitems"),z=_.querySelector(".fh-hist-expand-icon");M&&(M.style.display=y?"flex":"none"),z&&(z.textContent=y?"\u25B2":"\u25BC")}else a._doRender(!0);break}case"approve-task":{let r=a._people().find(y=>y.type==="parent");a._svc("approve_task",{task_id:t.dataset.tid,approved_by:(r==null?void 0:r.person_id)||""});break}case"deny-task":{let r=a._people().find(y=>y.type==="parent");a._svc("deny_task",{task_id:t.dataset.tid,denied_by:(r==null?void 0:r.person_id)||""});break}case"open-partial":a._modal={type:"partial-credit",data:{tid:t.dataset.tid,name:t.dataset.name||"",pts:t.dataset.pts||"0"}},a._doRender(!0);break;case"do-partial":{let r=a._people().find(y=>y.type==="parent");a._svc("approve_task",{task_id:t.dataset.tid,approved_by:(r==null?void 0:r.person_id)||"",credit_fraction:parseFloat(t.dataset.frac||"1")}),a._closeModal();break}case"approve-redemption":{let r=a._people().find(y=>y.type==="parent");a._svc("approve_redemption",{redemption_id:t.dataset.rid,approved_by:(r==null?void 0:r.person_id)||""});break}case"decline-redemption":{let r=a._people().find(y=>y.type==="parent");a._svc("decline_redemption",{redemption_id:t.dataset.rid,declined_by:(r==null?void 0:r.person_id)||""});break}case"excuse-task":a._svc("excuse_task",{instance_id:t.dataset.iid,excused_by:t.dataset.excusedBy,reason:""});break;case"mark-complete":a._svc("mark_task_complete",{instance_id:t.dataset.iid,marked_by:t.dataset.markedBy,reason:""});break;case"reject-task":a._svc("reject_task",{instance_id:t.dataset.iid,rejected_by:t.dataset.rejectedBy,reason:""});break;case"excuse-day":{let r=a._people().find(y=>y.type==="parent");a._svc("excuse_day",{person_id:t.dataset.pid,day:t.dataset.day,excused_by:(r==null?void 0:r.person_id)||""});break}case"claim-late":a._svc("claim_late_task",{task_id:t.dataset.iid,person_id:t.dataset.pid});break;case"redeem":{let r=t.dataset.pid,y=t.dataset.iid,_=(a._attrs("sensor.family_hub_needs_attention").people||[]).find(B=>B.id===r),M=_?`sensor.family_hub_${_.name.toLowerCase().replace(/ /g,"_")}`:null,z=M?(a._attrs(M).store_items||[]).find(B=>B.item_id===y):null;if(z&&z.locked){alert(z.lock_reason||"This reward is locked until you finish your chores.");break}a._svc("request_redemption",{person_id:r,item_id:y});break}case"request-cancel-sub":if(!confirm(`Cancel "${t.dataset.name||"this subscription"}"?
-This requires parent approval before it takes effect.`))break;a._svc("request_cancel_subscription",{subscription_id:t.dataset.subid,person_id:t.dataset.pid});break;case"open-chip-in":{let r=t.dataset.iid,y=t.dataset.pid,_=parseInt(t.dataset.remaining||"0"),M=parseInt(t.dataset.balance||"0"),z=a._people().find(J=>J.person_id===y),B=z?`sensor.family_hub_${z.name.toLowerCase().replace(/ /g,"_")}`:null,q=((B?a._attrs(B):{}).store_items||[]).find(J=>J.item_id===r)||{item_id:r,name:"reward"};a._modal={type:"chip-in",data:{item:q,pid:y,balance:M,remaining:_}},a._doRender(!0);break}case"ok-chip-in":{let r=parseInt(s("m-chipin-pts")||"0"),y=s("m-chipin-iid"),_=s("m-chipin-pid");if(!r||r<=0||!y||!_){alert("Please enter a valid number of points.");break}a._svc("chip_in_group_reward",{item_id:y,person_id:_,points:r}),a._modal=null,a._doRender(!0);break}case"accept-group-proposal":a._svc("respond_group_proposal",{proposal_id:t.dataset.propid,person_id:t.dataset.pid,accept:!0});break;case"decline-group-proposal":if(!confirm("Decline this group reward proposal?"))break;a._svc("respond_group_proposal",{proposal_id:t.dataset.propid,person_id:t.dataset.pid,accept:!1});break;case"approve-group-proposal":a._svc("approve_group_proposal",{proposal_id:t.dataset.propid,approved_by:t.dataset.by||"admin"});break;case"decline-group-proposal-parent":if(!confirm("Decline this group reward proposal?"))break;a._svc("decline_group_proposal",{proposal_id:t.dataset.propid,declined_by:t.dataset.by||"admin"});break;case"redeem-group-reward":if(!confirm(`Mark "${t.dataset.iname}" as redeemed?
+</html>`}function oo(e){let t=e._attrs("sensor.family_hub_needs_attention"),a=Wn(t),o=window.open("","_blank");if(!o){let s=new Blob([a],{type:"text/html"}),i=URL.createObjectURL(s);if(!window.open(i,"_blank")){let r=document.createElement("div");r.style.cssText="position:fixed;top:12px;left:50%;transform:translateX(-50%);background:#1c1c1e;color:#fff;padding:12px 18px;border-radius:8px;z-index:9999;font:14px/1.5 sans-serif",r.innerHTML=`Pop-ups are blocked. <a href="${i}" target="_blank" style="color:#64d2ff">Open chore list</a>`,document.body.appendChild(r),setTimeout(()=>r.remove(),15e3)}return}o.document.open(),o.document.write(a),o.document.close(),o.document.title=`${(t==null?void 0:t.family_name)||"Family"} \u2014 Chore List`}var X,Vt,io=N(()=>{X=e=>String(e??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#39;"),Vt=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]});function ka(e,t,a){var r,d,p,c,b,g,u,v,_,f,$,S,x,h,w,z,E,F,D,R,T,P;let o=a.shadowRoot,s=l=>{var y;return((y=o.getElementById(l))==null?void 0:y.value)??""},i=l=>{var y;return((y=o.getElementById(l))==null?void 0:y.checked)??!1},n=l=>parseInt(s(l)||"0");switch(e){case"nav":{let l=t.dataset.navView;if(!l)break;a._backStack.push(a._view||"home"),a._view=l,a._doRender(!0);break}case"nav-back":a._view=a._backStack.pop()||"home",a._doRender(!0);break;case"filter":a._filter=a._filter===t.dataset.pid?null:t.dataset.pid,a._doRender(!0);break;case"tab":a._tab=t.dataset.tab,a._doRender(!0);break;case"admin-sec":a._adminSec=t.dataset.sec,a._doRender(!0);break;case"hist-filter":a._histFilter=t.dataset.hpid||null,a._doRender(!0);break;case"chore-filter":a._choreFilter=t.value||null,a._doRender(!0);break;case"chore-status-filter":a._choreStatusFilter=t.value||null,a._doRender(!0);break;case"chore-rec-filter":a._choreRecFilter=t.value||null,a._doRender(!0);break;case"stats-rank":a._statsRankOverride=t.value,a._doRender(!0);break;case"stats-completion":a._statsCompletionPct=Number(t.value)||100,a._doRender(!0);break;case"stats-streak-pct":a._statsStreakPct=Number(t.value)||50,a._doRender(!0);break;case"chore-tab":{let l=t.dataset.tab;if(!l)break;a._choreFormTab=l,o.querySelectorAll(".fh-chore-tab").forEach(y=>{y.classList.toggle("active",y.dataset.tab===l)}),o.querySelectorAll(".fh-chore-tab-pane").forEach(y=>{y.style.display=y.dataset.tab===l?"":"none"}),a._syncModalUI();break}case"sort-admin-chores":{let l=t.dataset.col||null;if(!l)a._adminSort={col:null,dir:"asc"};else{let y=a._adminSort||{col:null,dir:"asc"};y.col===l?a._adminSort=y.dir==="asc"?{col:l,dir:"desc"}:{col:null,dir:"asc"}:a._adminSort={col:l,dir:"asc"}}a._doRender(!0);break}case"select-store-row":a._adminSelectedItemId=t.dataset.iid||null,a._adminSelectedChoreId=null,a._doRender(!0);break;case"close-store-panel":a._adminSelectedItemId=null,a._doRender(!0);break;case"sort-admin-store-items":{let l=t.dataset.col||null;if(!l)a._adminSortItems={col:null,dir:"asc"};else{let y=a._adminSortItems||{col:null,dir:"asc"};y.col===l?a._adminSortItems=y.dir==="asc"?{col:l,dir:"desc"}:{col:null,dir:"asc"}:a._adminSortItems={col:l,dir:"asc"}}a._doRender(!0);break}case"store-item-filter":a._storeItemFilter=t.dataset.fval||null,a._doRender(!0);break;case"toggle-admin-reward-cat":{let l=t.dataset.cat;if(!l)break;a._adminCollapsedRewardCats||(a._adminCollapsedRewardCats=new Set),a._adminCollapsedRewardCats.has(l)?a._adminCollapsedRewardCats.delete(l):a._adminCollapsedRewardCats.add(l),a._doRender(!0);break}case"ok-edit-store-item-inline":{let l=s("m-eiid"),k=(a._attrs("sensor.family_hub_needs_attention").store_items||[]).find(A=>A.item_id===l),M=wa(s,o,!0,(k==null?void 0:k.is_group_reward)??!1);if(!M)break;a._svc("update_store_item",M),a._adminSelectedItemId=null,a._doRender(!0);break}case"open-ranks":a._ranksTab=t.dataset.pid||"global",a._modal={type:"ranks",surface:"drawer",data:{}},a._doRender(!0);break;case"ranks-tab":a._ranksTab=t.dataset.tab||"global",a._doRender(!0);break;case"ranks-preview":{let l=Math.max(0,parseInt(s("m-curve-cap")||"0")),y=[],k=[];for(let B=0;B<5;B++)y.push(Math.max(0,parseFloat(s(`m-gain-pct-${B}`))||0)),k.push(Math.max(0,parseFloat(s(`m-drop-pct-${B}`))||0));let{gain:M,drop:A}=qt(l,y,k);for(let B=0;B<5;B++){let L=o.getElementById(`m-gain-pct-${B}`),q=o.getElementById(`m-drop-pct-${B}`),J=o.getElementById(`m-gain-pts-${B}`),Ze=o.getElementById(`m-drop-pts-${B}`);J&&L&&!L.disabled&&(J.textContent=M[B]),Ze&&q&&!q.disabled&&(Ze.textContent=A[B])}break}case"save-ranks-global":{let l=o.querySelectorAll(".fh-ad-rank-ladder-input"),y=[],k=!0;l.forEach(L=>{let q=parseFloat(L.value);if(isNaN(q)||q<=0){k=!1;return}y.push(q)});let M=Math.max(0,parseInt(s("m-rank-drop")||"60")),A=Math.max(0,parseInt(s("m-rank-gain")||"80")),B={rank_eval_weekday:parseInt(s("m-rank-weekday")||"0"),rank_dynamic_capacity:!0,rank_default_drop_pct:M,rank_default_gain_pct:A};k&&y.length&&(B.rank_ppd_ladder=y),a._svc("update_settings",B),a._closeModal();break}case"save-ranks-kid":{let l=s("m-rank-pid");if(!l)break;let y=Math.max(0,parseInt(s("m-curve-cap")||"0")),k=[],M=[];for(let L=0;L<5;L++)k.push(Math.max(0,parseFloat(s(`m-gain-pct-${L}`))||0)),M.push(Math.max(0,parseFloat(s(`m-drop-pct-${L}`))||0));let{gain:A,drop:B}=qt(y,k,M);a._svc("update_person",{person_id:l,rank_index:Math.max(0,Math.min(4,parseInt(s("m-rank-idx")||"0"))),rank_locked:i("m-rank-lock"),rank_gain_thresholds:A,rank_drop_thresholds:B,rank_curve:{cap:y,gain_pcts:k,drop_pcts:M}}),a._closeModal();break}case"toggle-admin-cat":{let l=t.dataset.cat;if(!l)break;a._adminCollapsedCats||(a._adminCollapsedCats=new Set),a._adminCollapsedCats.has(l)?a._adminCollapsedCats.delete(l):a._adminCollapsedCats.add(l),a._doRender(!0);break}case"complete":{let l=t.dataset.tid,y=t.dataset.pid;if(!l||!y)break;let k=parseInt(t.dataset.streak||"0"),M=parseInt(t.dataset.milestone||"0");M>0&&(k+1)%M===0&&(a._celebration={name:t.dataset.name||"Mission",streak:k+1},setTimeout(()=>{a._celebration&&(a._celebration=null,a._doRender(!0))},3e3)),a._svc("complete_task",{task_id:l,person_id:y}),a._flashing.add(l),a._pendingSubmit.add(l),a._doRender(!0),setTimeout(()=>{a._flashing.delete(l),a._doRender(!1)},1450),setTimeout(()=>{a._pendingSubmit.has(l)&&(a._pendingSubmit.delete(l),a._doRender(!1))},35e3);break}case"dismiss-celebration":a._celebration=null,a._doRender(!0);break;case"toggle-desc":{let l=t.dataset.id;a._expandedDescs.has(l)?a._expandedDescs.delete(l):a._expandedDescs.add(l),a._doRender(!0);break}case"toggle-skipped-group":{let l=t.dataset.key,y=!a._expandedSkippedDates.has(l);y?a._expandedSkippedDates.add(l):a._expandedSkippedDates.delete(l);let k=t.closest(".fh-hist-group");if(k){let M=k.querySelector(".fh-hist-subitems"),A=k.querySelector(".fh-hist-expand-icon");M&&(M.style.display=y?"flex":"none"),A&&(A.textContent=y?"\u25B2":"\u25BC")}else a._doRender(!0);break}case"approve-task":{let l=a._people().find(y=>y.type==="parent");a._svc("approve_task",{task_id:t.dataset.tid,approved_by:(l==null?void 0:l.person_id)||""});break}case"deny-task":{let l=a._people().find(y=>y.type==="parent");a._svc("deny_task",{task_id:t.dataset.tid,denied_by:(l==null?void 0:l.person_id)||""});break}case"open-partial":a._modal={type:"partial-credit",data:{tid:t.dataset.tid,name:t.dataset.name||"",pts:t.dataset.pts||"0"}},a._doRender(!0);break;case"do-partial":{let l=a._people().find(y=>y.type==="parent");a._svc("approve_task",{task_id:t.dataset.tid,approved_by:(l==null?void 0:l.person_id)||"",credit_fraction:parseFloat(t.dataset.frac||"1")}),a._closeModal();break}case"approve-redemption":{let l=a._people().find(y=>y.type==="parent");a._svc("approve_redemption",{redemption_id:t.dataset.rid,approved_by:(l==null?void 0:l.person_id)||""});break}case"decline-redemption":{let l=a._people().find(y=>y.type==="parent");a._svc("decline_redemption",{redemption_id:t.dataset.rid,declined_by:(l==null?void 0:l.person_id)||""});break}case"excuse-task":a._svc("excuse_task",{instance_id:t.dataset.iid,excused_by:t.dataset.excusedBy,reason:""});break;case"mark-complete":a._svc("mark_task_complete",{instance_id:t.dataset.iid,marked_by:t.dataset.markedBy,reason:""});break;case"reject-task":a._svc("reject_task",{instance_id:t.dataset.iid,rejected_by:t.dataset.rejectedBy,reason:""});break;case"excuse-day":{let l=a._people().find(y=>y.type==="parent");a._svc("excuse_day",{person_id:t.dataset.pid,day:t.dataset.day,excused_by:(l==null?void 0:l.person_id)||""});break}case"claim-late":a._svc("claim_late_task",{task_id:t.dataset.iid,person_id:t.dataset.pid});break;case"redeem":{let l=t.dataset.pid,y=t.dataset.iid,k=(a._attrs("sensor.family_hub_needs_attention").people||[]).find(B=>B.id===l),M=k?`sensor.family_hub_${k.name.toLowerCase().replace(/ /g,"_")}`:null,A=M?(a._attrs(M).store_items||[]).find(B=>B.item_id===y):null;if(A&&A.locked){alert(A.lock_reason||"This reward is locked until you finish your chores.");break}a._svc("request_redemption",{person_id:l,item_id:y});break}case"request-cancel-sub":if(!confirm(`Cancel "${t.dataset.name||"this subscription"}"?
+This requires parent approval before it takes effect.`))break;a._svc("request_cancel_subscription",{subscription_id:t.dataset.subid,person_id:t.dataset.pid});break;case"open-chip-in":{let l=t.dataset.iid,y=t.dataset.pid,k=parseInt(t.dataset.remaining||"0"),M=parseInt(t.dataset.balance||"0"),A=a._people().find(J=>J.person_id===y),B=A?`sensor.family_hub_${A.name.toLowerCase().replace(/ /g,"_")}`:null,q=((B?a._attrs(B):{}).store_items||[]).find(J=>J.item_id===l)||{item_id:l,name:"reward"};a._modal={type:"chip-in",data:{item:q,pid:y,balance:M,remaining:k}},a._doRender(!0);break}case"ok-chip-in":{let l=parseInt(s("m-chipin-pts")||"0"),y=s("m-chipin-iid"),k=s("m-chipin-pid");if(!l||l<=0||!y||!k){alert("Please enter a valid number of points.");break}a._svc("chip_in_group_reward",{item_id:y,person_id:k,points:l}),a._modal=null,a._doRender(!0);break}case"accept-group-proposal":a._svc("respond_group_proposal",{proposal_id:t.dataset.propid,person_id:t.dataset.pid,accept:!0});break;case"decline-group-proposal":if(!confirm("Decline this group reward proposal?"))break;a._svc("respond_group_proposal",{proposal_id:t.dataset.propid,person_id:t.dataset.pid,accept:!1});break;case"approve-group-proposal":a._svc("approve_group_proposal",{proposal_id:t.dataset.propid,approved_by:t.dataset.by||"admin"});break;case"decline-group-proposal-parent":if(!confirm("Decline this group reward proposal?"))break;a._svc("decline_group_proposal",{proposal_id:t.dataset.propid,declined_by:t.dataset.by||"admin"});break;case"redeem-group-reward":if(!confirm(`Mark "${t.dataset.iname}" as redeemed?
 
-This will mark the reward inactive.`))break;a._svc("redeem_group_reward",{item_id:t.dataset.iid,redeemed_by:"admin"});break;case"toggle-goal":{let r=t.dataset.pid,y=t.dataset.iid;if(!r||!y)break;let _=a._people().find(B=>B.person_id===r);if(!_)break;let z=a._attrs(a._personEntityId(_.name)).goal_item_id===y?"":y;a._svc("update_person",{person_id:r,goal_item_id:z});break}case"delete-chore":if(!confirm(`Delete "${t.dataset.cname}"?
+This will mark the reward inactive.`))break;a._svc("redeem_group_reward",{item_id:t.dataset.iid,redeemed_by:"admin"});break;case"toggle-goal":{let l=t.dataset.pid,y=t.dataset.iid;if(!l||!y)break;let k=a._people().find(B=>B.person_id===l);if(!k)break;let A=a._attrs(a._personEntityId(k.name)).goal_item_id===y?"":y;a._svc("update_person",{person_id:l,goal_item_id:A});break}case"delete-chore":if(!confirm(`Delete "${t.dataset.cname}"?
 
 This cannot be undone.`))break;a._adminSelectedChoreId=null,a._svc("delete_chore",{chore_id:t.dataset.cid});break;case"delete-store-item":if(!confirm(`Deactivate reward "${t.dataset.iname}"?
 
 It will be hidden from kids but stays in the list as [inactive]. Use "Delete permanently" in the edit panel to remove it completely.`))break;a._svc("delete_store_item",{item_id:t.dataset.iid});break;case"hard-delete-store-item":if(!confirm(`Permanently delete "${t.dataset.iname}"?
 
-This cannot be undone. Any pending redemption requests for this reward will be cancelled.`))break;a._adminSelectedItemId=null,a._svc("hard_delete_store_item",{item_id:t.dataset.iid}),a._doRender(!0);break;case"remove-cat-label":{let r=t.dataset.label,y=a._attrs("sensor.family_hub_needs_attention").category_labels||[];a._svc("update_settings",{category_labels:y.filter(_=>_!==r)});break}case"add-cat-label":{let r=o.getElementById("cat-label-input"),y=(l=r==null?void 0:r.value)==null?void 0:l.trim();if(!y)break;let _=a._attrs("sensor.family_hub_needs_attention").category_labels||[];_.includes(y)||a._svc("update_settings",{category_labels:[..._,y]}),r&&(r.value="");break}case"save-hub-layout":{let r={};o.querySelectorAll(".fh-hub-room-toggle").forEach(z=>{let B=z.dataset.roomId;B&&(r[B]={status:z.checked?"live":"hidden"})});let y=((p=(d=o.getElementById("m-hub-weather"))==null?void 0:d.value)==null?void 0:p.trim())||"",M=(((c=o.getElementById("m-hub-calendars"))==null?void 0:c.value)||"").split(/[\n,]+/).map(z=>z.trim()).filter(Boolean);a._svc("update_settings",{rooms_config:r,weather_entity:y,today_calendar_entities:M});break}case"toggle-global-penalty":{let r=t.checked??((b=t.querySelector("input"))==null?void 0:b.checked)??!0;a._svc("update_settings",{penalties_paused:!r});break}case"toggle-person-penalty":{let r=t.dataset.pid||((g=t.closest("[data-pid]"))==null?void 0:g.dataset.pid),y=t.checked??((u=t.querySelector("input"))==null?void 0:u.checked)??!0;r&&a._svc("update_person",{person_id:r,penalties_paused:!y});break}case"export-backup":a._svc("export_backup",{});break;case"print-chore-list":oo(a);break;case"rebuild-data":if(!confirm(`Rebuild data?
+This cannot be undone. Any pending redemption requests for this reward will be cancelled.`))break;a._adminSelectedItemId=null,a._svc("hard_delete_store_item",{item_id:t.dataset.iid}),a._doRender(!0);break;case"remove-cat-label":{let l=t.dataset.label,y=a._attrs("sensor.family_hub_needs_attention").category_labels||[];a._svc("update_settings",{category_labels:y.filter(k=>k!==l)});break}case"add-cat-label":{let l=o.getElementById("cat-label-input"),y=(r=l==null?void 0:l.value)==null?void 0:r.trim();if(!y)break;let k=a._attrs("sensor.family_hub_needs_attention").category_labels||[];k.includes(y)||a._svc("update_settings",{category_labels:[...k,y]}),l&&(l.value="");break}case"save-hub-layout":{let l={};o.querySelectorAll(".fh-hub-room-toggle").forEach(A=>{let B=A.dataset.roomId;B&&(l[B]={status:A.checked?"live":"hidden"})});let y=((p=(d=o.getElementById("m-hub-weather"))==null?void 0:d.value)==null?void 0:p.trim())||"",M=(((c=o.getElementById("m-hub-calendars"))==null?void 0:c.value)||"").split(/[\n,]+/).map(A=>A.trim()).filter(Boolean);a._svc("update_settings",{rooms_config:l,weather_entity:y,today_calendar_entities:M});break}case"toggle-global-penalty":{let l=t.checked??((b=t.querySelector("input"))==null?void 0:b.checked)??!0;a._svc("update_settings",{penalties_paused:!l});break}case"toggle-person-penalty":{let l=t.dataset.pid||((g=t.closest("[data-pid]"))==null?void 0:g.dataset.pid),y=t.checked??((u=t.querySelector("input"))==null?void 0:u.checked)??!0;l&&a._svc("update_person",{person_id:l,penalties_paused:!y});break}case"export-backup":a._svc("export_backup",{});break;case"print-chore-list":oo(a);break;case"rebuild-data":if(!confirm(`Rebuild data?
 
 This will remove ghost records, orphaned instances, and duplicates. A summary will appear as a Home Assistant notification.
 
-This cannot be undone.`))break;a._svc("rebuild_data",{});break;case"open-award":a._modal={type:"award",data:{pid:t.dataset.pid,pname:t.dataset.pname}},a._doRender(!0);break;case"open-deduct":a._modal={type:"deduct",data:{pid:t.dataset.pid,pname:t.dataset.pname}},a._doRender(!0);break;case"open-add-chore":a._adminSelectedChoreId=null,a._modal={type:"add-chore",surface:"drawer",data:{}},a._doRender(!0);break;case"select-chore-row":case"open-edit-chore":{let r=a._attrs("sensor.family_hub_needs_attention"),_=(r.all_chores||r.active_chores||[]).find(M=>M.chore_id===t.dataset.cid);if(!_)break;a._adminSelectedChoreId=null,a._modal={type:"edit-chore",surface:"drawer",data:{chore:_}},a._doRender(!0);break}case"open-add-store-item":a._adminSelectedItemId=null,a._modal={type:"add-store-item",data:{}},a._doRender(!0);break;case"open-edit-store-item":{let y=(a._attrs("sensor.family_hub_needs_attention").store_items||[]).find(_=>_.item_id===t.dataset.iid);if(!y)break;a._adminSelectedItemId=null,a._modal={type:"edit-store-item",data:{item:y}},a._doRender(!0);break}case"open-add-person":a._modal={type:"add-person",data:{}},a._doRender(!0);break;case"open-edit-person":a._modal={type:"edit-person",surface:"drawer",data:{pid:t.dataset.pid,pname:t.dataset.pname,ptype:t.dataset.ptype,pcolor:t.dataset.pcolor,allowancePts:parseInt(t.dataset.pallowpts||"0"),allowanceSched:t.dataset.pallowsched||"weekly",allowanceWday:parseInt(t.dataset.pallowwday??"5"),allowanceMday:parseInt(t.dataset.pallowmday||"1"),notifyTarget:t.dataset.pnotify||"",code:t.dataset.pcode||"",theme:t.dataset.ptheme||"classic",childMode:t.dataset.pchildmode==="true",completionThreshold:parseInt(t.dataset.pcompletionthreshold??"80"),completionMilestone:parseInt(t.dataset.pcompletionmilestone??"7"),completionBonusPoints:parseInt(t.dataset.pcompletionbonus??"50"),weeklyThreshold:parseInt(t.dataset.pweeklythreshold??"80"),weeklyMilestone:parseInt(t.dataset.pweeklymilestone??"4"),weeklyBonusPoints:parseInt(t.dataset.pweeklybonus??"100")}},a._doRender(!0);break;case"open-confirm-remove-person":a._modal={type:"confirm-remove-person",data:{pid:t.dataset.pid,pname:t.dataset.pname}},a._doRender(!0);break;case"reactivate-person":a._svc("reactivate_person",{person_id:t.dataset.pid});break;case"open-confirm-hard-delete-person":a._modal={type:"confirm-hard-delete-person",data:{pid:t.dataset.pid,pname:t.dataset.pname}},a._doRender(!0);break;case"open-edit-settings":a._modal={type:"edit-settings",surface:"drawer",data:{fname:t.dataset.fname,ppd:t.dataset.ppd,penaltyAlertTime:parseInt(t.dataset.palerttime??"800"),rankWeekday:parseInt(t.dataset.rankweekday??"0"),rankDrop:parseInt(t.dataset.rankdrop??"50"),rankGain:parseInt(t.dataset.rankgain??"75")}},a._doRender(!0);break;case"open-claim":a._modal={type:"claim",data:{tid:t.dataset.tid,name:t.dataset.name}},a._doRender(!0);break;case"open-add-reminder":a._modal={type:"add-reminder",data:{pid:t.dataset.pid||null}},a._doRender(!0);break;case"open-edit-streaks":a._modal={type:"edit-streaks",data:{pid:t.dataset.pid,pname:t.dataset.pname}},a._doRender(!0);break;case"close-modal":a._closeModal();break;case"ok-point-adjust":{let r=parseFloat(s("m-amount")),y=s("m-atype"),_=s("m-reason"),M=s("m-pid"),z=s("m-amode");if(!r||r<=0)break;let B={person_id:M,reason:_};y==="dollars"?B.dollar_amount=r:B.points=Math.round(r),a._svc(z==="award"?"award_bonus_points":"deduct_points",B),a._closeModal();break}case"ok-add-chore":case"ok-edit-chore":{let r=e==="ok-edit-chore",y=Jn(s,i,n,o,r);if(!y)break;a._svc(r?"update_chore":"add_chore",y),a._closeModal();break}case"set-streak":{let r=t.dataset.cid,y=t.dataset.pid,_=Math.max(0,parseInt(((x=o.getElementById(`m-streak-${r}`))==null?void 0:x.value)||"0"));a._svc("set_streak",{person_id:y,chore_id:r,count:_});break}case"rot-pool-add":case"rot-pool-remove":case"rot-pool-up":case"rot-pool-down":{let r=t.dataset.pid,y=o.getElementById("m-crot-pool-order"),_=o.getElementById("m-crot-pool-widget");if(!r||!y||!_)break;let M=y.value?y.value.split(",").filter(Boolean):[],z=M.indexOf(r);e==="rot-pool-add"?z===-1&&M.push(r):e==="rot-pool-remove"?z!==-1&&M.splice(z,1):e==="rot-pool-up"&&z>0?[M[z-1],M[z]]=[M[z],M[z-1]]:e==="rot-pool-down"&&z!==-1&&z<M.length-1&&([M[z+1],M[z]]=[M[z],M[z+1]]),y.value=M.join(","),_.innerHTML=ua(a._people(),M);break}case"ok-add-store-item":{let r=ka(s,o,!1,null);if(!r)break;a._svc("add_store_item",r),a._closeModal();break}case"ok-edit-store-item":{let r=(($=(m=(w=a._modal)==null?void 0:w.data)==null?void 0:m.item)==null?void 0:$.is_group_reward)??!1,y=ka(s,o,!0,r);if(!y)break;a._svc("update_store_item",y),a._closeModal();break}case"ok-add-person":{let r=s("m-pname").trim();if(!r)break;a._svc("add_person",{name:r,person_type:s("m-ptype"),avatar_color:s("m-pcolor")}),a._closeModal();break}case"ok-edit-person":{let r=s("m-pname").trim();if(!r)break;a._svc("update_person",{person_id:s("m-pid"),name:r,avatar_color:s("m-pcolor"),type:s("m-ptype"),allowance_points:parseInt(s("m-allowance-pts")||"0"),allowance_schedule:s("m-allowance-schedule"),allowance_weekday:parseInt(s("m-allowance-weekday")),allowance_monthday:parseInt(s("m-allowance-monthday")),notify_target:s("m-pnotify").trim(),code:s("m-pcode").trim().toUpperCase(),theme_key:s("m-ptheme"),child_mode:i("m-pchildmode"),completion_threshold_pct:Math.max(1,Math.min(100,n("m-completion-threshold")||80)),completion_milestone:Math.max(0,n("m-completion-milestone")||0),completion_bonus_points:Math.max(0,n("m-completion-bonus")||0),weekly_completion_threshold_pct:Math.max(1,Math.min(100,n("m-weekly-threshold")||80)),weekly_completion_milestone:Math.max(0,Math.min(52,n("m-weekly-milestone")||0)),weekly_completion_bonus_points:Math.max(0,n("m-weekly-bonus")||0)}),a._closeModal();break}case"ok-remove-person":{let r=s("m-rpid");if(!r)break;a._svc("remove_person",{person_id:r}),a._closeModal();break}case"ok-hard-delete-person":{let r=s("m-hdpid");if(!r)break;a._svc("hard_delete_person",{person_id:r}),a._closeModal();break}case"ok-edit-settings":{let r=s("m-fname").trim(),y=parseInt(s("m-ppd")||"10"),_=parseInt(s("m-alert-time")??"-1");if(!r)break;a._svc("update_settings",{family_name:r,points_per_dollar:y,penalty_alert_time:isNaN(_)?800:_}),a._closeModal();break}case"ok-claim":{let r=t.dataset.tid||s("m-cltid"),y=t.dataset.pid||s("m-clperson");if(!r||!y)break;a._svc("claim_task",{task_id:r,person_id:y}),a._closeModal();break}case"ok-add-reminder":{let r=s("m-rname").trim(),y=s("m-rperson");if(!r||!y)break;a._svc("add_chore",{name:r,chore_type:"reminder",assigned_to:[y],recurrence_type:s("m-rrec"),approval_required:!1,points:0,category_label:""}),a._closeModal();break}case"pick-template":{let r=(S=o.getElementById("m-ctpl"))==null?void 0:S.value;if(!r)break;let y=Ft.find(z=>z.key===r);if(!y)break;let _=(z,B)=>{let L=o.getElementById(z);L!==null&&(L.value=B)};_("m-cname",y.name),_("m-cdesc",y.description||"");let M=o.getElementById("m-clabel");M&&y.category&&[...M.options].find(B=>B.value===y.category)&&(M.value=y.category),y.points&&_("m-cpts",y.points),(v=o.getElementById("m-cname"))==null||v.focus();break}case"pick-icon":{let r=t.dataset.icon,y=o.getElementById("m-cicon");y&&(y.value=r);let _=o.getElementById("m-cicon-preview");_&&(_.innerHTML=""),o.querySelectorAll(".fh-icon-cell").forEach(z=>z.classList.toggle("selected",z.dataset.icon===r));let M=o.getElementById("m-icon-selected");if(M){let z=t.querySelector("span:first-child"),B=t.title||r;M.innerHTML='<span class="fh-icon-sel-icon" style="display:inline-flex;width:20px;height:20px;color:var(--fh-accent)">'+(z?z.innerHTML:"")+`</span> <span class="fh-icon-sel-lbl">${B}</span>`}break}case"upload-icon":{let r=o.getElementById("m-icon-upload");if(!r){console.warn("[family-hub] upload-icon: hidden file input not found");break}r.value="",r.click();break}case"clear-icon":{let r=o.getElementById("m-cicon");r&&(r.value="");let y=o.getElementById("m-cicon-preview");y&&(y.innerHTML=""),o.querySelectorAll(".fh-icon-cell.selected").forEach(_=>_.classList.remove("selected"));break}case"approve-subscription-redemption":{let r=t.dataset.rid,y=t.dataset.period||"monthly",_=a._people().find(z=>z.type==="parent"),M={redemption_id:r,approved_by:(_==null?void 0:_.person_id)||""};y==="weekly"?M.subscription_anchor=parseInt(((h=o.getElementById(`m-sub-wday-${r}`))==null?void 0:h.value)??"0"):y!=="daily"&&(M.subscription_anchor=Math.max(1,Math.min(31,parseInt(((k=o.getElementById(`m-sub-dom-${r}`))==null?void 0:k.value)??"1")))),a._svc("approve_redemption",M);break}case"admin-cancel-subscription":{let r=t.dataset.sname||"this subscription";if(!confirm(`Cancel "${r}"?
+This cannot be undone.`))break;a._svc("rebuild_data",{});break;case"open-award":a._modal={type:"award",data:{pid:t.dataset.pid,pname:t.dataset.pname}},a._doRender(!0);break;case"open-deduct":a._modal={type:"deduct",data:{pid:t.dataset.pid,pname:t.dataset.pname}},a._doRender(!0);break;case"open-add-chore":a._adminSelectedChoreId=null,a._modal={type:"add-chore",surface:"drawer",data:{}},a._doRender(!0);break;case"select-chore-row":case"open-edit-chore":{let l=a._attrs("sensor.family_hub_needs_attention"),k=(l.all_chores||l.active_chores||[]).find(M=>M.chore_id===t.dataset.cid);if(!k)break;a._adminSelectedChoreId=null,a._modal={type:"edit-chore",surface:"drawer",data:{chore:k}},a._doRender(!0);break}case"open-add-store-item":a._adminSelectedItemId=null,a._modal={type:"add-store-item",data:{}},a._doRender(!0);break;case"open-edit-store-item":{let y=(a._attrs("sensor.family_hub_needs_attention").store_items||[]).find(k=>k.item_id===t.dataset.iid);if(!y)break;a._adminSelectedItemId=null,a._modal={type:"edit-store-item",data:{item:y}},a._doRender(!0);break}case"open-add-person":a._modal={type:"add-person",data:{}},a._doRender(!0);break;case"open-edit-person":a._modal={type:"edit-person",surface:"drawer",data:{pid:t.dataset.pid,pname:t.dataset.pname,ptype:t.dataset.ptype,pcolor:t.dataset.pcolor,allowancePts:parseInt(t.dataset.pallowpts||"0"),allowanceSched:t.dataset.pallowsched||"weekly",allowanceWday:parseInt(t.dataset.pallowwday??"5"),allowanceMday:parseInt(t.dataset.pallowmday||"1"),notifyTarget:t.dataset.pnotify||"",code:t.dataset.pcode||"",theme:t.dataset.ptheme||"classic",childMode:t.dataset.pchildmode==="true",completionThreshold:parseInt(t.dataset.pcompletionthreshold??"80"),completionMilestone:parseInt(t.dataset.pcompletionmilestone??"7"),completionBonusPoints:parseInt(t.dataset.pcompletionbonus??"50"),weeklyThreshold:parseInt(t.dataset.pweeklythreshold??"80"),weeklyMilestone:parseInt(t.dataset.pweeklymilestone??"4"),weeklyBonusPoints:parseInt(t.dataset.pweeklybonus??"100")}},a._doRender(!0);break;case"open-confirm-remove-person":a._modal={type:"confirm-remove-person",data:{pid:t.dataset.pid,pname:t.dataset.pname}},a._doRender(!0);break;case"reactivate-person":a._svc("reactivate_person",{person_id:t.dataset.pid});break;case"open-confirm-hard-delete-person":a._modal={type:"confirm-hard-delete-person",data:{pid:t.dataset.pid,pname:t.dataset.pname}},a._doRender(!0);break;case"open-edit-settings":a._modal={type:"edit-settings",surface:"drawer",data:{fname:t.dataset.fname,ppd:t.dataset.ppd,penaltyAlertTime:parseInt(t.dataset.palerttime??"800"),rankWeekday:parseInt(t.dataset.rankweekday??"0"),rankDrop:parseInt(t.dataset.rankdrop??"50"),rankGain:parseInt(t.dataset.rankgain??"75")}},a._doRender(!0);break;case"open-claim":a._modal={type:"claim",data:{tid:t.dataset.tid,name:t.dataset.name}},a._doRender(!0);break;case"open-add-reminder":a._modal={type:"add-reminder",data:{pid:t.dataset.pid||null}},a._doRender(!0);break;case"open-edit-streaks":a._modal={type:"edit-streaks",data:{pid:t.dataset.pid,pname:t.dataset.pname}},a._doRender(!0);break;case"close-modal":a._closeModal();break;case"ok-point-adjust":{let l=parseFloat(s("m-amount")),y=s("m-atype"),k=s("m-reason"),M=s("m-pid"),A=s("m-amode");if(!l||l<=0)break;let B={person_id:M,reason:k};y==="dollars"?B.dollar_amount=l:B.points=Math.round(l),a._svc(A==="award"?"award_bonus_points":"deduct_points",B),a._closeModal();break}case"ok-add-chore":case"ok-edit-chore":{let l=e==="ok-edit-chore",y=Jn(s,i,n,o,l);if(!y)break;a._svc(l?"update_chore":"add_chore",y),a._closeModal();break}case"set-streak":{let l=t.dataset.cid,y=t.dataset.pid,k=Math.max(0,parseInt(((v=o.getElementById(`m-streak-${l}`))==null?void 0:v.value)||"0"));a._svc("set_streak",{person_id:y,chore_id:l,count:k});break}case"rot-pool-add":case"rot-pool-remove":case"rot-pool-up":case"rot-pool-down":{let l=t.dataset.pid,y=o.getElementById("m-crot-pool-order"),k=o.getElementById("m-crot-pool-widget");if(!l||!y||!k)break;let M=y.value?y.value.split(",").filter(Boolean):[],A=M.indexOf(l);e==="rot-pool-add"?A===-1&&M.push(l):e==="rot-pool-remove"?A!==-1&&M.splice(A,1):e==="rot-pool-up"&&A>0?[M[A-1],M[A]]=[M[A],M[A-1]]:e==="rot-pool-down"&&A!==-1&&A<M.length-1&&([M[A+1],M[A]]=[M[A],M[A+1]]),y.value=M.join(","),k.innerHTML=ua(a._people(),M);break}case"ok-add-store-item":{let l=wa(s,o,!1,null);if(!l)break;a._svc("add_store_item",l),a._closeModal();break}case"ok-edit-store-item":{let l=(($=(f=(_=a._modal)==null?void 0:_.data)==null?void 0:f.item)==null?void 0:$.is_group_reward)??!1,y=wa(s,o,!0,l);if(!y)break;a._svc("update_store_item",y),a._closeModal();break}case"ok-add-person":{let l=s("m-pname").trim();if(!l)break;a._svc("add_person",{name:l,person_type:s("m-ptype"),avatar_color:s("m-pcolor")}),a._closeModal();break}case"ok-edit-person":{let l=s("m-pname").trim();if(!l)break;a._svc("update_person",{person_id:s("m-pid"),name:l,avatar_color:s("m-pcolor"),type:s("m-ptype"),allowance_points:parseInt(s("m-allowance-pts")||"0"),allowance_schedule:s("m-allowance-schedule"),allowance_weekday:parseInt(s("m-allowance-weekday")),allowance_monthday:parseInt(s("m-allowance-monthday")),notify_target:s("m-pnotify").trim(),code:s("m-pcode").trim().toUpperCase(),theme_key:s("m-ptheme"),child_mode:i("m-pchildmode"),completion_threshold_pct:Math.max(1,Math.min(100,n("m-completion-threshold")||80)),completion_milestone:Math.max(0,n("m-completion-milestone")||0),completion_bonus_points:Math.max(0,n("m-completion-bonus")||0),weekly_completion_threshold_pct:Math.max(1,Math.min(100,n("m-weekly-threshold")||80)),weekly_completion_milestone:Math.max(0,Math.min(52,n("m-weekly-milestone")||0)),weekly_completion_bonus_points:Math.max(0,n("m-weekly-bonus")||0)}),a._closeModal();break}case"ok-remove-person":{let l=s("m-rpid");if(!l)break;a._svc("remove_person",{person_id:l}),a._closeModal();break}case"ok-hard-delete-person":{let l=s("m-hdpid");if(!l)break;a._svc("hard_delete_person",{person_id:l}),a._closeModal();break}case"ok-edit-settings":{let l=s("m-fname").trim(),y=parseInt(s("m-ppd")||"10"),k=parseInt(s("m-alert-time")??"-1");if(!l)break;a._svc("update_settings",{family_name:l,points_per_dollar:y,penalty_alert_time:isNaN(k)?800:k}),a._closeModal();break}case"ok-claim":{let l=t.dataset.tid||s("m-cltid"),y=t.dataset.pid||s("m-clperson");if(!l||!y)break;a._svc("claim_task",{task_id:l,person_id:y}),a._closeModal();break}case"ok-add-reminder":{let l=s("m-rname").trim(),y=s("m-rperson");if(!l||!y)break;a._svc("add_chore",{name:l,chore_type:"reminder",assigned_to:[y],recurrence_type:s("m-rrec"),approval_required:!1,points:0,category_label:""}),a._closeModal();break}case"pick-template":{let l=(S=o.getElementById("m-ctpl"))==null?void 0:S.value;if(!l)break;let y=Ft.find(A=>A.key===l);if(!y)break;let k=(A,B)=>{let L=o.getElementById(A);L!==null&&(L.value=B)};k("m-cname",y.name),k("m-cdesc",y.description||"");let M=o.getElementById("m-clabel");M&&y.category&&[...M.options].find(B=>B.value===y.category)&&(M.value=y.category),y.points&&k("m-cpts",y.points),(x=o.getElementById("m-cname"))==null||x.focus();break}case"pick-icon":{let l=t.dataset.icon,y=o.getElementById("m-cicon");y&&(y.value=l);let k=o.getElementById("m-cicon-preview");k&&(k.innerHTML=""),o.querySelectorAll(".fh-icon-cell").forEach(A=>A.classList.toggle("selected",A.dataset.icon===l));let M=o.getElementById("m-icon-selected");if(M){let A=t.querySelector("span:first-child"),B=t.title||l;M.innerHTML='<span class="fh-icon-sel-icon" style="display:inline-flex;width:20px;height:20px;color:var(--fh-accent)">'+(A?A.innerHTML:"")+`</span> <span class="fh-icon-sel-lbl">${B}</span>`}break}case"upload-icon":{let l=o.getElementById("m-icon-upload");if(!l){console.warn("[family-hub] upload-icon: hidden file input not found");break}l.value="",l.click();break}case"clear-icon":{let l=o.getElementById("m-cicon");l&&(l.value="");let y=o.getElementById("m-cicon-preview");y&&(y.innerHTML=""),o.querySelectorAll(".fh-icon-cell.selected").forEach(k=>k.classList.remove("selected"));break}case"approve-subscription-redemption":{let l=t.dataset.rid,y=t.dataset.period||"monthly",k=a._people().find(A=>A.type==="parent"),M={redemption_id:l,approved_by:(k==null?void 0:k.person_id)||""};y==="weekly"?M.subscription_anchor=parseInt(((h=o.getElementById(`m-sub-wday-${l}`))==null?void 0:h.value)??"0"):y!=="daily"&&(M.subscription_anchor=Math.max(1,Math.min(31,parseInt(((w=o.getElementById(`m-sub-dom-${l}`))==null?void 0:w.value)??"1")))),a._svc("approve_redemption",M);break}case"admin-cancel-subscription":{let l=t.dataset.sname||"this subscription";if(!confirm(`Cancel "${l}"?
 
-This will immediately end the subscription.`))break;let y=a._people().find(_=>_.type==="parent");a._svc("admin_cancel_subscription",{subscription_id:t.dataset.subid,canceled_by:(y==null?void 0:y.person_id)||""});break}case"admin-edit-subscription-open":a._editingSubId=t.dataset.subid,a._doRender();break;case"admin-edit-subscription-cancel":a._editingSubId=null,a._doRender();break;case"admin-update-subscription":{let r=t.dataset.subid,y=t.closest(".fh-point-row"),_=((A=y==null?void 0:y.querySelector(`#sub-edit-period-${CSS.escape(r)}`))==null?void 0:A.value)||null,M=(F=(E=y==null?void 0:y.querySelector(`#sub-edit-cost-${CSS.escape(r)}`))==null?void 0:E.value)==null?void 0:F.trim(),z=(R=(D=y==null?void 0:y.querySelector(`#sub-edit-date-${CSS.escape(r)}`))==null?void 0:D.value)==null?void 0:R.trim(),B={subscription_id:r};if(_&&(B.period=_),M!==void 0&&M!==""){let L=parseFloat(M);!isNaN(L)&&L>=0&&(B.dollar_cost_override=L)}z&&(B.next_renewal_date=z),a._editingSubId=null,a._svc("update_subscription",B);break}case"approve-cancel-subscription":{let r=a._people().find(y=>y.type==="parent");a._svc("approve_cancel_subscription",{subscription_id:t.dataset.subid,approved_by:(r==null?void 0:r.person_id)||""});break}case"decline-cancel-subscription":{let r=a._people().find(y=>y.type==="parent");a._svc("decline_cancel_subscription",{subscription_id:t.dataset.subid,declined_by:(r==null?void 0:r.person_id)||""});break}case"meals-tab":a._mealsTab=t.dataset.tab||"week",a._mealsDrawer=null,a._mealsRecipe=null,a._mealsDayPick=null,a._doRender(!0);break;case"meals-week-prev":a._mealsWeekPage=Math.max(0,(a._mealsWeekPage||0)-1),a._doRender(!0);break;case"meals-week-next":a._mealsWeekPage=Math.min(4,(a._mealsWeekPage||0)+1),a._doRender(!0);break;case"meals-week-today":a._mealsWeekPage=0,a._doRender(!0);break;case"meals-week-tap-day":{let r=t.dataset.date;if(!r)break;a._mealsTab="plan",a._mealsJumpDate=r,a._mealsDrawer=null,a._doRender(!0);break}case"meals-plan-select-day":a._mealsJumpDate=t.dataset.date||null,a._mealsDrawer=null,a._doRender(!0);break;case"meals-clear-day":a._svc("meals_clear_day",{date:t.dataset.date});break;case"meals-clear-dinner":a._svc("meals_clear_dinner",{date:t.dataset.date});break;case"meals-clear-bl":a._svc("meals_set_bl",{date:t.dataset.date,slot:t.dataset.slot,meal_id:"",scope:"today",week_start:"Sunday"});break;case"meals-remove-side":{let r=t.dataset.date,y=t.dataset.side,M=(a._attrs("sensor.family_hub_meals").plan||{})[r]||{},z=(M.d&&M.d.sides||[]).filter(B=>B!==y);a._svc("meals_set_dinner_sides",{date:r,sides:z});break}case"meals-rhythm-pop":{let r=t.dataset.weekday,y=a.shadowRoot.getElementById("fh-rh-pop-"+r);a.shadowRoot.querySelectorAll("[id^='fh-rh-pop-']").forEach(_=>{_.id!=="fh-rh-pop-"+r&&(_.style.display="none")}),y&&(y.style.display=y.style.display==="none"?"":"none");break}case"meals-set-rhythm":{let r=t.dataset.weekday,y=t.dataset.theme||"";a._svc("meals_set_rhythm",{weekday:parseInt(r,10),...y?{theme_key:y}:{}});let _=a.shadowRoot.getElementById("fh-rh-pop-"+r);_&&(_.style.display="none");break}case"meals-open-drawer":case"meals-open-sides":{let r=t.dataset.kind||(e==="meals-open-sides"?"d-sides":"d-main"),y=t.dataset.date||a._mealsJumpDate||null;if(!y)break;let M=(a._attrs("sensor.family_hub_meals").plan||{})[y]||{},z=r==="d-sides"?"sides":r==="b"||r==="l"?"browse":"protein",B=r==="d-sides"&&M.d?M.d.sides||[]:[];a._mealsDrawer={kind:r,dateISO:y,step:z,cat:null,cut:null,scope:"today",favOnly:!1,pendingMainId:null,pickedProtein:null,nudgeOff:!1,fatsOff:!1,selSides:B},a._doRender(!0);break}case"meals-close-drawer":a._mealsDrawer=null,a._doRender(!0);break;case"meals-drawer-back":{let r=a._mealsDrawer;if(!r)break;if(r.step==="cut")r.step="protein",r.cat=null;else if(r.step==="make"){let{PROTEINS:y}=Qe(),_=r.cat?(((T=y[r.cat])==null?void 0:T.cuts)||[]).filter(M=>!0):[];r.cat&&_.length>1?(r.step="cut",r.cut=null):(r.step="protein",r.cat=null,r.cut=null)}else if(r.step==="browse")r.step="protein";else if(r.step==="tacoprotein")r.step="make",r.pendingMainId=null;else if(r.step==="sides"&&r.pendingMainId){let{mealById:y,allMeals:_}=Qe(),M=y(r.pendingMainId,a._attrs("sensor.family_hub_meals").custom||[]);M&&M.proteinPick?r.step="tacoprotein":(r.step="make",r.pendingMainId=null)}a._mealsDrawer={...r},a._doRender(!0);break}case"meals-drawer-browse":if(!a._mealsDrawer)break;a._mealsDrawer={...a._mealsDrawer,step:"browse"},a._doRender(!0);break;case"meals-drawer-favonly":if(!a._mealsDrawer)break;a._mealsDrawer={...a._mealsDrawer,favOnly:!a._mealsDrawer.favOnly},a._doRender(!0);break;case"meals-drawer-scope":if(!a._mealsDrawer)break;a._mealsDrawer={...a._mealsDrawer,scope:t.dataset.scope||"today"},a._doRender(!0);break;case"meals-drawer-pick-cat":{let r=a._mealsDrawer;if(!r)break;let y=t.dataset.cat,{PROTEINS:_,MEALS:M}=Qe(),z=a._attrs("sensor.family_hub_meals").custom||[],L=M.concat(z).filter(J=>J.types.includes("d")&&!J.special&&J.protein===y),q=(((P=_[y])==null?void 0:P.cuts)||[]).filter(J=>L.some(Ze=>Ze.cut===J.id));q.length>1?a._mealsDrawer={...r,cat:y,step:"cut"}:a._mealsDrawer={...r,cat:y,cut:q.length===1?q[0].id:null,step:"make"},a._doRender(!0);break}case"meals-drawer-pick-cut":if(!a._mealsDrawer)break;a._mealsDrawer={...a._mealsDrawer,cut:t.dataset.cut,step:"make"},a._doRender(!0);break;case"meals-drawer-pick-main":{let r=a._mealsDrawer;if(!r)break;let y=t.dataset.meal,{mealById:_,allMeals:M}=Qe(),z=a._attrs("sensor.family_hub_meals").custom||[],B=_(y,z);if(!B)break;if(B.special)a._svc("meals_set_dinner",{date:r.dateISO,main:y,sides:[]}),Yt(a,r.dateISO,B);else{let L=new Set(B.sides||[]);B.proteinPick?a._mealsDrawer={...r,pendingMainId:y,pickedProtein:B.defaultPick||B.proteinPick[0],selSides:[...L],step:"tacoprotein",nudgeOff:!1,fatsOff:!1}:a._mealsDrawer={...r,pendingMainId:y,selSides:[...L],step:"sides",nudgeOff:!1,fatsOff:!1},a._doRender(!0)}break}case"meals-drawer-pick-special":{let r=a._mealsDrawer;if(!r)break;let y=t.dataset.meal,{mealById:_}=Qe(),M=a._attrs("sensor.family_hub_meals").custom||[];a._svc("meals_set_dinner",{date:r.dateISO,main:y,sides:[]}),Yt(a,r.dateISO,_(y,M));break}case"meals-drawer-pick-taco-protein":{let r=a._mealsDrawer;if(!r)break;a._mealsDrawer={...r,pickedProtein:t.dataset.protein,step:"sides"},a._doRender(!0);break}case"meals-drawer-pick-bl":{let r=a._mealsDrawer;if(!r)break;a._svc("meals_set_bl",{date:r.dateISO,slot:r.kind,meal_id:t.dataset.meal,scope:r.scope||"today",week_start:"Sunday"}),a._mealsDrawer=null,a._doRender(!0);break}case"meals-toggle-side":{let r=a._mealsDrawer;if(!r)break;let y=t.dataset.side,_=new Set(r.selSides||[]);_.has(y)?_.delete(y):_.add(y),a._mealsDrawer={...r,selSides:[..._]},a._doRender(!0);break}case"meals-dismiss-nudge":if(!a._mealsDrawer)break;a._mealsDrawer={...a._mealsDrawer,nudgeOff:!0},a._doRender(!0);break;case"meals-dismiss-fats":if(!a._mealsDrawer)break;a._mealsDrawer={...a._mealsDrawer,fatsOff:!0},a._doRender(!0);break;case"meals-drawer-no-sides":{let r=a._mealsDrawer;if(!r)break;if(r.kind==="d-sides")a._svc("meals_set_dinner_sides",{date:r.dateISO,sides:[]});else{let{variantFor:y,mealById:_,parseISO:M}=Qe(),z=a._attrs("sensor.family_hub_meals").custom||[],B=_(r.pendingMainId,z),L=B?y(B,M(r.dateISO),r.pickedProtein):"";a._svc("meals_set_dinner",{date:r.dateISO,main:r.pendingMainId,sides:[],...r.pickedProtein?{protein:r.pickedProtein}:{},...L?{variant:L}:{}}),Yt(a,r.dateISO,B);return}a._mealsDrawer=null,a._doRender(!0);break}case"meals-drawer-done-sides":{let r=a._mealsDrawer;if(!r)break;if(r.kind==="d-sides")a._svc("meals_set_dinner_sides",{date:r.dateISO,sides:r.selSides||[]}),a._mealsDrawer=null,a._doRender(!0);else{let{variantFor:y,mealById:_,parseISO:M}=Qe(),z=a._attrs("sensor.family_hub_meals").custom||[],B=_(r.pendingMainId,z),L=B?y(B,M(r.dateISO),r.pickedProtein):"";a._svc("meals_set_dinner",{date:r.dateISO,main:r.pendingMainId,sides:r.selSides||[],...r.pickedProtein?{protein:r.pickedProtein}:{},...L?{variant:L}:{}}),Yt(a,r.dateISO,B)}break}case"meals-drawer-next-day":{let r=a._mealsDrawer;if(!r)break;qn(a,r.dateISO);break}case"meals-toggle-have":a._svc("meals_toggle_have",{ingredient_id:t.dataset.ing});break;case"meals-pantry-pick":a._mealsDayPick=t.dataset.meal||null,a._doRender(!0);break;case"meals-daypick-pick":{let r=t.dataset.date,y=t.dataset.meal,M=a._attrs("sensor.family_hub_meals").custom||[],{mealById:z}=Qe(),B=z(y,M);if(!r||!B)break;a._svc("meals_set_dinner",{date:r,main:y,sides:(B.sides||[]).slice(0,2)}),a._mealsDayPick=null,a._doRender(!0);break}case"meals-close-daypick":a._mealsDayPick=null,a._doRender(!0);break;case"meals-lib-filter":a._mealsLibFilter=t.dataset.filter||"all",a._doRender(!0);break;case"meals-open-recipe":a._mealsRecipe=t.dataset.meal||null,a._doRender(!0);break;case"meals-close-recipe":a._mealsRecipe=null,a._doRender(!0);break;case"meals-recipe-plan":a._mealsRecipe=null,a._mealsDayPick=t.dataset.meal||null,a._doRender(!0);break;case"meals-lib-plan-meal":a._mealsDayPick=t.dataset.meal||null,a._doRender(!0);break;case"meals-toggle-fav":a._svc("meals_toggle_fav",{meal_id:t.dataset.meal});break;case"meals-ideas-refresh":a._doRender(!0);break;case"meals-save-idea":{let{IDEAS_POOL:r}=Qe(),y=r.find(M=>M.id===t.dataset.meal);if(!y)break;let _={id:y.id,name:y.name,glyph:y.glyph,types:["d"],groups:y.groups||[],ing:y.ing||[],sides:y.sides||[],protein:y.protein||"meatless",cut:y.cut||"",fav:!1,source:"Spoonacular"};a._svc("meals_add_custom_meal",{meal:_});break}case"meals-toggle-groc":a._svc("meals_toggle_grocery",{key:t.dataset.key,checked:t.dataset.checked==="true"});break;case"meals-reset-groc":{let y=a._attrs("sensor.family_hub_meals").groc||{},_=t.dataset.weekkey||"";Object.entries(y).forEach(([M,z])=>{z&&M.startsWith(_+":")&&a._svc("meals_toggle_grocery",{key:M,checked:!1})});break}case"meals-admin-subtab":a._mealsAdminSubtab=t.dataset.sub,a._mealsAdminRecipeId=null,a._doRender(!0);break;case"meals-admin-add-meal":{let r=s("ma-name").trim();if(!r){alert("Give the meal a name first.");break}let y=["b","l","d"].filter(he=>i("ma-type-"+he));if(!y.length){alert("Pick breakfast, lunch, or dinner.");break}let _=Xe.filter(he=>i("ma-grp-"+he)),M=at.filter(he=>i("ma-side-"+he.id)).map(he=>he.id),B=Oe(a._attrs("sensor.family_hub_meals").customIng||[]).filter(he=>i("ma-ing-"+he.id)).map(he=>he.id),L=s("ma-protcut"),[q,J]=L?L.split(":"):["",""],bt={id:"custom-"+(r.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"")||Date.now()),name:r,glyph:s("ma-glyph")||"\u{1F37D}\uFE0F",types:y,groups:_,ing:B,sides:M,fav:!1};q&&(bt.protein=q),J&&(bt.cut=J),a._svc("meals_add_custom_meal",{meal:bt});break}case"meals-admin-remove-meal":a._svc("meals_remove_custom_meal",{meal_id:t.dataset.id});break;case"meals-admin-add-ing":{let r=s("mi-name").trim();if(!r){alert("Name the ingredient first.");break}let y="custom-ing-"+(r.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"")||Date.now());a._svc("meals_add_ingredient",{ingredient:{id:y,label:r,glyph:s("mi-glyph")||"\u{1F955}",cat:s("mi-cat"),aisle:s("mi-aisle")}});break}case"meals-admin-remove-ing":a._svc("meals_remove_ingredient",{ingredient_id:t.dataset.id});break;case"meals-admin-recipe-edit":a._mealsAdminRecipeId=t.dataset.id,a._doRender(!0);break;case"meals-admin-recipe-cancel":a._mealsAdminRecipeId=null,a._doRender(!0);break;case"meals-admin-recipe-save":{let r=M=>s(M).split(`
-`).map(z=>z.trim()).filter(Boolean),y=r("mr-ing"),_=r("mr-steps");if(!y.length||!_.length){alert("A recipe needs at least one ingredient and one step.");break}a._svc("meals_save_recipe",{meal_id:t.dataset.id,recipe:{time:s("mr-time").trim()||"\u2014",serves:parseInt(s("mr-serves"),10)||5,ingredients:y,steps:_}}),a._mealsAdminRecipeId=null,a._doRender(!0);break}}}function Qe(){return jt}function Yt(e,t,a){e._mealsDrawer={kind:"d",dateISO:t,step:"confirm",savedName:a?a.name:"Dinner",savedGlyph:a?a.glyph:"\u2713"},e._doRender(!0)}function qn(e,t){let{today:a,addDays:o,iso:s,HORIZON_DAYS:i}=jt,n=e._attrs("sensor.family_hub_meals").plan||{},l=ft(t),d=null;for(let p=1;p<i;p++){let c=o(l,p);if(c>o(a(),i-1))break;let b=n[s(c)];if(!b||!b.d){d=c;break}}if(d){let p=s(d);e._mealsJumpDate=p,e._mealsDrawer={kind:"d-main",dateISO:p,step:"protein",cat:null,cut:null,scope:"today",favOnly:!1,pendingMainId:null,pickedProtein:null,nudgeOff:!1,fatsOff:!1,selSides:[]}}else e._mealsDrawer=null;e._doRender(!0)}function no(e,t){return Array.from(t.querySelectorAll(`.${e}:checked`)).map(a=>a.value)}function ro(e){let t=(e||"").trim();return t?t.startsWith("data:")?t:t.toLowerCase():""}function Jn(e,t,a,o,s){var v;let i=e("m-cname").trim();if(!i)return null;let n=e("m-crec"),l=e("m-ctype"),d=no("m-assign-person",o),p=Array.from(o.querySelectorAll(".m-wd-day:checked")).map(h=>parseInt(h.value)),c=Array.from(o.querySelectorAll(".m-df-day:checked")).map(h=>parseInt(h.value)),b=(e("m-dom-days")||"").split(",").map(h=>parseInt(h.trim())).filter(h=>Number.isFinite(h)&&h>=1&&h<=31),g=b.length?[...new Set(b)].sort((h,k)=>h-k):[1],u=ro(e("m-cicon")),x={name:i,chore_type:l,category_label:e("m-clabel"),assigned_to:d,points:a("m-cpts"),approval_required:t("m-cappr"),penalty_enabled:t("m-cpenalty"),penalty_points:a("m-cpenalty-pts"),icon:u};if(t("m-cpenalty")){let h=parseInt(e("m-daily-threshold")||"0");h>0&&(x.daily_penalty_after_days=h)}l==="claimable"&&(x.claimable_subtype=e("m-csubtype")||"fcfs",x.claimable_subtype==="multi_claim"&&(x.max_claimants=Math.max(2,a("m-max-claimants")||2),x.multi_claim_points_mode=e("m-points-mode")||"full"));let w=e("m-cdesc").trim();w&&(x.description=w);let m=o.getElementById("m-chore-expiry-section");if(m&&m.style.display!=="none"){let h=parseInt(e("m-cexpiry")||"0");h>0&&(x.expires_after_days=h)}x.streak_milestone=Math.max(0,a("m-streak-milestone")||0),x.streak_bonus_points=Math.max(0,a("m-streak-bonus")||0);let S=parseInt(e("m-reminder-time")??"-1");if(x.reminder_time=isNaN(S)?-1:S,l==="assigned"){let h=t("m-crot-enabled"),k=e("m-crot-pool-order")||"",A=h&&k?k.split(",").filter(Boolean):[];x.rotation_pool=A,x.rotation_cadence=h&&A.length?e("m-crot-cadence")||"per_instance":"",x.rotation_switch_weekday=parseInt(e("m-crot-switch-day")||"0")||0}else x.rotation_pool=[],x.rotation_cadence="";return s?(x.chore_id=e("m-cid"),x.active=((v=o.querySelector("#m-cactive"))==null?void 0:v.checked)!==!1,x.weekdays=p,x.day_filter=c,x.recurrence={type:n,weekdays:p,day_filter:c,...n==="monthly_on_date"?{days_of_month:g,day_of_month:g[0]}:{}}):(x.recurrence_type=n,p.length&&(x.weekdays=p),c.length&&(x.day_filter=c),n==="monthly_on_date"&&(x.days_of_month=g,x.day_of_month=g[0])),x}function ka(e,t,a,o){var b,g,u;let s=a?e("m-eiid"):null,i=e("m-sname").trim(),n=parseFloat(e("m-sdollar"));if(a&&!s||!i||!n||n<=0)return null;let l=((b=t.querySelector("#m-sgroup"))==null?void 0:b.checked)||!1,d=e("m-sscope"),p={name:i,dollar_value:n,scope:d,description:e("m-sdesc").trim(),category_label:e("m-scat")||"",max_per_period:parseInt(e("m-smaxperiod")||"0"),period:e("m-speriod")||"week",icon:ro(e("m-cicon"))};if(a&&(p.item_id=s,p.active=((g=t.querySelector("#m-sactive"))==null?void 0:g.checked)!==!1),l){let x=[...t.querySelectorAll(".m-scontrib")].filter(m=>parseInt(m.value)>0).map(m=>({person_id:m.dataset.pid,share_pct:parseInt(m.value)}));if(x.length===0)return alert("Group reward needs at least one contributor with a share > 0%."),null;let w=x.reduce((m,$)=>m+$.share_pct,0);if(w!==100)return alert(`Contributor shares must sum to exactly 100% (currently ${w}%). Use the "Equal split" button or adjust manually.`),null;p.is_group_reward=!0,p.contributors=x,p.scope="personal",p.person_ids=x.map(m=>m.person_id)}else a&&o&&(p.is_group_reward=!1,p.contributors=[]),d==="personal"?p.person_ids=no("m-sp-person",t):a&&(p.person_ids=[]);let c=((u=t.querySelector("#m-ssubtype"))==null?void 0:u.checked)||!1;return p.item_type=c?"subscription":"one_time",c&&(p.subscription_period=e("m-ssperiod")||"monthly"),p.require_daily_pct=Math.max(0,Math.min(100,parseInt(e("m-sreqpct")||"0")||0)),p.min_rank_index=Math.max(0,Math.min(4,parseInt(e("m-sminrank")||"0")||0)),p}function lo(e,t){var s;let a=(s=e==null?void 0:e.files)==null?void 0:s[0];if(!a)return;if(a.size>5*1024*1024){alert("Image too large. Please pick a file under 5 MB.");return}let o=new FileReader;o.onload=()=>{let i=new Image;i.onload=()=>{let l=i.width,d=i.height;l>d?l>128&&(d=Math.round(d*128/l),l=128):d>128&&(l=Math.round(l*128/d),d=128);let p=document.createElement("canvas");p.width=l,p.height=d,p.getContext("2d").drawImage(i,0,0,l,d);let b=p.toDataURL("image/png");if(b.length>350*1024){alert("Resized image is still too large. Pick a simpler image.");return}let g=t.getElementById("m-cicon");g&&(g.value=b);let u=t.getElementById("m-cicon-preview");u&&(u.innerHTML=`<div style="display:flex;align-items:center;gap:10px;padding:8px;border:1px solid var(--fh-border);border-radius:6px;background:var(--fh-surface)"><img src="${b}" style="width:48px;height:48px;object-fit:contain;border-radius:4px" alt=""><span style="font-size:.85rem;color:var(--fh-text-sec)">Custom uploaded image</span><button type="button" class="fh-btn fh-btn-ghost fh-btn-sm" data-act="clear-icon" style="margin-left:auto">Clear</button></div>`),t.querySelectorAll(".fh-icon-cell.selected").forEach(x=>x.classList.remove("selected"))},i.onerror=()=>alert("Could not read that image."),i.src=o.result},o.onerror=()=>alert("Could not read that file."),o.readAsDataURL(a)}var co=N(()=>{K();Kt();io();Ct()});var Xt,po=N(()=>{Ta();K();Q();ds();Vs();ao();Ut();na();ra();_t();co();Kt();Xt=class extends HTMLElement{static getStubConfig(){return{mode:"command_center"}}static getConfigElement(){return document.createElement("family-hub-card-editor")}constructor(){super(),this.attachShadow({mode:"open"}),this._cfg={},this._hass=null,this._model=null,this._lastDataRev=void 0,this._pendingRev=void 0,this._fetching=!1,this._modal=null,this._filter=null,this._tab="tasks",this._adminSec="today",this._flashing=new Set,this._pendingSubmit=new Set,this._expandedDescs=new Set,this._histFilter=null,this._choreFilter=null,this._expandedSkippedDates=new Set,this._view="home",this._backStack=[],this._viewPersonId=null,this._celebration=null,this._dragId=null,this._dragOverId=null,this._dragType=null,this._sortedChores=[],this._sortedStoreItems=[],this._adminSelectedChoreId=null,this._adminSort={col:null,dir:"asc"},this._adminCollapsedCats=new Set,this._choreFormTab="details",this._adminSelectedItemId=null,this._adminSortItems={col:null,dir:"asc"},this._adminCollapsedRewardCats=new Set,this._storeItemFilter=null,this._mealsTab="week",this._mealsWeekPage=0,this._mealsJumpDate=null,this._mealsDrawer=null,this._mealsRecipe=null,this._mealsDayPick=null,this._mealsNudgeDismissed=new Set,this._mealsFatDismissed=new Set,this._mealsLibFilter="all",this._mealsAdminSubtab="meals",this._mealsAdminRecipeId=null,this._abortCtrl=null,this._retryTimer=null}_reorderCategory(t,a,o){let s=this._attrs("sensor.family_hub_needs_attention").category_labels||[];if(!s.includes(t)||!s.includes(a))return;let i=s.filter(p=>p!==t),n=i.indexOf(a),l=o==="above"?n:n+1,d=[...i.slice(0,l),t,...i.slice(l)];this._svc("update_settings",{category_labels:d})}connectedCallback(){this._abortCtrl=new AbortController;let{signal:t}=this._abortCtrl,a=this.shadowRoot;a.addEventListener("click",o=>{let s=o.target.closest("[data-act]");s&&s.tagName!=="SELECT"&&wa(s.dataset.act,s,this)},{signal:t}),a.addEventListener("change",o=>{var i,n;let s=o.target;if(["chore-status-filter","chore-rec-filter","chore-filter","stats-rank","stats-completion","stats-streak-pct"].includes(s.dataset.act)){wa(s.dataset.act,s,this);return}if(s.dataset.act==="toggle-stats-streaks"){this._statsIncludeStreaks=s.checked,this._doRender(!0);return}if(s.dataset.act==="toggle-dollar"){this._svc("update_settings",{show_dollar_value_to_kids:s.checked});return}if(s.dataset.act==="toggle-global-penalty"){this._svc("update_settings",{penalties_paused:!s.checked});return}if(s.dataset.act==="toggle-person-penalty"){let l=s.dataset.pid;l&&this._svc("update_person",{person_id:l,penalties_paused:!s.checked});return}if(s.id==="m-everyone"&&a.querySelectorAll(".m-assign-person").forEach(l=>{var d;l.checked=s.checked,(d=l.closest(".fh-person-cb-chip"))==null||d.classList.toggle("checked",s.checked)}),s.classList.contains("m-assign-person")&&!s.checked){let l=a.getElementById("m-everyone");l&&(l.checked=!1)}(s.classList.contains("m-wd-day")||s.classList.contains("m-df-day"))&&((i=s.closest(".fh-wd-chip"))==null||i.classList.toggle("checked",s.checked)),(s.classList.contains("m-assign-person")||s.classList.contains("m-sp-person")||s.classList.contains("m-rot-person"))&&((n=s.closest(".fh-person-cb-chip"))==null||n.classList.toggle("checked",s.checked)),s.id==="m-icon-upload"&&s.files&&s.files.length>0&&lo(s,a),this._syncModalUI()},{signal:t}),a.addEventListener("dragstart",o=>{let s=o.target.closest("[data-drag-id]");s&&(this._dragId=s.dataset.dragId,this._dragType=s.dataset.dragType||"chore",this._dragSide=null,o.dataTransfer.effectAllowed="move",setTimeout(()=>s.classList.add("fh-dragging"),0))},{signal:t}),a.addEventListener("dragover",o=>{let s=o.target.closest("[data-drag-id]");if(!s||s.dataset.dragId===this._dragId)return;let i=s.dataset.dragType||"chore";if(i!==this._dragType)return;o.preventDefault();let n=s.getBoundingClientRect(),d=i==="category"?o.clientX<n.left+n.width/2?"above":"below":o.clientY<n.top+n.height/2?"above":"below";a.querySelectorAll(".fh-drop-above, .fh-drop-below").forEach(p=>p.classList.remove("fh-drop-above","fh-drop-below")),s.classList.add(d==="above"?"fh-drop-above":"fh-drop-below"),this._dragOverId=s.dataset.dragId,this._dragSide=d},{signal:t}),a.addEventListener("dragleave",o=>{let s=o.target.closest("[data-drag-id]");s&&s.classList.remove("fh-drop-above","fh-drop-below")},{signal:t}),a.addEventListener("drop",o=>{var w,m,$,S;o.preventDefault(),a.querySelectorAll(".fh-drop-above, .fh-drop-below, .fh-dragging").forEach(v=>v.classList.remove("fh-drop-above","fh-drop-below","fh-dragging"));let s=this._dragId,i=this._dragOverId,n=this._dragSide||"above",l=this._dragType||"chore";if(this._dragId=this._dragOverId=null,this._dragSide=null,this._dragType=null,!s||!i||s===i)return;if(l==="category"){this._reorderCategory(s,i,n);return}let d=l==="store-item"?{list:this._sortedStoreItems,idKey:"item_id",svc:"update_store_item",idField:"item_id"}:{list:this._sortedChores,idKey:"chore_id",svc:"update_chore",idField:"chore_id"},p=d.list.filter(v=>v[d.idKey]!==s),c=p.findIndex(v=>v[d.idKey]===i);if(c<0)return;let b,g;n==="above"?(b=((w=p[c-1])==null?void 0:w.sort_order)??p[c].sort_order-20,g=p[c].sort_order):(b=p[c].sort_order,g=((m=p[c+1])==null?void 0:m.sort_order)??b+20);let u=(b+g)/2,x=.01;if(Math.abs(g-u)<x||Math.abs(u-b)<x){let v=p.map((E,F)=>({...E,sort_order:(F+1)*10})),h=v.findIndex(E=>E[d.idKey]===i),k,A;n==="above"?(k=(($=v[h-1])==null?void 0:$.sort_order)??0,A=v[h].sort_order):(k=v[h].sort_order,A=((S=v[h+1])==null?void 0:S.sort_order)??k+20),u=(k+A)/2,v.forEach(E=>{E[d.idKey]!==s&&this._svc(d.svc,{[d.idField]:E[d.idKey],sort_order:E.sort_order})})}this._svc(d.svc,{[d.idField]:s,sort_order:u})},{signal:t}),a.addEventListener("dragend",()=>{a.querySelectorAll(".fh-drop-above, .fh-drop-below, .fh-dragging").forEach(o=>o.classList.remove("fh-drop-above","fh-drop-below","fh-dragging")),this._dragId=this._dragOverId=null,this._dragSide=null,this._dragType=null},{signal:t})}disconnectedCallback(){var t;(t=this._abortCtrl)==null||t.abort(),this._abortCtrl=null,this._retryTimer&&(clearTimeout(this._retryTimer),this._retryTimer=null)}setConfig(t){let a=["command_center","personal","maintenance","admin"];if(!t.mode)throw new Error("Family Hub: 'mode' is required");if(!a.includes(t.mode))throw new Error(`Family Hub: mode must be one of ${a.join(", ")}`);if(t.mode==="personal"&&!t.person)throw new Error("Family Hub: 'person' is required for personal mode");if(t.initial_view&&!/^(person|room):[A-Za-z0-9_-]+$/.test(t.initial_view))throw new Error("Family Hub: 'initial_view' must be 'person:<id>' or 'room:<id>'");this._cfg=t,t.mode==="command_center"&&t.initial_view&&!this._initialViewApplied&&(this._view=t.initial_view,this._backStack=["home"],this._initialViewApplied=!0),this._doRender(!0)}set hass(t){this._hass=t,this._maybeRender(),this._scheduleRetryIfNeeded()}_scheduleRetryIfNeeded(){if(this._retryTimer||this._model)return;let t=0,a=()=>{this._retryTimer=null,!(!this._hass||this._model)&&(t++,this._maybeRender(),!this._model&&t<15&&(this._retryTimer=setTimeout(a,2e3)))};this._retryTimer=setTimeout(a,2e3)}getCardSize(){return 5}_maybeRender(){var a,o;if(!this._hass||this._modal||this._adminSelectedChoreId||this._adminSelectedItemId||this._editingSubId||this._mealsAdminRecipeId)return;let t=(o=(a=this._hass.states["sensor.family_hub_needs_attention"])==null?void 0:a.attributes)==null?void 0:o.data_rev;t!==void 0&&(this._model!==null&&t===this._lastDataRev||this._fetchModel(t))}async _fetchModel(t){if(this._pendingRev=t,!this._fetching){this._fetching=!0;try{for(;this._lastDataRev!==this._pendingRev;){let a=this._pendingRev,o;try{o=await this._hass.connection.sendMessagePromise({type:"family_hub/get_model"})}catch(s){console.error("Family Hub: get_model failed",s);return}this._model=o,this._lastDataRev=a}}finally{this._fetching=!1}this._modal||this._adminSelectedChoreId||this._adminSelectedItemId||this._editingSubId||this._mealsAdminRecipeId||this._doRender(!1)}}_doRender(t=!1){if(!(!this._hass&&!t))try{let a=parseFloat(this._cfg.text_scale)||1,o=document.createElement("style");o.textContent=Mt+`:host { --fh-text-scale: ${a}; }`;let s=document.createElement("div");if(s.className="fh-card",!this._hass||!this._model)s.innerHTML='<div class="fh-empty">Loading\u2026</div>';else switch(["today","family","tasks","rewards","meals","history","settings"].includes(this._adminSec)||(this._adminSec="today"),this._cfg.mode){case"command_center":s.innerHTML=this._htmlCommandCenter();break;case"personal":s.innerHTML=oa(this);break;case"maintenance":s.innerHTML=Dt(this);break;case"admin":s.innerHTML=Us(this);break}if(this.shadowRoot.innerHTML="",this.shadowRoot.appendChild(o),this.shadowRoot.appendChild(s),this._modal&&this.shadowRoot.appendChild(this._buildModal()),this._celebration){let i=document.createElement("div");i.innerHTML=ms(this._celebration),this.shadowRoot.appendChild(i.firstElementChild)}this._syncModalUI()}catch(a){console.error("[family-hub] render error:",a);let o=document.createElement("style");o.textContent=Mt;let s=document.createElement("div");s.className="fh-card",s.innerHTML='<div class="fh-empty">Loading\u2026</div>',this.shadowRoot.innerHTML="",this.shadowRoot.appendChild(o),this.shadowRoot.appendChild(s),setTimeout(()=>{this._hass&&(this._lastDataRev=void 0,this._maybeRender())},3e3)}}_htmlCommandCenter(){let t=this._view||"home";if(t==="home")return va(this);let a="";if(t.startsWith("room:")){let o=t.slice(5),s=zs(o);a=s!=null&&s.render?s.render(this):'<div class="fh-empty">Unknown room.</div>'}else if(t.startsWith("person:")){let o=t.slice(7);this._viewPersonId=o;let s=this._findPerson(o),i=tt((s==null?void 0:s.theme_key)||"classic");if(a=oa(this),this._viewPersonId=null,i.handlesNavigation)return a}else return this._view="home",va(this);return to("Home")+a}_states(t){var a,o;return(o=(a=this._hass)==null?void 0:a.states)==null?void 0:o[t]}_attrs(t){var a;return this._model&&this._model[t]||((a=this._states(t))==null?void 0:a.attributes)||{}}_people(){return this._attrs("sensor.family_hub_needs_attention").people||[]}_findPerson(t){let a=(t||"").toLowerCase();return this._people().find(o=>o.name.toLowerCase()===a||o.person_id===t)||null}_personEntityId(t){return`sensor.family_hub_${La(t)}`}_svc(t,a){if(this._hass)try{let o=this._hass.callService(Pa,t,a);o&&typeof o.catch=="function"&&o.catch(s=>{var n,l;console.error(`[family-hub] service ${t} failed:`,s,"payload:",a);let i=((n=s==null?void 0:s.body)==null?void 0:n.message)||((l=s==null?void 0:s.error)==null?void 0:l.message)||(s==null?void 0:s.message)||(s==null?void 0:s.error)||"";if(!i||typeof i!="string")try{i=JSON.stringify(s)}catch{i=String(s)}i.length>600&&(i=i.slice(0,600)+"\u2026"),alert(`Family Hub service "${t}" failed:
+This will immediately end the subscription.`))break;let y=a._people().find(k=>k.type==="parent");a._svc("admin_cancel_subscription",{subscription_id:t.dataset.subid,canceled_by:(y==null?void 0:y.person_id)||""});break}case"admin-edit-subscription-open":a._editingSubId=t.dataset.subid,a._doRender();break;case"admin-edit-subscription-cancel":a._editingSubId=null,a._doRender();break;case"admin-update-subscription":{let l=t.dataset.subid,y=t.closest(".fh-point-row"),k=((z=y==null?void 0:y.querySelector(`#sub-edit-period-${CSS.escape(l)}`))==null?void 0:z.value)||null,M=(F=(E=y==null?void 0:y.querySelector(`#sub-edit-cost-${CSS.escape(l)}`))==null?void 0:E.value)==null?void 0:F.trim(),A=(R=(D=y==null?void 0:y.querySelector(`#sub-edit-date-${CSS.escape(l)}`))==null?void 0:D.value)==null?void 0:R.trim(),B={subscription_id:l};if(k&&(B.period=k),M!==void 0&&M!==""){let L=parseFloat(M);!isNaN(L)&&L>=0&&(B.dollar_cost_override=L)}A&&(B.next_renewal_date=A),a._editingSubId=null,a._svc("update_subscription",B);break}case"approve-cancel-subscription":{let l=a._people().find(y=>y.type==="parent");a._svc("approve_cancel_subscription",{subscription_id:t.dataset.subid,approved_by:(l==null?void 0:l.person_id)||""});break}case"decline-cancel-subscription":{let l=a._people().find(y=>y.type==="parent");a._svc("decline_cancel_subscription",{subscription_id:t.dataset.subid,declined_by:(l==null?void 0:l.person_id)||""});break}case"meals-tab":a._mealsTab=t.dataset.tab||"week",a._mealsDrawer=null,a._mealsRecipe=null,a._mealsDayPick=null,a._doRender(!0);break;case"meals-week-prev":a._mealsWeekPage=Math.max(0,(a._mealsWeekPage||0)-1),a._doRender(!0);break;case"meals-week-next":a._mealsWeekPage=Math.min(4,(a._mealsWeekPage||0)+1),a._doRender(!0);break;case"meals-week-today":a._mealsWeekPage=0,a._doRender(!0);break;case"meals-week-tap-day":{let l=t.dataset.date;if(!l)break;a._mealsTab="plan",a._mealsJumpDate=l,a._mealsDrawer=null,a._doRender(!0);break}case"meals-plan-select-day":a._mealsJumpDate=t.dataset.date||null,a._mealsDrawer=null,a._doRender(!0);break;case"meals-clear-day":a._svc("meals_clear_day",{date:t.dataset.date});break;case"meals-clear-dinner":a._svc("meals_clear_dinner",{date:t.dataset.date});break;case"meals-clear-bl":a._svc("meals_set_bl",{date:t.dataset.date,slot:t.dataset.slot,meal_id:"",scope:"today",week_start:"Sunday"});break;case"meals-remove-side":{let l=t.dataset.date,y=t.dataset.side,M=(a._attrs("sensor.family_hub_meals").plan||{})[l]||{},A=(M.d&&M.d.sides||[]).filter(B=>B!==y);a._svc("meals_set_dinner_sides",{date:l,sides:A});break}case"meals-rhythm-pop":{let l=t.dataset.weekday,y=a.shadowRoot.getElementById("fh-rh-pop-"+l);a.shadowRoot.querySelectorAll("[id^='fh-rh-pop-']").forEach(k=>{k.id!=="fh-rh-pop-"+l&&(k.style.display="none")}),y&&(y.style.display=y.style.display==="none"?"":"none");break}case"meals-set-rhythm":{let l=t.dataset.weekday,y=t.dataset.theme||"";a._svc("meals_set_rhythm",{weekday:parseInt(l,10),...y?{theme_key:y}:{}});let k=a.shadowRoot.getElementById("fh-rh-pop-"+l);k&&(k.style.display="none");break}case"meals-open-drawer":case"meals-open-sides":{let l=t.dataset.kind||(e==="meals-open-sides"?"d-sides":"d-main"),y=t.dataset.date||a._mealsJumpDate||null;if(!y)break;let M=(a._attrs("sensor.family_hub_meals").plan||{})[y]||{},A=l==="d-sides"?"sides":l==="b"||l==="l"?"browse":"protein",B=l==="d-sides"&&M.d?M.d.sides||[]:[];a._mealsDrawer={kind:l,dateISO:y,step:A,cat:null,cut:null,scope:"today",favOnly:!1,pendingMainId:null,pickedProtein:null,nudgeOff:!1,fatsOff:!1,selSides:B},a._doRender(!0);break}case"meals-close-drawer":a._mealsDrawer=null,a._doRender(!0);break;case"meals-drawer-back":{let l=a._mealsDrawer;if(!l)break;if(l.step==="cut")l.step="protein",l.cat=null;else if(l.step==="make"){let{PROTEINS:y}=Qe(),k=l.cat?(((T=y[l.cat])==null?void 0:T.cuts)||[]).filter(M=>!0):[];l.cat&&k.length>1?(l.step="cut",l.cut=null):(l.step="protein",l.cat=null,l.cut=null)}else if(l.step==="browse")l.step="protein";else if(l.step==="tacoprotein")l.step="make",l.pendingMainId=null;else if(l.step==="sides"&&l.pendingMainId){let{mealById:y,allMeals:k}=Qe(),M=y(l.pendingMainId,a._attrs("sensor.family_hub_meals").custom||[]);M&&M.proteinPick?l.step="tacoprotein":(l.step="make",l.pendingMainId=null)}a._mealsDrawer={...l},a._doRender(!0);break}case"meals-drawer-browse":if(!a._mealsDrawer)break;a._mealsDrawer={...a._mealsDrawer,step:"browse"},a._doRender(!0);break;case"meals-drawer-favonly":if(!a._mealsDrawer)break;a._mealsDrawer={...a._mealsDrawer,favOnly:!a._mealsDrawer.favOnly},a._doRender(!0);break;case"meals-drawer-scope":if(!a._mealsDrawer)break;a._mealsDrawer={...a._mealsDrawer,scope:t.dataset.scope||"today"},a._doRender(!0);break;case"meals-drawer-pick-cat":{let l=a._mealsDrawer;if(!l)break;let y=t.dataset.cat,{PROTEINS:k,MEALS:M}=Qe(),A=a._attrs("sensor.family_hub_meals").custom||[],L=M.concat(A).filter(J=>J.types.includes("d")&&!J.special&&J.protein===y),q=(((P=k[y])==null?void 0:P.cuts)||[]).filter(J=>L.some(Ze=>Ze.cut===J.id));q.length>1?a._mealsDrawer={...l,cat:y,step:"cut"}:a._mealsDrawer={...l,cat:y,cut:q.length===1?q[0].id:null,step:"make"},a._doRender(!0);break}case"meals-drawer-pick-cut":if(!a._mealsDrawer)break;a._mealsDrawer={...a._mealsDrawer,cut:t.dataset.cut,step:"make"},a._doRender(!0);break;case"meals-drawer-pick-main":{let l=a._mealsDrawer;if(!l)break;let y=t.dataset.meal,{mealById:k,allMeals:M}=Qe(),A=a._attrs("sensor.family_hub_meals").custom||[],B=k(y,A);if(!B)break;if(B.special)a._svc("meals_set_dinner",{date:l.dateISO,main:y,sides:[]}),Yt(a,l.dateISO,B);else{let L=new Set(B.sides||[]);B.proteinPick?a._mealsDrawer={...l,pendingMainId:y,pickedProtein:B.defaultPick||B.proteinPick[0],selSides:[...L],step:"tacoprotein",nudgeOff:!1,fatsOff:!1}:a._mealsDrawer={...l,pendingMainId:y,selSides:[...L],step:"sides",nudgeOff:!1,fatsOff:!1},a._doRender(!0)}break}case"meals-drawer-pick-special":{let l=a._mealsDrawer;if(!l)break;let y=t.dataset.meal,{mealById:k}=Qe(),M=a._attrs("sensor.family_hub_meals").custom||[];a._svc("meals_set_dinner",{date:l.dateISO,main:y,sides:[]}),Yt(a,l.dateISO,k(y,M));break}case"meals-drawer-pick-taco-protein":{let l=a._mealsDrawer;if(!l)break;a._mealsDrawer={...l,pickedProtein:t.dataset.protein,step:"sides"},a._doRender(!0);break}case"meals-drawer-pick-bl":{let l=a._mealsDrawer;if(!l)break;a._svc("meals_set_bl",{date:l.dateISO,slot:l.kind,meal_id:t.dataset.meal,scope:l.scope||"today",week_start:"Sunday"}),a._mealsDrawer=null,a._doRender(!0);break}case"meals-toggle-side":{let l=a._mealsDrawer;if(!l)break;let y=t.dataset.side,k=new Set(l.selSides||[]);k.has(y)?k.delete(y):k.add(y),a._mealsDrawer={...l,selSides:[...k]},a._doRender(!0);break}case"meals-dismiss-nudge":if(!a._mealsDrawer)break;a._mealsDrawer={...a._mealsDrawer,nudgeOff:!0},a._doRender(!0);break;case"meals-dismiss-fats":if(!a._mealsDrawer)break;a._mealsDrawer={...a._mealsDrawer,fatsOff:!0},a._doRender(!0);break;case"meals-drawer-no-sides":{let l=a._mealsDrawer;if(!l)break;if(l.kind==="d-sides")a._svc("meals_set_dinner_sides",{date:l.dateISO,sides:[]});else{let{variantFor:y,mealById:k,parseISO:M}=Qe(),A=a._attrs("sensor.family_hub_meals").custom||[],B=k(l.pendingMainId,A),L=B?y(B,M(l.dateISO),l.pickedProtein):"";a._svc("meals_set_dinner",{date:l.dateISO,main:l.pendingMainId,sides:[],...l.pickedProtein?{protein:l.pickedProtein}:{},...L?{variant:L}:{}}),Yt(a,l.dateISO,B);return}a._mealsDrawer=null,a._doRender(!0);break}case"meals-drawer-done-sides":{let l=a._mealsDrawer;if(!l)break;if(l.kind==="d-sides")a._svc("meals_set_dinner_sides",{date:l.dateISO,sides:l.selSides||[]}),a._mealsDrawer=null,a._doRender(!0);else{let{variantFor:y,mealById:k,parseISO:M}=Qe(),A=a._attrs("sensor.family_hub_meals").custom||[],B=k(l.pendingMainId,A),L=B?y(B,M(l.dateISO),l.pickedProtein):"";a._svc("meals_set_dinner",{date:l.dateISO,main:l.pendingMainId,sides:l.selSides||[],...l.pickedProtein?{protein:l.pickedProtein}:{},...L?{variant:L}:{}}),Yt(a,l.dateISO,B)}break}case"meals-drawer-next-day":{let l=a._mealsDrawer;if(!l)break;qn(a,l.dateISO);break}case"meals-toggle-have":a._svc("meals_toggle_have",{ingredient_id:t.dataset.ing});break;case"meals-pantry-pick":a._mealsDayPick=t.dataset.meal||null,a._doRender(!0);break;case"meals-daypick-pick":{let l=t.dataset.date,y=t.dataset.meal,M=a._attrs("sensor.family_hub_meals").custom||[],{mealById:A}=Qe(),B=A(y,M);if(!l||!B)break;a._svc("meals_set_dinner",{date:l,main:y,sides:(B.sides||[]).slice(0,2)}),a._mealsDayPick=null,a._doRender(!0);break}case"meals-close-daypick":a._mealsDayPick=null,a._doRender(!0);break;case"meals-lib-filter":a._mealsLibFilter=t.dataset.filter||"all",a._doRender(!0);break;case"meals-open-recipe":a._mealsRecipe=t.dataset.meal||null,a._doRender(!0);break;case"meals-close-recipe":a._mealsRecipe=null,a._doRender(!0);break;case"meals-recipe-plan":a._mealsRecipe=null,a._mealsDayPick=t.dataset.meal||null,a._doRender(!0);break;case"meals-lib-plan-meal":a._mealsDayPick=t.dataset.meal||null,a._doRender(!0);break;case"meals-toggle-fav":a._svc("meals_toggle_fav",{meal_id:t.dataset.meal});break;case"meals-ideas-refresh":a._doRender(!0);break;case"meals-save-idea":{let{IDEAS_POOL:l}=Qe(),y=l.find(M=>M.id===t.dataset.meal);if(!y)break;let k={id:y.id,name:y.name,glyph:y.glyph,types:["d"],groups:y.groups||[],ing:y.ing||[],sides:y.sides||[],protein:y.protein||"meatless",cut:y.cut||"",fav:!1,source:"Spoonacular"};a._svc("meals_add_custom_meal",{meal:k});break}case"meals-toggle-groc":a._svc("meals_toggle_grocery",{key:t.dataset.key,checked:t.dataset.checked==="true"});break;case"meals-reset-groc":{let y=a._attrs("sensor.family_hub_meals").groc||{},k=t.dataset.weekkey||"";Object.entries(y).forEach(([M,A])=>{A&&M.startsWith(k+":")&&a._svc("meals_toggle_grocery",{key:M,checked:!1})});break}case"meals-admin-subtab":a._mealsAdminSubtab=t.dataset.sub,a._mealsAdminRecipeId=null,a._doRender(!0);break;case"meals-admin-add-meal":{let l=s("ma-name").trim();if(!l){alert("Give the meal a name first.");break}let y=["b","l","d"].filter(he=>i("ma-type-"+he));if(!y.length){alert("Pick breakfast, lunch, or dinner.");break}let k=Xe.filter(he=>i("ma-grp-"+he)),M=at.filter(he=>i("ma-side-"+he.id)).map(he=>he.id),B=Oe(a._attrs("sensor.family_hub_meals").customIng||[]).filter(he=>i("ma-ing-"+he.id)).map(he=>he.id),L=s("ma-protcut"),[q,J]=L?L.split(":"):["",""],bt={id:"custom-"+(l.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"")||Date.now()),name:l,glyph:s("ma-glyph")||"\u{1F37D}\uFE0F",types:y,groups:k,ing:B,sides:M,fav:!1};q&&(bt.protein=q),J&&(bt.cut=J),a._svc("meals_add_custom_meal",{meal:bt});break}case"meals-admin-remove-meal":a._svc("meals_remove_custom_meal",{meal_id:t.dataset.id});break;case"meals-admin-add-ing":{let l=s("mi-name").trim();if(!l){alert("Name the ingredient first.");break}let y="custom-ing-"+(l.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"")||Date.now());a._svc("meals_add_ingredient",{ingredient:{id:y,label:l,glyph:s("mi-glyph")||"\u{1F955}",cat:s("mi-cat"),aisle:s("mi-aisle")}});break}case"meals-admin-remove-ing":a._svc("meals_remove_ingredient",{ingredient_id:t.dataset.id});break;case"meals-admin-recipe-edit":a._mealsAdminRecipeId=t.dataset.id,a._doRender(!0);break;case"meals-admin-recipe-cancel":a._mealsAdminRecipeId=null,a._doRender(!0);break;case"meals-admin-recipe-save":{let l=M=>s(M).split(`
+`).map(A=>A.trim()).filter(Boolean),y=l("mr-ing"),k=l("mr-steps");if(!y.length||!k.length){alert("A recipe needs at least one ingredient and one step.");break}a._svc("meals_save_recipe",{meal_id:t.dataset.id,recipe:{time:s("mr-time").trim()||"\u2014",serves:parseInt(s("mr-serves"),10)||5,ingredients:y,steps:k}}),a._mealsAdminRecipeId=null,a._doRender(!0);break}}}function Qe(){return jt}function Yt(e,t,a){e._mealsDrawer={kind:"d",dateISO:t,step:"confirm",savedName:a?a.name:"Dinner",savedGlyph:a?a.glyph:"\u2713"},e._doRender(!0)}function qn(e,t){let{today:a,addDays:o,iso:s,HORIZON_DAYS:i}=jt,n=e._attrs("sensor.family_hub_meals").plan||{},r=ft(t),d=null;for(let p=1;p<i;p++){let c=o(r,p);if(c>o(a(),i-1))break;let b=n[s(c)];if(!b||!b.d){d=c;break}}if(d){let p=s(d);e._mealsJumpDate=p,e._mealsDrawer={kind:"d-main",dateISO:p,step:"protein",cat:null,cut:null,scope:"today",favOnly:!1,pendingMainId:null,pickedProtein:null,nudgeOff:!1,fatsOff:!1,selSides:[]}}else e._mealsDrawer=null;e._doRender(!0)}function no(e,t){return Array.from(t.querySelectorAll(`.${e}:checked`)).map(a=>a.value)}function ro(e){let t=(e||"").trim();return t?t.startsWith("data:")?t:t.toLowerCase():""}function Jn(e,t,a,o,s){var x;let i=e("m-cname").trim();if(!i)return null;let n=e("m-crec"),r=e("m-ctype"),d=no("m-assign-person",o),p=Array.from(o.querySelectorAll(".m-wd-day:checked")).map(h=>parseInt(h.value)),c=Array.from(o.querySelectorAll(".m-df-day:checked")).map(h=>parseInt(h.value)),b=(e("m-dom-days")||"").split(",").map(h=>parseInt(h.trim())).filter(h=>Number.isFinite(h)&&h>=1&&h<=31),g=b.length?[...new Set(b)].sort((h,w)=>h-w):[1],u=ro(e("m-cicon")),v={name:i,chore_type:r,category_label:e("m-clabel"),assigned_to:d,points:a("m-cpts"),approval_required:t("m-cappr"),penalty_enabled:t("m-cpenalty"),penalty_points:a("m-cpenalty-pts"),icon:u};if(t("m-cpenalty")){let h=parseInt(e("m-daily-threshold")||"0");h>0&&(v.daily_penalty_after_days=h)}r==="claimable"&&(v.claimable_subtype=e("m-csubtype")||"fcfs",v.claimable_subtype==="multi_claim"&&(v.max_claimants=Math.max(2,a("m-max-claimants")||2),v.multi_claim_points_mode=e("m-points-mode")||"full"));let _=e("m-cdesc").trim();_&&(v.description=_);let f=o.getElementById("m-chore-expiry-section");if(f&&f.style.display!=="none"){let h=parseInt(e("m-cexpiry")||"0");h>0&&(v.expires_after_days=h)}v.streak_milestone=Math.max(0,a("m-streak-milestone")||0),v.streak_bonus_points=Math.max(0,a("m-streak-bonus")||0);let S=parseInt(e("m-reminder-time")??"-1");if(v.reminder_time=isNaN(S)?-1:S,r==="assigned"){let h=t("m-crot-enabled"),w=e("m-crot-pool-order")||"",z=h&&w?w.split(",").filter(Boolean):[];v.rotation_pool=z,v.rotation_cadence=h&&z.length?e("m-crot-cadence")||"per_instance":"",v.rotation_switch_weekday=parseInt(e("m-crot-switch-day")||"0")||0}else v.rotation_pool=[],v.rotation_cadence="";return s?(v.chore_id=e("m-cid"),v.active=((x=o.querySelector("#m-cactive"))==null?void 0:x.checked)!==!1,v.weekdays=p,v.day_filter=c,v.recurrence={type:n,weekdays:p,day_filter:c,...n==="monthly_on_date"?{days_of_month:g,day_of_month:g[0]}:{}}):(v.recurrence_type=n,p.length&&(v.weekdays=p),c.length&&(v.day_filter=c),n==="monthly_on_date"&&(v.days_of_month=g,v.day_of_month=g[0])),v}function wa(e,t,a,o){var b,g,u;let s=a?e("m-eiid"):null,i=e("m-sname").trim(),n=parseFloat(e("m-sdollar"));if(a&&!s||!i||!n||n<=0)return null;let r=((b=t.querySelector("#m-sgroup"))==null?void 0:b.checked)||!1,d=e("m-sscope"),p={name:i,dollar_value:n,scope:d,description:e("m-sdesc").trim(),category_label:e("m-scat")||"",max_per_period:parseInt(e("m-smaxperiod")||"0"),period:e("m-speriod")||"week",icon:ro(e("m-cicon"))};if(a&&(p.item_id=s,p.active=((g=t.querySelector("#m-sactive"))==null?void 0:g.checked)!==!1),r){let v=[...t.querySelectorAll(".m-scontrib")].filter(f=>parseInt(f.value)>0).map(f=>({person_id:f.dataset.pid,share_pct:parseInt(f.value)}));if(v.length===0)return alert("Group reward needs at least one contributor with a share > 0%."),null;let _=v.reduce((f,$)=>f+$.share_pct,0);if(_!==100)return alert(`Contributor shares must sum to exactly 100% (currently ${_}%). Use the "Equal split" button or adjust manually.`),null;p.is_group_reward=!0,p.contributors=v,p.scope="personal",p.person_ids=v.map(f=>f.person_id)}else a&&o&&(p.is_group_reward=!1,p.contributors=[]),d==="personal"?p.person_ids=no("m-sp-person",t):a&&(p.person_ids=[]);let c=((u=t.querySelector("#m-ssubtype"))==null?void 0:u.checked)||!1;return p.item_type=c?"subscription":"one_time",c&&(p.subscription_period=e("m-ssperiod")||"monthly"),p.require_daily_pct=Math.max(0,Math.min(100,parseInt(e("m-sreqpct")||"0")||0)),p.min_rank_index=Math.max(0,Math.min(4,parseInt(e("m-sminrank")||"0")||0)),p}function lo(e,t){var s;let a=(s=e==null?void 0:e.files)==null?void 0:s[0];if(!a)return;if(a.size>5*1024*1024){alert("Image too large. Please pick a file under 5 MB.");return}let o=new FileReader;o.onload=()=>{let i=new Image;i.onload=()=>{let r=i.width,d=i.height;r>d?r>128&&(d=Math.round(d*128/r),r=128):d>128&&(r=Math.round(r*128/d),d=128);let p=document.createElement("canvas");p.width=r,p.height=d,p.getContext("2d").drawImage(i,0,0,r,d);let b=p.toDataURL("image/png");if(b.length>350*1024){alert("Resized image is still too large. Pick a simpler image.");return}let g=t.getElementById("m-cicon");g&&(g.value=b);let u=t.getElementById("m-cicon-preview");u&&(u.innerHTML=`<div style="display:flex;align-items:center;gap:10px;padding:8px;border:1px solid var(--fh-border);border-radius:6px;background:var(--fh-surface)"><img src="${b}" style="width:48px;height:48px;object-fit:contain;border-radius:4px" alt=""><span style="font-size:.85rem;color:var(--fh-text-sec)">Custom uploaded image</span><button type="button" class="fh-btn fh-btn-ghost fh-btn-sm" data-act="clear-icon" style="margin-left:auto">Clear</button></div>`),t.querySelectorAll(".fh-icon-cell.selected").forEach(v=>v.classList.remove("selected"))},i.onerror=()=>alert("Could not read that image."),i.src=o.result},o.onerror=()=>alert("Could not read that file."),o.readAsDataURL(a)}var co=N(()=>{K();Kt();io();Ct()});var Xt,po=N(()=>{Ta();K();Q();ds();Vs();ao();Ut();na();ra();_t();co();Kt();Xt=class extends HTMLElement{static getStubConfig(){return{mode:"command_center"}}static getConfigElement(){return document.createElement("family-hub-card-editor")}constructor(){super(),this.attachShadow({mode:"open"}),this._cfg={},this._hass=null,this._model=null,this._lastDataRev=void 0,this._pendingRev=void 0,this._fetching=!1,this._modal=null,this._filter=null,this._tab="tasks",this._adminSec="today",this._flashing=new Set,this._pendingSubmit=new Set,this._expandedDescs=new Set,this._histFilter=null,this._choreFilter=null,this._expandedSkippedDates=new Set,this._view="home",this._backStack=[],this._viewPersonId=null,this._celebration=null,this._dragId=null,this._dragOverId=null,this._dragType=null,this._sortedChores=[],this._sortedStoreItems=[],this._adminSelectedChoreId=null,this._adminSort={col:null,dir:"asc"},this._adminCollapsedCats=new Set,this._choreFormTab="details",this._adminSelectedItemId=null,this._adminSortItems={col:null,dir:"asc"},this._adminCollapsedRewardCats=new Set,this._storeItemFilter=null,this._mealsTab="week",this._mealsWeekPage=0,this._mealsJumpDate=null,this._mealsDrawer=null,this._mealsRecipe=null,this._mealsDayPick=null,this._mealsNudgeDismissed=new Set,this._mealsFatDismissed=new Set,this._mealsLibFilter="all",this._mealsAdminSubtab="meals",this._mealsAdminRecipeId=null,this._abortCtrl=null,this._retryTimer=null}_reorderCategory(t,a,o){let s=this._attrs("sensor.family_hub_needs_attention").category_labels||[];if(!s.includes(t)||!s.includes(a))return;let i=s.filter(p=>p!==t),n=i.indexOf(a),r=o==="above"?n:n+1,d=[...i.slice(0,r),t,...i.slice(r)];this._svc("update_settings",{category_labels:d})}connectedCallback(){this._abortCtrl=new AbortController;let{signal:t}=this._abortCtrl,a=this.shadowRoot;a.addEventListener("click",o=>{let s=o.target.closest("[data-act]");s&&s.tagName!=="SELECT"&&ka(s.dataset.act,s,this)},{signal:t}),a.addEventListener("change",o=>{var i,n;let s=o.target;if(["chore-status-filter","chore-rec-filter","chore-filter","stats-rank","stats-completion","stats-streak-pct"].includes(s.dataset.act)){ka(s.dataset.act,s,this);return}if(s.dataset.act==="toggle-stats-streaks"){this._statsIncludeStreaks=s.checked,this._doRender(!0);return}if(s.dataset.act==="toggle-dollar"){this._svc("update_settings",{show_dollar_value_to_kids:s.checked});return}if(s.dataset.act==="toggle-global-penalty"){this._svc("update_settings",{penalties_paused:!s.checked});return}if(s.dataset.act==="toggle-person-penalty"){let r=s.dataset.pid;r&&this._svc("update_person",{person_id:r,penalties_paused:!s.checked});return}if(s.id==="m-everyone"&&a.querySelectorAll(".m-assign-person").forEach(r=>{var d;r.checked=s.checked,(d=r.closest(".fh-person-cb-chip"))==null||d.classList.toggle("checked",s.checked)}),s.classList.contains("m-assign-person")&&!s.checked){let r=a.getElementById("m-everyone");r&&(r.checked=!1)}(s.classList.contains("m-wd-day")||s.classList.contains("m-df-day"))&&((i=s.closest(".fh-wd-chip"))==null||i.classList.toggle("checked",s.checked)),(s.classList.contains("m-assign-person")||s.classList.contains("m-sp-person")||s.classList.contains("m-rot-person"))&&((n=s.closest(".fh-person-cb-chip"))==null||n.classList.toggle("checked",s.checked)),s.id==="m-icon-upload"&&s.files&&s.files.length>0&&lo(s,a),this._syncModalUI()},{signal:t}),a.addEventListener("dragstart",o=>{let s=o.target.closest("[data-drag-id]");s&&(this._dragId=s.dataset.dragId,this._dragType=s.dataset.dragType||"chore",this._dragSide=null,o.dataTransfer.effectAllowed="move",setTimeout(()=>s.classList.add("fh-dragging"),0))},{signal:t}),a.addEventListener("dragover",o=>{let s=o.target.closest("[data-drag-id]");if(!s||s.dataset.dragId===this._dragId)return;let i=s.dataset.dragType||"chore";if(i!==this._dragType)return;o.preventDefault();let n=s.getBoundingClientRect(),d=i==="category"?o.clientX<n.left+n.width/2?"above":"below":o.clientY<n.top+n.height/2?"above":"below";a.querySelectorAll(".fh-drop-above, .fh-drop-below").forEach(p=>p.classList.remove("fh-drop-above","fh-drop-below")),s.classList.add(d==="above"?"fh-drop-above":"fh-drop-below"),this._dragOverId=s.dataset.dragId,this._dragSide=d},{signal:t}),a.addEventListener("dragleave",o=>{let s=o.target.closest("[data-drag-id]");s&&s.classList.remove("fh-drop-above","fh-drop-below")},{signal:t}),a.addEventListener("drop",o=>{var _,f,$,S;o.preventDefault(),a.querySelectorAll(".fh-drop-above, .fh-drop-below, .fh-dragging").forEach(x=>x.classList.remove("fh-drop-above","fh-drop-below","fh-dragging"));let s=this._dragId,i=this._dragOverId,n=this._dragSide||"above",r=this._dragType||"chore";if(this._dragId=this._dragOverId=null,this._dragSide=null,this._dragType=null,!s||!i||s===i)return;if(r==="category"){this._reorderCategory(s,i,n);return}let d=r==="store-item"?{list:this._sortedStoreItems,idKey:"item_id",svc:"update_store_item",idField:"item_id"}:{list:this._sortedChores,idKey:"chore_id",svc:"update_chore",idField:"chore_id"},p=d.list.filter(x=>x[d.idKey]!==s),c=p.findIndex(x=>x[d.idKey]===i);if(c<0)return;let b,g;n==="above"?(b=((_=p[c-1])==null?void 0:_.sort_order)??p[c].sort_order-20,g=p[c].sort_order):(b=p[c].sort_order,g=((f=p[c+1])==null?void 0:f.sort_order)??b+20);let u=(b+g)/2,v=.01;if(Math.abs(g-u)<v||Math.abs(u-b)<v){let x=p.map((E,F)=>({...E,sort_order:(F+1)*10})),h=x.findIndex(E=>E[d.idKey]===i),w,z;n==="above"?(w=(($=x[h-1])==null?void 0:$.sort_order)??0,z=x[h].sort_order):(w=x[h].sort_order,z=((S=x[h+1])==null?void 0:S.sort_order)??w+20),u=(w+z)/2,x.forEach(E=>{E[d.idKey]!==s&&this._svc(d.svc,{[d.idField]:E[d.idKey],sort_order:E.sort_order})})}this._svc(d.svc,{[d.idField]:s,sort_order:u})},{signal:t}),a.addEventListener("dragend",()=>{a.querySelectorAll(".fh-drop-above, .fh-drop-below, .fh-dragging").forEach(o=>o.classList.remove("fh-drop-above","fh-drop-below","fh-dragging")),this._dragId=this._dragOverId=null,this._dragSide=null,this._dragType=null},{signal:t})}disconnectedCallback(){var t;(t=this._abortCtrl)==null||t.abort(),this._abortCtrl=null,this._retryTimer&&(clearTimeout(this._retryTimer),this._retryTimer=null)}setConfig(t){let a=["command_center","personal","maintenance","admin"];if(!t.mode)throw new Error("Family Hub: 'mode' is required");if(!a.includes(t.mode))throw new Error(`Family Hub: mode must be one of ${a.join(", ")}`);if(t.mode==="personal"&&!t.person)throw new Error("Family Hub: 'person' is required for personal mode");if(t.initial_view&&!/^(person|room):[A-Za-z0-9_-]+$/.test(t.initial_view))throw new Error("Family Hub: 'initial_view' must be 'person:<id>' or 'room:<id>'");this._cfg=t,t.mode==="command_center"&&t.initial_view&&!this._initialViewApplied&&(this._view=t.initial_view,this._backStack=["home"],this._initialViewApplied=!0),this._doRender(!0)}set hass(t){this._hass=t,this._maybeRender(),this._scheduleRetryIfNeeded()}_scheduleRetryIfNeeded(){if(this._retryTimer||this._model)return;let t=0,a=()=>{this._retryTimer=null,!(!this._hass||this._model)&&(t++,this._maybeRender(),!this._model&&t<15&&(this._retryTimer=setTimeout(a,2e3)))};this._retryTimer=setTimeout(a,2e3)}getCardSize(){return 5}_maybeRender(){var a,o;if(!this._hass||this._modal||this._adminSelectedChoreId||this._adminSelectedItemId||this._editingSubId||this._mealsAdminRecipeId)return;let t=(o=(a=this._hass.states["sensor.family_hub_needs_attention"])==null?void 0:a.attributes)==null?void 0:o.data_rev;t!==void 0&&(this._model!==null&&t===this._lastDataRev||this._fetchModel(t))}async _fetchModel(t){if(this._pendingRev=t,!this._fetching){this._fetching=!0;try{for(;this._lastDataRev!==this._pendingRev;){let a=this._pendingRev,o;try{o=await this._hass.connection.sendMessagePromise({type:"family_hub/get_model"})}catch(s){console.error("Family Hub: get_model failed",s);return}this._model=o,this._lastDataRev=a}}finally{this._fetching=!1}this._modal||this._adminSelectedChoreId||this._adminSelectedItemId||this._editingSubId||this._mealsAdminRecipeId||this._doRender(!1)}}_doRender(t=!1){if(!(!this._hass&&!t))try{let a=parseFloat(this._cfg.text_scale)||1,o=document.createElement("style");o.textContent=Mt+`:host { --fh-text-scale: ${a}; }`;let s=document.createElement("div");if(s.className="fh-card",!this._hass||!this._model)s.innerHTML='<div class="fh-empty">Loading\u2026</div>';else switch(["today","family","tasks","rewards","meals","history","settings"].includes(this._adminSec)||(this._adminSec="today"),this._cfg.mode){case"command_center":s.innerHTML=this._htmlCommandCenter();break;case"personal":s.innerHTML=oa(this);break;case"maintenance":s.innerHTML=Dt(this);break;case"admin":s.innerHTML=Us(this);break}if(this.shadowRoot.innerHTML="",this.shadowRoot.appendChild(o),this.shadowRoot.appendChild(s),this._modal&&this.shadowRoot.appendChild(this._buildModal()),this._celebration){let i=document.createElement("div");i.innerHTML=ms(this._celebration),this.shadowRoot.appendChild(i.firstElementChild)}this._syncModalUI()}catch(a){console.error("[family-hub] render error:",a);let o=document.createElement("style");o.textContent=Mt;let s=document.createElement("div");s.className="fh-card",s.innerHTML='<div class="fh-empty">Loading\u2026</div>',this.shadowRoot.innerHTML="",this.shadowRoot.appendChild(o),this.shadowRoot.appendChild(s),setTimeout(()=>{this._hass&&(this._lastDataRev=void 0,this._maybeRender())},3e3)}}_htmlCommandCenter(){let t=this._view||"home";if(t==="home")return va(this);let a="";if(t.startsWith("room:")){let o=t.slice(5),s=zs(o),i=this._attrs("sensor.family_hub_needs_attention").modules;i&&i[o]===!1?a=`<div class="fh-empty">This module is turned off.<br>
+                    <span style="opacity:.7">Enable it in Home Assistant \u2192 Family Hub \u2192 Configure.</span></div>`:a=s!=null&&s.render?s.render(this):'<div class="fh-empty">Unknown room.</div>'}else if(t.startsWith("person:")){let o=t.slice(7);this._viewPersonId=o;let s=this._findPerson(o),i=tt((s==null?void 0:s.theme_key)||"classic");if(a=oa(this),this._viewPersonId=null,i.handlesNavigation)return a}else return this._view="home",va(this);return to("Home")+a}_states(t){var a,o;return(o=(a=this._hass)==null?void 0:a.states)==null?void 0:o[t]}_attrs(t){var a;return this._model&&this._model[t]||((a=this._states(t))==null?void 0:a.attributes)||{}}_people(){return this._attrs("sensor.family_hub_needs_attention").people||[]}_findPerson(t){let a=(t||"").toLowerCase();return this._people().find(o=>o.name.toLowerCase()===a||o.person_id===t)||null}_personEntityId(t){return`sensor.family_hub_${La(t)}`}_svc(t,a){if(this._hass)try{let o=this._hass.callService(Pa,t,a);o&&typeof o.catch=="function"&&o.catch(s=>{var n,r;console.error(`[family-hub] service ${t} failed:`,s,"payload:",a);let i=((n=s==null?void 0:s.body)==null?void 0:n.message)||((r=s==null?void 0:s.error)==null?void 0:r.message)||(s==null?void 0:s.message)||(s==null?void 0:s.error)||"";if(!i||typeof i!="string")try{i=JSON.stringify(s)}catch{i=String(s)}i.length>600&&(i=i.slice(0,600)+"\u2026"),alert(`Family Hub service "${t}" failed:
 
 ${i}
 
 (See browser console for full details.)`)})}catch(o){console.error("[family-hub] callService threw:",o),alert(`Family Hub: service call "${t}" crashed before sending.
 
-${(o==null?void 0:o.message)||o}`)}}_buildModal(){var a;let t=document.createElement("div");return t.className="fh-modal-bg"+(((a=this._modal)==null?void 0:a.surface)==="drawer"?" fh-modal-bg--drawer":""),t.innerHTML=this._modalHTML(),t.addEventListener("click",o=>{o.target===t&&this._closeModal()}),t}_modalHTML(){if(!this._modal)return"";let{type:t,data:a}=this._modal,o=this._people(),s=this._attrs("sensor.family_hub_needs_attention").category_labels||[],i=this._attrs("sensor.family_hub_needs_attention").active_chores||[];switch(t){case"award":case"deduct":return As(this._modal);case"partial-credit":return Ms(this._modal);case"add-chore":return ga(null,!1,o,s,this._choreFormTab);case"edit-chore":return ga(a.chore,!0,o,s,this._choreFormTab);case"add-store-item":return Bs(o,s);case"edit-store-item":return Fs(a.item,o,s);case"add-person":return Rs();case"edit-person":return Ds(a);case"edit-settings":return Ls(a);case"ranks":return ba(this);case"claim":return Os(this._modal,o);case"add-reminder":return Ns(this._modal,o);case"confirm-remove-person":return Is(a);case"confirm-hard-delete-person":return Ts(a);case"edit-streaks":{let n=this._people().find(d=>d.person_id===a.pid),l=(n==null?void 0:n.streaks)||{};return Ps(a.pid,a.pname,i,l)}case"chip-in":return Hs(a.item,a.pid,a.balance,a.remaining);default:return""}}_closeModal(){this._modal=null,this._choreFormTab="details",this._doRender(!0)}_syncModalUI(){let t=this.shadowRoot,a=A=>{let E=t.getElementById(A);E&&(E.style.display="")},o=A=>{let E=t.getElementById(A);E&&(E.style.display="none")},s=t.getElementById("m-crec");if(s){let A=s.value,E=t.getElementById("m-ctype"),F=(E==null?void 0:E.value)||"assigned";o("m-dayfilter-section"),o("m-weekdays-section"),o("m-dom-section"),o("m-chore-expiry-section"),A==="daily"&&a("m-dayfilter-section"),A==="weekly"&&a("m-weekdays-section"),A==="monthly_on_date"&&a("m-dom-section"),F==="claimable"&&a("m-chore-expiry-section")}let i=t.getElementById("m-ctype"),n=t.getElementById("m-claimable-section"),l=t.getElementById("m-multi-claim-section"),d=t.getElementById("m-csubtype");if(i&&n){let A=i.value==="claimable";if(n.style.display=A?"":"none",l){let E=A&&(d==null?void 0:d.value)==="multi_claim";l.style.display=E?"":"none"}}let p=t.getElementById("m-cpenalty"),c=t.getElementById("m-penalty-pts-section"),b=t.getElementById("m-daily-threshold-section");p&&c&&(c.style.display=p.checked?"":"none",b&&(b.style.display=p.checked?"":"none"));let g=t.getElementById("m-sscope"),u=t.getElementById("m-sperson-section");g&&u&&(u.style.display=g.value==="personal"?"":"none");let x=t.getElementById("m-sgroup"),w=t.getElementById("m-sgroup-section");x&&w&&(w.style.display=x.checked?"":"none",x.checked&&u&&(u.style.display="none"));let m=t.getElementById("m-rotation-section"),$=t.getElementById("m-rotation-config"),S=t.getElementById("m-crot-enabled"),v=t.getElementById("m-ctype");m&&(m.style.display=(v==null?void 0:v.value)==="assigned"?"":"none"),$&&S&&($.style.display=S.checked?"":"none");let h=t.getElementById("m-crot-cadence"),k=t.getElementById("m-crot-switch-day-wrap");h&&k&&(k.style.display=h.value==="weekly"?"":"none")}}});var Qt,ho=N(()=>{K();Q();Qt=class extends HTMLElement{setConfig(t){this._cfg=t,this._render()}set hass(t){var a,o,s;this._hass=t,this._people=((s=(o=(a=t==null?void 0:t.states)==null?void 0:a["sensor.family_hub_needs_attention"])==null?void 0:o.attributes)==null?void 0:s.people)||[],this._render()}_render(){var x,w,m,$,S,v,h,k,A;let t=this._cfg||{},a=this._people||[],o=t.mode||"command_center",s=t.person||"",i=t.initial_view||"",n=t.text_scale!=null?t.text_scale:1,d=(((m=(w=(x=this._hass)==null?void 0:x.states)==null?void 0:w["sensor.family_hub_needs_attention"])==null?void 0:m.attributes)||{}).rooms_config||{},p=[["","Home (default)"],...a.map(E=>[`person:${E.person_id}`,`${E.name}'s page`]),...Object.keys(d).map(E=>[`room:${E}`,`Room: ${E}`])],b=!!((S=($=this._hass)==null?void 0:$.states)==null?void 0:S["sensor.family_hub_needs_attention"]),g=`<span style="
+${(o==null?void 0:o.message)||o}`)}}_buildModal(){var a;let t=document.createElement("div");return t.className="fh-modal-bg"+(((a=this._modal)==null?void 0:a.surface)==="drawer"?" fh-modal-bg--drawer":""),t.innerHTML=this._modalHTML(),t.addEventListener("click",o=>{o.target===t&&this._closeModal()}),t}_modalHTML(){if(!this._modal)return"";let{type:t,data:a}=this._modal,o=this._people(),s=this._attrs("sensor.family_hub_needs_attention").category_labels||[],i=this._attrs("sensor.family_hub_needs_attention").active_chores||[];switch(t){case"award":case"deduct":return As(this._modal);case"partial-credit":return Ms(this._modal);case"add-chore":return ga(null,!1,o,s,this._choreFormTab);case"edit-chore":return ga(a.chore,!0,o,s,this._choreFormTab);case"add-store-item":return Bs(o,s);case"edit-store-item":return Fs(a.item,o,s);case"add-person":return Rs();case"edit-person":return Ds(a);case"edit-settings":return Ls(a);case"ranks":return ba(this);case"claim":return Os(this._modal,o);case"add-reminder":return Ns(this._modal,o);case"confirm-remove-person":return Is(a);case"confirm-hard-delete-person":return Ts(a);case"edit-streaks":{let n=this._people().find(d=>d.person_id===a.pid),r=(n==null?void 0:n.streaks)||{};return Ps(a.pid,a.pname,i,r)}case"chip-in":return Hs(a.item,a.pid,a.balance,a.remaining);default:return""}}_closeModal(){this._modal=null,this._choreFormTab="details",this._doRender(!0)}_syncModalUI(){let t=this.shadowRoot,a=z=>{let E=t.getElementById(z);E&&(E.style.display="")},o=z=>{let E=t.getElementById(z);E&&(E.style.display="none")},s=t.getElementById("m-crec");if(s){let z=s.value,E=t.getElementById("m-ctype"),F=(E==null?void 0:E.value)||"assigned";o("m-dayfilter-section"),o("m-weekdays-section"),o("m-dom-section"),o("m-chore-expiry-section"),z==="daily"&&a("m-dayfilter-section"),z==="weekly"&&a("m-weekdays-section"),z==="monthly_on_date"&&a("m-dom-section"),F==="claimable"&&a("m-chore-expiry-section")}let i=t.getElementById("m-ctype"),n=t.getElementById("m-claimable-section"),r=t.getElementById("m-multi-claim-section"),d=t.getElementById("m-csubtype");if(i&&n){let z=i.value==="claimable";if(n.style.display=z?"":"none",r){let E=z&&(d==null?void 0:d.value)==="multi_claim";r.style.display=E?"":"none"}}let p=t.getElementById("m-cpenalty"),c=t.getElementById("m-penalty-pts-section"),b=t.getElementById("m-daily-threshold-section");p&&c&&(c.style.display=p.checked?"":"none",b&&(b.style.display=p.checked?"":"none"));let g=t.getElementById("m-sscope"),u=t.getElementById("m-sperson-section");g&&u&&(u.style.display=g.value==="personal"?"":"none");let v=t.getElementById("m-sgroup"),_=t.getElementById("m-sgroup-section");v&&_&&(_.style.display=v.checked?"":"none",v.checked&&u&&(u.style.display="none"));let f=t.getElementById("m-rotation-section"),$=t.getElementById("m-rotation-config"),S=t.getElementById("m-crot-enabled"),x=t.getElementById("m-ctype");f&&(f.style.display=(x==null?void 0:x.value)==="assigned"?"":"none"),$&&S&&($.style.display=S.checked?"":"none");let h=t.getElementById("m-crot-cadence"),w=t.getElementById("m-crot-switch-day-wrap");h&&w&&(w.style.display=h.value==="weekly"?"":"none")}}});var Qt,ho=N(()=>{K();Q();Qt=class extends HTMLElement{setConfig(t){this._cfg=t,this._render()}set hass(t){var a,o,s;this._hass=t,this._people=((s=(o=(a=t==null?void 0:t.states)==null?void 0:a["sensor.family_hub_needs_attention"])==null?void 0:o.attributes)==null?void 0:s.people)||[],this._render()}_render(){var v,_,f,$,S,x,h,w,z;let t=this._cfg||{},a=this._people||[],o=t.mode||"command_center",s=t.person||"",i=t.initial_view||"",n=t.text_scale!=null?t.text_scale:1,d=(((f=(_=(v=this._hass)==null?void 0:v.states)==null?void 0:_["sensor.family_hub_needs_attention"])==null?void 0:f.attributes)||{}).rooms_config||{},p=[["","Home (default)"],...a.map(E=>[`person:${E.person_id}`,`${E.name}'s page`]),...Object.keys(d).map(E=>[`room:${E}`,`Room: ${E}`])],b=!!((S=($=this._hass)==null?void 0:$.states)==null?void 0:S["sensor.family_hub_needs_attention"]),g=`<span style="
             display:inline-block;width:8px;height:8px;border-radius:50%;
             background:${b?"#30d158":"#ff453a"};
             margin-right:5px;vertical-align:middle;"></span>`,u=b?`${g}Integration connected (v${lt})`:`${g}Integration not found \u2014 install Family Hub`;this.innerHTML=`
@@ -9543,7 +9565,7 @@ ${(o==null?void 0:o.message)||o}`)}}_buildModal(){var a;let t=document.createEle
           <label class="fhe-label">Person</label>
           ${a.length?`<select class="fhe-select" id="e-person">
                    ${a.map(E=>`<option value="${E.name.toLowerCase()}"
-                                ${E.name.toLowerCase()===s?"selected":""}>${f(E.name)}</option>`).join("")}
+                                ${E.name.toLowerCase()===s?"selected":""}>${m(E.name)}</option>`).join("")}
                  </select>`:`<input class="fhe-input" id="e-person" type="text"
                         value="${s}" placeholder="e.g. jackson">`}
           <span class="fhe-hint">Enter the person's name (lowercase)</span>
@@ -9553,7 +9575,7 @@ ${(o==null?void 0:o.message)||o}`)}}_buildModal(){var a;let t=document.createEle
              style="display:${o==="command_center"?"flex":"none"}">
           <label class="fhe-label">Initial view</label>
           <select class="fhe-select" id="e-initial-view">
-            ${p.map(([E,F])=>`<option value="${E}" ${E===i?"selected":""}>${f(F)}</option>`).join("")}
+            ${p.map(([E,F])=>`<option value="${E}" ${E===i?"selected":""}>${m(F)}</option>`).join("")}
           </select>
           <span class="fhe-hint">Open this view directly. Back arrow returns to home.</span>
         </div>
@@ -9565,4 +9587,4 @@ ${(o==null?void 0:o.message)||o}`)}}_buildModal(){var a;let t=document.createEle
           </select>
           <span class="fhe-hint">Increase for Echo Show / tablet screens.</span>
         </div>
-      </div>`,(v=this.querySelector("#e-mode"))==null||v.addEventListener("change",E=>{this._cfg={...this._cfg,mode:E.target.value},E.target.value!=="personal"&&delete this._cfg.person,E.target.value!=="command_center"&&delete this._cfg.initial_view,this._fireChange(),this._render()}),(h=this.querySelector("#e-initial-view"))==null||h.addEventListener("change",E=>{let F=E.target.value;this._cfg={...this._cfg},F?this._cfg.initial_view=F:delete this._cfg.initial_view,this._fireChange()}),(k=this.querySelector("#e-person"))==null||k.addEventListener("change",E=>{this._cfg={...this._cfg,person:E.target.value},this._fireChange()}),(A=this.querySelector("#e-scale"))==null||A.addEventListener("change",E=>{this._cfg={...this._cfg,text_scale:parseFloat(E.target.value)},this._fireChange()})}_fireChange(){this.dispatchEvent(new CustomEvent("config-changed",{detail:{config:this._cfg},bubbles:!0,composed:!0}))}}});var Kn=go(()=>{po();ho();K();customElements.get("family-hub-card-impl")||customElements.define("family-hub-card-impl",Xt);customElements.get("family-hub-card-editor-impl")||customElements.define("family-hub-card-editor-impl",Qt);console.info(`%c FAMILY-HUB-CARD %c v${lt} %c body loaded `,"background:#7F77DD;color:#fff;font-weight:700;border-radius:4px 0 0 4px;padding:2px 6px","background:#1c1c1e;color:#fff;font-weight:400;padding:2px 6px","background:#58D38A;color:#000;font-weight:600;border-radius:0 4px 4px 0;padding:2px 6px")});export default Kn();
+      </div>`,(x=this.querySelector("#e-mode"))==null||x.addEventListener("change",E=>{this._cfg={...this._cfg,mode:E.target.value},E.target.value!=="personal"&&delete this._cfg.person,E.target.value!=="command_center"&&delete this._cfg.initial_view,this._fireChange(),this._render()}),(h=this.querySelector("#e-initial-view"))==null||h.addEventListener("change",E=>{let F=E.target.value;this._cfg={...this._cfg},F?this._cfg.initial_view=F:delete this._cfg.initial_view,this._fireChange()}),(w=this.querySelector("#e-person"))==null||w.addEventListener("change",E=>{this._cfg={...this._cfg,person:E.target.value},this._fireChange()}),(z=this.querySelector("#e-scale"))==null||z.addEventListener("change",E=>{this._cfg={...this._cfg,text_scale:parseFloat(E.target.value)},this._fireChange()})}_fireChange(){this.dispatchEvent(new CustomEvent("config-changed",{detail:{config:this._cfg},bubbles:!0,composed:!0}))}}});var Kn=go(()=>{po();ho();K();customElements.get("family-hub-card-impl")||customElements.define("family-hub-card-impl",Xt);customElements.get("family-hub-card-editor-impl")||customElements.define("family-hub-card-editor-impl",Qt);console.info(`%c FAMILY-HUB-CARD %c v${lt} %c body loaded `,"background:#7F77DD;color:#fff;font-weight:700;border-radius:4px 0 0 4px;padding:2px 6px","background:#1c1c1e;color:#fff;font-weight:400;padding:2px 6px","background:#58D38A;color:#000;font-weight:600;border-radius:0 4px 4px 0;padding:2px 6px")});export default Kn();

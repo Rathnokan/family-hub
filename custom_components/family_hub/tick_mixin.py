@@ -359,6 +359,14 @@ class TickMixin:
         # --- Prune old terminal task instances -------------------------------
         self._trim_task_instances(today)
 
+        # --- Module tick hooks (v0.8.0) --------------------------------------
+        # Each enabled module with a tick_hook runs its once-per-day work (e.g.
+        # maintenance clears expired snoozes). No-op until a module declares one.
+        from .modules import MODULES
+        for _mod in MODULES.values():
+            if _mod.tick_hook and _mod.id in self.enabled_modules:
+                await getattr(self, _mod.tick_hook)(today)
+
         self._data["settings"]["last_tick_date"] = today.isoformat()
         await self.async_save()
 

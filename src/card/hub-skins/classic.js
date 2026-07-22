@@ -123,6 +123,24 @@ function _htmlRooms(card, naAttr) {
         const status = roomsCfg[room.id]?.status || room.status;
         if (status === "hidden") return "";
 
+        // v0.8.0: a disabled module shows a dimmed, inert "MODULE OFF" tile so
+        // the user knows the room exists and where to turn it back on. The
+        // drill-down is blocked (no data-act="nav"); _htmlCommandCenter guards
+        // deep-links too.
+        const moduleOn = naAttr.modules?.[room.id] !== false;
+        if (!moduleOn) {
+            return `
+            <div class="fh-home-room-tile off" style="--room-accent:${room.accent}">
+                <div class="fh-home-room-icon" style="color:${room.accent}">${room.icon}</div>
+                <div class="fh-home-room-body">
+                    <div class="fh-home-room-label">${escHTML(room.label)}</div>
+                    <div class="fh-home-room-sub">${escHTML(room.sub)}</div>
+                    <div class="fh-home-room-off">MODULE OFF</div>
+                    <div class="fh-home-room-preview">Enable in HA → Family Hub → Configure</div>
+                </div>
+            </div>`;
+        }
+
         const isLive    = status === "live";
         const stats     = isLive ? room.getStats(card) : [];
         const statsHTML = stats.map(s => `

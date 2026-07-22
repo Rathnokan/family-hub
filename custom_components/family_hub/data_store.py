@@ -191,6 +191,9 @@ from .redemptions_mixin import RedemptionsMixin
 from .history_admin_mixin import HistoryAdminMixin
 from .meals_mixin import MealsMixin
 
+from .event_bus import FamilyHubBus
+from .modules import MODULE_IDS
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -217,6 +220,27 @@ class FamilyHubDataStore(CardShaperMixin, TickMixin, StreaksRanksMixin, Subscrip
             domain: Store(hass, STORAGE_VERSION, f"{DOMAIN}_{domain}")
             for domain in _STORE_DOMAINS
         }
+        # v0.8.0 module framework: which modules are exposed (services/sensors/
+        # card model/tick). Set authoritatively by async_setup_entry from the
+        # config-entry options; defaults to all-on so the store works standalone
+        # (first load before options are read, tests). Disabled modules keep all
+        # their data — it is simply never exposed or mutated.
+        self.enabled_modules: frozenset[str] = frozenset(MODULE_IDS)
+        # v0.8.0 internal pub/sub between modules. Delivery is gated on
+        # enabled_modules at publish time (evaluated fresh each publish).
+        self.bus = FamilyHubBus(lambda mid: mid in self.enabled_modules)
+        self._register_bus_subscriptions()
+
+    def _register_bus_subscriptions(self) -> None:
+        """Wire each module's event-bus subscribers. Called once at store init.
+
+        Subscriptions register unconditionally; delivery is gated on
+        enabled_modules, so toggling a module on is race-free. No subscribers
+        exist yet in A2 — the maintenance subscriber lands in A4 and the
+        chores-bridge subscriber in D5. Keep this the single wiring point so the
+        subscription set is easy to audit.
+        """
+        return
 
     # ------------------------------------------------------------------
     # Load / Save

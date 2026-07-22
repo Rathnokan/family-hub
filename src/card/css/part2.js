@@ -29,6 +29,15 @@ export const CSS_2 = `    color:var(--fh-text-sec); letter-spacing:.04em;
   }
   .fh-home-room-tile.coming { opacity:.6; cursor:default; }
   .fh-home-room-tile.coming:hover { border-color:transparent; background:var(--fh-surface); }
+  /* v0.8.0: disabled-module tile — dimmed and inert (no drill-down). */
+  .fh-home-room-tile.off { opacity:.45; cursor:default; }
+  .fh-home-room-tile.off:hover { border-color:transparent; background:var(--fh-surface); }
+  .fh-home-room-off {
+    display:inline-block; font-size:.78rem; font-weight:800; letter-spacing:.08em;
+    padding:2px 8px; border-radius:10px;
+    background:var(--fh-bg); color:var(--fh-text-sec);
+    border:1px solid var(--fh-border); margin-bottom:4px;
+  }
   .fh-home-room-icon {
     width:36px; height:36px; flex-shrink:0;
     display:flex; align-items:center; justify-content:center; margin-top:1px;

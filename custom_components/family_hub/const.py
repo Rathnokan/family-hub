@@ -20,6 +20,20 @@ STORAGE_FILE = "family_hub_data.json"
 # Bumped 1→2 for the v0.7.0 module-oriented multi-store layout.
 STORAGE_VERSION = 2
 
+# ---------------------------------------------------------------------------
+# Module event-bus topics (v0.8.0). In-process pub/sub between modules — see
+# event_bus.FamilyHubBus and docs/PLAN-v0.8.0.md §2. Payload contracts are
+# FROZEN now; the cross-module subscribers land later (A4 maintenance, D5 the
+# chores bridge). Publishers know only these topic strings — never import a
+# sibling module.
+#   external_task_offer    {source_module, external_id, name, description,
+#                           points, due_date, assigned_to|None, claimable}
+#   external_task_complete {source_module, external_id, completed_by, completed_at}
+#   external_task_revoke   {source_module, external_id}
+TOPIC_EXTERNAL_TASK_OFFER = "external_task_offer"
+TOPIC_EXTERNAL_TASK_COMPLETE = "external_task_complete"
+TOPIC_EXTERNAL_TASK_REVOKE = "external_task_revoke"
+
 # Person types
 PERSON_TYPE_KID = "kid"
 PERSON_TYPE_PARENT = "parent"

@@ -52,6 +52,7 @@ from .const import (
 )
 from .coordinator import FamilyHubCoordinator
 from .data_store import FamilyHubDataStore
+from .modules import MODULES, enabled_modules
 from .services import async_setup_services
 from .websocket import async_register_websocket_api
 
@@ -169,6 +170,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     store = FamilyHubDataStore(hass, storage_path)
     await store.async_load()
 
+    # v0.8.0 module framework: resolve which modules are enabled from the config
+    # entry options (default all-on) BEFORE the first refresh, so the card model,
+    # sensors, and services all see a consistent enabled set. Changing a toggle
+    # reloads the entry (see _async_update_listener), re-running this cleanly.
+    store.enabled_modules = enabled_modules(entry)
+    entry.async_on_unload(entry.add_update_listener(_async_update_listener))
+
     # v0.7.6: repair task instances stranded by an earlier chore-type switch
     # (e.g. ASSIGNED → CLAIMABLE "Bonus"). Runs once per load; no-op when clean.
     repaired = await store._reconcile_chore_instance_types()
@@ -263,7 +271,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # --- Services ---
     # Services are set up before the sensor platform so that the callables
     # exist in hass.data before any service handler could fire.
-    await async_setup_services(hass, coordinator)
+    await async_setup_services(hass, coordinator, store.enabled_modules)
 
     # --- Sensors ---
     # The platform forward populates person_entities and stores the
@@ -287,20 +295,39 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return True
 
 
+async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Reload the entry when its options change (v0.8.0 module toggles).
+
+    async_setup_entry rebuilds services/sensors/model from the enabled set, so a
+    reload is all that's needed to enable/disable a module. async_unload_entry
+    flushes any debounced store writes first, so no save is lost.
+    """
+    await hass.config_entries.async_reload(entry.entry_id)
+
+
 async def _async_cleanup_stale_entities(
     hass: HomeAssistant,
     entry: ConfigEntry,
     store: FamilyHubDataStore,
 ) -> None:
-    """Remove any entities that no longer exist in this version of the integration."""
+    """Remove any entities that no longer exist in this version of the integration.
+
+    v0.8.0: the expected set of module-owned global sensors is built from the
+    module registry against store.enabled_modules — so disabling a module removes
+    its sensors on the next reload, and re-enabling recreates them with identical
+    unique_ids. Core sensors (needs_attention, claimable_tasks) are always kept.
+    """
     expected: set[str] = {f"{DOMAIN}_person_{p['id']}" for p in store.people}
     expected.update({f"{DOMAIN}_widget_{p['id']}" for p in store.people})
+    # Core global sensors (never gated).
     expected.update({
-        f"{DOMAIN}_maintenance_due",
-        f"{DOMAIN}_maintenance_overdue",
         f"{DOMAIN}_needs_attention",
         f"{DOMAIN}_claimable_tasks",
     })
+    # Module-owned global sensors, only for enabled modules.
+    for mod in MODULES.values():
+        if mod.id in store.enabled_modules:
+            expected.update(mod.sensor_unique_ids)
 
     registry = er.async_get(hass)
     stale = [

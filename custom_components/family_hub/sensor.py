@@ -104,11 +104,19 @@ async def async_setup_entry(
         entities.append(FamilyHubPersonWidgetSensor(coordinator, person["id"]))
 
     # --- Global sensors -------------------------------------------------------
-    entities.append(FamilyHubMaintenanceDueSensor(coordinator))
-    entities.append(FamilyHubMaintenanceOverdueSensor(coordinator))
+    # v0.8.0: module-owned global sensors are created only when their module is
+    # enabled. needs_attention + claimable_tasks are core (always created).
+    # A disabled module's sensors are pruned by _async_cleanup_stale_entities on
+    # this same reload; re-enabling recreates them with identical unique_ids.
+    enabled = coordinator.store.enabled_modules
+
     entities.append(FamilyHubNeedsAttentionSensor(coordinator))
     entities.append(FamilyHubClaimableTasksSensor(coordinator))
-    entities.append(FamilyHubMealsSensor(coordinator))
+    if "maintenance" in enabled:
+        entities.append(FamilyHubMaintenanceDueSensor(coordinator))
+        entities.append(FamilyHubMaintenanceOverdueSensor(coordinator))
+    if "meals" in enabled:
+        entities.append(FamilyHubMealsSensor(coordinator))
 
     async_add_entities(entities, update_before_add=True)
 
@@ -352,10 +360,16 @@ class FamilyHubNeedsAttentionSensor(FamilyHubBaseSensor):
     @property
     def native_value(self) -> int:
         store = self.coordinator.store
+        # v0.8.0: overdue maintenance only counts when the maintenance module is
+        # on, so the badge never references a disabled module.
+        overdue_maint = (
+            len(get_maintenance_tasks(store, overdue_only=True))
+            if "maintenance" in store.enabled_modules else 0
+        )
         return (
             len(store.get_pending_approvals())
             + len(store.get_pending_redemptions())
-            + len(get_maintenance_tasks(store, overdue_only=True))
+            + overdue_maint
             + len(store.get_group_reward_proposals_for_card())
             + len([s for s in store._data.get("subscriptions", []) if s["status"] == SUB_STATUS_CANCEL_PENDING])
         )

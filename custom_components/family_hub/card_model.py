@@ -28,6 +28,15 @@ from .const import (
     REDEMPTION_PENDING,
     STATUS_PENDING_APPROVAL,
 )
+from .modules import MODULE_IDS
+
+
+def _modules_map(store) -> dict:
+    """v0.8.0: {module_id: enabled_bool} for every module, so the card can hide
+    a disabled module's room tile / drill-down / affordances. Missing
+    enabled_modules (defensive) reads as all-on."""
+    enabled = getattr(store, "enabled_modules", None)
+    return {mid: (enabled is None or mid in enabled) for mid in MODULE_IDS}
 
 
 def _chore_occ_per_week(chore) -> float:
@@ -347,6 +356,8 @@ def build_needs_attention_scalars(store) -> dict:
 
         # Room layout config for the editor's initial_view dropdown
         "rooms_config": store.settings.get("rooms_config", {}),
+        # v0.8.0: per-module enabled map so the card hides disabled rooms/affordances.
+        "modules":      _modules_map(store),
         "family_name":  store.family_name,
     }
 
@@ -517,6 +528,7 @@ def build_needs_attention_payload(store) -> dict:
         "penalties_paused_global":   store.penalties_paused_global,
         "penalty_alert_time":        store.settings.get("penalty_alert_time", 800),
         "rooms_config":              store.settings.get("rooms_config", {}),
+        "modules":                   _modules_map(store),
         "weather_entity":            store.settings.get("weather_entity", ""),
         "today_calendar_entities":   store.settings.get("today_calendar_entities", []),
         "rank_eval_weekday":         store.settings.get("rank_eval_weekday", 0),
@@ -645,13 +657,25 @@ def build_card_model(store) -> dict:
     """Assemble the full card model: every Family Hub sensor's payload, keyed
     by entity_id. The card fetches this via the `family_hub/get_model`
     websocket command and reads it through card._attrs(<entity_id>)."""
+    # Core payloads (always present).
     model = {
-        "sensor.family_hub_needs_attention":     build_needs_attention_payload(store),
-        "sensor.family_hub_claimable_tasks":     build_claimable_payload(store),
-        "sensor.family_hub_maintenance_due":     build_maintenance_due_payload(store),
-        "sensor.family_hub_maintenance_overdue": build_maintenance_overdue_payload(store),
-        "sensor.family_hub_meals":               build_meals_payload(store),
+        "sensor.family_hub_needs_attention": build_needs_attention_payload(store),
+        "sensor.family_hub_claimable_tasks": build_claimable_payload(store),
     }
+    # v0.8.0: a disabled module contributes no model keys. The card gates its UI
+    # on the `modules` map (in needs_attention), and _attrs() returns {} for a
+    # missing key, so an omitted key is safe.
+    enabled = getattr(store, "enabled_modules", None)
+
+    def _on(mid: str) -> bool:
+        return enabled is None or mid in enabled
+
+    if _on("maintenance"):
+        model["sensor.family_hub_maintenance_due"] = build_maintenance_due_payload(store)
+        model["sensor.family_hub_maintenance_overdue"] = build_maintenance_overdue_payload(store)
+    if _on("meals"):
+        model["sensor.family_hub_meals"] = build_meals_payload(store)
+
     for p in store.get_active_people():
         model[person_entity_id(p["name"])] = build_person_payload(store, p["id"])
     return model

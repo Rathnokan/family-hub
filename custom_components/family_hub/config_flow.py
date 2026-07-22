@@ -17,6 +17,7 @@ import os
 import voluptuous as vol
 
 from homeassistant import config_entries
+from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 
 from .const import (
@@ -37,6 +38,14 @@ class FamilyHubConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle the Family Hub setup flow."""
 
     VERSION = 1
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(
+        config_entry: config_entries.ConfigEntry,
+    ) -> config_entries.OptionsFlow:
+        """Expose the module enable/disable options flow (v0.8.0)."""
+        return FamilyHubOptionsFlow()
 
     def __init__(self) -> None:
         self._config: dict = {}
@@ -138,3 +147,26 @@ class FamilyHubConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 "initial_people": self._people,
             },
         )
+
+
+class FamilyHubOptionsFlow(config_entries.OptionsFlow):
+    """Runtime module enable/disable (v0.8.0 module framework).
+
+    Flags are stored under ``entry.options["modules"]`` as ``{module_id: bool}``.
+    Changing a toggle triggers the update listener in __init__.py, which reloads
+    the config entry — so only enabled modules' services and sensors are
+    re-registered. A disabled module keeps all of its stored data.
+    """
+
+    async def async_step_init(self, user_input: dict | None = None) -> FlowResult:
+        from .modules import MODULES
+
+        if user_input is not None:
+            return self.async_create_entry(title="", data={"modules": dict(user_input)})
+
+        current = (self.config_entry.options or {}).get("modules", {})
+        schema = vol.Schema({
+            vol.Required(mod.id, default=current.get(mod.id, True)): bool
+            for mod in MODULES.values()
+        })
+        return self.async_show_form(step_id="init", data_schema=schema)

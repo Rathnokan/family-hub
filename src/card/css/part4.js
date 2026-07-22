@@ -524,6 +524,9 @@ export const CSS_4 = `    text-shadow:2px 2px 0 rgba(255,255,255,.3), 4px 4px 0 
     border: 1px solid var(--fh-border);
     border-radius: var(--fh-radius-sm);
   }
+  /* v0.8.0: locked row — module disabled in integration options. */
+  .fh-hub-room-row--off { opacity: .5; }
+  .fh-hub-room-row--off .fh-toggle { pointer-events: none; }
   .fh-hub-room-icon {
     width: 28px; height: 28px; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center;
