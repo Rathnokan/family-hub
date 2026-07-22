@@ -32,13 +32,13 @@
 
 Implement from [docs/PLAN-v0.8.0.md](docs/PLAN-v0.8.0.md) — each brief there has files, anchors, and acceptance criteria.
 
-| Session | Scope (one line) |
-|---|---|
-| **A2** | Module framework (`modules.py` registry + OptionsFlow toggles + entry reload; gated services/sensors/model/tick; card OFF-tile) + `event_bus.py` pub/sub with frozen `external_task_*` topic contracts. |
-| **A3** | Versioned export/import — `DATA_SCHEMA_VERSION 3` envelope, `migrations.py` stepwise migrators, `export_data`/`import_data` services with validate-then-swap safety. |
-| **A4** | Maintenance backend — new `maintenance` store domain (tasks/products/completions/vendors/funds/home_profile), `_maintenance_schedule.py` derived-state scheduling (both `schedule_mode`s), ~19 `maintenance_*` services, seed-loader interface (library ships empty). |
-| **A5** | One-time migration of `category_label=="Maintenance"` chores into the new collection + full `_chore_is_maintenance` seam removal. |
-| **A6** | Chores/Rewards gating audit — make the chores + rewards toggles real (services/sensors/tick/card degradation), per the A1 decision that ALL modules are gateable. |
+| Session | Scope (one line) | State |
+|---|---|---|
+| **A2** | Module framework (`modules.py` registry + OptionsFlow toggles + entry reload; gated services/sensors/model/tick; card OFF-tile) + `event_bus.py` pub/sub with frozen `external_task_*` topic contracts. | ✅ done + live-tested 2026-07-21 |
+| **A3** | Versioned export/import — `DATA_SCHEMA_VERSION 3` envelope, `migrations.py` stepwise migrators, `export_data`/`import_data` services with validate-then-swap safety. | ✅ done + live-tested 2026-07-21 (12/12) |
+| **A4** | Maintenance backend — new `maintenance` store domain (tasks/products/completions/vendors/funds/home_profile), `_maintenance_schedule.py` derived-state scheduling (both `schedule_mode`s), ~19 `maintenance_*` services, seed-loader interface (library ships empty). **`assign` = bus offer/revoke only, no in-module assignee (decided 2026-07-21).** | ◀ next |
+| **A5** | One-time migration of `category_label=="Maintenance"` chores into the new collection + full `_chore_is_maintenance` seam removal. | |
+| **A6** | Chores/Rewards gating audit — make the chores + rewards toggles real (services/sensors/tick/card degradation), per the A1 decision that ALL modules are gateable. | |
 
 **Parallel (not Claude Code):** Phase B seed-library research (Chat/Research, 3 sessions → `seed_library.json`) and Phase C design (admin IA rethink + maintenance room prototype → handoff spec). Phase D (room UI, notifications, Chores bridge D5) starts when A is done + C2 has screens.
 
