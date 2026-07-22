@@ -120,6 +120,14 @@
     "export_backup": {
       "name": "Export backup",
       "description": "Save a timestamped backup of all Family Hub data."
+    },
+    "export_data": {
+      "name": "Export data (versioned)",
+      "description": "Write a schema-stamped export of all Family Hub data, portable across versions."
+    },
+    "import_data": {
+      "name": "Import data (versioned)",
+      "description": "Import a Family Hub export with forward migration; backs up and verifies before swapping."
     }
   }
 }

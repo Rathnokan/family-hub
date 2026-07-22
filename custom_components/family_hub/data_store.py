@@ -61,6 +61,7 @@ from __future__ import annotations
 
 import asyncio
 import calendar
+import copy
 import json
 import logging
 import math
@@ -71,6 +72,7 @@ from datetime import date, datetime, timedelta
 from typing import Any
 
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.storage import Store
 
 from .const import (
@@ -161,8 +163,10 @@ from .const import (
     STATUS_REJECTED,
     STATUS_SELF_REPORTED,
     STATUS_SKIPPED,
+    DATA_SCHEMA_VERSION,
     STORAGE_FILE,
     STORAGE_VERSION,
+    VERSION,
 )
 from ._store_helpers import (
     _STORE_DOMAINS,
@@ -192,6 +196,7 @@ from .history_admin_mixin import HistoryAdminMixin
 from .meals_mixin import MealsMixin
 
 from .event_bus import FamilyHubBus
+from .migrations import migrate_to_current
 from .modules import MODULE_IDS
 
 _LOGGER = logging.getLogger(__name__)
@@ -491,6 +496,12 @@ class FamilyHubDataStore(CardShaperMixin, TickMixin, StreaksRanksMixin, Subscrip
         # v0.8.0: ensure the meals section + all its sub-keys exist
         _migrate_meals(self._data)
 
+        # v0.8.0: stamp the family-data schema version. Numbered structural
+        # migrations (migrations.MIGRATORS) run on IMPORT before this; the
+        # setdefault forward-fills above are the intra-version top-up that runs
+        # on every load and after every import.
+        self._data["schema_version"] = DATA_SCHEMA_VERSION
+
     async def async_save(self) -> None:
         """Persist data to the per-domain HA Stores (v0.7.0 P3).
 
@@ -691,3 +702,160 @@ class FamilyHubDataStore(CardShaperMixin, TickMixin, StreaksRanksMixin, Subscrip
         except OSError as err:
             _LOGGER.error("Family Hub: backup failed: %s", err)
             return False
+
+    # ------------------------------------------------------------------
+    # Versioned export / import (v0.8.0 — ecosystem infrastructure)
+    # ------------------------------------------------------------------
+
+    def _collection_counts(self, data: dict) -> dict[str, int]:
+        """Lengths of every list-valued top-level collection. Generic so new
+        module collections (maintenance_* in A4) are counted automatically."""
+        return {k: len(v) for k, v in data.items() if isinstance(v, list)}
+
+    def _export_envelope(self) -> dict:
+        """Schema-stamped export envelope wrapping the full merged store."""
+        return {
+            "format": "family_hub_export",
+            "schema_version": self._data.get("schema_version", DATA_SCHEMA_VERSION),
+            "app_version": VERSION,
+            "exported_at": datetime.now().astimezone().isoformat(),
+            "meta": {
+                # Informational only — module flags live in HA config-entry
+                # options and are NOT re-applied on import.
+                "modules": {mid: (mid in self.enabled_modules) for mid in MODULE_IDS},
+                "counts": self._collection_counts(self._data),
+            },
+            "data": self._data,
+        }
+
+    async def async_export_data(self, export_path: str | None = None) -> str:
+        """Write a versioned export of ALL module data (envelope + counts).
+
+        Returns the path written. Default location mirrors export_backup's dir.
+        Disabled modules' data is included — an export is always 100% complete.
+        """
+        if export_path is None:
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+            export_path = os.path.join(
+                self._hass.config.path("family_hub_backups"),
+                f"family_hub_export_{ts}.json",
+            )
+        envelope = self._export_envelope()
+
+        def _write() -> None:
+            os.makedirs(os.path.dirname(export_path), exist_ok=True)
+            with open(export_path, "w", encoding="utf-8") as f:
+                json.dump(envelope, f, indent=2, ensure_ascii=False)
+
+        await self._hass.async_add_executor_job(_write)
+        _LOGGER.info("Family Hub: data exported to %s", export_path)
+        return export_path
+
+    async def async_import_data(self, import_path: str, dry_run: bool = False) -> dict:
+        """Import a Family Hub export, migrating it forward if needed.
+
+        Validate-then-swap: the file is parsed, structurally migrated, record-
+        migrated, and count-verified on a CANDIDATE copy BEFORE the live store is
+        touched. Any failure raises HomeAssistantError with the live store intact
+        (the swap simply never happens). History-count equality is mandatory —
+        losing history is the only unacceptable outcome. dry_run returns the
+        verification report and changes nothing.
+
+        Bare legacy export_backup files (a raw merged dict, no envelope) are
+        detected and imported as the current schema, so every backup a user has
+        ever made stays restorable.
+        """
+        def _read() -> dict:
+            with open(import_path, encoding="utf-8") as f:
+                return json.load(f)
+
+        try:
+            raw = await self._hass.async_add_executor_job(_read)
+        except (OSError, json.JSONDecodeError) as err:
+            raise HomeAssistantError(f"Could not read import file: {err}") from err
+
+        # --- Envelope detection ---
+        if isinstance(raw, dict) and raw.get("format") == "family_hub_export":
+            from_version = int(raw.get("schema_version", DATA_SCHEMA_VERSION))
+            data = raw.get("data")
+            envelope_counts = (raw.get("meta") or {}).get("counts", {})
+        elif isinstance(raw, dict) and "people" in raw and "settings" in raw:
+            # Legacy export_backup: raw merged dict, no envelope → current shape.
+            from_version = int(raw.get("schema_version", DATA_SCHEMA_VERSION))
+            data = raw
+            envelope_counts = {}
+        else:
+            raise HomeAssistantError("Unrecognized file — not a Family Hub export.")
+
+        if not isinstance(data, dict):
+            raise HomeAssistantError("Import file has no data payload.")
+
+        # --- Reject newer-than-current ---
+        if from_version > DATA_SCHEMA_VERSION:
+            raise HomeAssistantError(
+                f"Export is schema v{from_version}; this Family Hub supports up to "
+                f"v{DATA_SCHEMA_VERSION}. Upgrade Family Hub, then import."
+            )
+
+        # --- Migrate + record-migrate a CANDIDATE copy (live store untouched) ---
+        candidate = copy.deepcopy(data)
+        try:
+            candidate = migrate_to_current(candidate, from_version)
+        except KeyError as err:
+            raise HomeAssistantError(
+                f"No migrator for data schema v{err}; cannot import this file."
+            ) from err
+
+        # Run the idempotent record forward-fills on the candidate by temporarily
+        # pointing self._data at it. Restored in `finally`, so a failure anywhere
+        # below leaves the live store exactly as it was.
+        saved = self._data
+        self._data = candidate
+        try:
+            self._run_record_migrations()
+        finally:
+            self._data = saved
+
+        # --- Verify counts (history exact; others must not shrink) ---
+        cand_counts = self._collection_counts(candidate)
+        report: dict = {
+            "from_version": from_version,
+            "to_version": DATA_SCHEMA_VERSION,
+            "counts": cand_counts,
+            "warnings": [],
+            "dry_run": dry_run,
+        }
+        for key, expected in envelope_counts.items():
+            got = cand_counts.get(key, 0)
+            if key == "history":
+                if got != expected:
+                    raise HomeAssistantError(
+                        f"History count mismatch (export {expected}, migrated {got}). "
+                        "Aborting to protect history."
+                    )
+            elif got < expected:
+                report["warnings"].append(f"{key}: export {expected}, migrated {got}")
+
+        if dry_run:
+            return report
+
+        # --- Pre-import backup of CURRENT data, then swap ---
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_path = os.path.join(
+            self._hass.config.path("family_hub_backups"),
+            f"family_hub_pre_import_{ts}.json",
+        )
+        await self.async_export_data(backup_path)
+        report["pre_import_backup"] = backup_path
+
+        async with self._lock:
+            self._data = candidate
+            await self.async_save()
+        await self.async_flush()
+
+        _LOGGER.warning(
+            "Family Hub: imported data from %s (pre-import backup: %s)",
+            import_path, backup_path,
+        )
+        report["imported"] = True
+        return report

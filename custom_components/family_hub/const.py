@@ -21,6 +21,14 @@ STORAGE_FILE = "family_hub_data.json"
 STORAGE_VERSION = 2
 
 # ---------------------------------------------------------------------------
+# Family-DATA schema version (v0.8.0). Distinct from STORAGE_VERSION (the HA
+# Store file-LAYOUT version): this describes the shape of the data itself and
+# stamps every export. Lineage: v1 legacy single file · v2 multi-store · v3
+# v0.8.0. Bump this + add a migrations.MIGRATORS entry ONLY for structural
+# changes (renamed/moved collections). Additive fields stay setdefault-only.
+DATA_SCHEMA_VERSION = 3
+
+# ---------------------------------------------------------------------------
 # Module event-bus topics (v0.8.0). In-process pub/sub between modules — see
 # event_bus.FamilyHubBus and docs/PLAN-v0.8.0.md §2. Payload contracts are
 # FROZEN now; the cross-module subscribers land later (A4 maintenance, D5 the

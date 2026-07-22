@@ -328,6 +328,41 @@ export_backup:
       selector:
         text:
 
+export_data:
+  name: Export data (versioned)
+  description: >-
+    Write a schema-stamped export of ALL Family Hub data (every module, even
+    disabled ones). Portable across future versions via import_data.
+  fields:
+    path:
+      name: Path
+      description: >-
+        Absolute file path to write to. Leave blank to auto-name under
+        config/family_hub_backups/.
+      required: false
+      selector:
+        text:
+
+import_data:
+  name: Import data (versioned)
+  description: >-
+    Import a Family Hub export, migrating it forward if needed. Backs up current
+    data first, verifies collection counts (history must match exactly), then
+    swaps atomically. Fails safe — the live store is untouched on any error.
+  fields:
+    path:
+      name: Path
+      description: Absolute path of the export file to import.
+      required: true
+      selector:
+        text:
+    dry_run:
+      name: Dry run
+      description: Validate and report only — make no changes.
+      required: false
+      selector:
+        boolean:
+
 # ---------------------------------------------------------------------------
 # Subscriptions
 # ---------------------------------------------------------------------------

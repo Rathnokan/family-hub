@@ -106,6 +106,7 @@ from .const import (
     STATUS_REJECTED,
     STATUS_SELF_REPORTED,
     STATUS_SKIPPED,
+    DATA_SCHEMA_VERSION,
     STORAGE_FILE,
     STORAGE_VERSION,
 )
@@ -133,7 +134,7 @@ def _new_id() -> str:
 # ever lost, and a future module's collection is forward-compatible). A new
 # module = a new domain here + its own data/<module> package later.
 _STORE_DOMAINS: dict[str, list[str]] = {
-    "core":    ["version", "settings", "people"],
+    "core":    ["version", "schema_version", "settings", "people"],
     "chores":  ["chores", "task_instances"],
     "rewards": ["store_items", "redemptions", "subscriptions", "group_reward_proposals"],
     "history": ["history"],
@@ -148,6 +149,7 @@ def _empty_store(
 ) -> dict:
     return {
         "version": STORAGE_VERSION,
+        "schema_version": DATA_SCHEMA_VERSION,
         "settings": {
             "family_name": family_name,
             "points_per_dollar": points_per_dollar,

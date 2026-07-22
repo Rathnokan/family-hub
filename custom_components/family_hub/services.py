@@ -1157,6 +1157,64 @@ async def async_setup_services(
     )
 
     # ------------------------------------------------------------------
+    # Versioned export / import (v0.8.0). Core services — never gated.
+    # ------------------------------------------------------------------
+
+    async def handle_export_data(call: ServiceCall) -> None:
+        path = await store.async_export_data(call.data.get("path") or None)
+        await hass.services.async_call(
+            "persistent_notification", "create",
+            {
+                "message": f"Family Hub data exported to:\n`{path}`",
+                "title": "Family Hub export complete",
+                "notification_id": "family_hub_export",
+            },
+        )
+
+    hass.services.async_register(
+        DOMAIN, "export_data", handle_export_data,
+        schema=vol.Schema({vol.Optional("path"): cv.string}),
+    )
+
+    async def handle_import_data(call: ServiceCall) -> None:
+        # async_import_data raises HomeAssistantError on any failure, with the
+        # live store untouched — HA surfaces that to the caller.
+        report = await store.async_import_data(
+            call.data["path"], call.data.get("dry_run", False)
+        )
+        if not report.get("dry_run"):
+            await coordinator.async_refresh()
+        warn = report.get("warnings") or []
+        if report.get("dry_run"):
+            title = "Family Hub import — dry run (no changes)"
+        else:
+            title = "Family Hub import complete"
+        lines = [
+            f"Schema v{report.get('from_version')} → v{report.get('to_version')}",
+            f"Collections: {report.get('counts')}",
+        ]
+        if report.get("pre_import_backup"):
+            lines.append(f"Pre-import backup: `{report['pre_import_backup']}`")
+        if warn:
+            lines.append("Warnings: " + "; ".join(warn))
+        await hass.services.async_call(
+            "persistent_notification", "create",
+            {
+                "message": "\n".join(lines),
+                "title": title,
+                "notification_id": "family_hub_import",
+            },
+        )
+
+    hass.services.async_register(
+        DOMAIN, "import_data", handle_import_data,
+        schema=vol.Schema({
+            vol.Required("path"):    cv.string,
+            vol.Optional("dry_run"): cv.boolean,
+        }),
+    )
+
+    # ------------------------------------------------------------------
     # Subscriptions (v0.6.5)
     # ------------------------------------------------------------------
 
