@@ -21,18 +21,30 @@
 
 ---
 
-## Current status (2026-06-08)
+## Current status (2026-07-11)
 
-- **v0.7.3 shipped** (tag `v0.7.3`, release published). Chores batch: partial credit, late make-up claims, excuse-day, due/reset labels, per-chore rotation switch day + Current/Up Next rail, chore editor rebuilt as a 3-tab side-rail drawer (monthly multi-day; one-time + Add Task removed), admin actor logging, person-delete trash. See [RELEASE-NOTES-v0.7.3.md](RELEASE-NOTES-v0.7.3.md). (v0.7.2 "Dynamic Ranks" before it.)
-- **Next:** repurpose the chore detail side-panel, or the history/model perf trim, then v0.8.0 Home Maintenance. Branch from `main`.
+- **v0.7.7 shipped** (tag `v0.7.7`, release published) — Meals module + v0.7.6 reward gates / weekly streak / phone surfaces before it. Chores module is tabled.
+- **Active: v0.8.0 "Home Maintenance" — Phase A foundations.** A1 architecture session complete (2026-07-11); full approved plan → **[docs/PLAN-v0.8.0.md](docs/PLAN-v0.8.0.md)**. Scope authority: `home-maintenance-module-scope.md` (v2) + `family-hub-v080-implementation-plan.md` (in the user's Claude project knowledge).
 
 ---
 
-## Next up
+## Next up — v0.8.0 Phase A (one session each, in order)
 
-### Picked up next
-- **Repurpose the chore detail side-panel.** The desktop master-detail right panel (`_htmlChoreEditorPanel`) is a placeholder now that editing opens the drawer — fill it with useful data.
-- **Resolved:** ~~first-parent attribution~~ — shipped as **admin actor logging** (v0.7.3): `store.acting_as()` tags history `actor` with the logged-in HA user.
+Implement from [docs/PLAN-v0.8.0.md](docs/PLAN-v0.8.0.md) — each brief there has files, anchors, and acceptance criteria.
+
+| Session | Scope (one line) |
+|---|---|
+| **A2** | Module framework (`modules.py` registry + OptionsFlow toggles + entry reload; gated services/sensors/model/tick; card OFF-tile) + `event_bus.py` pub/sub with frozen `external_task_*` topic contracts. |
+| **A3** | Versioned export/import — `DATA_SCHEMA_VERSION 3` envelope, `migrations.py` stepwise migrators, `export_data`/`import_data` services with validate-then-swap safety. |
+| **A4** | Maintenance backend — new `maintenance` store domain (tasks/products/completions/vendors/funds/home_profile), `_maintenance_schedule.py` derived-state scheduling (both `schedule_mode`s), ~19 `maintenance_*` services, seed-loader interface (library ships empty). |
+| **A5** | One-time migration of `category_label=="Maintenance"` chores into the new collection + full `_chore_is_maintenance` seam removal. |
+| **A6** | Chores/Rewards gating audit — make the chores + rewards toggles real (services/sensors/tick/card degradation), per the A1 decision that ALL modules are gateable. |
+
+**Parallel (not Claude Code):** Phase B seed-library research (Chat/Research, 3 sessions → `seed_library.json`) and Phase C design (admin IA rethink + maintenance room prototype → handoff spec). Phase D (room UI, notifications, Chores bridge D5) starts when A is done + C2 has screens.
+
+### Carried items
+- **Repurpose the chore detail side-panel** — shipped v0.7.5 as the Earning & Balance rail. ~~Resolved.~~
+- **Admin actor logging** — shipped v0.7.3. ~~Resolved.~~
 
 ### Open decisions (user's call — parked)
 - ~~**Task-instance retention**~~ — resolved 2026-06-06: **30 days confirmed** (`TASK_INSTANCE_RETENTION_DAYS = 30`). No need for a longer window right now.
@@ -54,7 +66,7 @@
 - **Kid-initiated "Propose sharing" UI** — backend exists from v0.6.3; the proposal-creation modal was never built. See [BUGS.md](BUGS.md) "Deferred".
 
 ### Separate Maintenance into its own module (raised 2026-05-29, Jim)
-Maintenance is conceptually distinct from Chores but currently lives as a `category_label == "Maintenance"` special-case (the only seam is `_chore_is_maintenance()` + the Home Care drill-down). Target: own data collection / services / admin section, with two distinct admin tabs ("Chores" + "Maintenance"). Pairs with the v0.8.0 Home Maintenance room. Leave current behavior until then.
+**→ Now the active v0.8.0 scope.** Plan approved 2026-07-11: [docs/PLAN-v0.8.0.md](docs/PLAN-v0.8.0.md) (module framework, event bus, versioned export/import, maintenance data model, migration + seam removal).
 
 ### Deferred v0.6.3 items (parked)
 - Time-windowed chores (`available_from` / `expires_at`, sub-day auto-skip).
@@ -71,8 +83,10 @@ Maintenance is conceptually distinct from Chores but currently lives as a `categ
 | v0.7.0 | Re-foundation ✅ | Event-driven (no 30 s poll), websocket model + lean sensors, multi-store + debounced saves + safe migration, minified bundle, inactive-member mgmt, CI, `data_store.py`/`css.js` splits. |
 | v0.7.1 | Bug-swat + cleanup ✅ | Correctness patch off a full-codebase audit; hardening + de-drift. |
 | **v0.7.x** | Group rewards expansion / efficiency trims | Group subs, group streak reward, "Propose sharing" UI; history runtime trim; assets upload. |
-| v0.8.0 | Home Maintenance room — full feature | CRUD from the card, scheduling/recurrence; pairs with carving Maintenance out of chores. (Room is live as a read-only drill-down today.) |
-| v0.9.0 | Meals room | Weekly menu, grocery list, "what's for dinner" on the home strip. Scaffold live as coming-soon. |
+| v0.7.7 | Meals module ✅ | Weekly menu, plan/pantry/library/groceries tabs, 18 services, own store domain. |
+| **v0.8.0** | **Home Maintenance module (ACTIVE)** | Module framework + event bus + versioned export/import + maintenance backend + chores carve-out (Phase A, [docs/PLAN-v0.8.0.md](docs/PLAN-v0.8.0.md)); room UI / notifications / Chores bridge (Phase D). |
+| v0.8.x | Maintenance depth | Cost capture + reports, sinking funds (inflation + target-balance-today), full Inspect-Plan-Do, vendor book, printable plan. |
+| v0.9.0 | Recommendations + lawn program | Rules-as-data seasonal/event-driven recommendations; Bermuda lawn program from Phase B research. |
 | v0.10.0 | Calendar room | Pulls real HA calendar entities into the today strip. Scaffold live as coming-soon. |
 | v0.11.0 | Smart Home room | Permission-gated lighting/climate/irrigation for kids. Scaffold live as coming-soon. |
 | v1.0.0 | Theme builder UI + public release | Parent authors themes without editing code (rides on theme co-location). |

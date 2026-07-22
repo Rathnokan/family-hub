@@ -52,19 +52,19 @@ The handoff prompt is part of "Phase Complete" — do not declare a phase done w
 
 ---
 
-## Current Status — 2026-06-20
+## Current Status — 2026-07-11
 
 | Item | State |
 |---|---|
-| **Live on HA (Samba)** | v0.7.6 backend deployed; rebuilt card needs redeploy for the weekly-streak UI. |
-| **GitHub / HACS** | **v0.7.6 SHIPPED** — "Reward gates, weekly streak & phone surfaces" on `main`, **tag `v0.7.6`**, GitHub release published (Latest). **GitHub Actions CI green** on every push. (Prior tags: `v0.7.5` chores polish, `v0.7.3` make-up/partial-credit, `v0.7.2` Dynamic Ranks, `v0.7.1` bug-swat, `v0.7.0` Re-foundation. v0.7.4 skipped.) |
-| **manifest.json / hacs.json / constants.js / const.py VERSION** | **0.7.6** (`iot_class` = `calculated`). |
-| **Phase** | **v0.7.6 SHIPPED.** Reward unlock gates (`require_daily_pct`/`min_rank_index` + locked badge on all themes), bonus-chore claiming (claim rail), fully dynamic ranks (manual set + lock, computed weekly capacity), new **weekly-consistency streak** (chip + weekly progress bar all themes), and **phone home-screen surfaces** — per-person `sensor.family_hub_<name>_widget` + opt-in quiet checklist notification with Done buttons (`checklist_notify` flag; `mobile_app_notification_action` → `complete_task`). See [RELEASE-NOTES-v0.7.6.md](RELEASE-NOTES-v0.7.6.md). **⚠️ Phone widget/notification surfaces shipped but NOT yet live-tested on a device — verify before relying on them.** Next module: v0.8.0 Home Maintenance (branch from `main`). |
+| **Live on HA (Samba)** | v0.7.7 on `main` (Meals module); verify deployed state at session start if it matters. |
+| **GitHub / HACS** | **v0.7.7 SHIPPED** — Meals module, on `main`. **GitHub Actions CI green** on every push. (Prior tags: `v0.7.6` reward gates/weekly streak/phone surfaces, `v0.7.5` chores polish, `v0.7.3` make-up/partial-credit, `v0.7.2` Dynamic Ranks, `v0.7.1` bug-swat, `v0.7.0` Re-foundation. v0.7.4 skipped.) |
+| **manifest.json / hacs.json / constants.js / const.py VERSION** | **0.7.7** (`iot_class` = `calculated`). |
+| **Phase** | **v0.8.0 "Home Maintenance" — Phase A PLANNED (A1 architecture session complete 2026-07-11, no code yet).** Approved plan: **[docs/PLAN-v0.8.0.md](docs/PLAN-v0.8.0.md)** — module framework (all modules gateable, OptionsFlow + reload), event bus, versioned export/import (`DATA_SCHEMA_VERSION 3`), maintenance backend (no-instance derived-state model), chores carve-out migration. Implementation sessions **A2 → A3 → A4 → A5 → A6**, one sitting each; A2 is next. Scope docs (`home-maintenance-module-scope.md` v2, `family-hub-v080-implementation-plan.md`, `seed-schema.json`) live in the user's Claude project knowledge. ⚠️ v0.7.6 phone widget/notification surfaces still NOT device-tested. |
 
 > **v0.7.6 is on `main` + tagged.** Future work: branch from `main`. Every push runs CI — keep it green before deploying.
 >
 > **Backlog (recommended order):**
-> 1. **v0.8.0 Home Maintenance room CRUD** — split Maintenance out of the chores `category_label` special-case into its own module (roadmap). This is the next module.
+> 1. **v0.8.0 Phase A sessions A2–A6** — implement [docs/PLAN-v0.8.0.md](docs/PLAN-v0.8.0.md) one session at a time (A2 module framework + event bus is next). Branch from `main`.
 > 2. **model/history runtime trim (LOW — not currently a problem).** The card model caps `history_log` at **150 collapsed rows** (`get_history_for_card(limit=150)`) shipped over websocket (off the state machine since v0.7.0) — confirmed fine at family scale. Residual cost is only that `build_card_model` walks the full history to build those 150 rows each `data_rev`; revisit only if history grows huge. (Lazy per-view `family_hub/get_history` ws command stays the eventual fix.)
 > 3. Smaller deferred items (slug divergence, dedupe, theme flavor text) — [BUGS.md](BUGS.md) "Open — deferred". All low-value/intentional.
 > 4. **Done & shipped:** chore side-panel repurposed → Earning & Balance rail (v0.7.5); first-parent attribution → admin actor logging (v0.7.3); task-instance retention confirmed 30d; weekly-window mismatch fixed (v0.7.2).

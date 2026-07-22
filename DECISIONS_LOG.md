@@ -348,6 +348,51 @@
 
 ---
 
+## v0.8.0 module foundations (PLANNED — approved A1 session 2026-07-11, implemented in A2–A6)
+
+> Full plan with files/anchors/acceptance: [docs/PLAN-v0.8.0.md](docs/PLAN-v0.8.0.md). Entries here are decided; drop the PLANNED marker as they land.
+
+### Module toggles = OptionsFlow + entry reload, not dynamic registration
+- **Decision:** Per-module enable flags live in `entry.options["modules"]` (new `FamilyHubOptionsFlow`); the update listener reloads the config entry. Disabled = never registered.
+- **Why:** `async_setup_entry` already rebuilds services/sensors/resources from scratch, so a reload gives "no services/sensors for disabled modules" for free. Dynamic add/remove would add ~200 lines and a half-registered failure mode. `async_unload_entry` already flushes debounced saves, so reload is loss-safe.
+- **Don't:** Don't move the flags into the settings store to avoid the reload — the ~1–2 s reload on a rare admin action is the cheap side of the tradeoff. Don't re-apply module flags on `import_data` (they're recorded informationally in `meta.modules`; flags are infrastructure, data is data).
+
+### Mixins stay composed; gating happens only at the four exposure surfaces
+- **Decision:** All mixins (including a disabled module's) remain on `FamilyHubDataStore`; every store domain loads, record-migrates, and saves regardless of flags. Gating lives exclusively in the `MODULES` table consumers: service registration, sensor creation, `build_card_model` keys, and the tick-hook loop.
+- **Why:** "Rework is expected; data is sacred." A disabled module's data must survive untouched and re-enable losslessly; gating at load would create half-migrated stores. Trap avoided: conditional mixin composition changes the MRO and breaks `self.` call sites in ways ruff can't catch.
+- **Don't:** Don't add enabled-checks inside store mutation methods — services being unregistered is the gate; a double gate creates untestable dead paths.
+
+### All six modules gateable; chores/rewards boundary
+- **Decision (user, A1):** chores, rewards, meals, maintenance, smarthome, calendar are all toggleable. Core (people, points balances, settings, history, allowance, tick engine, websocket) is not a module. Chores owns task_instances, claimable + widget sensors, checklist notifications, and streaks/ranks tick processing (ranks freeze at stored values when chores is off). Rewards owns store_items/redemptions/subscriptions/group proposals + the subscriptions tick. The two are mutually independent.
+- **Why:** Scope principle #1 (any module can be off and everything else keeps working). Points balances stay core because rewards must be able to spend with chores off (frozen rank feeds rank-scaled PPD).
+- **Don't:** Don't gate allowance under chores — it's a points grant on people, not a chore mechanism.
+
+### Event bus callbacks run under the store lock and may only call `_apply_*` internals
+- **Decision:** `FamilyHubBus` (`store.bus`) delivers async callbacks sequentially; publishers publish from inside their own locked mutation. Callbacks must never call `async_save()` or any public `async_*` store method, and never re-publish. Delivery is gated per subscriber on `enabled_modules` at publish time (disabled = silently dropped, debug log); `async_publish` returns the delivery count so publishers can revert affordances on 0.
+- **Why:** The trap is deadlock (callback awaiting the lock the publisher holds) and double-save. Sequential in-lock delivery keeps cross-module mutations atomic within the publisher's save. Subscribing unconditionally at store init with the gate at delivery makes toggling race-free.
+- **Don't:** Don't use the HA event bus or dispatcher for module-to-module messages — this bus exists so messages to disabled modules die silently in-process. Don't let modules import each other; topic strings in `const.py` are the whole contract.
+
+### DATA_SCHEMA_VERSION (data shape) is distinct from STORAGE_VERSION (file layout)
+- **Decision:** `DATA_SCHEMA_VERSION = 3` stamps exports and gates stepwise import migrators (`migrations.py`, `MIGRATORS[from_version]`). `STORAGE_VERSION = 2` remains the HA Store file-layout version. Setdefault record migrations stay as the every-load forward-fill; numbered migrators are for structural changes only.
+- **Why:** Conflating the two is the trap — v0.7.0 bumped STORAGE_VERSION for the multi-store split, but export/import needs a version that describes the *data shape* independent of how it's filed on disk. Lineage: v1 legacy single file, v2 multi-store, v3 v0.8.0.
+- **Don't:** Don't bump DATA_SCHEMA_VERSION for additive fields (setdefault covers those). Don't ship a structure change without its migrator — `migrate_to_current` KeyErrors by design.
+
+### Import is validate-then-swap; history equality is mandatory
+- **Decision:** `async_import_data` migrates and verifies a candidate copy (counts ≥ envelope counts, history exactly equal), takes a pre-import backup, and only then swaps `self._data` under the lock. Bare legacy `export_backup` dicts are detected and imported forever. `dry_run` reports without touching anything.
+- **Why:** "Losing history is the only unacceptable outcome." Rollback-by-never-swapping is strictly safer than undo. Mirrors the verify-by-count discipline of the v1→v2 migration.
+
+### Maintenance tasks have no task_instances — lifecycle state is derived
+- **Decision:** A maintenance task carries `next_due`/`last_completed`; `scheduled/upcoming/due/overdue/snoozed/disabled` is computed by pure functions (`_maintenance_schedule.py`); `completed`/`skipped` are events in the append-only completions collection. `compute_next_due` honors `schedule_mode` (`from_completion` floats; `calendar_anchored` never drifts).
+- **Why:** Chores need instances (N assignees × daily recurrence × approval/penalty/claim state feeding streaks). A maintenance task has one next occurrence and no approval flow; an instance layer would duplicate `next_due` into a row the tick must reconcile — pure liability. Trap avoided: the tick has nothing to generate/expire for maintenance, by design.
+- **Don't:** Don't add maintenance instances for the Chores bridge — the chores module creates one of *its* instances in response to the bus offer (D5); instance semantics stay with the module that has them.
+
+### Chores→maintenance migration is presence-based idempotent; history rows are never rewritten
+- **Decision:** `_async_migrate_maintenance_chores` runs on every load; no `category_label=="Maintenance"` chores ⇒ no-op; record-level dedupe by `legacy_chore_id`; pre-migration export first; completions synthesized from approved instances; the chore and its instances deleted; `history` untouched.
+- **Why:** A settings "migrated=true" flag is the trap — it misses Maintenance chores re-arriving via `import_data` of an old export. Presence-based detection makes import + migration compose for free. History rows are free-standing text/points records that stay valid without rewriting.
+- **Don't:** Don't remove `_migrate_chore`'s legacy label seeding or `LEGACY_MAINTENANCE_CATEGORIES` — they're what routes a v1-era import into this migration.
+
+---
+
 ## Doc conventions
 
 ### CLAUDE.md / ROADMAP.md / ARCHITECTURE.md / DECISIONS_LOG.md / BUGS.md

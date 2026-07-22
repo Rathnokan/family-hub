@@ -380,3 +380,38 @@ _doRender(force)
 - `cache_headers=False` ensures the browser always fetches fresh files; the `?v=<mtime>` cache-bust on the Lovelace resource URL is additional belt-and-braces.
 - `_async_register_card_resource` registers the stub URL as a Lovelace `module` resource (same storage HACS uses). Re-registration on every `async_setup_entry` keeps the URL in sync with the deployed file's mtime, so a Samba copy is enough to get the new bundle picked up — no HA restart, no manual resource editing.
 - Hardcoded `BODY_URL` in `main.js` is the body's path; we **never** scan `<script>` tags to derive a base URL (HA loads module resources via `import(url)`, no `<script>` tag is ever inserted).
+
+---
+
+## 9. v0.8.0 PLANNED architecture (approved 2026-07-11 — not yet implemented)
+
+> Everything in this section is the **approved plan**, not current code. Implementation sessions A2–A6 per [docs/PLAN-v0.8.0.md](docs/PLAN-v0.8.0.md) (files, anchors, acceptance criteria live there). Delete the "PLANNED" marker per subsection as each lands.
+
+### 9.1 Module framework (A2)
+
+- **Registry:** `modules.py` — a declarative `MODULES: dict[str, ModuleDef]` table (`id, title, store_domains, register_services, sensor_unique_ids, model_keys, tick_hook, room_ids`). All six modules declared: chores, rewards, meals, maintenance, smarthome, calendar. **Core (people, points, settings, history, tick engine, websocket, allowance) is not a module and never gateable.**
+- **Flags:** `entry.options["modules"]` via a new `FamilyHubOptionsFlow`; update listener reloads the entry. Since `async_setup_entry` rebuilds everything, disabled = never registered — no dynamic unregister plumbing.
+- **Gating happens at exactly four exposure surfaces** — services (per-module registrars called from `async_setup_services`), sensors (gated creation + registry-driven stale cleanup), card model (module keys omitted from `build_card_model`), tick (per-module `tick_hook` loop). **Mixins stay composed unconditionally; a disabled module's store domain still loads, record-migrates, and saves — data is never mutated or lost by a toggle.**
+- **Module boundaries:** chores owns task_instances/claimable + widget sensors + checklist notifications + streaks/ranks tick (ranks freeze at stored values when off); rewards owns store_items/redemptions/subscriptions/group proposals + subscriptions tick; the two are mutually independent (earn-only / spend-only both work). `needs_attention` gates each aggregate term per module.
+- **Card:** new `modules` map in needs_attention scalars/payload. "Disabled" (module off — dimmed OFF tile, drill-down blocked, admin tab hidden) is distinct from and wins over `rooms_config` "hidden" (cosmetic layout choice).
+
+### 9.2 Event bus (A2)
+
+- `event_bus.py` — `FamilyHubBus` owned by the store (`store.bus`), in-process pub/sub, **not** the HA event bus. `subscribe(topic, module_id, cb)` / `async_publish(topic, payload) -> delivery_count`.
+- Delivery gated per subscriber at publish time on `enabled_modules` — a message to a disabled module is silently dropped (debug log). Subscriptions register unconditionally at store init (`_register_bus_subscriptions()` hook per mixin), so toggling on is race-free. Delivery count 0 lets the publisher revert affordance state.
+- **Locking convention:** publishers publish from inside their own locked mutation; callbacks run under the store lock and may only call internal `_apply_*` helpers — never `async_save()`, never public `async_*` methods, never re-publish.
+- Topics in `const.py`, contracts frozen: `external_task_offer` / `external_task_complete` / `external_task_revoke` (payloads in the plan doc §2). Zero cross-module imports — publishers know only topic strings. Card rule: a control publishing to a topic subscribed by module M renders only when `naAttr.modules[M]`.
+
+### 9.3 Versioned export/import (A3)
+
+- **`DATA_SCHEMA_VERSION = 3`** — the family-data schema version, distinct from HA Store layout `STORAGE_VERSION = 2` (lineage: v1 legacy single file, v2 multi-store, v3 v0.8.0). Setdefault record migrations stay as the intra-version forward-fill; numbered migrators (`migrations.py`, `MIGRATORS[from_version]`, stepwise v3→v4→v5) handle structural changes only.
+- Export envelope: `{format: "family_hub_export", schema_version, app_version, exported_at, meta: {modules, counts}, data: <entire merged store>}`. `async_export_data` / `async_import_data` on the store; `export_data` / `import_data` services (core, never gated).
+- Import safety: parse → envelope-detect (bare legacy `export_backup` dicts import forever) → reject newer → migrate + record-migrate a **candidate copy** → verify counts (history equality mandatory) → optional dry-run stop → pre-import backup → swap under lock + flush. Validate-then-swap: rollback = the swap never happened.
+
+### 9.4 Maintenance module (A4–A5)
+
+- New store domain: `"maintenance": [maintenance_tasks, maintenance_products, maintenance_completions, maintenance_vendors, maintenance_funds, home_profile]` → `.storage/family_hub_maintenance`. New `maintenance_mixin.py` + `services_maintenance.py` (~19 services) + `seed_loader.py` (+ `seed_library.json`, ships empty until Phase B research).
+- **No task instances.** A task carries `next_due`/`last_completed`; lifecycle state (`scheduled/upcoming/due/overdue` + `snoozed`/`disabled`) is **derived** by pure functions in `_maintenance_schedule.py`; `completed`/`skipped` are events in the append-only completions collection. `compute_next_due` honors `schedule_mode`: `from_completion` floats from the actual completion date; `calendar_anchored` never drifts off its `seasonal_anchor`.
+- `workflow: inspect_plan_do` tracked via `workflow_stage ∈ {null, plan, do}` on the task. Home Profile is editable settings; changing it re-applies the seed library idempotently by `seed_id` (newly inapplicable seeds disable, never delete).
+- Sensor contract preserved: `sensor.family_hub_maintenance_due` / `_overdue` entity ids and all scalar/item attr keys unchanged (fed from the new collection; A4 reads the union with legacy labeled chores, A5 removes the legacy half + the `_chore_is_maintenance` seam + the "Maintenance" default category label).
+- Migration (A5): presence-based idempotent move of `category_label=="Maintenance"` chores → tasks (+ synthesized completions from approved instances), pre-migration export first, chore + its instances deleted, **history rows never touched**.
