@@ -324,13 +324,14 @@ async def _async_cleanup_stale_entities(
     unique_ids. Core sensors (needs_attention, claimable_tasks) are always kept.
     """
     expected: set[str] = {f"{DOMAIN}_person_{p['id']}" for p in store.people}
-    expected.update({f"{DOMAIN}_widget_{p['id']}" for p in store.people})
-    # Core global sensors (never gated).
-    expected.update({
-        f"{DOMAIN}_needs_attention",
-        f"{DOMAIN}_claimable_tasks",
-    })
-    # Module-owned global sensors, only for enabled modules.
+    # Core global sensor (never gated).
+    expected.add(f"{DOMAIN}_needs_attention")
+    # Per-person widget sensors are a chores surface — expected only when chores
+    # is on, so disabling chores prunes them on reload.
+    if "chores" in store.enabled_modules:
+        expected.update({f"{DOMAIN}_widget_{p['id']}" for p in store.people})
+    # Module-owned global sensors, only for enabled modules (chores → claimable,
+    # maintenance → due/overdue, meals → meals).
     for mod in MODULES.values():
         if mod.id in store.enabled_modules:
             expected.update(mod.sensor_unique_ids)

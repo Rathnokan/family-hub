@@ -534,6 +534,9 @@ class TasksMixin:
         spam the notify service. Opt-in via the per-person `checklist_notify`
         flag (default off); a person with it off has any prior tile cleared once.
         """
+        # v0.8.0 A6: the checklist notification is a Chores surface.
+        if "chores" not in self.enabled_modules:
+            return
         sigs = getattr(self, "_checklist_sig", None)
         if sigs is None:
             sigs = {}
@@ -605,6 +608,9 @@ class TasksMixin:
           #2 Daily penalty accumulating — fires once per day while daily_penalty_after_days
              penalties are actively accruing on a task instance.
         """
+        # v0.8.0 A6: chore reminders/penalty nudges are a Chores surface.
+        if "chores" not in self.enabled_modules:
+            return
         now = datetime.now()
         today = now.date()
         current_hmm = now.hour * 100 + now.minute

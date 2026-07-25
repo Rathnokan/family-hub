@@ -68,17 +68,22 @@ export function htmlAdmin(card) {
     const storeItems      = attr.store_items          || [];
     const actionCount     = approvals.length + redemptions.length + groupProposals.length + cancelSubs.length;
 
+    // v0.8.0 A6: a disabled module's admin tab is hidden.
+    const modules = attr.modules || {};
+    const modOn = (id) => modules[id] !== false;
     const sections = [
         { id: "today",    label: "Today",    icon: "◐", badge: actionCount },
         { id: "family",   label: "Family",   icon: "◍", badge: 0 },
-        { id: "tasks",    label: "Chores",   icon: "◉", badge: 0 },
-        { id: "rewards",  label: "Rewards",  icon: "◈", badge: 0 },
-        { id: "meals",    label: "Meals",    icon: "◇", badge: 0 },
+        ...(modOn("chores")  ? [{ id: "tasks",   label: "Chores",   icon: "◉", badge: 0 }] : []),
+        ...(modOn("rewards") ? [{ id: "rewards", label: "Rewards",  icon: "◈", badge: 0 }] : []),
+        ...(modOn("meals")   ? [{ id: "meals",   label: "Meals",    icon: "◇", badge: 0 }] : []),
         { id: "history",  label: "History",  icon: "◑", badge: 0 },
         { id: "settings", label: "Settings", icon: "◎", badge: 0 },
     ];
 
-    const sec = card._adminSec;
+    // Fall back to Today if the active tab belongs to a now-disabled module.
+    let sec = card._adminSec;
+    if (!sections.some(s => s.id === sec)) sec = "today";
 
     let body = "";
     switch (sec) {
@@ -95,7 +100,7 @@ export function htmlAdmin(card) {
     const TB = {
         today:    { crumb: "OVERVIEW",      title: "Today",
                     actions: `<button class="fh-ad-btn fh-ad-btn--ghost" data-act="export-backup">Export backup</button>
-                              <button class="fh-ad-btn fh-ad-btn--primary" data-act="open-add-chore">${I.plus} Add chore</button>` },
+                              ${modOn("chores") ? `<button class="fh-ad-btn fh-ad-btn--primary" data-act="open-add-chore">${I.plus} Add chore</button>` : ""}` },
         family:   { crumb: "PEOPLE",        title: "Family",
                     actions: `<button class="fh-ad-btn fh-ad-btn--primary" data-act="open-add-person">${I.person} Add person</button>` },
         tasks:    { crumb: "CHORES",        title: "Chores",

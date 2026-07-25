@@ -77,13 +77,15 @@ MODULES: dict[str, ModuleDef] = {
     "chores": ModuleDef(
         id="chores",
         title="Chores",
-        experimental=True,          # fully gated in A6
+        # Owns the claimable global sensor. Per-person widget sensors are also a
+        # chores surface but are dynamic (family_hub_widget_<id>), gated inline in
+        # sensor.py + __init__ stale cleanup rather than via this static tuple.
+        sensor_unique_ids=(f"{DOMAIN}_claimable_tasks",),
         room_ids=("chores",),
     ),
     "rewards": ModuleDef(
         id="rewards",
         title="Rewards",
-        experimental=True,          # fully gated in A6
         room_ids=(),                # rewards surfaces live on personal pages, no tile
     ),
     "meals": ModuleDef(

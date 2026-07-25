@@ -38,8 +38,8 @@
         "title": "Modules",
         "description": "Turn Family Hub modules on or off. A disabled module registers no services or sensors and its room shows as unavailable on the Command Center. Its data is kept and restored when you re-enable it.",
         "data": {
-          "chores": "Chores (experimental)",
-          "rewards": "Rewards (experimental)",
+          "chores": "Chores",
+          "rewards": "Rewards",
           "meals": "Meals",
           "maintenance": "Home Maintenance",
           "smarthome": "Smart Home",

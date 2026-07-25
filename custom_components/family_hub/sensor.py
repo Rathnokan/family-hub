@@ -95,23 +95,27 @@ async def async_setup_entry(
     coordinator: FamilyHubCoordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
     person_entities: dict = hass.data[DOMAIN][entry.entry_id]["person_entities"]
 
+    # v0.8.0: module-owned sensors are created only when their module is enabled.
+    # The per-person MAIN sensor (points balance) + needs_attention are core;
+    # the per-person WIDGET sensor + claimable_tasks are chores surfaces. A
+    # disabled module's sensors are pruned by _async_cleanup_stale_entities on
+    # this same reload; re-enabling recreates them with identical unique_ids.
+    enabled = coordinator.store.enabled_modules
+    chores_on = "chores" in enabled
+
     # --- Initial per-person sensors ------------------------------------------
     entities: list[SensorEntity] = []
     for person in coordinator.store.get_active_people():
         sensor = FamilyHubPersonSensor(coordinator, person["id"])
         person_entities[person["id"]] = sensor
         entities.append(sensor)
-        entities.append(FamilyHubPersonWidgetSensor(coordinator, person["id"]))
+        if chores_on:
+            entities.append(FamilyHubPersonWidgetSensor(coordinator, person["id"]))
 
     # --- Global sensors -------------------------------------------------------
-    # v0.8.0: module-owned global sensors are created only when their module is
-    # enabled. needs_attention + claimable_tasks are core (always created).
-    # A disabled module's sensors are pruned by _async_cleanup_stale_entities on
-    # this same reload; re-enabling recreates them with identical unique_ids.
-    enabled = coordinator.store.enabled_modules
-
     entities.append(FamilyHubNeedsAttentionSensor(coordinator))
-    entities.append(FamilyHubClaimableTasksSensor(coordinator))
+    if chores_on:
+        entities.append(FamilyHubClaimableTasksSensor(coordinator))
     if "maintenance" in enabled:
         entities.append(FamilyHubMaintenanceDueSensor(coordinator))
         entities.append(FamilyHubMaintenanceOverdueSensor(coordinator))
@@ -134,10 +138,11 @@ async def async_setup_entry(
             return
         sensor = FamilyHubPersonSensor(coordinator, person_id)
         person_entities[person_id] = sensor
-        async_add_entities(
-            [sensor, FamilyHubPersonWidgetSensor(coordinator, person_id)],
-            update_before_add=True,
-        )
+        new_entities: list[SensorEntity] = [sensor]
+        # Widget sensor is a chores surface — only when the module is on.
+        if "chores" in coordinator.store.enabled_modules:
+            new_entities.append(FamilyHubPersonWidgetSensor(coordinator, person_id))
+        async_add_entities(new_entities, update_before_add=True)
         _LOGGER.info("Family Hub: registered sensor for new person %s", person_id)
 
     def remove_person_sensor(person_id: str) -> None:
@@ -360,19 +365,19 @@ class FamilyHubNeedsAttentionSensor(FamilyHubBaseSensor):
     @property
     def native_value(self) -> int:
         store = self.coordinator.store
-        # v0.8.0: overdue maintenance only counts when the maintenance module is
-        # on, so the badge never references a disabled module.
-        overdue_maint = (
-            len(get_maintenance_tasks(store, overdue_only=True))
-            if "maintenance" in store.enabled_modules else 0
-        )
-        return (
-            len(store.get_pending_approvals())
-            + len(store.get_pending_redemptions())
-            + overdue_maint
-            + len(store.get_group_reward_proposals_for_card())
-            + len([s for s in store._data.get("subscriptions", []) if s["status"] == SUB_STATUS_CANCEL_PENDING])
-        )
+        # v0.8.0 A6: each term counts only while its module is enabled, so the
+        # badge never references a disabled module.
+        em = store.enabled_modules
+        total = 0
+        if "chores" in em:
+            total += len(store.get_pending_approvals())
+        if "rewards" in em:
+            total += len(store.get_pending_redemptions())
+            total += len(store.get_group_reward_proposals_for_card())
+            total += len([s for s in store._data.get("subscriptions", []) if s["status"] == SUB_STATUS_CANCEL_PENDING])
+        if "maintenance" in em:
+            total += len(get_maintenance_tasks(store, overdue_only=True))
+        return total
 
     @property
     def extra_state_attributes(self) -> dict:

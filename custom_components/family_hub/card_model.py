@@ -39,6 +39,12 @@ def _modules_map(store) -> dict:
     return {mid: (enabled is None or mid in enabled) for mid in MODULE_IDS}
 
 
+def _on(store, module_id: str) -> bool:
+    """True if a module is enabled (defensive: missing enabled_modules = all-on)."""
+    enabled = getattr(store, "enabled_modules", None)
+    return enabled is None or module_id in enabled
+
+
 def _chore_occ_per_week(chore) -> float:
     """Average times/week a chore comes due, from its recurrence. Mirrors the
     card's _choreOccPerWeek. One-time / unknown → 0."""
@@ -232,10 +238,16 @@ def build_person_payload(store, person_id) -> dict:
     balance    = person.get("points_balance", 0)
     rank_index = person.get("rank_index", 0)
 
-    task_data   = store.get_tasks_for_card(person_id)
-    store_items = store.get_store_items_for_card(person_id, rank_index)
+    # v0.8.0 A6: a person's chore lists come from Chores; store items / goal /
+    # subs / group proposals come from Rewards. When a module is off its data is
+    # empty, so the personal page shows points balance (+ the other module).
+    chores_on  = _on(store, "chores")
+    rewards_on = _on(store, "rewards")
 
-    goal_id   = scalars["goal_item_id"]
+    task_data   = store.get_tasks_for_card(person_id) if chores_on else {"due_today": [], "overdue": [], "pending_approval": []}
+    store_items = store.get_store_items_for_card(person_id, rank_index) if rewards_on else []
+
+    goal_id   = scalars["goal_item_id"] if rewards_on else ""
     goal_item = store.get_store_item(goal_id) if goal_id else None
     if goal_item:
         cost = round(goal_item.get("dollar_value", 0) * store.get_rank_ppd(rank_index)) or 0
@@ -261,8 +273,8 @@ def build_person_payload(store, person_id) -> dict:
         "tasks_pending_approval_list": task_data["pending_approval"],
         "store_items":     store_items,
         "goal":            goal_summary,
-        "group_proposals": store.get_group_proposals_for_person(person_id),
-        "subscriptions":   store.get_subscriptions_for_person(person_id, rank_index),
+        "group_proposals": store.get_group_proposals_for_person(person_id) if rewards_on else [],
+        "subscriptions":   store.get_subscriptions_for_person(person_id, rank_index) if rewards_on else [],
     }
 
 
@@ -330,11 +342,12 @@ def build_needs_attention_scalars(store) -> dict:
         # Single mutation counter — the card watches this to refetch the model.
         "data_rev": getattr(store, "data_rev", 0),
 
-        # Action counts for automations / badges
-        "pending_task_approvals": len(store.get_pending_approvals()),
-        "pending_redemptions":    len(store.get_pending_redemptions()),
-        "overdue_maintenance":    len(get_maintenance_tasks(store, overdue_only=True)),
-        "pending_subscription_cancellations": len(store.get_cancel_pending_subscriptions_for_card()),
+        # Action counts for automations / badges — v0.8.0 A6: each gated on its
+        # module so a disabled module contributes no count.
+        "pending_task_approvals": len(store.get_pending_approvals()) if _on(store, "chores") else 0,
+        "pending_redemptions":    len(store.get_pending_redemptions()) if _on(store, "rewards") else 0,
+        "overdue_maintenance":    len(get_maintenance_tasks(store, overdue_only=True)) if _on(store, "maintenance") else 0,
+        "pending_subscription_cancellations": len(store.get_cancel_pending_subscriptions_for_card()) if _on(store, "rewards") else 0,
 
         # Slim roster (id + name + type + theme) for the card config editor + automations
         "people": [
@@ -356,9 +369,11 @@ def build_needs_attention_scalars(store) -> dict:
 
 
 def build_needs_attention_payload(store) -> dict:
-    pending_tasks  = store.get_pending_approvals()
-    pending_redeem = store.get_pending_redemptions()
-    overdue_maint  = get_maintenance_tasks(store, overdue_only=True)
+    # v0.8.0 A6: the action queues are empty when their module is off, so counts,
+    # badges, and the admin queues never reference a disabled module.
+    pending_tasks  = store.get_pending_approvals() if _on(store, "chores") else []
+    pending_redeem = store.get_pending_redemptions() if _on(store, "rewards") else []
+    overdue_maint  = get_maintenance_tasks(store, overdue_only=True) if _on(store, "maintenance") else []
 
     # All store items for admin store management tab — sorted by sort_order
     # (v0.6.3 drag-reorder), name as the deterministic tie-breaker.
@@ -392,13 +407,14 @@ def build_needs_attention_payload(store) -> dict:
         )
     ]
 
-    cancel_pending_subs = store.get_cancel_pending_subscriptions_for_card()
+    # v0.8.0 A6: subscription queues are a Rewards surface.
+    cancel_pending_subs = store.get_cancel_pending_subscriptions_for_card() if _on(store, "rewards") else []
 
     # All non-canceled subscriptions for the Family panel rail
     _people_by_id = {p["id"]: p for p in store.people}
     _items_by_id  = {i["id"]: i for i in store.store_items}
     subs_all = []
-    for _sub in store._data.get("subscriptions", []):
+    for _sub in (store._data.get("subscriptions", []) if _on(store, "rewards") else []):
         if _sub.get("status") == "canceled":
             continue
         _p = _people_by_id.get(_sub.get("person_id", ""), {})
@@ -441,10 +457,10 @@ def build_needs_attention_payload(store) -> dict:
         "overdue_maintenance":    len(overdue_maint),
         "pending_subscription_cancellations": len(cancel_pending_subs),
 
-        # Full queues — actionable rows for the admin card
-        "approval_queue":           store.get_approval_queue_for_card(),
-        "redemption_queue":         store.get_redemption_queue_for_card(),
-        "group_proposal_queue":     store.get_group_reward_proposals_for_card(),
+        # Full queues — actionable rows for the admin card (A6: gated per module)
+        "approval_queue":           store.get_approval_queue_for_card() if _on(store, "chores") else [],
+        "redemption_queue":         store.get_redemption_queue_for_card() if _on(store, "rewards") else [],
+        "group_proposal_queue":     store.get_group_reward_proposals_for_card() if _on(store, "rewards") else [],
         "subscription_cancel_queue": cancel_pending_subs,
         "all_subscriptions":        subs_all,
 
@@ -506,12 +522,12 @@ def build_needs_attention_payload(store) -> dict:
             for p in store.people if not p.get("active", True)
         ],
 
-        # Chores for the admin Tasks tab
-        "active_chores": store.get_active_chores_for_card(),
-        "all_chores":    store.get_all_chores_for_card(),
+        # Chores for the admin Tasks tab (A6: empty when chores off)
+        "active_chores": store.get_active_chores_for_card() if _on(store, "chores") else [],
+        "all_chores":    store.get_all_chores_for_card() if _on(store, "chores") else [],
 
-        # All active store items for admin store management
-        "store_items": all_store_items,
+        # All active store items for admin store management (A6: empty when rewards off)
+        "store_items": all_store_items if _on(store, "rewards") else [],
 
         # Settings for admin display and card dropdowns
         "family_name":               store.family_name,

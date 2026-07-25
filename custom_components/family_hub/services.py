@@ -59,6 +59,26 @@ from .coordinator import FamilyHubCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
+# v0.8.0 A6: services owned by the gateable Chores / Rewards modules. Registered
+# in async_setup_services and removed at the end when the module is disabled.
+# Core services (people, points award/deduct, settings, tick, export/import) are
+# intentionally NOT listed here — they stay available with any module off.
+_CHORE_SERVICE_NAMES = (
+    "complete_task", "claim_task", "approve_task", "claim_late_task", "deny_task",
+    "add_task", "add_one_time_task", "add_chore", "update_chore", "delete_chore",
+    "excuse_task", "excuse_day", "reject_task", "mark_task_complete",
+    "set_streak", "set_completion_streak", "set_rank",
+)
+_REWARD_SERVICE_NAMES = (
+    "add_store_item", "update_store_item", "delete_store_item", "hard_delete_store_item",
+    "request_redemption", "approve_redemption", "decline_redemption",
+    "propose_group_reward", "respond_group_proposal", "approve_group_proposal",
+    "decline_group_proposal", "chip_in_group_reward", "redeem_group_reward",
+    "subscribe", "request_cancel_subscription", "approve_cancel_subscription",
+    "decline_cancel_subscription", "admin_cancel_subscription", "update_subscription",
+    "admin_subscribe_for_person",
+)
+
 
 async def async_setup_services(
     hass: HomeAssistant,
@@ -1380,13 +1400,25 @@ async def async_setup_services(
     )
 
     # --- Module service registrars (v0.8.0 module framework) ---------------
-    # Gateable modules register their own services only when enabled; core
-    # services above are always registered. Meals is the first extracted module
-    # (A2); maintenance/chores/rewards registrars land in A4/A6.
+    # Gateable modules with their own file register only when enabled; core
+    # services above are always registered. Meals (A2) + maintenance (A4).
     from .modules import MODULES
     for _mod in MODULES.values():
         if _mod.register_services and _mod.id in enabled:
             _mod.register_services(hass, coordinator)
+
+    # --- v0.8.0 A6: gate the load-bearing Chores / Rewards modules ----------
+    # Their services are interwoven with core/people services above and share
+    # helper closures, so rather than extract ~37 of them into separate files
+    # (high churn/risk on the point economy), we register everything above and
+    # remove the module's services here when it's disabled. Setup-time only —
+    # no service has been called yet, so register-then-remove is invisible.
+    if "chores" not in enabled:
+        for _name in _CHORE_SERVICE_NAMES:
+            hass.services.async_remove(DOMAIN, _name)
+    if "rewards" not in enabled:
+        for _name in _REWARD_SERVICE_NAMES:
+            hass.services.async_remove(DOMAIN, _name)
 
 
 # ------------------------------------------------------------------

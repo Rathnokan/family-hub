@@ -336,28 +336,41 @@ class TickMixin:
             )
             last_tick = today - timedelta(days=CATCH_UP_LIMIT)
 
+        # v0.8.0 A6: gate the load-bearing per-date processing by module. Chore
+        # instance generation, penalties, completion streaks, and weekly rank/
+        # streak evaluation belong to Chores (off ⇒ ranks/streaks freeze at their
+        # stored values, no instances/penalties). Subscriptions belong to Rewards.
+        # Allowance stays CORE (a points grant on people, not a chore mechanism).
+        chores_on = "chores" in self.enabled_modules
+        rewards_on = "rewards" in self.enabled_modules
+
         current = last_tick + timedelta(days=1)
         while current <= today:
-            await self._async_tick_for_date(current)
-            # v0.6.1: evaluate yesterday's completion rate AFTER the tick has
-            # finalised yesterday's skipped-state. Must run before allowance so
-            # the bonus and allowance show as separate history entries on the
-            # same day rather than commingling.
-            await self._async_process_completion_streaks(current)
+            if chores_on:
+                await self._async_tick_for_date(current)
+                # v0.6.1: evaluate yesterday's completion rate AFTER the tick has
+                # finalised yesterday's skipped-state. Must run before allowance
+                # so bonus and allowance show as separate history entries on the
+                # same day rather than commingling.
+                await self._async_process_completion_streaks(current)
             await self._async_process_allowances(current)
-            await self._async_process_weekly_ranks(current)
-            await self._async_process_weekly_completion_streaks(current)
-            await self._async_process_subscriptions(current)
+            if chores_on:
+                await self._async_process_weekly_ranks(current)
+                await self._async_process_weekly_completion_streaks(current)
+            if rewards_on:
+                await self._async_process_subscriptions(current)
             current += timedelta(days=1)
 
         # --- Expire overdue one-time / claimable instances -------------------
-        await self._async_expire_tasks(today)
+        if chores_on:
+            await self._async_expire_tasks(today)
 
-        # --- Trim history to rolling window ----------------------------------
+        # --- Trim history to rolling window (history is core) ----------------
         self._trim_history(today)
 
         # --- Prune old terminal task instances -------------------------------
-        self._trim_task_instances(today)
+        if chores_on:
+            self._trim_task_instances(today)
 
         # --- Module tick hooks (v0.8.0) --------------------------------------
         # Each enabled module with a tick_hook runs its once-per-day work (e.g.
