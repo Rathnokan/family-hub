@@ -177,9 +177,6 @@ class CardShaperMixin:
             chore = self.get_chore(t["chore_id"])
             if not chore:
                 continue
-            # Maintenance items belong on the maintenance card
-            if self._chore_is_maintenance(chore):
-                continue
 
             threshold = chore.get("daily_penalty_after_days")
             if threshold and chore.get("penalty_enabled") and chore.get("penalty_points", 0):
@@ -425,8 +422,6 @@ class CardShaperMixin:
             chore = self.get_chore(task["chore_id"])
             if not chore:
                 continue
-            if self._chore_is_maintenance(chore):
-                continue
 
             chore_type = chore.get("chore_type", CHORE_TYPE_ASSIGNED)
             assigned   = task.get("assigned_to")
@@ -509,8 +504,6 @@ class CardShaperMixin:
         """
         result = []
         for c in self.get_active_chores():
-            if self._chore_is_maintenance(c):
-                continue
             if c["recurrence"].get("type") == RECURRENCE_ONE_TIME:
                 continue
             assigned_names = []
@@ -557,8 +550,6 @@ class CardShaperMixin:
         result = []
         for c in self.chores:
             if not c.get("id"):
-                continue
-            if self._chore_is_maintenance(c):
                 continue
             # One-time chores ARE included here (unlike the active-only view) so
             # they appear in the admin Chores list and can be filtered/reused.

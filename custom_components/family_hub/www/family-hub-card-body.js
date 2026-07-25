@@ -6834,9 +6834,6 @@ FUNDS`}
     `}var na=N(()=>{ut();Q();K()});function Dt(e){let t=e._attrs("sensor.family_hub_maintenance_due"),a=t.overdue||0,o=t.due_this_week||0,s=t.due_next_week||0,i=t.items||[],n=`
         <div class="fh-maint-head">
             <div class="fh-maint-title">HOME CARE</div>
-            <button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="open-add-reminder">
-                + Add reminder
-            </button>
         </div>`;if(!i.length)return n+`
             <div class="fh-maint-empty">
                 <div class="fh-maint-empty-icon">\u{1F3E0}</div>

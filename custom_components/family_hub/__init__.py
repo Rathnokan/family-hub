@@ -184,6 +184,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await store.async_save()
         _LOGGER.info("Family Hub: reconciled instance types for %d chore(s)", repaired)
 
+    # v0.8.0 A5: one-time move of category_label=="Maintenance" chores into the
+    # new maintenance module (presence-based idempotent; takes a backup first).
+    migrated_maint = await store._async_migrate_maintenance_chores()
+    if migrated_maint:
+        _LOGGER.info("Family Hub: migrated %d Maintenance chore(s) to the maintenance module", migrated_maint)
+
     await store.async_update_settings(
         family_name=family_name,
         points_per_dollar=points_per_dollar,

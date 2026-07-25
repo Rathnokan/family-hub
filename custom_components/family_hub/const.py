@@ -97,7 +97,6 @@ DEFAULT_CATEGORY_LABELS = [
     "Bonus",
     "Cleaning",
     "Pet Care",
-    "Maintenance",
 ]
 
 # ---------------------------------------------------------------------------

@@ -393,6 +393,11 @@ class FamilyHubDataStore(CardShaperMixin, TickMixin, StreaksRanksMixin, Subscrip
         s.setdefault("points_per_dollar",         DEFAULT_POINTS_PER_DOLLAR)
         s.setdefault("show_dollar_value_to_kids", DEFAULT_SHOW_DOLLAR_VALUE_TO_KIDS)
         s.setdefault("category_labels",           list(DEFAULT_CATEGORY_LABELS))
+        # v0.8.0 A5: Maintenance is its own module now — drop the legacy label so
+        # it no longer appears in the chore category dropdowns. Any chore that
+        # still carries it is migrated out by _async_migrate_maintenance_chores.
+        if "Maintenance" in s.get("category_labels", []):
+            s["category_labels"] = [c for c in s["category_labels"] if c != "Maintenance"]
         s.setdefault(CONF_PENALTIES_PAUSED_GLOBAL, DEFAULT_PENALTIES_PAUSED_GLOBAL)
         # v0.5.0: notification settings
         s.setdefault("penalty_alert_time", 800)  # HHMM; -1 = disabled

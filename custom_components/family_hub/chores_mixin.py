@@ -142,10 +142,6 @@ class ChoresMixin:
     def get_active_chores(self) -> list[dict]:
         return [c for c in self.chores if c.get("active", True)]
 
-    def _chore_is_maintenance(self, chore: dict) -> bool:
-        """A chore belongs to the maintenance card if its label is 'Maintenance'."""
-        return chore.get("category_label", "") == "Maintenance"
-
     async def async_add_chore(
         self,
         name: str,

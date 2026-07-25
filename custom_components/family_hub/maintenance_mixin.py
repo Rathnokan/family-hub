@@ -22,11 +22,20 @@ Design (see docs/PLAN-v0.8.0.md §4):
 from __future__ import annotations
 
 import logging
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from .const import (
     ACTIVE_STATUSES,
+    CHORE_TYPE_CLAIMABLE,
     MAINTENANCE_DUE_SOON_DAYS,
+    RECURRENCE_DAILY,
+    RECURRENCE_EVERY_N_DAYS,
+    RECURRENCE_EVERY_N_WEEKS,
+    RECURRENCE_MONTHLY_ON_DATE,
+    RECURRENCE_ONE_TIME,
+    RECURRENCE_WEEKLY,
+    STATUS_APPROVED,
+    STATUS_SELF_REPORTED,
     TOPIC_EXTERNAL_TASK_OFFER,
     TOPIC_EXTERNAL_TASK_REVOKE,
 )
@@ -124,47 +133,20 @@ class MaintenanceMixin:
         }
 
     def get_maintenance_view(self, today: date | None = None) -> list[dict]:
-        """Normalized maintenance items from BOTH sources, sorted by days_delta.
+        """Normalized maintenance items from the maintenance_tasks collection,
+        sorted by days_delta. Item keys are the frozen sensor/card contract
+        (task_id, chore_id, name, description, category_label, due_date,
+        days_delta, assigned_to, person_name, person_color); `state`/`source_kind`
+        are additive extras.
 
-        A4 union read: legacy category_label==Maintenance chore instances +
-        new-collection maintenance tasks. A5 drops the legacy branch. Item keys
-        are the frozen sensor/card contract (task_id, chore_id, name, description,
-        category_label, due_date, days_delta, assigned_to, person_name,
-        person_color); `state`/`source_kind` are additive extras."""
+        (A4 also read legacy category_label==Maintenance chore instances; A5
+        migrated those into this collection and removed the legacy branch.)"""
         today = today or date.today()
         items: list[dict] = []
-
-        # --- Legacy: active maintenance chore instances (removed in A5) ---
-        for inst in self.task_instances:
-            if inst["status"] not in ACTIVE_STATUSES:
-                continue
-            chore = self.get_chore(inst["chore_id"])
-            if not chore or not self._chore_is_maintenance(chore):
-                continue
-            due = date.fromisoformat(inst["due_date"])
-            assigned = inst.get("assigned_to")
-            person = self.get_person(assigned) if assigned else None
-            items.append({
-                "task_id":        inst["id"],
-                "chore_id":       inst["chore_id"],
-                "name":           chore["name"],
-                "description":    chore.get("description", ""),
-                "category_label": chore.get("category_label", ""),
-                "due_date":       inst["due_date"],
-                "days_delta":     (due - today).days,
-                "assigned_to":    assigned,
-                "person_name":    person["name"] if person else None,
-                "person_color":   person.get("avatar_color", "#7F77DD") if person else None,
-                "state":          "overdue" if due < today else ("due" if due == today else "upcoming"),
-                "source_kind":    "chore",
-            })
-
-        # --- New: maintenance_tasks collection ---
         for task in self.maintenance_tasks:
             item = self._mtask_view_item(task, today)
             if item:
                 items.append(item)
-
         return sorted(items, key=lambda x: x["days_delta"])
 
     # ------------------------------------------------------------------
@@ -233,6 +215,11 @@ class MaintenanceMixin:
         self._data["maintenance_tasks"] = [t for t in self.maintenance_tasks if t["id"] != task_id]
         if len(self._data["maintenance_tasks"]) == before:
             return False
+        # Purge the task's completion records too, so they don't orphan with a
+        # dangling task_id (mirrors delete_chore purging its task_instances).
+        self._data["maintenance_completions"] = [
+            c for c in self.maintenance_completions if c.get("task_id") != task_id
+        ]
         await self.async_save()
         return True
 
@@ -610,6 +597,163 @@ class MaintenanceMixin:
 
         await self.async_save()
         return added
+
+    # ------------------------------------------------------------------
+    # One-time migration: category_label=="Maintenance" chores → tasks (A5)
+    # ------------------------------------------------------------------
+
+    def _chore_to_maintenance_fields(self, chore: dict) -> dict:
+        """Map a legacy Maintenance chore's fields to maintenance-task fields.
+        Rotation/claim/day-filter nuances are dropped (noted in the description
+        and/or an INFO log)."""
+        rec = chore.get("recurrence", {}) or {}
+        rtype = rec.get("type", RECURRENCE_DAILY)
+        interval = int(rec.get("interval", 1) or 1)
+        schedule_mode = "from_completion"
+        recurrence: dict | None
+        seasonal_anchor = None
+        note = ""
+
+        if rtype == RECURRENCE_DAILY:
+            recurrence = {"interval": 1, "unit": "days"}
+            df = rec.get("day_filter") or []
+            if df and len(df) < 7:
+                note = " (was daily on selected weekdays)"
+        elif rtype == RECURRENCE_WEEKLY:
+            recurrence = {"interval": 1, "unit": "weeks"}
+        elif rtype == RECURRENCE_EVERY_N_DAYS:
+            recurrence = {"interval": interval, "unit": "days"}
+        elif rtype == RECURRENCE_EVERY_N_WEEKS:
+            recurrence = {"interval": interval, "unit": "weeks"}
+        elif rtype == RECURRENCE_MONTHLY_ON_DATE:
+            schedule_mode = "calendar_anchored"
+            recurrence = {"interval": 1, "unit": "months"}
+            dom = sorted(chore.get("days_of_month") or [])
+            seasonal_anchor = {"month": None, "day": (dom[0] if dom else 1)}
+            if len(dom) > 1:
+                note = f" (was monthly on days {', '.join(map(str, dom))})"
+        elif rtype == RECURRENCE_ONE_TIME:
+            recurrence = None
+        else:
+            recurrence = {"interval": 1, "unit": "days"}
+
+        assignable = bool(chore.get("assigned_to") or chore.get("chore_type") == CHORE_TYPE_CLAIMABLE)
+        if chore.get("rotation_pool") or chore.get("claimable_subtype"):
+            _LOGGER.info(
+                "Family Hub: migration dropped rotation/claim config from chore '%s'",
+                chore.get("name"),
+            )
+
+        return {
+            "name":                chore.get("name", "Untitled"),
+            "description":         (chore.get("description", "") + note).strip(),
+            "category":            "general",
+            "schedule_mode":       schedule_mode,
+            "recurrence":          recurrence,
+            "seasonal_anchor":     seasonal_anchor,
+            "workflow":            "simple",
+            "lead_time_days":      14,
+            "default_point_value": int(chore.get("points", 0) or 0),
+            "assignable":          assignable,
+            "enabled":             bool(chore.get("active", True)),
+            "source":              "chore_migration",
+            "legacy_chore_id":     chore["id"],
+        }
+
+    def _set_migrated_schedule(self, task: dict, instances: list, today: date) -> None:
+        """next_due = earliest ACTIVE instance due date (else the derived initial);
+        last_completed = latest completed instance date."""
+        active_due = sorted(
+            i["due_date"] for i in instances
+            if i.get("status") in ACTIVE_STATUSES and i.get("due_date")
+        )
+        if active_due:
+            task["next_due"] = active_due[0]
+        else:
+            d = initial_next_due(task, today)
+            task["next_due"] = d.isoformat() if d else None
+        completed = sorted(
+            i["completed_at"][:10] for i in instances
+            if i.get("status") in (STATUS_APPROVED, STATUS_SELF_REPORTED) and i.get("completed_at")
+        )
+        if completed:
+            task["last_completed"] = completed[-1]
+
+    async def _async_migrate_maintenance_chores(self) -> int:
+        """One-time move of category_label=="Maintenance" chores into the new
+        maintenance collection. Presence-based + record-level idempotent (dedupe
+        by legacy_chore_id), so it's a no-op on every subsequent load and also
+        catches Maintenance chores re-imported from an old export.
+
+        Takes a pre-migration export backup BEFORE mutating; synthesizes
+        completions from approved/self-reported instances; deletes the chore and
+        its task_instances. `history` rows are never touched."""
+        already = {
+            t.get("legacy_chore_id") for t in self.maintenance_tasks if t.get("legacy_chore_id")
+        }
+        targets = [
+            c for c in self.chores
+            if c.get("category_label") == "Maintenance" and c["id"] not in already
+        ]
+        if not targets:
+            return 0
+
+        # Pre-migration backup — do not proceed without it (data is sacred).
+        import os
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup = os.path.join(
+            self._hass.config.path("family_hub_backups"),
+            f"family_hub_pre_maintenance_migration_{ts}.json",
+        )
+        try:
+            await self.async_export_data(backup)
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.error(
+                "Family Hub: pre-migration backup failed (%s); aborting migration", err
+            )
+            return 0
+
+        today = date.today()
+        migrated = 0
+        for chore in targets:
+            instances = [t for t in self.task_instances if t.get("chore_id") == chore["id"]]
+            task = self._new_maintenance_task(self._chore_to_maintenance_fields(chore), today)
+            self._set_migrated_schedule(task, instances, today)
+            self.maintenance_tasks.append(task)
+
+            for inst in instances:
+                if inst.get("status") in (STATUS_APPROVED, STATUS_SELF_REPORTED) and inst.get("completed_at"):
+                    self.maintenance_completions.append({
+                        "id":             _new_id(),
+                        "task_id":        task["id"],
+                        "date":           inst["completed_at"][:10],
+                        "completed_by":   inst.get("completed_by"),
+                        "mode":           "diy",
+                        "stage":          "do",
+                        "actual_cost":    0,
+                        "actual_minutes": 0,
+                        "products_used":  [],
+                        "vendor_id":      None,
+                        "notes":          "migrated from chore",
+                        "photo":          None,
+                    })
+
+            self._data["chores"] = [c for c in self.chores if c["id"] != chore["id"]]
+            self._data["task_instances"] = [
+                t for t in self.task_instances if t.get("chore_id") != chore["id"]
+            ]
+            migrated += 1
+            _LOGGER.info(
+                "Family Hub: migrated Maintenance chore '%s' (%s) → maintenance task %s",
+                chore.get("name"), chore["id"], task["id"],
+            )
+
+        await self.async_save()
+        _LOGGER.warning(
+            "Family Hub: migrated %d Maintenance chore(s) into the maintenance module "
+            "(pre-migration backup: %s)", migrated, backup,
+        )
+        return migrated
 
     # ------------------------------------------------------------------
     # Bus wiring (called from FamilyHubDataStore._register_bus_subscriptions)

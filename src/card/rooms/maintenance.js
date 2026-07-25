@@ -14,12 +14,12 @@ export function renderMaintenance(card) {
     const nextWeek = attr.due_next_week || 0;
     const items    = attr.items         || [];
 
+    // v0.8.0 A5: the old "+ Add reminder" button created a personal reminder
+    // (empty category_label), never a maintenance item — removed. Maintenance
+    // tasks are managed via the maintenance_* services (full room UI = Phase D).
     const header = `
         <div class="fh-maint-head">
             <div class="fh-maint-title">HOME CARE</div>
-            <button class="fh-btn fh-btn-ghost fh-btn-sm" data-act="open-add-reminder">
-                + Add reminder
-            </button>
         </div>`;
 
     if (!items.length) {
