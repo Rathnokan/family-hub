@@ -38,7 +38,11 @@ Implement from [docs/PLAN-v0.8.0.md](docs/PLAN-v0.8.0.md) — each brief there h
 | **A3** | Versioned export/import — `DATA_SCHEMA_VERSION 3` envelope, `migrations.py` stepwise migrators, `export_data`/`import_data` services with validate-then-swap safety. | ✅ done + live-tested 2026-07-21 (12/12) |
 | **A4** | Maintenance backend — new `maintenance` store domain (tasks/products/completions/vendors/funds/home_profile), `_maintenance_schedule.py` derived-state scheduling (both `schedule_mode`s), ~19 `maintenance_*` services, seed-loader interface (library ships empty). **`assign` = bus offer/revoke only, no in-module assignee (decided 2026-07-21).** | ◀ next |
 | **A5** | One-time migration of `category_label=="Maintenance"` chores into the new collection + full `_chore_is_maintenance` seam removal. | |
-| **A6** | Chores/Rewards gating audit — make the chores + rewards toggles real (services/sensors/tick/card degradation), per the A1 decision that ALL modules are gateable. | |
+| **A6** | Chores/Rewards gating audit — make the chores + rewards toggles real (services/sensors/tick/card degradation), per the A1 decision that ALL modules are gateable. | ✅ done + live-tested 2026-07-25 (20/20) |
+
+**Phase A COMPLETE (A1–A6), on `main`, CI green, not yet tagged.** Next: **Phase B** seed-library research (Chat/Research → `seed_library.json`) + **Phase C** design (admin IA rethink + maintenance room prototype → handoff spec), both non-Code. Then **Phase D** (Code): D1 seed import + sensors, D2 room UI from the design spec, D3 admin tab, D4 notifications, D5 chores bridge (the `external_task_*` bus subscriber). See [docs/PLAN-v0.8.0.md](docs/PLAN-v0.8.0.md) + the implementation-plan doc in project knowledge.
+
+**Deferred from A6 (cosmetic, low priority):** per-theme personal-page section-hiding when chores/rewards is off — a chores-off kid page shows an empty "today"/"all done" section, a rewards-off page an empty store rail. Backend data is correctly gated (nothing breaks); only the empty header lingers. Fix touches all 6 themes; do it if the toggles see real use.
 
 **Parallel (not Claude Code):** Phase B seed-library research (Chat/Research, 3 sessions → `seed_library.json`) and Phase C design (admin IA rethink + maintenance room prototype → handoff spec). Phase D (room UI, notifications, Chores bridge D5) starts when A is done + C2 has screens.
 

@@ -60,6 +60,9 @@
 
 ## Open — deferred (real, but not surgical; fix when next in that area)
 
+### Personal-page section-hiding when a module is off (v0.8.0 A6) — cosmetic
+- When **Chores** is disabled, a kid's themed personal page still renders the "today's tasks" section header (shows the empty / "all done" state); when **Rewards** is disabled, the store rail renders empty. The backend correctly gates the data (empty lists in `build_person_payload`), so nothing breaks — only the empty section header lingers. Hiding those headers means gating on `naAttr.modules.chores` / `.rewards` in all six themes (+ `themes/_shared.js`). Deferred from A6 to avoid regression risk across the themed pages; do it if the chores/rewards toggles see real use. — `themes/*.js`, `_shared.js`
+
 ### ~~First-parent attribution~~ — **RESOLVED in v0.7.3 (admin actor logging)**
 - Instead of mapping the acting HA user to a *person*, v0.7.3 records the **logged-in HA user name** directly: `store.acting_as(await _resolve_actor(hass, call))` wraps the admin handlers, `_append_history` stamps an `actor` field, and the History rows show "· by &lt;name&gt;". Parents are treated as one unit per the user's call; mostly reads "Administrator". See `history_admin_mixin.py` (`acting_as`/`_append_history`) + `services.py` (`_resolve_actor`).
 
