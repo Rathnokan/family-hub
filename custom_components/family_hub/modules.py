@@ -63,6 +63,11 @@ def _register_meals(hass, coordinator) -> None:
     register_meals_services(hass, coordinator)
 
 
+def _register_maintenance(hass, coordinator) -> None:
+    from .services_maintenance import register_maintenance_services
+    register_maintenance_services(hass, coordinator)
+
+
 # --- The registry -----------------------------------------------------------
 # NOTE: as later sessions land, fill in register_services / sensor_unique_ids /
 # model_keys / tick_hook for each module (A4 maintenance backend, A6 chores &
@@ -92,12 +97,13 @@ MODULES: dict[str, ModuleDef] = {
     "maintenance": ModuleDef(
         id="maintenance",
         title="Home Maintenance",
-        register_services=None,     # backend lands in A4
+        register_services=_register_maintenance,
         sensor_unique_ids=(f"{DOMAIN}_maintenance_due", f"{DOMAIN}_maintenance_overdue"),
         model_keys=(
             "sensor.family_hub_maintenance_due",
             "sensor.family_hub_maintenance_overdue",
         ),
+        tick_hook="_async_maintenance_tick",
         room_ids=("maintenance",),
     ),
     "smarthome": ModuleDef(

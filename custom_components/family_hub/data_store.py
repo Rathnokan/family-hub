@@ -179,6 +179,7 @@ from ._store_helpers import (
     _migrate_store_item,
     _migrate_task_instance,
     _migrate_meals,
+    _migrate_maintenance,
     _advance_renewal_date,
     _days_until_reset,
 )
@@ -194,6 +195,7 @@ from .group_rewards_mixin import GroupRewardsMixin
 from .redemptions_mixin import RedemptionsMixin
 from .history_admin_mixin import HistoryAdminMixin
 from .meals_mixin import MealsMixin
+from .maintenance_mixin import MaintenanceMixin
 
 from .event_bus import FamilyHubBus
 from .migrations import migrate_to_current
@@ -204,7 +206,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 
-class FamilyHubDataStore(CardShaperMixin, TickMixin, StreaksRanksMixin, SubscriptionsMixin, PeopleMixin, ChoresMixin, TasksMixin, StoreItemsMixin, GroupRewardsMixin, RedemptionsMixin, HistoryAdminMixin, MealsMixin):
+class FamilyHubDataStore(CardShaperMixin, TickMixin, StreaksRanksMixin, SubscriptionsMixin, PeopleMixin, ChoresMixin, TasksMixin, StoreItemsMixin, GroupRewardsMixin, RedemptionsMixin, HistoryAdminMixin, MealsMixin, MaintenanceMixin):
     """Manages reading and writing the Family Hub JSON data file."""
 
     def __init__(self, hass: HomeAssistant, storage_path: str) -> None:
@@ -245,7 +247,7 @@ class FamilyHubDataStore(CardShaperMixin, TickMixin, StreaksRanksMixin, Subscrip
         chores-bridge subscriber in D5. Keep this the single wiring point so the
         subscription set is easy to audit.
         """
-        return
+        self._register_maintenance_subscriptions()
 
     # ------------------------------------------------------------------
     # Load / Save
@@ -495,6 +497,9 @@ class FamilyHubDataStore(CardShaperMixin, TickMixin, StreaksRanksMixin, Subscrip
 
         # v0.8.0: ensure the meals section + all its sub-keys exist
         _migrate_meals(self._data)
+
+        # v0.8.0: ensure the maintenance collections exist
+        _migrate_maintenance(self._data)
 
         # v0.8.0: stamp the family-data schema version. Numbered structural
         # migrations (migrations.MIGRATORS) run on IMPORT before this; the

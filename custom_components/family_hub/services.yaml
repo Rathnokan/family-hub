@@ -464,3 +464,215 @@ meals_toggle_have:
 meals_toggle_grocery:
   name: Meals — toggle grocery row
   description: Check or uncheck a grocery-list row.
+
+# ---------------------------------------------------------------------------
+# Home Maintenance (v0.8.0) — registered only when the maintenance module is on
+# ---------------------------------------------------------------------------
+maintenance_add_task:
+  name: Maintenance — add task
+  description: Add a maintenance task (recurrence + schedule_mode).
+  fields:
+    name:
+      name: Name
+      required: true
+      selector:
+        text:
+    schedule_mode:
+      name: Schedule mode
+      description: from_completion (floats from actual completion) or calendar_anchored (never drifts).
+      selector:
+        select:
+          options: [from_completion, calendar_anchored]
+    recurrence:
+      name: Recurrence
+      description: '{interval, unit} where unit is days/weeks/months/years. Omit for one-shot.'
+      selector:
+        object:
+    seasonal_anchor:
+      name: Seasonal anchor
+      description: '{month, day} for calendar_anchored tasks.'
+      selector:
+        object:
+maintenance_update_task:
+  name: Maintenance — update task
+  description: Update fields on a maintenance task.
+  fields:
+    task_id:
+      name: Task ID
+      required: true
+      selector:
+        text:
+maintenance_delete_task:
+  name: Maintenance — delete task
+  description: Delete a maintenance task.
+  fields:
+    task_id:
+      name: Task ID
+      required: true
+      selector:
+        text:
+maintenance_complete_task:
+  name: Maintenance — complete task
+  description: Record a completion (cost/time/products), decrement inventory, advance next_due.
+  fields:
+    task_id:
+      name: Task ID
+      required: true
+      selector:
+        text:
+    mode:
+      name: Mode
+      selector:
+        select:
+          options: [diy, pro]
+    actual_cost:
+      name: Actual cost
+      selector:
+        number:
+          min: 0
+          mode: box
+    result:
+      name: Inspect result
+      description: For inspect_plan_do tasks — all_good re-arms, needs_work opens the Plan stage.
+      selector:
+        select:
+          options: [all_good, needs_work]
+maintenance_snooze_task:
+  name: Maintenance — snooze task
+  description: Suppress a task until a date (or for N days).
+  fields:
+    task_id:
+      name: Task ID
+      required: true
+      selector:
+        text:
+    days:
+      name: Days
+      selector:
+        number:
+          min: 1
+          mode: box
+maintenance_reschedule_task:
+  name: Maintenance — reschedule task
+  description: Move this occurrence to a specific date.
+  fields:
+    task_id:
+      name: Task ID
+      required: true
+      selector:
+        text:
+    next_due:
+      name: Next due (YYYY-MM-DD)
+      required: true
+      selector:
+        text:
+maintenance_skip_task:
+  name: Maintenance — skip task
+  description: Skip this occurrence and advance next_due (not recorded as done).
+  fields:
+    task_id:
+      name: Task ID
+      required: true
+      selector:
+        text:
+maintenance_offer_task:
+  name: Maintenance — offer task (bridge)
+  description: Publish the task as an external offer for the Chores board (no-op until the D5 bridge).
+  fields:
+    task_id:
+      name: Task ID
+      required: true
+      selector:
+        text:
+maintenance_revoke_task:
+  name: Maintenance — revoke offer
+  description: Revoke a previously-offered task.
+  fields:
+    task_id:
+      name: Task ID
+      required: true
+      selector:
+        text:
+maintenance_add_product:
+  name: Maintenance — add product
+  description: Add a product/inventory item.
+  fields:
+    name:
+      name: Name
+      required: true
+      selector:
+        text:
+maintenance_update_product:
+  name: Maintenance — update product
+  fields:
+    product_id:
+      name: Product ID
+      required: true
+      selector:
+        text:
+maintenance_delete_product:
+  name: Maintenance — delete product
+  fields:
+    product_id:
+      name: Product ID
+      required: true
+      selector:
+        text:
+maintenance_adjust_inventory:
+  name: Maintenance — adjust inventory
+  description: Add or subtract stock (delta can be negative).
+  fields:
+    product_id:
+      name: Product ID
+      required: true
+      selector:
+        text:
+    delta:
+      name: Delta
+      required: true
+      selector:
+        number:
+          mode: box
+maintenance_add_vendor:
+  name: Maintenance — add vendor
+  fields:
+    name:
+      name: Name
+      required: true
+      selector:
+        text:
+maintenance_update_vendor:
+  name: Maintenance — update vendor
+  fields:
+    vendor_id:
+      name: Vendor ID
+      required: true
+      selector:
+        text:
+maintenance_delete_vendor:
+  name: Maintenance — delete vendor
+  fields:
+    vendor_id:
+      name: Vendor ID
+      required: true
+      selector:
+        text:
+maintenance_update_fund:
+  name: Maintenance — update fund
+  description: Create or update a sinking/emergency fund (manual ledger).
+  fields:
+    fund_id:
+      name: Fund ID (blank to create)
+      selector:
+        text:
+    fund_type:
+      name: Fund type
+      selector:
+        select:
+          options: [sinking, emergency]
+maintenance_update_home_profile:
+  name: Maintenance — update home profile
+  description: Update Home Profile settings; re-applies seed applicability.
+maintenance_apply_seeds:
+  name: Maintenance — apply seed library
+  description: Re-evaluate the seed library against the Home Profile (idempotent).

@@ -139,6 +139,10 @@ _STORE_DOMAINS: dict[str, list[str]] = {
     "rewards": ["store_items", "redemptions", "subscriptions", "group_reward_proposals"],
     "history": ["history"],
     "meals":   ["meals"],   # v0.8.0 Meals room (own store: .storage/family_hub_meals)
+    "maintenance": [        # v0.8.0 Home Maintenance module (.storage/family_hub_maintenance)
+        "maintenance_tasks", "maintenance_products", "maintenance_completions",
+        "maintenance_vendors", "maintenance_funds", "home_profile",
+    ],
 }
 _SAVE_DELAY_SECONDS = 2.0  # debounce window for async_delay_save
 
@@ -166,6 +170,7 @@ def _empty_store(
         "history": [],
         "group_reward_proposals": [],
         "meals": _empty_meals(),
+        **_empty_maintenance(),
     }
 
 
@@ -195,6 +200,29 @@ def _migrate_meals(data: dict) -> None:
     defaults = _empty_meals()
     for key, default in defaults.items():
         meals.setdefault(key, default)
+
+
+def _empty_maintenance() -> dict:
+    """v0.8.0: empty Home Maintenance collections. Each is a top-level key routed
+    to the `maintenance` store domain. Tasks carry next_due/last_completed (state
+    is derived, not stored — see _maintenance_schedule); completions are append-
+    only; home_profile parameterises seed applicability and is editable settings."""
+    return {
+        "maintenance_tasks":       [],
+        "maintenance_products":    [],
+        "maintenance_completions": [],
+        "maintenance_vendors":     [],
+        "maintenance_funds":       [],
+        "home_profile":            {},
+    }
+
+
+def _migrate_maintenance(data: dict) -> None:
+    """Idempotent forward-fill for the maintenance collections. Safe on every
+    load: ensures each collection exists without touching existing records."""
+    defaults = _empty_maintenance()
+    for key, default in defaults.items():
+        data.setdefault(key, default)
 
 
 # ---------------------------------------------------------------------------

@@ -367,33 +367,10 @@ class CardShaperMixin:
         return sorted(queue, key=lambda x: x.get("requested_at") or "")
 
     def get_maintenance_items_for_card(self) -> list[dict]:
-        today = date.today()
-        items = []
-        for task in self.task_instances:
-            if task["status"] not in ACTIVE_STATUSES:
-                continue
-            chore = self.get_chore(task["chore_id"])
-            if not chore:
-                continue
-            if not self._chore_is_maintenance(chore):
-                continue
-            due_date   = date.fromisoformat(task["due_date"])
-            days_delta = (due_date - today).days
-            assigned   = task.get("assigned_to")
-            person     = self.get_person(assigned) if assigned else None
-            items.append({
-                "task_id":      task["id"],
-                "chore_id":     task["chore_id"],
-                "name":         chore["name"],
-                "description":  chore.get("description", ""),
-                "category_label": chore.get("category_label", ""),
-                "due_date":     task["due_date"],
-                "days_delta":   days_delta,
-                "assigned_to":  assigned,
-                "person_name":  person["name"] if person else None,
-                "person_color": person.get("avatar_color", "#7F77DD") if person else None,
-            })
-        return sorted(items, key=lambda x: x["days_delta"])
+        # v0.8.0 A4: the normalized union view (new maintenance_tasks + legacy
+        # Maintenance chore instances) lives in MaintenanceMixin.get_maintenance_view.
+        # It carries the same frozen item keys plus additive state/source_kind.
+        return self.get_maintenance_view()
 
     def get_claimable_tasks_for_card(self) -> list[dict]:
         items = []

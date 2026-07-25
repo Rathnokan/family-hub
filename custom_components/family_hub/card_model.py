@@ -113,24 +113,17 @@ def person_entity_id(name: str) -> str:
 # ---------------------------------------------------------------------------
 
 def get_maintenance_tasks(store, overdue_only: bool = False) -> list[dict]:
-    """Return active maintenance task instances (category_label == Maintenance)."""
-    today           = date.today()
-    due_soon_cutoff = (today + timedelta(days=MAINTENANCE_DUE_SOON_DAYS)).isoformat()
-    today_str       = today.isoformat()
-    results         = []
-    for task in store.task_instances:
-        if task["status"] not in ACTIVE_STATUSES:
-            continue
-        chore = store.get_chore(task["chore_id"])
-        if not chore or not store._chore_is_maintenance(chore):
-            continue
-        if overdue_only:
-            if task["due_date"] < today_str:
-                results.append(task)
-        else:
-            if task["due_date"] <= due_soon_cutoff:
-                results.append(task)
-    return results
+    """Maintenance items needing attention, as normalized view items.
+
+    v0.8.0 A4: reads the UNION of the new maintenance_tasks collection and legacy
+    category_label==Maintenance chore instances via store.get_maintenance_view()
+    (A5 removes the legacy half). overdue_only → past-due items; otherwise items
+    due within MAINTENANCE_DUE_SOON_DAYS (overdue included, matching prior
+    behavior). Callers use len() or the frozen item keys."""
+    view = store.get_maintenance_view()
+    if overdue_only:
+        return [i for i in view if i["days_delta"] < 0]
+    return [i for i in view if i["days_delta"] <= MAINTENANCE_DUE_SOON_DAYS]
 
 
 # ---------------------------------------------------------------------------
@@ -557,23 +550,19 @@ def build_claimable_payload(store) -> dict:
 
 
 def build_maintenance_due_scalars(store) -> dict:
-    """Maintenance-due SENSOR payload: summary counts + next item, no items list."""
-    today     = date.today()
-    today_str = today.isoformat()
-    week_str  = (today + timedelta(days=7)).isoformat()
+    """Maintenance-due SENSOR payload: summary counts + next item, no items list.
+    Reads normalized view items (days_delta relative to today)."""
+    items         = get_maintenance_tasks(store)
+    overdue       = [i for i in items if i["days_delta"] < 0]
+    due_this_week = [i for i in items if 0 <= i["days_delta"] <= 7]
+    due_next_week = [i for i in items if i["days_delta"] > 7]
 
-    tasks         = get_maintenance_tasks(store)
-    overdue       = [t for t in tasks if t["due_date"] < today_str]
-    due_this_week = [t for t in tasks if today_str <= t["due_date"] <= week_str]
-    due_next_week = [t for t in tasks if week_str < t["due_date"]]
-
-    upcoming = sorted([t for t in tasks if t["due_date"] >= today_str], key=lambda t: t["due_date"])
+    upcoming = sorted([i for i in items if i["days_delta"] >= 0], key=lambda i: i["due_date"])
     next_item = next_due_date = next_due_days = None
     if upcoming:
-        chore = store.get_chore(upcoming[0]["chore_id"])
-        next_item     = chore["name"] if chore else None
+        next_item     = upcoming[0]["name"]
         next_due_date = upcoming[0]["due_date"]
-        next_due_days = (date.fromisoformat(next_due_date) - today).days
+        next_due_days = upcoming[0]["days_delta"]
 
     return {
         "overdue":       len(overdue),
@@ -593,28 +582,24 @@ def build_maintenance_due_payload(store) -> dict:
 def build_maintenance_overdue_scalars(store) -> dict:
     """Maintenance-overdue SENSOR payload: oldest-overdue scalar only (the count
     is the sensor's native_value)."""
-    today  = date.today()
     oldest = 0
-    for task in get_maintenance_tasks(store, overdue_only=True):
-        oldest = max(oldest, (today - date.fromisoformat(task["due_date"])).days)
+    for item in get_maintenance_tasks(store, overdue_only=True):
+        oldest = max(oldest, -item["days_delta"])
     return {"oldest_overdue_days": oldest}
 
 
 def build_maintenance_overdue_payload(store) -> dict:
-    today = date.today()
-    tasks = get_maintenance_tasks(store, overdue_only=True)
-    items = []
+    items  = []
     oldest = 0
-    for task in tasks:
-        chore        = store.get_chore(task["chore_id"])
-        days_overdue = (today - date.fromisoformat(task["due_date"])).days
+    for item in get_maintenance_tasks(store, overdue_only=True):
+        days_overdue = -item["days_delta"]
         oldest       = max(oldest, days_overdue)
         items.append({
-            "name":           chore["name"] if chore else task["chore_id"],
-            "description":    chore.get("description", "") if chore else "",
+            "name":           item["name"],
+            "description":    item["description"],
             "days_overdue":   days_overdue,
-            "assigned_to":    task.get("assigned_to"),
-            "category_label": chore.get("category_label", "") if chore else "",
+            "assigned_to":    item["assigned_to"],
+            "category_label": item["category_label"],
         })
     return {"items": items, "oldest_overdue_days": oldest}
 
