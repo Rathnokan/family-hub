@@ -1,0 +1,74 @@
+{
+  "$comment": "Family Hub Home Maintenance — seed task record schema. All seed library research output must conform to this. One JSON object per task; deliverable is an array. SCHEMA v2 (B1.5 gap-closure): applicability vocabulary expanded from equipment-presence tags to equipment-presence + equipment-VARIANT tags so the Home Profile can enable the correct task set per appliance type (e.g. tank vs tankless water heater). v1 records remain valid; the only breaking fix is 'tile' -> 'tile_surfaces'.",
+  "schema_version": 2,
+  "task_record": {
+    "task_id": "snake_case_unique_id (e.g. hvac_filter_check)",
+    "name": "Short display name",
+    "description_howto": "2-4 sentence description including a brief how-to",
+    "category": "HVAC | Plumbing | Electrical/Safety | Exterior | Interior | Appliances | Landscape/Irrigation | Pest | Seasonal",
+    "location": "Room/zone tag (Kitchen, Master Bath, Roof, Yard, Garage, Whole Home...)",
+    "recurrence": { "interval": "integer", "unit": "days | weeks | months | years" },
+    "seasonal_anchor": "null, or month/window like 'February' or 'October (post-monsoon)'",
+    "schedule_mode": "from_completion | calendar_anchored",
+    "workflow": "simple | inspect_plan_do",
+    "lead_time_days": "integer — how far ahead it surfaces as upcoming",
+    "effort": { "diy_minutes": "integer", "difficulty": "Easy | Moderate | Hard | Pro-only" },
+    "est_cost_diy": "number USD (materials), 0 if free",
+    "est_cost_pro": "number USD (typical service), null if never hired out",
+    "default_mode": "diy | pro | decide",
+    "products": ["product ids/names consumed, empty array if none"],
+    "assignable": "boolean — suitable to assign to a family member via Chores bridge",
+    "default_point_value": "integer suggestion, 0 if not assignable",
+    "applicability": ["only include tags that gate this task — see applicability_tags. Empty array = universal to all homes."],
+    "climate_tags": ["universal and/or desert_southwest"],
+    "surprise_factor": "low | med | high — high = most homeowners don't know they should do this",
+    "sources": ["citation strings/URLs"]
+  },
+  "applicability_tags": {
+    "$comment": "Full controlled vocabulary for task_record.applicability. Presence tags gate optional equipment/features; variant tags gate mutually-exclusive appliance types. The Home Profile (scope doc Section 3.4) must ask a question that resolves every tag used by an enabled seed task. Variant tag groups marked 'exclusive' should render as a single-select profile question.",
+    "presence_tags": [
+      "pool", "softener", "ro", "fireplace", "gutters", "septic", "carpet",
+      "two_story", "hoa", "sump_pump", "well_water", "irrigation", "lawn",
+      "wood_deck", "wood_fence", "stone_counters", "tile_surfaces",
+      "humidifier", "mini_split", "generator", "gas_service", "evap_cooler"
+    ],
+    "variant_tag_groups": {
+      "water_heater_type": {
+        "exclusive": true,
+        "tags": ["tank_water_heater", "tankless_water_heater"],
+        "profile_question": "Water heater type: Tank / Tankless"
+      },
+      "roof_type": {
+        "exclusive": true,
+        "tags": ["tile_roof", "shingle_roof"],
+        "profile_question": "Roof type: Tile / Shingle (already in v1)"
+      },
+      "heating_type": {
+        "exclusive": true,
+        "tags": ["gas_heat", "heat_pump", "electric_heat"],
+        "profile_question": "Primary heating: Gas furnace / Heat pump / Electric. Reserved — no current seed task is gated on these (annual heating tune-up applies to all); tags exist so future variant tasks and B2 cost records can differentiate."
+      },
+      "dryer_fuel": {
+        "exclusive": true,
+        "tags": ["gas_dryer", "electric_dryer"],
+        "profile_question": "Dryer fuel: Gas / Electric. Reserved — vent/lint tasks apply to both; a gas dryer additionally resolves gas_service for the connector inspection."
+      }
+    },
+    "notes": [
+      "'gas_service' means the home has natural gas or propane service to ANY appliance; it gates the gas connector/shutoff inspection. A profile answer of gas furnace, gas dryer, gas range, gas water heater, or gas fireplace should set it automatically.",
+      "'fireplace' remains the umbrella tag for the annual NFPA 211 chimney/flue inspection, which applies to wood-burning and gas hearths alike. Split into wood/gas variants only if a variant-specific task is ever added.",
+      "'tile_surfaces' replaces the v1 ad-hoc 'tile' tag (used by grout_reseal). Migration: rewrite 'tile' -> 'tile_surfaces' on import.",
+      "Reserved tags with no seed tasks yet (add tasks before exposing profile questions): evap_cooler (populated in the B3 Desert Southwest pass), electric_heat, gas_dryer, electric_dryer."
+    ]
+  },
+  "big_ticket_record": {
+    "$comment": "Separate table for sinking-fund assets. B1.5 note: the water-heater entry must be split by variant — tank (10-15 yr life) vs tankless (~20 yr life) — because expected_life_years drives target_balance_today. Add water softener (10-15 yr) to the asset list.",
+    "asset_id": "snake_case",
+    "name": "Water Heater (Tank), Water Heater (Tankless), HVAC, Tile Roof Underlayment, Exterior Repaint, Carpet, Garage Springs, Water Softener, RO System...",
+    "current_replacement_cost": "number USD (2026)",
+    "cost_range": "low-high USD",
+    "expected_life_years": "integer or range",
+    "notes": "AZ-specific life adjustments (sun, hard water) where relevant",
+    "sources": ["citations"]
+  }
+}

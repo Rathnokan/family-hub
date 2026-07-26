@@ -1,1 +1,4069 @@
-[]
+{
+ "$comment": "Family Hub Home Maintenance — FINAL SHIPPED seed library, v3.0.0 (2026-07-19). Contents: the 93-task canonical set (B1+B1.5) with the B2 pricing merge (v2.1) and the B2.1 mini-pass completing all pricing, PLUS the B3 Desert Southwest climate layer: per-task climate_overrides (additive schema v2.2 — recurrence/seasonal_anchor/note applied only when the Home Profile climate preset matches), 4 new evap_cooler-gated tasks (97 total), Tucson tankless-descale rule (6 mo unsoftened / 12 mo with verified softener), monsoon-anchored inspection timing (NWS Jun 15-Sep 30), UA Extension Bermuda citations (az1817/az1683/az1681) banked as v0.9 lawn-program rules data, and the completed 15-asset big-ticket table (cost_basis_year 2026, planning_life_years; future cost computed at runtime per scope Section 8). cost_status semantics unchanged: no pending records remain. est_cost_pro null = never hired out standalone. This file replaces seed_library.v2.1.json as THE library; B2/B2.1/B3 records: B2-VERIFICATION.md, B3-RECORD.md.",
+ "schema_version": 2,
+ "library_version": "3.0.0",
+ "date": "2026-07-19",
+ "task_count": 97,
+ "tasks": [
+  {
+   "task_id": "kitchen_disposal_freshen",
+   "name": "Clean & freshen garbage disposal",
+   "description_howto": "Grind a few ice cubes with cold water to knock off debris, then drop in citrus peels to deodorize. Do this weekly if you use the disposal daily. Never put your hand inside; use tongs to clear jams with power off.",
+   "category": "Appliances",
+   "location": "Kitchen",
+   "recurrence": {
+    "interval": 1,
+    "unit": "weeks"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 2,
+   "effort": {
+    "diy_minutes": 5,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [
+    "ice",
+    "citrus_peel"
+   ],
+   "assignable": true,
+   "default_point_value": 5,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "InSinkErator via Consumer Reports, https://www.consumerreports.org/appliances/garbage-disposals/how-to-clean-your-garbage-disposal-a1060478189/ — 'If you use your disposal daily, it's a good idea to follow these steps once a week to clean it.'",
+    "B2 cost classification: household consumables only (ice, citrus peel) — effectively $0; never hired out, pro null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "dryer_lint_screen",
+   "name": "Clean dryer lint screen",
+   "description_howto": "Remove and clear the lint filter before or after every load. This is the single biggest dryer-fire prevention step per NFPA. Periodically wash the screen with soap and water if you use dryer sheets, which leave a film.",
+   "category": "Appliances",
+   "location": "Laundry",
+   "recurrence": {
+    "interval": 1,
+    "unit": "weeks"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 1,
+   "effort": {
+    "diy_minutes": 1,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [],
+   "assignable": true,
+   "default_point_value": 3,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "NFPA/CSIA dryer safety, https://www.dryersafety.org/nfpa-safety-tips.html — 'Make sure you clean the lint filter before or after each load of laundry.'",
+    "B2 cost classification: free; never hired out, pro null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "range_hood_wipe",
+   "name": "Wipe range hood surfaces",
+   "description_howto": "Wipe down the range hood exterior and control area weekly to prevent grease buildup that feeds kitchen fires. Degrease the metal mesh filter separately on the monthly schedule.",
+   "category": "Interior",
+   "location": "Kitchen",
+   "recurrence": {
+    "interval": 2,
+    "unit": "weeks"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 2,
+   "effort": {
+    "diy_minutes": 10,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [
+    "degreaser"
+   ],
+   "assignable": true,
+   "default_point_value": 5,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "InterNACHI seasonal checklist, https://www.nachi.org/documents/ben-gromicko-folder/checklist-home-maintenance-seasonal-bengromicko.pdf — 'Clean the kitchen exhaust hood and air filter.'",
+    "B2 cost classification: household cleaner only — effectively $0; never hired out, pro null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "lawn_mow_edge",
+   "name": "Mow & edge lawn",
+   "description_howto": "Mow at the recommended height for the grass type during the growing season, never removing more than a third of the blade, and edge walk/drive borders. Baseline recurring lawn task; the full climate-tuned fertilization/overseed program is a separate v0.9 deliverable.",
+   "category": "Landscape/Irrigation",
+   "location": "Yard",
+   "recurrence": {
+    "interval": 1,
+    "unit": "weeks"
+   },
+   "seasonal_anchor": "Growing season",
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 2,
+   "effort": {
+    "diy_minutes": 45,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 5,
+   "est_cost_pro": 50,
+   "default_mode": "decide",
+   "products": [],
+   "assignable": true,
+   "default_point_value": 15,
+   "applicability": [
+    "lawn"
+   ],
+   "climate_tags": [
+    "universal",
+    "desert_southwest"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "Scope doc Section 5 baseline weekly task; grass-type mowing heights per university extension turf guidance (detailed Bermuda program with AZ extension citations lands in the B3/v0.9 lawn deliverable).",
+    "B2 interval corroboration: growth-based one-third rule per Ohio State Univ. Extension (Ohioline HYG-5816), LSU AgCenter, NMSU (H-505), Univ. of Wisconsin Extension (A3435) — mow when grass reaches ~1.5x target height, up to 2x/week in spring flush, none in dormancy. Weekly growing-season default retained.",
+    "B2 pricing (2026 national): DIY ~$5/mow fuel & consumables; pro mow visit ~$50 (range $30-$80) per LawnStarter/Angi 2026 rate data.",
+    "B3 lawn citations (retro-fill per B1.5 plan): Univ. of Arizona Cooperative Extension az1817 'A Turfgrass Maintenance Guide for Residential and Commercial Lawns in the Low Elevation Arizona Desert' (Casa Grande/Phoenix/Tucson/Yuma) — April green-up fertilization at consistent 60F soil temps, deep infrequent irrigation, Jun-Aug dethatch/aerify window, dormant-winter watering guidance.",
+    "Univ. of Arizona Cooperative Extension az1683 'Overseeding Winter Grasses into Bermudagrass Turf' (Kopec & Umeda) — October-ideal overseeding at 80-85F days/55F nights; perennial ryegrass green Oct-May; UA turf tips: late September ideal in Tucson; no heavy N after Aug 31.",
+    "Univ. of Arizona Cooperative Extension az1681 'Mowing Turfgrasses in the Desert' — variety-specific mowing heights (also retro-fills the B1 mowing-height citation)."
+   ],
+   "cost_status": "priced_b2",
+   "climate_overrides": {
+    "desert_southwest": {
+     "note": "Bermuda program hooks (rules data banked for v0.9): active growth Apr-Oct (mow regularly per az1681 heights); overseed decision late Sep (Tucson) with perennial rye per az1683 (Oct ideal, 80-85F days / ~55F nights) for a green winter lawn, or let it go dormant (no winter mowing; water ~monthly only if winter rains fail per az1817). No heavy nitrogen after Aug 31 ahead of overseeding."
+    }
+   }
+  },
+  {
+   "task_id": "hvac_filter_check",
+   "name": "Check/replace HVAC air filter",
+   "description_howto": "Inspect the 1-inch furnace/AC filter monthly and replace when dirty; 1-inch filters typically need changing every 1-3 months, 4-5 inch media filters every 6-12 months. Hold it to a light — if light doesn't pass through, replace it. More often with pets or during peak heating/cooling.",
+   "category": "HVAC",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 1,
+    "unit": "months"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 7,
+   "effort": {
+    "diy_minutes": 10,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 20,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [
+    "hvac_filter"
+   ],
+   "assignable": true,
+   "default_point_value": 5,
+   "applicability": [],
+   "climate_tags": [
+    "universal",
+    "desert_southwest"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "Carrier, https://www.carrier.com/residential/en/us/products/air-conditioners/air-conditioner-maintenance/how-often-to-change-air-filter/ — 'For 1-inch filters, replace them every 1 to 3 months. For 4-inch media filters, replace them every 6 to 12 months.'",
+    "B2 pricing (2026 national): $20 is the per-FILTER cost when the check triggers replacement (Angi 2026: avg $20, range $10-$50 for MERV 8-13 1-inch; 4-5 inch media higher but less frequent). The monthly check itself is free. Pro cost null — standalone filter changes aren't hired out; they ride along with tune-ups (see hvac_cooling_tuneup).",
+    "B3 climate: NWS-defined Arizona monsoon season: June 15 - September 30 (fixed dates adopted 2008; peak storms mid-July-mid-August)."
+   ],
+   "cost_status": "priced_b2",
+   "climate_overrides": {
+    "desert_southwest": {
+     "note": "Dust discipline: during dust-storm season and the monsoon (roughly May-September), check monthly WITHOUT skipping — 1-inch filters commonly need replacement every month in dust season here, not every 2-3."
+    }
+   }
+  },
+  {
+   "task_id": "gfci_afci_test",
+   "name": "Test GFCI & AFCI devices",
+   "description_howto": "Press TEST on each GFCI outlet and AFCI/GFCI breaker monthly; the device should trip and power should cut. Press RESET to restore. If it won't trip or won't reset, replace it. Also test after electrical storms.",
+   "category": "Electrical/Safety",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 1,
+    "unit": "months"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 3,
+   "effort": {
+    "diy_minutes": 15,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "high",
+   "sources": [
+    "UL via Gary N. Smith Inspections, https://garynsmith.net/how-to-test-afci-and-gfci-receptacles/ — 'they must be tested regularly — UL recommends once a month — to verify they are working properly.'",
+    "InterNACHI seasonal checklist — 'Test all AFCI and GFCI devices.'",
+    "B2 cost classification: genuinely free — press test/reset per Leviton/Eaton manufacturer instructions and NEC/NFPA guidance. Never hired out standalone; pro cost null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "fire_extinguisher_check",
+   "name": "Fire extinguisher monthly visual check",
+   "description_howto": "Confirm each extinguisher is in its place, unobstructed, pin/seal intact, no damage/corrosion, and the gauge needle is in the green. Lift it to confirm it feels full. This is the homeowner monthly check per NFPA 10; a professional does the annual maintenance.",
+   "category": "Electrical/Safety",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 1,
+    "unit": "months"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 3,
+   "effort": {
+    "diy_minutes": 5,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [],
+   "assignable": true,
+   "default_point_value": 5,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "med",
+   "sources": [
+    "NFPA 10 via NFPA, https://www.nfpa.org/news-blogs-and-articles/blogs/2020/10/30/guide-to-fire-extinguisher-itm — 'inspected when they are initially installed and once a month after that.'",
+    "B2 cost classification: visual gauge/pin/date check is free; annual pro certification priced separately on fire_extinguisher_pro_service. Pro null for the monthly check."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "smoke_co_alarm_test",
+   "name": "Test smoke & CO alarms",
+   "description_howto": "Press the test button on every smoke and carbon-monoxide alarm monthly and listen for the alarm. Replace batteries at least annually (unless sealed 10-yr units). Vacuum dust from covers periodically.",
+   "category": "Electrical/Safety",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 1,
+    "unit": "months"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 3,
+   "effort": {
+    "diy_minutes": 10,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [
+    "alarm_battery"
+   ],
+   "assignable": true,
+   "default_point_value": 5,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "NFPA CO safety / NFPA 72, https://www.nfpa.org/education-and-research/home-fire-safety/carbon-monoxide ; NFPA 72 requires monthly alarm testing and 10-year smoke-alarm replacement.",
+    "B2 cost classification: monthly button test is free. Budget ~$10-$20/yr for the annual battery swap (9V/AA retail, First Alert/Kidde guidance) — carried on the alarm_battery product record, not per test occurrence. Never hired out; pro cost null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "sink_stopper_disposal_visual",
+   "name": "Visual leak sweep under sinks & appliances",
+   "description_howto": "Once a month, look under kitchen/bath sinks and behind/under the dishwasher, fridge and washer for drips, staining or corrosion at supply lines and drains. Early detection of a slow leak prevents cabinet rot and mold.",
+   "category": "Plumbing",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 1,
+    "unit": "months"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 3,
+   "effort": {
+    "diy_minutes": 15,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [],
+   "assignable": true,
+   "default_point_value": 5,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "InterNACHI seasonal checklist — 'Check your home for water leaks.'",
+    "B2 cost classification: visual check, free; never hired out, pro null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "dishwasher_filter_clean",
+   "name": "Clean dishwasher filter",
+   "description_howto": "Twist out the removable cylindrical/flat filter at the bottom of the dishwasher, rinse food debris under running water, and reseat. Whirlpool recommends monthly, or every two weeks with daily use / hard water.",
+   "category": "Appliances",
+   "location": "Kitchen",
+   "recurrence": {
+    "interval": 1,
+    "unit": "months"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 5,
+   "effort": {
+    "diy_minutes": 10,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [],
+   "assignable": true,
+   "default_point_value": 5,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "med",
+   "sources": [
+    "Whirlpool, https://producthelp.whirlpool.com/Dishwashers/Product_Info/Dishwasher_Cleaning_and_Care/How_to_Clean_the_Dishwasher_Filters — 'clean your filter once a month... If you have a large family or run the dishwasher daily, consider cleaning the filter every two weeks.'",
+    "B2 cost classification: rinse under the tap, free; never hired out, pro null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "softener_salt_check",
+   "name": "Check water softener salt level",
+   "description_howto": "Check the brine tank monthly and add salt whenever it falls below half full so the resin can regenerate. Break up any salt 'bridge' (hard crust) that keeps salt from contacting the water.",
+   "category": "Plumbing",
+   "location": "Garage",
+   "recurrence": {
+    "interval": 1,
+    "unit": "months"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 7,
+   "effort": {
+    "diy_minutes": 15,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 10,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [
+    "softener_salt"
+   ],
+   "assignable": true,
+   "default_point_value": 5,
+   "applicability": [
+    "softener"
+   ],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "med",
+   "sources": [
+    "Culligan, https://www.culligan.com/blog/why-its-important-to-add-salt-to-your-water-softener-on-time — 'experts recommend checking the brine tank at least once a month and adding salt whenever it's less than half full.'",
+    "B2.1 needed: softener salt retail price per 40-lb bag and typical monthly consumption; check itself is free.",
+    "B2.1 pricing (2026 national): sodium-chloride softener salt $5-$10/40-lb bag (premium/potassium-chloride $25-$35); a family of four+ uses roughly one bag/month — $10/bag point charged as topped off. The level check itself is free."
+   ],
+   "cost_status": "priced_b2_1"
+  },
+  {
+   "task_id": "ac_condensate_flush",
+   "name": "Flush AC condensate drain line",
+   "description_howto": "During cooling season, pour a cup of distilled vinegar (or a vinegar/water mix) into the condensate drain access, or clear the line with a wet/dry vac at the exterior outlet. Prevents algae clogs that overflow the drain pan and cause ceiling/water damage.",
+   "category": "HVAC",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 1,
+    "unit": "months"
+   },
+   "seasonal_anchor": "May-September (cooling season)",
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 7,
+   "effort": {
+    "diy_minutes": 10,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [
+    "distilled_vinegar"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "high",
+   "sources": [
+    "Providence Homes (ENERGY STAR Zero Energy Ready guide), https://www.providencehomesinc.com/resources/home-maintenance-tips/hvac-maintenance-flushing-the-condensate-line/ — 'It's recommended to flush the condensate line once a month.'",
+    "B2 cost classification: a cup of distilled vinegar per flush — sub-$1, rounds to $0; standalone condensate flushes aren't hired out (bundled in tune-ups), pro null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "washing_machine_clean",
+   "name": "Clean washing machine & gasket",
+   "description_howto": "Run a tub-clean/hot cycle with washer cleaner, wipe the door gasket and detergent dispenser (especially front-loaders prone to mildew), and leave the door ajar between uses. Clean the drain-pump filter if the model has one.",
+   "category": "Appliances",
+   "location": "Laundry",
+   "recurrence": {
+    "interval": 1,
+    "unit": "months"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 7,
+   "effort": {
+    "diy_minutes": 15,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 5,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [
+    "washer_cleaner"
+   ],
+   "assignable": true,
+   "default_point_value": 3,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "Whirlpool appliance care guidance; general manufacturer tub-clean recommendation.",
+    "B2.1 needed: washer-cleaner tablet retail price (e.g. Affresh-class) per cycle.",
+    "B2.1 pricing (2026 national): washer-cleaner tablets (Affresh-class, Whirlpool-recommended) ~$10-$15 per 6-count/6-month pack retail (Amazon/Target/Lowe's) — ~$2/cycle, rounds to $5."
+   ],
+   "cost_status": "priced_b2_1"
+  },
+  {
+   "task_id": "minisplit_filter_clean",
+   "name": "Clean mini-split washable filters",
+   "description_howto": "Power off the indoor head, lift the front panel, slide out the washable mesh filters, vacuum or wash them with mild soap, dry fully, and reinstall. Manufacturers (Mitsubishi/Trane and peers) direct cleaning as often as every two weeks in peak season; monthly is the practical baseline for most homes, more often with pets or dust. Clogged filters cut airflow and efficiency and can push debris into the drain pan.",
+   "category": "HVAC",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 1,
+    "unit": "months"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 5,
+   "effort": {
+    "diy_minutes": 15,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [],
+   "assignable": true,
+   "default_point_value": 5,
+   "applicability": [
+    "mini_split"
+   ],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "med",
+   "sources": [
+    "Trane/Mitsubishi, https://www.trane.com/residential/en/resources/troubleshooting/ductless-systems/do-mini-splits-have-filters/ — clean per the owner's manual, 'as often as every two weeks during peak heating or cooling season.'",
+    "B2 cost classification: washable filters, free; never hired out standalone, pro null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "pest_perimeter_walk",
+   "name": "Pest perimeter walk-around",
+   "description_howto": "Walk the home's exterior monthly: look for ant trails, wasp nests, rodent droppings/gnaw marks, termite mud tubes on the foundation, and gaps at weep screeds, vents, and door sweeps. Knock down webs and nests early, seal small entry gaps, and keep vegetation and stored items off the stucco/foundation line. Early detection here is what keeps the annual termite inspection boring.",
+   "category": "Pest",
+   "location": "Exterior",
+   "recurrence": {
+    "interval": 1,
+    "unit": "months"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 5,
+   "effort": {
+    "diy_minutes": 15,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [],
+   "assignable": true,
+   "default_point_value": 5,
+   "applicability": [],
+   "climate_tags": [
+    "universal",
+    "desert_southwest"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "Scope doc Section 5 baseline task; termite warning-sign checklist (mud tubes, frass, swarmers) per pest-industry inspection guidance already cited on termite_inspection, e.g. https://www.dodsonbros.com/termites/how-often-should-you-get-a-termite-inspection/ .",
+    "B2 interval corroboration: monthly exterior inspection walk consistent with IPM practice per Oklahoma State Univ. Extension household-pest guidance and EPA IPM principles. Note: B2's quarterly figure applies to preventive BARRIER TREATMENTS (product residual ~2-3 months), which in this library are spawned work from this inspect_plan_do task, not the walk itself.",
+    "B2 pricing context: the walk is free; if outsourced entirely, pro quarterly perimeter plans run ~$100-$150/visit ($400-$600/yr) per pestcontrolpricing.com 2026 and service-plan data — capture via vendor book / spawned pro work, not this task's estimate.",
+    "B3 climate: NWS-defined Arizona monsoon season: June 15 - September 30 (fixed dates adopted 2008; peak storms mid-July-mid-August)."
+   ],
+   "cost_status": "priced_b2",
+   "climate_overrides": {
+    "desert_southwest": {
+     "note": "Monsoon note: insect activity surges with summer moisture — keep the monthly walk through the season and give the foundation line special attention for termite mud tubes in September-October after the rains."
+    }
+   }
+  },
+  {
+   "task_id": "sprinkler_visual_check",
+   "name": "Sprinkler/drip visual run-through",
+   "description_howto": "Run each irrigation zone briefly once a month during the watering season and watch it: look for broken, clogged, tilted, or blocked heads, drip emitters that have popped off, geysers, and overspray onto hardscape. Fix or flag what you find. Catches the silent leaks and dead emitters that kill plants and waste water between annual audits.",
+   "category": "Landscape/Irrigation",
+   "location": "Yard",
+   "recurrence": {
+    "interval": 1,
+    "unit": "months"
+   },
+   "seasonal_anchor": "Watering season",
+   "schedule_mode": "from_completion",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 5,
+   "effort": {
+    "diy_minutes": 20,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [],
+   "assignable": true,
+   "default_point_value": 5,
+   "applicability": [
+    "irrigation"
+   ],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "EPA WaterSense, Maintenance Checklist for a Water-Efficient Home, https://www.epa.gov/system/files/documents/2024-03/watersense_homemaintenancechecklist_508.pdf — inspect irrigation for leaks/waste and maintain sprinklers seasonally.",
+    "B2 cost classification: visual walk of zones, free; repairs are spawned work. Pro null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "sump_pump_test",
+   "name": "Test sump pump",
+   "description_howto": "Slowly pour a bucket of water into the sump pit until the float rises; confirm the pump switches on, ejects water, and shuts off. Check the discharge exits well away from the foundation. SSPMA advises quarterly cleaning of the inlet screen for pumps not handling washer water.",
+   "category": "Plumbing",
+   "location": "Basement",
+   "recurrence": {
+    "interval": 3,
+    "unit": "months"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 7,
+   "effort": {
+    "diy_minutes": 20,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "sump_pump"
+   ],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "high",
+   "sources": [
+    "SSPMA/InterNACHI via Allstate, https://www.allstate.com/resources/home-insurance/sump-pump-inspection-tips — quarterly inlet cleaning when not handling washer water; annual pump/pit cleaning.",
+    "B2 cost classification: bucket-of-water test, free; never hired out, pro null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "dry_ptrap_flush",
+   "name": "Flush dry P-traps in unused drains",
+   "description_howto": "Pour a quart of water (add a little mineral oil to slow evaporation) down floor drains, guest-bath sinks/tubs, and any seldom-used fixtures every quarter. This refills the P-trap so sewer gas can't enter the home. A dry trap is the usual cause of a mystery sewer smell.",
+   "category": "Plumbing",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 3,
+    "unit": "months"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 5,
+   "effort": {
+    "diy_minutes": 10,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [],
+   "assignable": true,
+   "default_point_value": 5,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "high",
+   "sources": [
+    "EPA septic guidance (drain/trap maintenance principle), https://www.epa.gov/septic/how-care-your-septic-system ; InterNACHI plumbing SOP, https://www.nachi.org/sop.htm (traps and drains).",
+    "B2 cost classification: tap water (a splash of mineral oil optional, pennies), rounds to $0; never hired out, pro null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "faucet_aerator_clean",
+   "name": "Clean faucet aerators & showerheads",
+   "description_howto": "Unscrew aerators and showerheads and soak in vinegar to dissolve mineral scale, then rinse. Restores flow and is especially needed in hard-water areas. Quarterly in hard water, less often in soft.",
+   "category": "Plumbing",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 3,
+    "unit": "months"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 7,
+   "effort": {
+    "diy_minutes": 20,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [
+    "distilled_vinegar"
+   ],
+   "assignable": true,
+   "default_point_value": 5,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "med",
+   "sources": [
+    "EPA WaterSense fixture guidance; InterNACHI plumbing SOP, https://www.nachi.org/sop.htm .",
+    "B2 cost classification: household vinegar soak, free; never hired out, pro null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "range_hood_filter_degrease",
+   "name": "Degrease range hood filter",
+   "description_howto": "Remove the metal mesh grease filter and wash in hot soapy water or run through the dishwasher. Reduces kitchen fire risk and restores exhaust airflow.",
+   "category": "Appliances",
+   "location": "Kitchen",
+   "recurrence": {
+    "interval": 3,
+    "unit": "months"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 5,
+   "effort": {
+    "diy_minutes": 15,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [
+    "degreaser"
+   ],
+   "assignable": true,
+   "default_point_value": 5,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "InterNACHI seasonal checklist — 'Clean the kitchen exhaust hood and air filter.'",
+    "B2 cost classification: dish soap / degreaser soak — household supplies, rounds to $0; never hired out, pro null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "garage_door_balance_test",
+   "name": "Garage door balance & reverse test",
+   "description_howto": "With the door closed, pull the opener release and lift the door by hand to about waist height; a balanced door stays put. Then run the auto-reverse test: place a 2x4 flat on the floor in the door path — the door must reverse on contact. Also test the photo-eye sensors. If the door is heavy or won't stay, the spring needs a pro (springs are under lethal tension).",
+   "category": "Exterior",
+   "location": "Garage",
+   "recurrence": {
+    "interval": 3,
+    "unit": "months"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 7,
+   "effort": {
+    "diy_minutes": 15,
+    "difficulty": "Moderate"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "decide",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "high",
+   "sources": [
+    "DASMA TDS-190 'Factors Affecting Spring Cycle Life', https://www.dasma.com/wp-content/uploads/2021/12/TDS190.pdf ; balance/reverse test guidance for standard ~10,000-cycle torsion springs.",
+    "B2 cost classification: disconnect-and-lift balance test is free; spring work it may trigger is priced on garage_spring_service. Pro null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "garbage_disposal_deep_clean",
+   "name": "Deep-clean disposal splash guard",
+   "description_howto": "Scrub the underside of the rubber splash guard and the grinding chamber (power off) where sludge and odor collect. Complements the weekly ice/citrus routine.",
+   "category": "Appliances",
+   "location": "Kitchen",
+   "recurrence": {
+    "interval": 3,
+    "unit": "months"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 5,
+   "effort": {
+    "diy_minutes": 15,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [
+    "dish_soap"
+   ],
+   "assignable": true,
+   "default_point_value": 5,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "InSinkErator via Consumer Reports, https://www.consumerreports.org/appliances/garbage-disposals/how-to-clean-your-garbage-disposal-a1060478189/ .",
+    "B2 cost classification: baking soda/vinegar/ice — household supplies, rounds to $0; never hired out, pro null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "irrigation_controller_adjust",
+   "name": "Adjust irrigation controller for the season",
+   "description_howto": "Four times a year, revise the irrigation controller's schedule to match seasonal water needs — shorter/less frequent runs in cool months, stepped up ahead of heat. If the controller is a WaterSense-labeled weather-based unit, verify its settings instead of hand-adjusting. Calendar-anchored: a missed adjustment shouldn't shift the next one.",
+   "category": "Landscape/Irrigation",
+   "location": "Yard",
+   "recurrence": {
+    "interval": 3,
+    "unit": "months"
+   },
+   "seasonal_anchor": "January / April / July / October",
+   "schedule_mode": "calendar_anchored",
+   "workflow": "simple",
+   "lead_time_days": 7,
+   "effort": {
+    "diy_minutes": 15,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "irrigation"
+   ],
+   "climate_tags": [
+    "universal",
+    "desert_southwest"
+   ],
+   "surprise_factor": "med",
+   "sources": [
+    "EPA WaterSense, Maintenance Checklist for a Water-Efficient Home, https://www.epa.gov/system/files/documents/2024-03/watersense_homemaintenancechecklist_508.pdf — 'revise your irrigation system's schedule according to seasonal weather changes' (if not using a WaterSense labeled controller).",
+    "B2 cost classification: reprogramming the controller is free; never hired out standalone, pro null.",
+    "B3 climate: NWS-defined Arizona monsoon season: June 15 - September 30 (fixed dates adopted 2008; peak storms mid-July-mid-August)."
+   ],
+   "cost_status": "confirmed_free_b2",
+   "climate_overrides": {
+    "desert_southwest": {
+     "note": "Tucson rhythm for the Jan/Apr/Jul/Oct anchors: January = winter cutback; April = ramp for dry heat; July = monsoon adjustment (cut runtimes when storms deliver — the controller shouldn't water in the rain); October = post-monsoon step-down. Smart/WaterSense controllers automate this; the quarterly check verifies it."
+    }
+   }
+  },
+  {
+   "task_id": "dryer_vent_clean",
+   "name": "Clean dryer exhaust vent & duct",
+   "description_howto": "Disconnect the dryer, vacuum/brush the transition hose and the wall/roof duct, and clear the exterior vent flap. Also clean under and behind the dryer. Default is at least annually; step up to twice a year with heavy use, pets, or long duct runs. Failure to clean is the #1 cause of dryer fires.",
+   "category": "Appliances",
+   "location": "Laundry",
+   "recurrence": {
+    "interval": 6,
+    "unit": "months"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 14,
+   "effort": {
+    "diy_minutes": 60,
+    "difficulty": "Moderate"
+   },
+   "est_cost_diy": 30,
+   "est_cost_pro": 150,
+   "default_mode": "decide",
+   "products": [
+    "dryer_vent_brush"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "high",
+   "sources": [
+    "NFPA via CSIA dryersafety.org, https://www.dryersafety.org/nfpa-safety-tips.html — 'Once a year, or more often if you notice that it is taking longer than normal for your clothes to dry, clean lint out of the vent pipe...'",
+    "B2 pricing (2026 national): pro dryer-vent cleaning avg $145, range $75-$340 by vent location (Angi 2026; HomeAdvisor 2026 concurs; HomeGuide $80-$185 standard, $150-$250 roof exit) — rounded to $150. DIY rotary brush kit $15-$50. U.S. Fire Administration backs at-least-annual cleaning; 6-month cadence retained for a 5-person household's laundry volume."
+   ],
+   "cost_status": "priced_b2"
+  },
+  {
+   "task_id": "refrigerator_coil_clean",
+   "name": "Clean refrigerator condenser coils",
+   "description_howto": "Unplug the fridge, remove the base grille or pull the unit out, and vacuum/brush dust off the condenser coils (bottom-front or rear). PNNL/DOE recommends every 6-12 months; clean every 2-3 months if you have pets or a dusty/garage location.",
+   "category": "Appliances",
+   "location": "Kitchen",
+   "recurrence": {
+    "interval": 6,
+    "unit": "months"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 10,
+   "effort": {
+    "diy_minutes": 25,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [
+    "coil_brush"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "high",
+   "sources": [
+    "PNNL/DOE Building America Solution Center, https://basc.pnnl.gov/diy-guides/clean-refrigerator-condenser-coils — 'clean the condenser coils behind or below the refrigerator every 6 to 12 months.'",
+    "B2 cost classification: vacuum + coil brush (one-time tool), recurring cost $0; rarely hired out standalone, pro null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "washer_hose_inspect",
+   "name": "Inspect washing machine fill hoses",
+   "description_howto": "Pull the washer out and inspect both hot/cold supply hoses for cracks, blisters, rust at fittings, or bulging. Replace rubber hoses on a 5-year cycle (braided stainless recommended). A failed hose can release ~650 gallons/hour.",
+   "category": "Appliances",
+   "location": "Laundry",
+   "recurrence": {
+    "interval": 6,
+    "unit": "months"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 10,
+   "effort": {
+    "diy_minutes": 20,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [
+    "braided_washer_hose"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "high",
+   "sources": [
+    "State Farm, 'A $30M Load of Laundry', https://newsroom.statefarm.com/a-30m-load-of-laundry — 'Replace supply hoses every three to five years'; a washing machine hose 'can displace an average of 650 gallons of water per hour.'",
+    "InterNACHI seasonal checklist — 'Check the water hoses on the clothes washer, refrigerator icemaker and dishwasher for cracks and bubbles.'",
+    "B2 cost classification: visual inspection is free; hose replacement (braided stainless ~$20-$30) is spawned work, price with products in B2.1 if desired. Pro null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "exterior_caulk_seal_inspect",
+   "name": "Inspect exterior door/window caulk & weather-stripping",
+   "description_howto": "Walk the exterior and inspect caulk joints and weather-stripping at doors and windows for cracks, gaps and shrinkage; re-caulk or replace stripping as needed. Prevents water intrusion and cuts heating/cooling loss. Best done spring and fall.",
+   "category": "Exterior",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 6,
+    "unit": "months"
+   },
+   "seasonal_anchor": "April & October",
+   "schedule_mode": "calendar_anchored",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 14,
+   "effort": {
+    "diy_minutes": 45,
+    "difficulty": "Moderate"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [
+    "exterior_caulk",
+    "weatherstripping"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "med",
+   "sources": [
+    "InterNACHI seasonal checklist — 'Make sure the caulking around doors and windows is adequate to reduce heat/cooling loss.'",
+    "B2 cost classification: inspection is free; caulk consumed by spawned re-caulk work. Pro null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "bath_caulk_grout_inspect",
+   "name": "Inspect & refresh tub/shower caulk and grout",
+   "description_howto": "Check caulk lines and grout in tubs/showers and around fixtures for cracks, gaps, or mildew; recaulk and reseal to keep water out of the subfloor and wall cavity. Condition-based — the inspection may spawn a recaulk/regrout project.",
+   "category": "Interior",
+   "location": "Bathrooms",
+   "recurrence": {
+    "interval": 6,
+    "unit": "months"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 14,
+   "effort": {
+    "diy_minutes": 30,
+    "difficulty": "Moderate"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [
+    "tub_caulk"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "med",
+   "sources": [
+    "InterNACHI seasonal checklist — 'Make sure that the caulking around your bathroom fixtures is adequate to prevent water from seeping into the sub-flooring.'",
+    "B2 cost classification: inspection is free; re-caulk/re-grout is spawned work. Pro null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "gutter_clean",
+   "name": "Clean gutters & downspouts",
+   "description_howto": "Clear leaves and debris from gutters and downspouts and flush with a hose to confirm flow; verify downspouts discharge away from the foundation. Standard cadence is twice a year (spring and fall); more often under pine/oak or with heavy tree cover.",
+   "category": "Exterior",
+   "location": "Roof",
+   "recurrence": {
+    "interval": 6,
+    "unit": "months"
+   },
+   "seasonal_anchor": "April & October",
+   "schedule_mode": "calendar_anchored",
+   "workflow": "simple",
+   "lead_time_days": 14,
+   "effort": {
+    "diy_minutes": 90,
+    "difficulty": "Moderate"
+   },
+   "est_cost_diy": 20,
+   "est_cost_pro": 175,
+   "default_mode": "decide",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "gutters"
+   ],
+   "climate_tags": [
+    "universal",
+    "desert_southwest"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "Tower Hill Insurance, https://www.thig.com/learning-center/how-often-should-you-clean-your-gutters/ — 'Experts recommend cleaning them at least twice a year, typically in the spring and fall.'",
+    "B2 pricing (2026 national): Angi 2026 gutter-cleaning cost guide — national average $168, typical range $119-$234, $0.95-$2.25/linear ft (rounded to $175 per B2's $25 pro rounding convention); Liberty Home Guard 2026 ~$160 concurs. DIY ~$20 supplies; ladder-safety risk is why difficulty is Moderate.",
+    "B3 climate: NWS-defined Arizona monsoon season: June 15 - September 30 (fixed dates adopted 2008; peak storms mid-July-mid-August)."
+   ],
+   "cost_status": "priced_b2",
+   "climate_overrides": {
+    "desert_southwest": {
+     "note": "Desert cadence: clean in JUNE (pre-monsoon — must flow before the season's downpours) and again in OCTOBER (post-monsoon debris). Many desert homes have partial or no gutters; profile-gated as usual.",
+     "seasonal_anchor": "June (pre-monsoon) & October (post-monsoon)"
+    }
+   }
+  },
+  {
+   "task_id": "water_heater_flush",
+   "name": "Flush water heater sediment",
+   "description_howto": "Shut off power/gas, connect a hose to the drain valve, and drain several gallons (or fully) until water runs clear to remove sediment that insulates the burner and causes rumbling. Default annual; every 6 months in hard water.",
+   "category": "Plumbing",
+   "location": "Garage",
+   "recurrence": {
+    "interval": 6,
+    "unit": "months"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 14,
+   "effort": {
+    "diy_minutes": 45,
+    "difficulty": "Moderate"
+   },
+   "est_cost_diy": 15,
+   "est_cost_pro": 150,
+   "default_mode": "diy",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "tank_water_heater"
+   ],
+   "climate_tags": [
+    "universal",
+    "desert_southwest"
+   ],
+   "surprise_factor": "med",
+   "sources": [
+    "Rheem, https://www.rheem.com/water-heating/articles/how-often-to-flush-your-water-heater-and-how-to-do-it/ — 'Once per year for most homes, or every 6 months if you have hard water.'",
+    "B2 pricing (2026 national): DIY ~$15 (hose + minimal consumables); pro flush $75-$250 (HomeGuide 2026), Angi ~$200 — $150 midpoint used; often bundled into a broader water-heater tune-up.",
+    "B3 climate: Tucson water is classified hard to very hard by Tucson Water's own water-quality parameter guidance; 2026 city-wide readings run ~11-13 gpg (211-220 ppm) with CAP-heavy areas reported 12-22 gpg — 1.5-3x the 7-gpg 'hard' threshold (WQA scale)."
+   ],
+   "cost_status": "priced_b2",
+   "climate_overrides": {
+    "desert_southwest": {
+     "note": "Tank homes on Tucson water: hold the 6-month cadence (do not stretch to annual) and pair with annual anode inspection — hard water is the tank-killer here."
+    }
+   }
+  },
+  {
+   "task_id": "ceiling_fan_reverse",
+   "name": "Reverse ceiling fan direction",
+   "description_howto": "Flip the fan-direction switch seasonally: counter-clockwise in summer (downdraft/cooling) and clockwise on low in winter (updraft that pushes warm ceiling air down). Dust blades while you're up there.",
+   "category": "Interior",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 6,
+    "unit": "months"
+   },
+   "seasonal_anchor": "April & October",
+   "schedule_mode": "calendar_anchored",
+   "workflow": "simple",
+   "lead_time_days": 7,
+   "effort": {
+    "diy_minutes": 10,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [],
+   "assignable": true,
+   "default_point_value": 3,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "med",
+   "sources": [
+    "ENERGY STAR / DOE ceiling-fan guidance (seasonal reversal); InterNACHI energy-efficiency guidance, https://www.nachi.org/home-maintenance.htm .",
+    "B2 cost classification: genuinely free — flip the reverse switch seasonally (fan manufacturer + ENERGY STAR guidance). Never hired out; pro cost null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "exterior_hose_bib_check",
+   "name": "Test exterior hose bibs & shutoffs",
+   "description_howto": "Twice a year, operate exterior hose bibs and each fixture's shutoff valve to confirm they turn freely and don't leak; exercising valves keeps them from seizing. In freeze-prone regions, close and drain them before winter.",
+   "category": "Plumbing",
+   "location": "Exterior",
+   "recurrence": {
+    "interval": 6,
+    "unit": "months"
+   },
+   "seasonal_anchor": "April & October",
+   "schedule_mode": "calendar_anchored",
+   "workflow": "simple",
+   "lead_time_days": 7,
+   "effort": {
+    "diy_minutes": 20,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "med",
+   "sources": [
+    "InterNACHI seasonal checklist — 'Check the shutoff valve at each plumbing fixture to make sure they function.'",
+    "B2 cost classification: visual/operational check, free; never hired out, pro null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "whole_house_water_filter",
+   "name": "Replace whole-house water filter cartridge",
+   "description_howto": "If a whole-house sediment/carbon filter is installed, replace the cartridge on the manufacturer's schedule (commonly 3-6 months for sediment, up to 12 months for larger carbon units). Note pressure drop as a change cue.",
+   "category": "Plumbing",
+   "location": "Garage",
+   "recurrence": {
+    "interval": 6,
+    "unit": "months"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 14,
+   "effort": {
+    "diy_minutes": 20,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 30,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [
+    "water_filter_cartridge"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "APEC Water filter guidance, https://www.apecwater.com/collections/reverse-osmosis-all-filters ; manufacturer cartridge schedules.",
+    "B2.1 needed: sediment/carbon cartridge retail price for the installed housing size.",
+    "B2.1 pricing (2026 national): standard 10-in sediment/carbon cartridges $10-$30; 4.5x20-in big-blue $40-$100 (Home Depot/filter retailers 2026) — $30 point; confirm housing size in Products."
+   ],
+   "cost_status": "priced_b2_1"
+  },
+  {
+   "task_id": "fridge_water_filter",
+   "name": "Replace refrigerator water filter",
+   "description_howto": "Swap the fridge's water/ice filter cartridge every 6 months (or when the indicator light comes on), then flush a few gallons through the dispenser before use. A spent filter stops removing contaminants and chokes flow to the ice maker. Applies to fridges with a dispenser/ice maker.",
+   "category": "Appliances",
+   "location": "Kitchen",
+   "recurrence": {
+    "interval": 6,
+    "unit": "months"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 14,
+   "effort": {
+    "diy_minutes": 10,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 40,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [
+    "fridge_water_filter"
+   ],
+   "assignable": true,
+   "default_point_value": 5,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "Whirlpool, https://producthelp.whirlpool.com/Refrigeration/Water_Filter_Information/Installation_Support/When_to_Change_the_Water_Filter — 'Replace your refrigerator water filter every 6 months or when the indicator light comes on.'",
+    "GE Appliances, https://products.geappliances.com/appliance/gea-support-search-content?contentId=21284 — every 6 months or ~170-200 gallons.",
+    "B2.1 needed: OEM vs certified-aftermarket fridge filter retail price.",
+    "B2.1 pricing (2026 national): OEM fridge filters ~$40-$50 (Consumer Reports); NSF-certified aftermarket $10-$25 (e.g. 2-pack ~$20 at Home Depot) — $40 OEM-leaning point; 6-month cycle."
+   ],
+   "cost_status": "priced_b2_1"
+  },
+  {
+   "task_id": "tankless_inlet_filter_clean",
+   "name": "Clean tankless water heater inlet filters",
+   "description_howto": "Shut off water to the unit, remove the cold-water inlet filter screen (and the air intake filter on models that have one), rinse debris and scale off under running water, and reseat. A clogged inlet screen causes flow-rate errors and lukewarm water. Takes minutes and pairs naturally with the annual descale.",
+   "category": "Plumbing",
+   "location": "Garage",
+   "recurrence": {
+    "interval": 6,
+    "unit": "months"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 10,
+   "effort": {
+    "diy_minutes": 15,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "tankless_water_heater"
+   ],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "high",
+   "sources": [
+    "TanklessHelp Rinnai maintenance guide, https://www.tanklesshelp.com/rinnai-tankless-water-heater-maintenance-clean-and-descale — water inlet and air intake filters collect debris/dust and need regular cleaning to prevent error codes.",
+    "B2 cost classification: remove-rinse-reinstall the inlet screen, free; never hired out standalone, pro null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "fire_escape_drill",
+   "name": "Family fire escape drill",
+   "description_howto": "Walk the family through the escape plan — two ways out of every room, get low under smoke, close doors behind you, meet at the outside meeting spot — then run the drill. NFPA says to practice twice a year, making it realistic; run one drill at night to confirm the kids actually wake to the smoke alarm. Update the plan whenever the house or sleeping arrangements change.",
+   "category": "Electrical/Safety",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 6,
+    "unit": "months"
+   },
+   "seasonal_anchor": "April & October (pair with clock/battery habits)",
+   "schedule_mode": "calendar_anchored",
+   "workflow": "simple",
+   "lead_time_days": 7,
+   "effort": {
+    "diy_minutes": 20,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [],
+   "assignable": true,
+   "default_point_value": 10,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "med",
+   "sources": [
+    "NFPA escape planning, https://www.nfpa.org/education-and-research/home-fire-safety/escape-planning — 'Practice your home fire escape plan twice a year, making the drill as realistic as possible.'",
+    "Ready.gov, https://www.ready.gov/home-fire-escape-plan — 'Have a home fire drill at least twice a year.'",
+    "B2 cost classification: free family activity (NFPA); never hired out, pro null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "main_shutoff_exercise",
+   "name": "Exercise main water shutoff valve",
+   "description_howto": "Twice a year, gently turn the home's main water shutoff fully closed and back open to keep it from seizing from mineral buildup — then open a faucet with the valve closed to confirm it actually stops flow. Make sure every adult (and older kids) knows where it is. A seized main valve during a burst pipe or failed washer hose is the difference between a mop-up and a flooded house. If it's stiff or weeps at the stem, have a plumber replace it with a quarter-turn ball valve.",
+   "category": "Plumbing",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 6,
+    "unit": "months"
+   },
+   "seasonal_anchor": "April & October",
+   "schedule_mode": "calendar_anchored",
+   "workflow": "simple",
+   "lead_time_days": 7,
+   "effort": {
+    "diy_minutes": 10,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "high",
+   "sources": [
+    "MyPlumbingPal main shutoff guide, https://myplumbingpal.com/basics/main-shutoff-valve/ — exercise 'twice a year. Turn it off and back on fully to keep it from seizing.'",
+    "Engineer Fix, https://engineerfix.com/how-to-find-and-use-your-main-water-shut-off-valve-outside/ — exercising the valve a full cycle is the best preventative against seizure; never force a seized valve.",
+    "B2 cost classification: exercising the valve is free; a seized valve spawns pro plumbing work. Pro null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "garage_door_lube",
+   "name": "Lubricate garage door hardware",
+   "description_howto": "Every six months, spray a silicone or white-lithium garage-door lubricant on hinge pivot points, steel roller bearings, torsion springs, bearing plates, and the lock — keep the tracks clean and dry (never grease them), and don't use plain WD-40. Cycle the door a few times to distribute. Pairs with the quarterly balance/reverse test; quiet, low-friction hardware extends spring and opener life.",
+   "category": "Exterior",
+   "location": "Garage",
+   "recurrence": {
+    "interval": 6,
+    "unit": "months"
+   },
+   "seasonal_anchor": "April & October",
+   "schedule_mode": "calendar_anchored",
+   "workflow": "simple",
+   "lead_time_days": 10,
+   "effort": {
+    "diy_minutes": 20,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 5,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [
+    "garage_door_lubricant"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "med",
+   "sources": [
+    "LiftMaster maintenance guidance (summarized), https://ggdoor.com/adjusting-a-liftmaster-garage-door-opener/ — 'Lubricate all moving parts every six months'; tracks stay dry per Chamberlain manuals.",
+    "Industry guidance, https://artisandoorworks.com/blog/how-to-lubricate-a-garage-door-so-it-isnt-noisy/ — hinges/rollers/springs/bearing plates every six months; avoid regular WD-40.",
+    "B2.1 needed: garage-door lubricant (silicone/lithium) retail price per can (multi-use).",
+    "B2.1 pricing (2026 national): silicone garage-door lubricant ~$6/9-oz can (Blaster at Home Depot; 3-IN-ONE similar), multiple applications per can — $5/occurrence."
+   ],
+   "cost_status": "priced_b2_1"
+  },
+  {
+   "task_id": "hvac_cooling_tuneup",
+   "name": "Professional AC/cooling tune-up",
+   "description_howto": "Have a licensed HVAC tech service the cooling system each spring: clean coils, check refrigerant charge, test electrical/capacitors, clear the condensate drain, and verify airflow. Manufacturers effectively require annual maintenance to keep warranties valid.",
+   "category": "HVAC",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 1,
+    "unit": "years"
+   },
+   "seasonal_anchor": "March-April (pre-cooling)",
+   "schedule_mode": "calendar_anchored",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 30,
+   "effort": {
+    "diy_minutes": 0,
+    "difficulty": "Pro-only"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": 150,
+   "default_mode": "pro",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "Carrier, https://www.carrier.com/us/en/residential/hvac-resources/air-conditioners/ac-tune-up/ — 'schedule an air conditioner tune-up at least once a year... in the spring before the peak cooling season.'",
+    "B2 pricing (2026 national): pro AC tune-up (incl. condenser coil clean, condensate clear, refrigerant/electrical checks) typically $75-$200 — $150 midpoint used (Angi/HomeGuide HVAC tune-up cost data 2026)."
+   ],
+   "cost_status": "priced_b2"
+  },
+  {
+   "task_id": "hvac_heating_tuneup",
+   "name": "Professional heating/furnace tune-up",
+   "description_howto": "Have a tech inspect and service the furnace/heat pump each fall: inspect the heat exchanger for cracks, test for CO, clean burners, check ignition and safety controls, and verify the flue. Critical CO-safety step for gas heat.",
+   "category": "HVAC",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 1,
+    "unit": "years"
+   },
+   "seasonal_anchor": "September-October (pre-heating)",
+   "schedule_mode": "calendar_anchored",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 30,
+   "effort": {
+    "diy_minutes": 0,
+    "difficulty": "Pro-only"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": 125,
+   "default_mode": "pro",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "Bryant, https://www.bryant.com/en/us/products/hvac-tune-up/ — 'schedule an HVAC tune up twice a year: once in the spring for your cooling system and once in the fall for your heating system.'",
+    "InterNACHI seasonal checklist — 'Have a heating professional check your heating system every year.'",
+    "B2.1 needed: pro furnace/heating tune-up national price (cite Angi/HomeGuide-class 2026 data as done for cooling).",
+    "B2.1 pricing (2026 national): furnace/heating tune-up $70-$200, HomeGuide national avg ~$130 (Carrier guidance concurs $70-$200; Phoenix-market providers quote $75-$200) — $125 point. Annual fall service; CO-safety critical for gas furnaces."
+   ],
+   "cost_status": "priced_b2_1"
+  },
+  {
+   "task_id": "water_heater_anode_inspect",
+   "name": "Inspect water heater anode rod",
+   "description_howto": "Once a year, back out the hex-head anode rod and inspect it; replace when more than ~6 inches of the steel core wire is exposed or it's eroded below ~3/8 inch. The sacrificial anode is what keeps the tank from rusting — replacing it can double tank life. Practically, most homeowners inspect every ~3 years and replace ~every 5 (sooner in hard/softened water).",
+   "category": "Plumbing",
+   "location": "Garage",
+   "recurrence": {
+    "interval": 1,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 21,
+   "effort": {
+    "diy_minutes": 45,
+    "difficulty": "Moderate"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "decide",
+   "products": [
+    "anode_rod"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "tank_water_heater"
+   ],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "high",
+   "sources": [
+    "Rheem residential water heater use & care manual (AP21980) — 'The anode rod should be removed from the water heater's tank annually for inspection and replaced when more than 6\" of core wire is exposed at either end of the rod.'",
+    "Family Handyman, https://www.familyhandyman.com/project/extend-the-life-of-your-water-heater-by-replacing-the-anode-rod/ — replace ~every 5 years, check every 3.",
+    "B2 cost classification: the annual inspection consumes nothing (rod replacement is priced separately on water_heater_anode_replace). Pro cost null — standalone anode inspection isn't hired out; pros check it during a flush service."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "water_heater_tp_valve_test",
+   "name": "Test water heater T&P relief valve",
+   "description_howto": "Once a year, lift the temperature-and-pressure relief valve lever briefly and confirm water discharges through the drain tube, then snaps shut. If it dribbles afterward or does nothing, it needs replacement — a stuck T&P valve is a genuine explosion hazard.",
+   "category": "Plumbing",
+   "location": "Garage",
+   "recurrence": {
+    "interval": 1,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 14,
+   "effort": {
+    "diy_minutes": 15,
+    "difficulty": "Moderate"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "decide",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "tank_water_heater"
+   ],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "high",
+   "sources": [
+    "Wagner Mechanical, https://wagnermechanical.com/blog/water-heater-flush-guide/ — 'test its pressure-relief valve at least once every year.'",
+    "B2 cost classification: lift-the-lever test is free; a failed/leaking T&P valve spawns replacement work. Pro null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "expansion_tank_precharge",
+   "name": "Check water heater expansion tank pre-charge",
+   "description_howto": "Shut the cold supply and relieve system pressure, then check the air pre-charge at the tank's Schrader valve with a tire gauge; it should match house static pressure (typically ~50 psi). Tap the tank — a waterlogged tank sounds solid and must be replaced. A failed tank shows up as a dripping T&P valve.",
+   "category": "Plumbing",
+   "location": "Garage",
+   "recurrence": {
+    "interval": 1,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 14,
+   "effort": {
+    "diy_minutes": 30,
+    "difficulty": "Moderate"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "decide",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "tank_water_heater"
+   ],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "high",
+   "sources": [
+    "PNNL Building America Solution Center, https://basc.pnnl.gov/images/check-air-pressure-water-heaters-expansion-tank-using-air-pressure-gauge-shown-and-adjust-it — 'Check the air pressure of the water heater's expansion tank... and adjust it... to match the home's cold water pressure.'",
+    "B2 cost classification: tire gauge + hand pump (one-time tools), recurring cost $0; rarely hired out standalone, pro null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "pressure_regulator_check",
+   "name": "Check water pressure & regulator (PRV)",
+   "description_howto": "Attach a gauge to a hose bib and read static pressure; target 40-60 psi (code max 80). If pressure is high, erratic, or the house has water-hammer, the pressure-reducing valve may have sediment fouling or be failing. PRVs typically last 10-15 years.",
+   "category": "Plumbing",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 1,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 14,
+   "effort": {
+    "diy_minutes": 20,
+    "difficulty": "Moderate"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "decide",
+   "products": [
+    "pressure_gauge"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "high",
+   "sources": [
+    "Watts, https://www.watts.com/resources/references-tools/waterpressurereducingvalvesfaq — regulate 'usually 50 lbs.'; PRV required when city pressure exceeds 80 lbs.",
+    "Rainbow MWD, https://www.rainbowmwd.ca.gov/water-pressure-regulator-faqs — 'The life expectancy of a water pressure regulator is most commonly in the range of 10 to 15 years.'",
+    "B2 cost classification: hose-bib pressure gauge is a ~one-time tool; the check itself is free. Pro null (PRV replacement is the priced event)."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "chimney_inspection",
+   "name": "Annual chimney/flue inspection (Level 1)",
+   "description_howto": "Have a CSIA-certified sweep perform at least an NFPA 211 Level 1 inspection and clean as needed before heating season — checks creosote buildup, blockages/animal nests, and structural soundness of accessible flue and firebox. Required annually even if the fireplace is seldom used.",
+   "category": "Seasonal",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 1,
+    "unit": "years"
+   },
+   "seasonal_anchor": "September-October (pre-heating)",
+   "schedule_mode": "calendar_anchored",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 30,
+   "effort": {
+    "diy_minutes": 0,
+    "difficulty": "Pro-only"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": 175,
+   "default_mode": "pro",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "fireplace"
+   ],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "med",
+   "sources": [
+    "NFPA 211 Section 14.2.1 (via Chimney Expert), https://chimney-expert.com/learn/chimney-inspection-nfpa-211-standards-why-your-chimney-should-be-inspected-annually/ — 'Chimneys, fireplaces, and vents shall be inspected at least once a year... and cleaned and repaired if necessary.'",
+    "B2.1 needed: NFPA 211 Level 1 chimney inspection (and sweep, if combined) pro price.",
+    "B2.1 pricing (2026 national): NFPA 211 annual Level 1 inspection incl. basic sweep $100-$250 (HomeGuide 2026) — $175 point. Angi/HomeAdvisor cite $450 avg across all levels; Level 2 (camera/idle/post-event) $200-$1,000."
+   ],
+   "cost_status": "priced_b2_1"
+  },
+  {
+   "task_id": "fire_extinguisher_pro_service",
+   "name": "Fire extinguisher annual maintenance",
+   "description_howto": "Have rechargeable extinguishers professionally examined and tagged once a year per NFPA 10 (mechanical parts, agent, expelling means). Replace disposable units past their service life; note the 6-year and 12-year hydrostatic milestones.",
+   "category": "Electrical/Safety",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 1,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "calendar_anchored",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 21,
+   "effort": {
+    "diy_minutes": 0,
+    "difficulty": "Pro-only"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": 50,
+   "default_mode": "pro",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "med",
+   "sources": [
+    "NFPA 10 via NFPA, https://www.nfpa.org/news-blogs-and-articles/blogs/2020/10/30/guide-to-fire-extinguisher-itm — annual external maintenance examination required.",
+    "B2.1 needed: annual extinguisher certification/service price (or the replace-vs-service breakpoint for home units).",
+    "B2.1 pricing (2026 national): annual professional extinguisher inspection $40-$100 (Angi/HomeGuide 2026); recharge $10-$60. Home units are often more economical to REPLACE (~$40-$200 new) than service — capture either path at completion."
+   ],
+   "cost_status": "priced_b2_1"
+  },
+  {
+   "task_id": "termite_inspection",
+   "name": "Annual termite/WDO inspection",
+   "description_howto": "Have a licensed pest professional inspect for wood-destroying organisms — mud tubes, frass, swarmers, hollow-sounding wood — annually in warm/humid termite-prone regions (every 2-3 years in low-risk areas). Most homeowner policies don't cover termite damage.",
+   "category": "Pest",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 1,
+    "unit": "years"
+   },
+   "seasonal_anchor": "Spring (swarm season)",
+   "schedule_mode": "calendar_anchored",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 30,
+   "effort": {
+    "diy_minutes": 0,
+    "difficulty": "Pro-only"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": 125,
+   "default_mode": "pro",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal",
+    "desert_southwest"
+   ],
+   "surprise_factor": "med",
+   "sources": [
+    "Dodson Pest Control, https://www.dodsonbros.com/termites/how-often-should-you-get-a-termite-inspection/ — 'Pest control companies and insurance companies both recommend scheduling an inspection every year.'",
+    "B2.1 needed: annual termite inspection price — note many AZ providers inspect free with treatment-plan upsell; B3 also touches this task.",
+    "B2.1 pricing (2026 national): standalone termite inspection avg ~$130 (LawnStarter 2026, $0-$277); Phoenix-market $75-$200 (Angi Phoenix; local providers $75-$150). Many AZ providers inspect FREE with treatment-plan upsell (Terminix/Orkin) — $0 is a legitimate pro outcome; WDIIR real-estate reports cost more.",
+    "B3 climate: Arizona termite pressure and $75-$200 Phoenix-market inspection pricing per Angi Phoenix termite guide 2026 and Phoenix-market providers (18+ AZ termite species noted)."
+   ],
+   "cost_status": "priced_b2_1",
+   "climate_overrides": {
+    "desert_southwest": {
+     "note": "Treat as MANDATORY-ANNUAL in the Desert Southwest: Arizona hosts among the heaviest subterranean-termite pressure in the U.S. (18+ species reported in the Phoenix/Tucson region); annual professional inspection is the floor, and the monthly perimeter walk watches for mud tubes between visits. Post-monsoon moisture spikes activity."
+    }
+   }
+  },
+  {
+   "task_id": "roof_inspection",
+   "name": "Annual roof inspection",
+   "description_howto": "From the ground/eaves (or by a roofer) inspect roof covering, flashing, penetrations, and gutters for damaged/missing shingles or cracked/slipped tiles, and check for active-leak signs inside. Best in spring after winter and after major storms.",
+   "category": "Exterior",
+   "location": "Roof",
+   "recurrence": {
+    "interval": 1,
+    "unit": "years"
+   },
+   "seasonal_anchor": "Spring",
+   "schedule_mode": "calendar_anchored",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 30,
+   "effort": {
+    "diy_minutes": 30,
+    "difficulty": "Moderate"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": 150,
+   "default_mode": "decide",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal",
+    "desert_southwest"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "InterNACHI Basic Home Checklist, https://www.nachi.org/documents2012/Checklist/internachi%20basic%20checklist.pdf — inspect roof-covering materials, gutters, downspouts, vents, flashing.",
+    "B2.1 needed: pro roof inspection price; DIY ground/binocular inspection confirmed $0.",
+    "B2.1 pricing (2026 national): physical walk-on roof inspection $75-$200 (HomeGuide 2026); Angi national avg $250 incl. drone/IR types. DIY ground/binocular inspection confirmed $0; tile roofs: stay off the tiles — breakage risk.",
+    "B3 climate: NWS-defined Arizona monsoon season: June 15 - September 30 (fixed dates adopted 2008; peak storms mid-July-mid-August)."
+   ],
+   "cost_status": "priced_b2_1",
+   "climate_overrides": {
+    "desert_southwest": {
+     "note": "Anchor the annual inspection to OCTOBER (post-monsoon): monsoon wind/rain/UV is the damage season for tile roofs and underlayment; inspect after it ends, before winter rains. Ground/binocular DIY inspection; never walk tile.",
+     "seasonal_anchor": "October (post-monsoon)"
+    }
+   }
+  },
+  {
+   "task_id": "attic_ventilation_check",
+   "name": "Check attic ventilation & insulation",
+   "description_howto": "Once a year enter or peer into the attic to confirm soffit/ridge vents are unblocked, look for moisture/mold, staining, daylight at penetrations, pest intrusion, and compressed/displaced insulation. Poor attic ventilation drives ice dams, roof-deck rot, and high cooling loads.",
+   "category": "Interior",
+   "location": "Attic",
+   "recurrence": {
+    "interval": 1,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 21,
+   "effort": {
+    "diy_minutes": 30,
+    "difficulty": "Moderate"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "decide",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "high",
+   "sources": [
+    "InterNACHI SOP 3.9 Attic, Insulation and Ventilation, https://www.nachi.org/sop.htm .",
+    "B2 cost classification: visual soffit/ridge/screen check, free; repairs are spawned work. Pro null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "softener_brine_tank_clean",
+   "name": "Clean water softener brine tank",
+   "description_howto": "Once a year, empty the brine tank, remove salt sludge/sediment and any salt bridge, wash the tank, and refill with fresh salt. Keeps the softener regenerating properly. (Some manufacturers say every few years; annual is the conservative default, more often with high iron.)",
+   "category": "Plumbing",
+   "location": "Garage",
+   "recurrence": {
+    "interval": 1,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 14,
+   "effort": {
+    "diy_minutes": 60,
+    "difficulty": "Moderate"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [
+    "softener_salt"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "softener"
+   ],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "med",
+   "sources": [
+    "Culligan, https://www.culligan.com/blog/what-to-expect-after-getting-a-water-softener — 'it is recommended to clean the brine tank every few years'; annual cleaning is the conservative default in high-sediment/iron water.",
+    "B2 cost classification: water + dish soap, free; never hired out standalone, pro null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "generator_test",
+   "name": "Test emergency/standby generator",
+   "description_howto": "Run a portable or standby generator under load annually (standby units typically self-exercise weekly) and confirm it starts, holds voltage, and transfers. Run stored fuel out of gas equipment before long storage; stabilize fuel as needed.",
+   "category": "Electrical/Safety",
+   "location": "Garage",
+   "recurrence": {
+    "interval": 1,
+    "unit": "years"
+   },
+   "seasonal_anchor": "Fall",
+   "schedule_mode": "calendar_anchored",
+   "workflow": "simple",
+   "lead_time_days": 21,
+   "effort": {
+    "diy_minutes": 30,
+    "difficulty": "Moderate"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": 250,
+   "default_mode": "decide",
+   "products": [
+    "fuel_stabilizer"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "generator"
+   ],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "med",
+   "sources": [
+    "InterNACHI seasonal checklist — 'Test your emergency generator'; 'Run all gas-powered lawn equipment until the fuel is gone.'",
+    "B2.1 needed: annual pro generator service price; DIY test-run confirmed ~$0 (fuel trivial).",
+    "B2.1 pricing (2026 national): annual standby-generator pro service visit $175-$400, recent avgs $250-$275; annual maintenance budget $200-$600 (Angi 2026). DIY monthly/periodic test-run confirmed ~$0 (fuel trivial)."
+   ],
+   "cost_status": "priced_b2_1"
+  },
+  {
+   "task_id": "deck_patio_inspect",
+   "name": "Inspect deck / patio / walkways",
+   "description_howto": "Inspect wood decks for rot, loose fasteners, wobbly rails and ledger connections; check concrete patios, driveways and walks for cracks, heaving or trip hazards and repair to keep a level walking surface. Reseal wood decks as the finish wears.",
+   "category": "Exterior",
+   "location": "Yard",
+   "recurrence": {
+    "interval": 1,
+    "unit": "years"
+   },
+   "seasonal_anchor": "Summer",
+   "schedule_mode": "calendar_anchored",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 21,
+   "effort": {
+    "diy_minutes": 45,
+    "difficulty": "Moderate"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "decide",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "InterNACHI seasonal checklist — 'Check your wood deck or concrete patio for deterioration'; 'Repair all cracked, broken or uneven driveways and walks.'",
+    "B2 cost classification: inspection is free; refinishing/repair is spawned work (see deck_reseal). Pro null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "tree_limb_clearance",
+   "name": "Clear tree limbs from roof & lines",
+   "description_howto": "Trim branches back from the roof, siding, chimney, and service/power lines to reduce abrasion, pest bridges, and storm/fire risk. Keep firewood and combustibles at least 20 ft from the house.",
+   "category": "Landscape/Irrigation",
+   "location": "Yard",
+   "recurrence": {
+    "interval": 1,
+    "unit": "years"
+   },
+   "seasonal_anchor": "Late winter (dormant)",
+   "schedule_mode": "calendar_anchored",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 30,
+   "effort": {
+    "diy_minutes": 90,
+    "difficulty": "Moderate"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": 450,
+   "default_mode": "decide",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal",
+    "desert_southwest"
+   ],
+   "surprise_factor": "med",
+   "sources": [
+    "InterNACHI seasonal checklist — 'Confirm firewood at least 20 feet away from your home'; 'Remove bird nests from chimney flues and outdoor electrical fixtures.'",
+    "B2.1 needed: pro trimming price band (highly size-dependent); DIY confirmed $0 for reachable limbs with owned tools.",
+    "B2.1 pricing (2026 national): pro tree trimming avg ~$460/tree (Angi/NerdWallet 2026; $200-$760 typical, small trees from $75); Phoenix-market avg ~$600 (Angi). DIY confirmed $0 for reachable limbs with owned pole tools; anything near lines or requiring climbing is pro work.",
+    "B3 climate: NWS-defined Arizona monsoon season: June 15 - September 30 (fixed dates adopted 2008; peak storms mid-July-mid-August)."
+   ],
+   "cost_status": "priced_b2_1",
+   "climate_overrides": {
+    "desert_southwest": {
+     "note": "Anchor to MAY-JUNE (pre-monsoon): thin canopies, remove dead wood, and clear limbs from the roofline before monsoon outflow winds (downbursts) arrive — this is the Desert Southwest's storm-prep window, replacing the generic late-winter dormant timing.",
+     "seasonal_anchor": "May-June (pre-monsoon)"
+    }
+   }
+  },
+  {
+   "task_id": "exterior_siding_inspect",
+   "name": "Inspect exterior siding & trim",
+   "description_howto": "Inspect siding, fascia, soffits and trim for deterioration, cracks, rot, or paint failure; note areas that need re-caulk, repair, or repainting. Condition-based inspection that can spawn a paint/repair project.",
+   "category": "Exterior",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 1,
+    "unit": "years"
+   },
+   "seasonal_anchor": "Spring",
+   "schedule_mode": "calendar_anchored",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 21,
+   "effort": {
+    "diy_minutes": 40,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "decide",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "InterNACHI seasonal checklist — 'Check all the fascia and trim for deterioration'; 'Check exterior siding.'",
+    "B2 cost classification: walk-around inspection, free; stucco/siding repair is spawned work. Pro null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "window_door_lock_check",
+   "name": "Check window & door locks/security",
+   "description_howto": "Test all window and door locks and deadbolts for secure operation; lubricate and adjust as needed. Confirm exterior lighting and stair nightlights work.",
+   "category": "Electrical/Safety",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 1,
+    "unit": "years"
+   },
+   "seasonal_anchor": "Summer",
+   "schedule_mode": "calendar_anchored",
+   "workflow": "simple",
+   "lead_time_days": 14,
+   "effort": {
+    "diy_minutes": 30,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [],
+   "assignable": true,
+   "default_point_value": 5,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "InterNACHI seasonal checklist — 'Check all window and door locks'; 'Check the nightlights at the top and bottom of all stairs.'",
+    "B2 cost classification: operation check + trivial dry lube, rounds to $0; never hired out, pro null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "extension_cord_check",
+   "name": "Inspect & replace worn extension/power cords",
+   "description_howto": "Inspect extension cords and appliance/holiday-light cords for brittleness, fraying, or damage and replace any that are compromised. Confirm connections are tight on seasonal decorations.",
+   "category": "Electrical/Safety",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 1,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 14,
+   "effort": {
+    "diy_minutes": 20,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [],
+   "assignable": true,
+   "default_point_value": 3,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "InterNACHI seasonal checklist — 'Replace all extension cords that have become brittle, worn or damaged.'",
+    "B2 cost classification: visual inspection, free; never hired out, pro null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "ro_prefilter_replace",
+   "name": "Replace RO pre-filters",
+   "description_howto": "Replace the reverse-osmosis sediment and carbon pre-filter cartridges every 6-12 months to protect the membrane and keep flow/taste up. Shut the supply and tank valves, relieve pressure, then swap cartridges.",
+   "category": "Plumbing",
+   "location": "Kitchen",
+   "recurrence": {
+    "interval": 1,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 14,
+   "effort": {
+    "diy_minutes": 30,
+    "difficulty": "Moderate"
+   },
+   "est_cost_diy": 75,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [
+    "ro_sediment_filter",
+    "ro_carbon_filter"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "ro"
+   ],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "med",
+   "sources": [
+    "APEC Water, https://www.apecwater.com/collections/reverse-osmosis-all-filters — 'Sediment & carbon filters: Every 6-12 months.'",
+    "B2.1 needed: annual RO pre/post filter set retail price (membrane priced separately on ro_membrane_replace).",
+    "B2.1 pricing (2026 national): annual RO pre/post-filter replacement sets $70-$80 (Home Depot 1-yr sets incl. membrane); typical annual filter spend $100-$150 (industry guides) — $75 point. Membrane priced separately on ro_membrane_replace."
+   ],
+   "cost_status": "priced_b2_1"
+  },
+  {
+   "task_id": "dishwasher_deep_clean",
+   "name": "Deep-clean & descale dishwasher",
+   "description_howto": "Run a cleaning cycle with a dishwasher cleaner/vinegar to remove grease and mineral scale, clean the spray arms and door gasket, and confirm the drain is clear. Complements monthly filter cleaning.",
+   "category": "Appliances",
+   "location": "Kitchen",
+   "recurrence": {
+    "interval": 1,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 14,
+   "effort": {
+    "diy_minutes": 25,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 5,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [
+    "dishwasher_cleaner"
+   ],
+   "assignable": true,
+   "default_point_value": 5,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "Whirlpool cleaning & care, https://producthelp.whirlpool.com/Dishwashers/Product_Info/Dishwasher_Cleaning_and_Care/How_to_Clean_the_Dishwasher_Filters .",
+    "B2.1 needed: dishwasher cleaner retail price per treatment.",
+    "B2.1 pricing (2026 national): dishwasher-cleaner tablets (Affresh-class) ~$10-$15 per 6-count pack retail — ~$2/treatment, rounds to $5."
+   ],
+   "cost_status": "priced_b2_1"
+  },
+  {
+   "task_id": "irrigation_backflow_test",
+   "name": "Test irrigation & backflow preventer",
+   "description_howto": "At spring startup, run each irrigation zone, check for broken/clogged heads and leaks, adjust coverage, and confirm the backflow preventer functions (many jurisdictions require an annual certified backflow test). Adjust the controller seasonally.",
+   "category": "Landscape/Irrigation",
+   "location": "Yard",
+   "recurrence": {
+    "interval": 1,
+    "unit": "years"
+   },
+   "seasonal_anchor": "Spring startup",
+   "schedule_mode": "calendar_anchored",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 21,
+   "effort": {
+    "diy_minutes": 45,
+    "difficulty": "Moderate"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": 100,
+   "default_mode": "decide",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "irrigation"
+   ],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "med",
+   "sources": [
+    "EPA WaterSense irrigation maintenance guidance; local backflow-test requirements.",
+    "B2.1 needed: certified backflow-assembly test fee (jurisdiction-dependent; get Tucson-typical in B3 if easier).",
+    "B2.1 pricing (2026 national): certified annual backflow-assembly test typically $70-$90 (Angi 2026); HomeGuide $30-$300 per device; industry-typical $100-$150. Jurisdiction-mandated where required — fee varies by municipality."
+   ],
+   "cost_status": "priced_b2_1"
+  },
+  {
+   "task_id": "septic_inspect",
+   "name": "Septic system inspection",
+   "description_howto": "Have the septic system inspected by a professional (EPA: at least every 3 years for conventional systems; annually for systems with pumps/float switches). The inspector measures sludge/scum to time the next pump-out.",
+   "category": "Plumbing",
+   "location": "Yard",
+   "recurrence": {
+    "interval": 1,
+    "unit": "years"
+   },
+   "seasonal_anchor": "Spring",
+   "schedule_mode": "calendar_anchored",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 30,
+   "effort": {
+    "diy_minutes": 0,
+    "difficulty": "Pro-only"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": 250,
+   "default_mode": "pro",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "septic"
+   ],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "EPA, https://www.epa.gov/septic/how-care-your-septic-system — 'The average household septic system should be inspected at least every three years by a septic service professional.'",
+    "B2.1 needed: septic inspection price.",
+    "B2.1 pricing (2026 national): routine/basic septic check-up $200-$300 (iBuyer 2026); HomeAdvisor avg $550 ($200-$900) skews to camera/real-estate inspections. EPA cadence: inspect every 1-3 years."
+   ],
+   "cost_status": "priced_b2_1"
+  },
+  {
+   "task_id": "pool_service_annual",
+   "name": "Annual pool equipment service",
+   "description_howto": "Have pool pump, filter, heater, and safety equipment serviced annually and confirm barriers/alarms meet safety guidelines. (Routine chemistry/skimming is a separate high-frequency task set handled in the pool module.)",
+   "category": "Exterior",
+   "location": "Yard",
+   "recurrence": {
+    "interval": 1,
+    "unit": "years"
+   },
+   "seasonal_anchor": "Spring",
+   "schedule_mode": "calendar_anchored",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 30,
+   "effort": {
+    "diy_minutes": 0,
+    "difficulty": "Pro-only"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": 200,
+   "default_mode": "pro",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "pool"
+   ],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "InterNACHI Pool & Spa safety guidelines, https://www.nachi.org/home-maintenance.htm .",
+    "B2.1 needed: annual pool equipment service / opening-closing equivalent price.",
+    "B2.1 pricing (2026 national): one-time pool service/cleaning visit $90-$270 (Fixr 2026), first-time service $150-$350 (HomeGuide) — $200 point for the annual equipment-service visit. Ongoing weekly plans $80-$150/mo ($960-$1,800/yr) are a separate lifestyle choice tracked via vendor book."
+   ],
+   "cost_status": "priced_b2_1"
+  },
+  {
+   "task_id": "exterior_wash",
+   "name": "Wash home exterior / remove mildew",
+   "description_howto": "Gently wash siding/stucco and trim (soft wash or low-pressure) to remove dirt, mildew, and cobwebs; treat mold before it degrades the finish. Extends time between repaints.",
+   "category": "Exterior",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 1,
+    "unit": "years"
+   },
+   "seasonal_anchor": "Spring",
+   "schedule_mode": "calendar_anchored",
+   "workflow": "simple",
+   "lead_time_days": 21,
+   "effort": {
+    "diy_minutes": 120,
+    "difficulty": "Moderate"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": 300,
+   "default_mode": "decide",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal",
+    "desert_southwest"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "Networx exterior-maintenance guide, https://www.networx.com/article/how-often-should-you-paint-the-outside-o — pre-paint cleaning/mildew treatment guidance.",
+    "B2.1 needed: pro house-wash (soft wash) price and DIY house-wash soap cost.",
+    "B2.1 pricing (2026 national): pro house wash (soft wash) avg $265 ($170-$360, HomeGuide 2026); Angi avg $311 — $300 point; two-story +30-50%. DIY = garden hose + optional house-wash concentrate (track via product record); stucco requires low-pressure technique ($0.30-$0.50/sq ft pro).",
+    "B3 climate: NWS-defined Arizona monsoon season: June 15 - September 30 (fixed dates adopted 2008; peak storms mid-July-mid-August)."
+   ],
+   "cost_status": "priced_b2_1",
+   "climate_overrides": {
+    "desert_southwest": {
+     "note": "Time the annual wash post-monsoon (October): dust-storm film and rain-splash staining accumulate over the season; washing after it ends keeps results through the mild months."
+    }
+   }
+  },
+  {
+   "task_id": "tankless_descale_flush",
+   "name": "Descale/flush tankless water heater",
+   "description_howto": "Isolate the unit at its service valves, connect a flush kit (submersible pump + hoses), and circulate ~4 gallons of undiluted food-grade white vinegar through the heat exchanger for 45-60 minutes, then rinse. Rinnai and other manufacturers direct flushing at least once a year; hard-water areas should flush every 6 months. Skipping this is the leading cause of premature heat-exchanger failure and can void the warranty. If the unit lacks isolation/purge valves, have a plumber install them once — every future flush becomes a 1-hour DIY job.",
+   "category": "Plumbing",
+   "location": "Garage",
+   "recurrence": {
+    "interval": 12,
+    "unit": "months"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 21,
+   "effort": {
+    "diy_minutes": 75,
+    "difficulty": "Moderate"
+   },
+   "est_cost_diy": 30,
+   "est_cost_pro": 200,
+   "default_mode": "decide",
+   "products": [
+    "tankless_flush_kit",
+    "white_vinegar"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "tankless_water_heater"
+   ],
+   "climate_tags": [
+    "universal",
+    "desert_southwest"
+   ],
+   "surprise_factor": "high",
+   "sources": [
+    "Rinnai, https://www.rinnai.us/residential/flushing-my-rinnai-tankless-water-heater — 'it's important to flush those mineral deposits at least once a year'; 4 gallons undiluted white vinegar, never chemical solutions.",
+    "Hale Home / Rinnai maintenance guidance, https://halehomeservices.com/blog/cleaning-rinnai-tankless-water-heater-guide/ — annual default, 'If you have hard water, consider flushing it every six months.'",
+    "B2 pricing (2026 national): recurring DIY cost ~$30/flush (descaler solution or vinegar); one-time reusable pump/flush kit $99-$150 (Kelaro/DrainX retail, TanklessHelp 2026). Pro flush $150-$250 (Fixurge 2026; TanklessHelp cites $180-$350 upper band). Required in hard water to preserve warranty.",
+    "B3 climate: Tucson water is classified hard to very hard by Tucson Water's own water-quality parameter guidance; 2026 city-wide readings run ~11-13 gpg (211-220 ppm) with CAP-heavy areas reported 12-22 gpg — 1.5-3x the 7-gpg 'hard' threshold (WQA scale)."
+   ],
+   "cost_status": "priced_b2",
+   "climate_overrides": {
+    "desert_southwest": {
+     "note": "TUCSON RULE (B3, documented decision): descale every 6 MONTHS on unsoftened Tucson water; 12 months is acceptable only with a verified, functioning softener producing soft water. Rationale: Rinnai directs more-frequent-than-annual flushing in hard water (already cited above) and Tucson supply is hard to very hard. The Home Profile softener answer selects the cadence; when in doubt, 6 months.",
+     "recurrence": {
+      "interval": 6,
+      "unit": "months"
+     }
+    }
+   }
+  },
+  {
+   "task_id": "radon_test",
+   "name": "Radon test (biennial)",
+   "description_howto": "Place an EPA-protocol short-term or long-term radon test kit in the lowest lived-in level with windows/doors closed per the kit instructions, then mail it to the lab (or use a continuous digital monitor). EPA's action level is 4.0 pCi/L. Retest every two years — radon levels fluctuate with season, soil, and structural changes — and after any major renovation, foundation work, or HVAC change.",
+   "category": "Electrical/Safety",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 2,
+    "unit": "years"
+   },
+   "seasonal_anchor": "Winter (closed-house conditions give the most conservative reading)",
+   "schedule_mode": "calendar_anchored",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 30,
+   "effort": {
+    "diy_minutes": 20,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 25,
+   "est_cost_pro": 150,
+   "default_mode": "diy",
+   "products": [
+    "radon_test_kit"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "high",
+   "sources": [
+    "EPA, A Citizen's Guide to Radon (EPA 402/K-12/002), https://www.epa.gov/sites/default/files/2016-12/documents/2016_a_citizens_guide_to_radon.pdf — testing protocols and the 4 pCi/L action level.",
+    "EPA-derived retest guidance (multiple state/industry programs), e.g. https://www.realinspectionservices.com/how-often-should-you-have-a-radon-test-done/ — 'The EPA suggests testing every two years,' and retesting after renovations or mitigation.",
+    "B2.1 needed: short-term radon test kit retail price incl. lab fee.",
+    "B2.1 pricing (2026 national): short-term DIY kit $10-$25 + lab fee $10-$40 (HomeGuide/Angi 2026; retail kits ~$20 with lab included) — $25 all-in point. Professional testing $145-$714 (Angi avg $420), typically for real-estate transactions."
+   ],
+   "cost_status": "priced_b2_1"
+  },
+  {
+   "task_id": "gas_connector_shutoff_check",
+   "name": "Gas appliance connector & shutoff check",
+   "description_howto": "Annually verify every gas appliance (range, dryer, water heater, furnace, fireplace) has an accessible shutoff valve you know how to operate, and visually check the visible flexible connector for corrosion, kinks, or age without moving the appliance. Any uncoated-brass connector must be replaced with stainless steel per the CPSC — but do NOT move appliances to inspect; old connectors can break when moved, so have a professional inspect and replace. Replace the connector whenever the appliance itself is replaced or relocated.",
+   "category": "Electrical/Safety",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 1,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 21,
+   "effort": {
+    "diy_minutes": 20,
+    "difficulty": "Moderate"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "decide",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "gas_service"
+   ],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "high",
+   "sources": [
+    "CPSC Release #97-003, https://www.cpsc.gov/Newsroom/News-Releases/1997/CPSC-Warns-About-Dangerous-Flexible-Gas-Connectors-Used-on-Home-Appliances — uncoated brass connectors linked to 35 deaths; replace with stainless; professional inspection only, do not move appliances.",
+    "PSE&G gas connector safety, https://nj.pseg.com/safetyandreliability/gassafety/gasappliances — 'Gas appliance connectors should be inspected regularly and replaced as needed'; always replace when an appliance is moved or replaced.",
+    "B2 cost classification: visual + soapy-water bubble check, free (CPSC guidance); suspected leaks spawn licensed-pro work immediately. Pro null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "well_water_test",
+   "name": "Annual well water test",
+   "description_howto": "Collect a sample per your certified lab's instructions and test annually for total coliform bacteria, nitrates, total dissolved solids, and pH (add arsenic/local contaminants per county guidance). Test immediately after flooding, well work, or any change in taste, odor, or color. Private wells are unregulated — annual testing is the only way to know the water is safe.",
+   "category": "Plumbing",
+   "location": "Yard",
+   "recurrence": {
+    "interval": 1,
+    "unit": "years"
+   },
+   "seasonal_anchor": "Spring",
+   "schedule_mode": "calendar_anchored",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 30,
+   "effort": {
+    "diy_minutes": 30,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 50,
+   "est_cost_pro": 250,
+   "default_mode": "decide",
+   "products": [
+    "well_test_kit"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "well_water"
+   ],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "med",
+   "sources": [
+    "EPA, Protect Your Home's Water, https://www.epa.gov/privatewells/protect-your-homes-water — 'Test your private well annually for total coliform bacteria, nitrates, total dissolved solids, and pH levels.'",
+    "CDC/EPA annual-testing recommendation summarized in AAFP/PMC review, https://pmc.ncbi.nlm.nih.gov/articles/PMC12978773/ .",
+    "B2.1 needed: annual well-water lab panel (bacteria/nitrates) fee.",
+    "B2.1 pricing (2026 national): certified-lab annual bacteria+nitrate panel $40-$100 (mail-in $50-$100); county health departments free-$60 in many states (state labs from $10/test) — $50 DIY-collected point. Pro well inspection incl. lab water testing $250-$550 (HomeGuide)."
+   ],
+   "cost_status": "priced_b2_1"
+  },
+  {
+   "task_id": "humidifier_pad_replace",
+   "name": "Replace whole-house humidifier water panel",
+   "description_howto": "At the start of heating season, shut power and water to the furnace humidifier, slide out the old water panel (evaporator pad), and install a new one; clean the housing and check the drain line while it's open. AprilAire directs replacing the panel once per heating season for most models (twice for high-output Model 45 panels). A scaled-up panel breeds bacteria and stops humidifying.",
+   "category": "HVAC",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 12,
+    "unit": "months"
+   },
+   "seasonal_anchor": "October (start of heating season)",
+   "schedule_mode": "calendar_anchored",
+   "workflow": "simple",
+   "lead_time_days": 21,
+   "effort": {
+    "diy_minutes": 20,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 15,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [
+    "humidifier_water_panel"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "humidifier"
+   ],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "med",
+   "sources": [
+    "AprilAire humidifier maintenance, https://shop.aprilaire.com/pages/humidifier-maintenance — 'Replace the water panel annually (Models 300, 500, 600, 700, and 720) or twice per heating season (Model 400).'",
+    "B2.1 needed: humidifier evaporator pad retail price.",
+    "B2.1 pricing (2026 national): whole-house humidifier water panel/evaporator pad ~$10-$27 each (AprilAire 35 2-pack $19.59 at Home Depot) — $15 point; annual, sooner in hard water."
+   ],
+   "cost_status": "priced_b2_1"
+  },
+  {
+   "task_id": "window_screen_clean",
+   "name": "Wash windows & screens",
+   "description_howto": "Annually wash exterior window glass, remove and rinse screens, and check screen frames and weep holes while they're out. Clean tracks so sliders seal and drain properly. Doubles as a close-up inspection of window seals and glazing.",
+   "category": "Exterior",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 1,
+    "unit": "years"
+   },
+   "seasonal_anchor": "Spring",
+   "schedule_mode": "calendar_anchored",
+   "workflow": "simple",
+   "lead_time_days": 14,
+   "effort": {
+    "diy_minutes": 120,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "decide",
+   "products": [],
+   "assignable": true,
+   "default_point_value": 15,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "InterNACHI seasonal home maintenance checklist, https://www.nachi.org/documents/ben-gromicko-folder/checklist-home-maintenance-seasonal-bengromicko.pdf — window/screen cleaning and inspection among seasonal exterior items.",
+    "B2 cost classification: hose + mild soap, free; rarely hired out, pro null."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "carpet_deep_clean",
+   "name": "Professional/deep carpet cleaning",
+   "description_howto": "Hot-water-extraction clean carpets every 12 months for the whole home, hitting high-traffic lanes at least that often (heavy-use homes: every 6 months on traffic areas). Keep the receipt: Mohawk requires a documented professional cleaning every 18 months and Shaw every 12-24 months to keep the carpet warranty valid — most homeowners don't know missed cleanings void warranty claims.",
+   "category": "Interior",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 12,
+    "unit": "months"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 30,
+   "effort": {
+    "diy_minutes": 180,
+    "difficulty": "Moderate"
+   },
+   "est_cost_diy": 60,
+   "est_cost_pro": 250,
+   "default_mode": "decide",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "carpet"
+   ],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "med",
+   "sources": [
+    "Mohawk residential warranty, https://www.georgiacarpet.com/pages/mohawk-warranty-information/mohawk-residential-carpet-warranty-information.html — 'a minimum of one (1) professional cleaning every 18 months' with proof required.",
+    "Shaw care guidance, https://sofloclean.com/shaw-carpet-care-recommendations/ — 'Carpet in a typical household should be cleaned every 12 to 18 months.'",
+    "B2.1 needed: pro hot-water-extraction whole-home price and DIY extractor-rental cost (warranty-preservation task — receipts matter).",
+    "B2.1 pricing (2026 national): pro hot-water extraction avg $182 ($123-$242, Angi 2026); whole-house $125-$575 (Yelp), $200-$500 typical — $250 whole-home point. DIY extractor rental + solution $45-$80. Keep receipts — Mohawk/Shaw warranties require documented professional cleaning."
+   ],
+   "cost_status": "priced_b2_1"
+  },
+  {
+   "task_id": "countertop_seal_check",
+   "name": "Check & reseal stone countertops",
+   "description_howto": "Annually do the water-bead test on granite/marble/quartzite counters: puddle a little water for 10-15 minutes — if it darkens the stone or stops beading, clean and apply a penetrating stone sealer. Sealed stone resists oil and stain absorption; porous unsealed stone stains permanently. (Engineered quartz doesn't need sealing.)",
+   "category": "Interior",
+   "location": "Kitchen",
+   "recurrence": {
+    "interval": 1,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 14,
+   "effort": {
+    "diy_minutes": 45,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [
+    "stone_sealer"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "stone_counters"
+   ],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "med",
+   "sources": [
+    "Stone/grout sealer manufacturer water-bead test guidance (same basis as grout_reseal); scope doc Section 5 'countertop seal check' annual inspect_plan_do item.",
+    "B2 cost classification: water-drop bead test is free; resealing (sealer product) is spawned work — price sealer in B2.1. Pro null for the check."
+   ],
+   "cost_status": "confirmed_free_b2"
+  },
+  {
+   "task_id": "tankless_pro_service",
+   "name": "Professional tankless water heater service",
+   "description_howto": "Have a qualified technician service the tankless unit every 1-2 years: thorough descale, burner and ignition inspection, venting/air-intake check for obstruction or corrosion, condensate line check (condensing models), and pressure-relief valve test. Complements — not replaces — the owner descale in hard-water areas.",
+   "category": "Plumbing",
+   "location": "Garage",
+   "recurrence": {
+    "interval": 2,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 30,
+   "effort": {
+    "diy_minutes": 0,
+    "difficulty": "Pro-only"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": 200,
+   "default_mode": "pro",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "tankless_water_heater"
+   ],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "med",
+   "sources": [
+    "Engineer Fix Rinnai maintenance guide, https://engineerfix.com/rinnai-maintenance-how-to-flush-your-tankless-water-heater/ — 'Rinnai recommends professional check-ups annually or every two years,' including internal component inspection.",
+    "HomeAlliance Rinnai RU-series guidance, https://homealliance.com/faq/how-often-should-i-flush-and-descale-my-rinnai-ru-model-series-tankless-water-heater-such-as-the — professional maintenance every one to two years.",
+    "B2.1 needed: pro tankless service visit price (beyond the DIY descale already priced on tankless_descale_flush).",
+    "B2.1 pricing (2026, from B2 anchors): professional tankless flush/service visit $150-$250 (Fixurge 2026; TanklessHelp cites $180-$350 upper band) — $200 point, matching the pro path on tankless_descale_flush; the 1-2 yr pro visit adds burner/venting/error-code inspection beyond the DIY descale."
+   ],
+   "cost_status": "priced_b2_1"
+  },
+  {
+   "task_id": "water_heater_anode_replace",
+   "name": "Replace water heater anode rod",
+   "description_howto": "Replace the sacrificial anode rod approximately every 5 years (every 1-2 years in softened/very hard water) — before it's fully consumed — to keep the tank from rusting through. Best done during a flush.",
+   "category": "Plumbing",
+   "location": "Garage",
+   "recurrence": {
+    "interval": 5,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 30,
+   "effort": {
+    "diy_minutes": 60,
+    "difficulty": "Hard"
+   },
+   "est_cost_diy": 40,
+   "est_cost_pro": 250,
+   "default_mode": "decide",
+   "products": [
+    "anode_rod"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "tank_water_heater"
+   ],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "high",
+   "sources": [
+    "Family Handyman, https://www.familyhandyman.com/project/extend-the-life-of-your-water-heater-by-replacing-the-anode-rod/ — 'replace your water heater anode rod before it fails, about every five years'; hard/softened water shortens to 1-2 yr.",
+    "B2 pricing (2026 national): rod part $20-$50 (magnesium/aluminum/zinc); pro replacement $150-$350 total with $60-$200 labor (HomeGuide 2026, Angi 2026 — replace every 3-5 yr, sooner in hard/softened water). Materially extends tank life."
+   ],
+   "cost_status": "priced_b2"
+  },
+  {
+   "task_id": "ro_membrane_replace",
+   "name": "Replace RO membrane",
+   "description_howto": "Replace the reverse-osmosis membrane roughly every 2-3 years (manufacturer range 2-5 depending on model and water quality), watching for reduced output or worse taste as an early cue.",
+   "category": "Plumbing",
+   "location": "Kitchen",
+   "recurrence": {
+    "interval": 2,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 21,
+   "effort": {
+    "diy_minutes": 30,
+    "difficulty": "Moderate"
+   },
+   "est_cost_diy": 75,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [
+    "ro_membrane"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "ro"
+   ],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "med",
+   "sources": [
+    "APEC Water official filter-change PDF (via Home Depot), https://images.thdstatic.com/catalog/pdfImages/4e/4e5e3bea-ce30-45f9-bdff-3907611fc5cc.pdf — carbon/membrane stage 'should be changed every 2-3 years.'",
+    "B2 pricing (2026 national): RO membrane element $50-$100, replace every 2-5 yr (HomeGuide 2026 RO system data) — $75 midpoint. Typically DIY; standalone pro membrane swaps are uncommon (annual RO service plans exist — price in B2.1 if wanted), so pro cost null for now."
+   ],
+   "cost_status": "priced_b2"
+  },
+  {
+   "task_id": "co_alarm_replace",
+   "name": "Replace carbon monoxide alarms",
+   "description_howto": "Replace CO alarms per the date on the unit — commonly every 5 years (some models 7-10). CO sensors degrade even when the unit still powers on. Use the printed replace-by date, not the install date.",
+   "category": "Electrical/Safety",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 5,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 30,
+   "effort": {
+    "diy_minutes": 20,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 40,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [
+    "co_alarm"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "med",
+   "sources": [
+    "NFPA 72 / Vermont DPS, https://www.essexvt.gov/1407/Code-Information-on-Carbon-Monoxide-Alar — 'The life span for a CO Alarm is about five (5) years'; NJ guidance cites 5-10 yr per model.",
+    "B2.1 needed: CO alarm unit retail price (5-7 yr replacement).",
+    "B2.1 pricing (2026 national): CO / combination smoke-CO alarms $35-$70 typical per unit (Kidde/First Alert $39-$50 at Walmart; Lowe's typical combo $71) — $40/unit point. 5-7 yr sensor life per manufacturer."
+   ],
+   "cost_status": "priced_b2_1"
+  },
+  {
+   "task_id": "septic_pump",
+   "name": "Pump septic tank",
+   "description_howto": "Have the septic tank pumped every 3-5 years for a typical household (sooner for smaller tanks, larger households, or with a garbage disposal). Pump when sludge+scum reach ~1/3 of tank volume, per the inspection measurement.",
+   "category": "Plumbing",
+   "location": "Yard",
+   "recurrence": {
+    "interval": 4,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 30,
+   "effort": {
+    "diy_minutes": 0,
+    "difficulty": "Pro-only"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": 425,
+   "default_mode": "pro",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "septic"
+   ],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "EPA, https://www.epa.gov/septic/how-care-your-septic-system — 'Household septic tanks are typically pumped every three to five years.'",
+    "B2.1 needed: septic pump-out price.",
+    "B2.1 pricing (2026 national): septic pump-out avg $428, typical $291-$565 (Angi 2026; HomeAdvisor $297-$584 concurs), tank-size dependent ($250 small to $700+ 2,000-gal)."
+   ],
+   "cost_status": "priced_b2_1"
+  },
+  {
+   "task_id": "grout_reseal",
+   "name": "Reseal tile grout & natural-stone counters",
+   "description_howto": "Reseal cementitious grout in showers/floors and any natural-stone countertops roughly every 1-3 years (do the water-bead test — if water no longer beads, reseal). Condition-based; keeps water and stains out of porous surfaces.",
+   "category": "Interior",
+   "location": "Bathrooms",
+   "recurrence": {
+    "interval": 2,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 21,
+   "effort": {
+    "diy_minutes": 60,
+    "difficulty": "Moderate"
+   },
+   "est_cost_diy": 20,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [
+    "grout_sealer",
+    "stone_sealer"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "tile_surfaces"
+   ],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "med",
+   "sources": [
+    "InterNACHI interior/tile maintenance guidance, https://www.nachi.org/sop.htm ; grout/stone sealer manufacturer water-bead test.",
+    "B2.1 needed: penetrating grout sealer retail price per coverage area.",
+    "B2.1 pricing (2026 national): penetrating grout/tile sealer $10-$34/quart (TileLab $10, Aqua Mix qt $15, Homax qt ~$13, premium $26-$34) + applicator — $20 point per reseal."
+   ],
+   "cost_status": "priced_b2_1"
+  },
+  {
+   "task_id": "deck_reseal",
+   "name": "Reseal / restain wood deck",
+   "description_howto": "Clean and reapply sealer or stain to a wood deck every ~2-3 years (do a water-bead test). Protects against UV and moisture; timing depends on exposure and prior finish.",
+   "category": "Exterior",
+   "location": "Yard",
+   "recurrence": {
+    "interval": 3,
+    "unit": "years"
+   },
+   "seasonal_anchor": "Late spring",
+   "schedule_mode": "from_completion",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 30,
+   "effort": {
+    "diy_minutes": 240,
+    "difficulty": "Moderate"
+   },
+   "est_cost_diy": 120,
+   "est_cost_pro": 400,
+   "default_mode": "decide",
+   "products": [
+    "deck_stain"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "wood_deck"
+   ],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "InterNACHI exterior maintenance guidance, https://www.nachi.org/home-maintenance.htm .",
+    "B2.1 needed: deck stain/sealer DIY cost per coverage and pro refinish price (distinct product/coverage from fence_stain).",
+    "B2.1 pricing (2026 national): DIY 12x12 deck stain/seal $59-$176 (HomeGuide; stain $20-$50/gal at 200-300 sq ft/gal, quality $40-$80) — $120 point incl. cleaner/supplies. Pro clean+stain 12x12 $226-$582 (HomeGuide; $1-$2.50/sq ft labor HomeAdvisor) — $400 point."
+   ],
+   "cost_status": "priced_b2_1"
+  },
+  {
+   "task_id": "garage_spring_service",
+   "name": "Garage door spring / hardware service",
+   "description_howto": "Standard torsion springs are rated ~10,000 cycles (about 7 years at 4 cycles/day). Have a pro measure/replace springs and service cables, rollers, and hardware as they approach end of life or when the balance test fails. Never adjust torsion springs yourself.",
+   "category": "Exterior",
+   "location": "Garage",
+   "recurrence": {
+    "interval": 5,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 30,
+   "effort": {
+    "diy_minutes": 0,
+    "difficulty": "Pro-only"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": 350,
+   "default_mode": "pro",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "high",
+   "sources": [
+    "IDC Spring, https://idcspring.com/resources/articles/garage-door-spring-lifespan/ — 'The standard garage door spring is designed to last 10,000 cycles'; ~7 years at 4 cycles/day.",
+    "B2 pricing (2026 national): torsion spring pair replacement, installed, $250-$500 — $350 point estimate (HomeGuide 2026 $150-$350 torsion; This Old House 2026 $300-$540; HomeAdvisor 2025 ~$250 avg). PRO-ONLY: ~30,000 in-lb stored energy (ANSI/DASMA 102). NOTE: this asset also appears in the big-ticket table (garage_door_springs); Costs & Savings must count it in exactly one place — recommendation: task-side (small-ticket), fund accrual off for that asset."
+   ],
+   "cost_status": "priced_b2"
+  },
+  {
+   "task_id": "smoke_alarm_replace",
+   "name": "Replace smoke alarms (10-year)",
+   "description_howto": "Replace every smoke alarm 10 years from its manufacture date regardless of whether it still tests — sensing elements degrade over time. Check the date printed on the back of each unit.",
+   "category": "Electrical/Safety",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 10,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "simple",
+   "lead_time_days": 30,
+   "effort": {
+    "diy_minutes": 30,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 40,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [
+    "smoke_alarm"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "med",
+   "sources": [
+    "NFPA 72 Section 14.4.5.3 (via US Made Supply), https://usmadesupply.com/resources/building-codes-standards/emergency-life-safety/nfpa-72 — 'Smoke detectors must be replaced 10 years from the manufacture date... regardless of whether they still pass testing.'",
+    "B2.1 needed: smoke alarm unit retail price (10-yr sealed vs battery models).",
+    "B2.1 pricing (2026 national): smoke alarms $10-$65/unit; 10-yr sealed-battery photoelectric ~$30-$50 (HomeGuide 2026; retail) — $40/unit point. NFPA: replace all alarms at 10 years; a typical 4-BR two-story fleet is 6-8 units (see big-ticket asset detector_fleet)."
+   ],
+   "cost_status": "priced_b2_1"
+  },
+  {
+   "task_id": "dryer_flex_duct_replace",
+   "name": "Replace flexible vinyl/foil dryer duct",
+   "description_howto": "If the dryer uses flexible vinyl or thin-foil transition duct, replace it with rigid or semi-rigid metal duct — vinyl/foil is a fire hazard and no longer code-compliant in most areas. One-time upgrade; inspect metal duct condition thereafter.",
+   "category": "Appliances",
+   "location": "Laundry",
+   "recurrence": {
+    "interval": 5,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 21,
+   "effort": {
+    "diy_minutes": 45,
+    "difficulty": "Moderate"
+   },
+   "est_cost_diy": 25,
+   "est_cost_pro": null,
+   "default_mode": "diy",
+   "products": [
+    "rigid_metal_duct"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "med",
+   "sources": [
+    "CPSC via Dryer Doctors, https://dryerdoctors.com/dryer-vent-cleaning/how-often-needed/ — replace vinyl/foil with rigid/semi-rigid metal duct.",
+    "B2.1 needed: rigid/semi-rigid duct replacement kit retail price.",
+    "B2.1 pricing (2026 national): 8-ft semi-rigid aluminum duct $12 (GE at Home Depot); complete airtight hookup kit $40 — $25 point. Semi-rigid or rigid metal only; never vinyl/foil flex."
+   ],
+   "cost_status": "priced_b2_1"
+  },
+  {
+   "task_id": "interior_paint_touchup",
+   "name": "Interior paint & wall inspection / touch-up",
+   "description_howto": "Every ~3 years walk each room: touch up scuffs, nail pops, and settling cracks, and plan repaints for high-wear rooms (halls, kids' rooms, baths) which cycle faster than bedrooms. Condition-based — the inspection spawns the repaint project when a room crosses the line.",
+   "category": "Interior",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 3,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 30,
+   "effort": {
+    "diy_minutes": 120,
+    "difficulty": "Moderate"
+   },
+   "est_cost_diy": 40,
+   "est_cost_pro": 400,
+   "default_mode": "decide",
+   "products": [
+    "interior_paint"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "Scope doc Section 5 (2-5 year tier, 'interior touch-up paint'); room-use-dependent repaint ranges (~3-7 yr) per painting-industry guidance — interval to be corroborated alongside the B2 cost pass.",
+    "B2 interval corroboration: repaint cycles by room — living/bedrooms 5-7 yr, kitchens/baths 3-4 yr, high-traffic halls/stairs 2-3 yr, ceilings 10+ yr (painting-trade consensus, e.g. Groovy Hues, Undertone Interiors). The 3-yr whole-home inspection cadence is retained: it catches the fastest room cycles and spawns repaints as needed.",
+    "B2 pricing (2026 national): DIY touch-up supplies $25-$60 (Sherwin-Williams/Behr retail); pro per-room repaint ~$400 (~250 sq ft wall at ~$1.60/sq ft, Angi 2026) for spawned repaint work."
+   ],
+   "cost_status": "priced_b2"
+  },
+  {
+   "task_id": "concrete_paver_seal",
+   "name": "Re-seal concrete / pavers",
+   "description_howto": "Every ~3 years (water-bead test to confirm), clean and re-seal decorative concrete, stamped surfaces, and pavers to protect against staining, surface wear, and joint-sand loss. Plain broom-finish driveways can often skip sealing; sealed/decorative surfaces cannot.",
+   "category": "Exterior",
+   "location": "Yard",
+   "recurrence": {
+    "interval": 3,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 30,
+   "effort": {
+    "diy_minutes": 240,
+    "difficulty": "Moderate"
+   },
+   "est_cost_diy": 120,
+   "est_cost_pro": 700,
+   "default_mode": "decide",
+   "products": [
+    "concrete_sealer"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "Scope doc Section 5 (2-5 year tier, 're-seal concrete/pavers'); sealer manufacturer reapplication ranges (2-5 yr) — interval to be corroborated alongside the B2 cost pass.",
+    "B2 interval corroboration (placeholder replaced): Belgard paver-sealant guidance (recommends Techniseal) — reseal every 3-5 years; Unilock maintenance guide concurs (3-5 yr). Canonical 3-yr interval is inside the authoritative range, so no interval change (per B2 threshold rule). High-UV/high-traffic trends to the short end; Foundation Armor silane-siloxane premium sealers reach 7-10 yr.",
+    "B2 pricing (2026 national): DIY sealer ~$100-$200 (5 gal covers ~500-1,000 sq ft, Techniseal/retail) + sprayer; pro clean+seal ~$0.50-$2.00/sq ft, ~$700 typical patio/driveway. Effort revised to 240 min for the full clean-dry-apply sequence."
+   ],
+   "cost_status": "priced_b2"
+  },
+  {
+   "task_id": "fence_stain",
+   "name": "Stain / seal wood fence",
+   "description_howto": "Every ~3 years (sooner in intense sun), clean and re-stain or seal wood fencing to slow UV graying, cracking, and rot at posts and rails. Do the water-bead test on a rail to confirm timing; inspect post bases for movement or rot while you're at it.",
+   "category": "Exterior",
+   "location": "Yard",
+   "recurrence": {
+    "interval": 3,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 30,
+   "effort": {
+    "diy_minutes": 300,
+    "difficulty": "Moderate"
+   },
+   "est_cost_diy": 80,
+   "est_cost_pro": 800,
+   "default_mode": "decide",
+   "products": [
+    "fence_stain"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "wood_fence"
+   ],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "Scope doc Section 5 (2-5 year tier, 'fence stain'); stain manufacturer reapplication guidance (2-4 yr typical) — interval to be corroborated alongside the B2 cost pass.",
+    "B2 interval corroboration (placeholder replaced): Five Star Painting — treat a wood fence every 2-3 years; corroborated by Nortex Fence and Rocky Mountain Forest Products (2-3 yr four-season baseline; arid climates/cedar heartwood can stretch 3-5 yr; south-facing high-UV toward 2 yr). Canonical 3-yr interval is inside the range, so no interval change (per B2 threshold rule).",
+    "B2 pricing (2026 national): DIY semi-transparent oil stain ~$30-$50/gal at ~175 sq ft/gal (Ready Seal/Thompson's retail) + supplies; pro staining $1-$3/sq ft, ~$700-$1,000 typical yard. Effort revised to 300 min for clean-dry-apply."
+   ],
+   "cost_status": "priced_b2"
+  },
+  {
+   "task_id": "exterior_repaint",
+   "name": "Repaint / re-stucco-coat home exterior",
+   "description_howto": "Repaint the exterior on a material-driven cycle: wood siding ~3-7 years, aluminum ~5, stucco ~5-10, fiber-cement ~10-15, painted brick ~15-20. Repaint before the old coat fully fails (watch fading, chalking, peeling) to protect the substrate. Inspection may trigger the project earlier.",
+   "category": "Exterior",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 7,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 60,
+   "effort": {
+    "diy_minutes": 0,
+    "difficulty": "Pro-only"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "decide",
+   "products": [
+    "exterior_paint"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "Networx, https://www.networx.com/article/how-often-should-you-paint-the-outside-o — 'Wood siding should be repainted every 3-7 years... stucco 5-6 years'; fiber-cement 10-15 yr, painted brick 15-20 yr.",
+    "B2: cost carried by big-ticket asset exterior_repaint_stucco ($4,500 pt / $3,600-$7,200, 5-10 yr paint life; AZ UV trends 5-7). Kept off this task to avoid double-counting against the sinking fund."
+   ],
+   "cost_status": "linked_to_asset"
+  },
+  {
+   "task_id": "water_heater_replace_watch",
+   "name": "Water heater end-of-life watch (10-15 yr, tank)",
+   "description_howto": "Track the water heater's age; conventional tank units typically last 10-15 years. As it approaches that window, plan proactive replacement and watch for rust-colored water, base leaks, or rumbling. Well-maintained tanks (annual flush + anode) reach the upper range.",
+   "category": "Plumbing",
+   "location": "Garage",
+   "recurrence": {
+    "interval": 12,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 90,
+   "effort": {
+    "diy_minutes": 0,
+    "difficulty": "Pro-only"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "pro",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "tank_water_heater"
+   ],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "H.L. Bowman, https://hlbowman.com/how-often-should-you-flush-your-water-heater/ — 'a conventional storage tank water heater can last between 10 and 15 years' with annual flushing.",
+    "B2: replacement cost carried by big-ticket asset wh_tank ($1,650 pt / $1,200-$3,100, life 10-15 yr) — kept off this task to avoid double-counting against the sinking fund."
+   ],
+   "cost_status": "linked_to_asset"
+  },
+  {
+   "task_id": "tankless_replace_watch",
+   "name": "Tankless water heater end-of-life watch (~20 yr)",
+   "description_howto": "Track the tankless unit's age; a properly descaled unit can last up to ~20 years — roughly double a tank heater — but neglected scale shortens that sharply. As it ages, watch for recurring flow/temperature error codes, declining hot-water output, and rising service frequency, and plan proactive replacement. This longer service life changes the sinking-fund math versus a tank unit.",
+   "category": "Plumbing",
+   "location": "Garage",
+   "recurrence": {
+    "interval": 18,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 90,
+   "effort": {
+    "diy_minutes": 0,
+    "difficulty": "Pro-only"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "pro",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "tankless_water_heater"
+   ],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "Build Show Network (Matt Risinger) tankless maintenance, https://buildshownetwork.com/contents/rinnai-flush-routine-tankless-maintenance-diy — regular descaling prevents premature failure and supports 'a functional water heating system for up to 20 years.'",
+    "B2: replacement cost carried by big-ticket asset wh_tankless ($3,500 pt / $2,400-$5,600, life ~20 yr) — kept off this task to avoid double-counting against the sinking fund."
+   ],
+   "cost_status": "linked_to_asset"
+  },
+  {
+   "task_id": "expansion_tank_replace_watch",
+   "name": "Expansion tank replacement watch (5-10 yr)",
+   "description_howto": "Thermal expansion tanks last ~5-10 years before the diaphragm fails or the air charge is lost. Replace when the annual pre-charge check shows it waterlogged (water at the Schrader valve, or a solid-sounding tank), or when the T&P valve drips.",
+   "category": "Plumbing",
+   "location": "Garage",
+   "recurrence": {
+    "interval": 8,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 30,
+   "effort": {
+    "diy_minutes": 60,
+    "difficulty": "Hard"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "decide",
+   "products": [
+    "expansion_tank"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "tank_water_heater"
+   ],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "high",
+   "sources": [
+    "Engineer Fix, https://engineerfix.com/how-to-check-and-adjust-expansion-tank-pressure/ — 'Expansion tanks typically have a lifespan of five to ten years before the internal diaphragm fails or the air charge is lost.'",
+    "B2: asset record PENDING (B2.1) — expansion tank not in the delivered big-ticket table; add asset with cited cost/life before fund accrual."
+   ],
+   "cost_status": "linked_to_asset"
+  },
+  {
+   "task_id": "pressure_regulator_replace",
+   "name": "Replace water pressure regulator (PRV)",
+   "description_howto": "Plan to replace the pressure-reducing valve at ~10-15 years, or sooner if annual pressure checks show it can no longer hold a steady 40-60 psi. A failing PRV lets damaging high pressure into the house.",
+   "category": "Plumbing",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 12,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 30,
+   "effort": {
+    "diy_minutes": 0,
+    "difficulty": "Pro-only"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "pro",
+   "products": [
+    "pressure_regulator"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "med",
+   "sources": [
+    "Rainbow MWD, https://www.rainbowmwd.ca.gov/water-pressure-regulator-faqs — 'The life expectancy of a water pressure regulator is most commonly in the range of 10 to 15 years.'",
+    "B2: asset record PENDING (B2.1) — PRV not in the delivered big-ticket table; add asset with cited cost/life before fund accrual."
+   ],
+   "cost_status": "linked_to_asset"
+  },
+  {
+   "task_id": "sump_pump_replace_watch",
+   "name": "Sump pump replacement watch (5-10 yr)",
+   "description_howto": "Track sump pump age; primary pumps last ~5-10 years (5-7 with heavy use). Replace proactively as it ages or if it runs rough, and replace the battery-backup battery every ~3-5 years. The float switch is the most common failure — some makers advise replacing it every ~2 years.",
+   "category": "Plumbing",
+   "location": "Basement",
+   "recurrence": {
+    "interval": 8,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 30,
+   "effort": {
+    "diy_minutes": 90,
+    "difficulty": "Hard"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "decide",
+   "products": [
+    "sump_pump",
+    "backup_battery"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "sump_pump"
+   ],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "med",
+   "sources": [
+    "The Hanover Insurance Group, https://www.hanover.com/resources/tips-individuals-and-businesses/prepare-now-learn-how/simple-tips-maintain-your-sump-pump — 'replace an average-use unit every 7-10 years... 5-7 years' with frequent use; float replaced ~every 2 years.",
+    "B2: asset record PENDING (B2.1) — sump pump not in the delivered big-ticket table; add asset with cited cost/life before fund accrual."
+   ],
+   "cost_status": "linked_to_asset"
+  },
+  {
+   "task_id": "roof_replace_watch",
+   "name": "Roof / underlayment end-of-life watch",
+   "description_howto": "Track roof age and condition toward end of service life (asphalt shingle commonly ~15-25 years; tile far longer but the underlayment fails sooner). Use the annual roof inspection to flag widespread granule loss, curling, cracked tiles, or failing underlayment and plan re-roof/underlayment replacement.",
+   "category": "Exterior",
+   "location": "Roof",
+   "recurrence": {
+    "interval": 20,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 90,
+   "effort": {
+    "diy_minutes": 0,
+    "difficulty": "Pro-only"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "pro",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "InterNACHI 'Maintaining Your Roof' / life-expectancy chapter, https://www.nachi.org/home-maintenance.htm .",
+    "B2: replacement cost carried by big-ticket asset roof_tile_underlayment ($12,000 pt / $4,000-$18,000, ~20 yr underlayment life) — kept off this task to avoid double-counting."
+   ],
+   "cost_status": "linked_to_asset"
+  },
+  {
+   "task_id": "hvac_replace_watch",
+   "name": "HVAC system end-of-life watch",
+   "description_howto": "Track HVAC age (central AC ~15 yr, heat pumps ~14 yr, gas furnaces ~18 yr per DOE data). As equipment ages, use annual tune-up reports to decide repair-vs-replace and budget for replacement before a peak-season failure.",
+   "category": "HVAC",
+   "location": "Whole Home",
+   "recurrence": {
+    "interval": 15,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 90,
+   "effort": {
+    "diy_minutes": 0,
+    "difficulty": "Pro-only"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "pro",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "DOE equipment-lifespan data via Shavitz, https://www.shavitz.com/whats-included-in-a-professional-hvac-tune-up/ — 'central air conditioners average about 15 years, heat pumps around 14, and gas furnaces around 18.'",
+    "B2: replacement cost carried by big-ticket assets hvac_ac_furnace ($11,500) / hvac_heatpump ($13,000); the Home Profile heating answer selects the active variant. Kept off this task to avoid double-counting."
+   ],
+   "cost_status": "linked_to_asset"
+  },
+  {
+   "task_id": "garage_opener_replace_watch",
+   "name": "Garage door opener / safety upgrade watch",
+   "description_howto": "Track opener age (~10-15 yr typical). Older openers may lack modern photo-eye/auto-reverse safety and rolling-code security; plan replacement and confirm safety features on every install.",
+   "category": "Exterior",
+   "location": "Garage",
+   "recurrence": {
+    "interval": 12,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 30,
+   "effort": {
+    "diy_minutes": 0,
+    "difficulty": "Pro-only"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "decide",
+   "products": [
+    "garage_opener"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "DASMA TDS-190 / Raynor garage safety guidance, https://raynor.com/garage-door-spring-types-and-lifespan/ .",
+    "B2: replacement cost carried by big-ticket asset garage_opener (~$450 pt / $300-$600 installed, ~10-15 yr — anchor embedded in B2 spring research; corroborate in B2.1). Kept off this task to avoid double-counting."
+   ],
+   "cost_status": "linked_to_asset"
+  },
+  {
+   "task_id": "softener_replace_watch",
+   "name": "Water softener end-of-life watch (10-15 yr)",
+   "description_howto": "Track the softener's age; residential units typically last 10-15 years, with the control valve usually failing first and hard water accelerating wear. As it approaches that window, watch for spotting/hard-water symptoms returning, constant regeneration, or salt use dropping to zero, and plan replacement — a dead softener in hard water quietly shortens the life of the water heater, fixtures, and appliances downstream.",
+   "category": "Plumbing",
+   "location": "Garage",
+   "recurrence": {
+    "interval": 12,
+    "unit": "years"
+   },
+   "seasonal_anchor": null,
+   "schedule_mode": "from_completion",
+   "workflow": "inspect_plan_do",
+   "lead_time_days": 60,
+   "effort": {
+    "diy_minutes": 0,
+    "difficulty": "Pro-only"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "pro",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "softener"
+   ],
+   "climate_tags": [
+    "universal"
+   ],
+   "surprise_factor": "low",
+   "sources": [
+    "SoftPro Water Systems, https://www.softprowatersystems.com/pages/average-lifespan-residential-water-softener — 'Most residential water softeners last 10-15 years, with control valves typically failing first'; hardness accelerates wear.",
+    "B2: replacement cost carried by big-ticket asset water_softener ($2,000 pt / $1,200-$3,800, life 10-15 yr) — kept off this task to avoid double-counting."
+   ],
+   "cost_status": "linked_to_asset"
+  },
+  {
+   "task_id": "evap_cooler_startup",
+   "name": "Evaporative cooler spring startup",
+   "description_howto": "Before the first heat (delay until ~85F days — you'll use half the water): remove the cover, reinstall the drain plug, reconnect and open the water line, check the float valve, saturate the pads by running the pump before the fan, check belt tension and oil blower/motor bearings per the manual, and set the bleed-off valve to the minimum that controls mineral buildup.",
+   "category": "HVAC",
+   "location": "Roof",
+   "recurrence": {
+    "interval": 1,
+    "unit": "years"
+   },
+   "seasonal_anchor": "April-May (pre-heat)",
+   "schedule_mode": "calendar_anchored",
+   "workflow": "simple",
+   "lead_time_days": 14,
+   "effort": {
+    "diy_minutes": 60,
+    "difficulty": "Moderate"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": 100,
+   "default_mode": "decide",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "evap_cooler"
+   ],
+   "climate_tags": [
+    "desert_southwest"
+   ],
+   "surprise_factor": "med",
+   "cost_status": "priced_b3",
+   "sources": [
+    "Univ. of Arizona Cooperative Extension (Cochise County) evaporative-cooler 'Cool Rules' (republished by Mission Springs Water District) — delay startup until ~85F (50% less water), run pump before fan to saturate pads, crack windows in cooled rooms, adjust bleed-off valve to minimum needed, replace mineral-crusted pads; winterize: drain and clean the pan (vinegar dissolves mineral buildup), inspect trough, dry, and cover.",
+    "AZ-market pro pricing: swamp-cooler spring startup or winterization service $99.95 (air-conditioning-arizona.com, AZ statewide 2026); pads replaced at least annually, 1-2x/season with heavy use or hard water (LJ Refrigeration Carefree AZ; Viking HVAC AZ); well-maintained coolers last 15-20 yr in AZ (Viking HVAC)."
+   ]
+  },
+  {
+   "task_id": "evap_pad_replace",
+   "name": "Replace evaporative cooler pads",
+   "description_howto": "Replace pads at startup each season, and again mid-season if they crust with minerals (hard water accelerates this). Aspen pads are the economical default; rigid cellulose media costs more but lasts longer and rinses clean. Fresh pads are the single biggest driver of cooling performance and water efficiency.",
+   "category": "HVAC",
+   "location": "Roof",
+   "recurrence": {
+    "interval": 1,
+    "unit": "years"
+   },
+   "seasonal_anchor": "April-May (at startup); repeat mid-season if mineral-crusted",
+   "schedule_mode": "calendar_anchored",
+   "workflow": "simple",
+   "lead_time_days": 14,
+   "effort": {
+    "diy_minutes": 45,
+    "difficulty": "Moderate"
+   },
+   "est_cost_diy": 40,
+   "est_cost_pro": null,
+   "default_mode": "decide",
+   "products": [
+    "evap_cooler_pads"
+   ],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "evap_cooler"
+   ],
+   "climate_tags": [
+    "desert_southwest"
+   ],
+   "surprise_factor": "med",
+   "cost_status": "priced_b3",
+   "sources": [
+    "Univ. of Arizona Cooperative Extension (Cochise County) evaporative-cooler 'Cool Rules' (republished by Mission Springs Water District) — delay startup until ~85F (50% less water), run pump before fan to saturate pads, crack windows in cooled rooms, adjust bleed-off valve to minimum needed, replace mineral-crusted pads; winterize: drain and clean the pan (vinegar dissolves mineral buildup), inspect trough, dry, and cover.",
+    "AZ-market pro pricing: swamp-cooler spring startup or winterization service $99.95 (air-conditioning-arizona.com, AZ statewide 2026); pads replaced at least annually, 1-2x/season with heavy use or hard water (LJ Refrigeration Carefree AZ; Viking HVAC AZ); well-maintained coolers last 15-20 yr in AZ (Viking HVAC).",
+    "B3 pricing (2026 retail): aspen pad sets $16-$21 (Champion 3-4 pc sets, Home Depot; Lowe's typical accessory $18); rigid cellulose media (MasterCool-class) $72-$119 — $40 point for a typical full aspen pad change; rigid-media homes budget the high band."
+   ]
+  },
+  {
+   "task_id": "evap_midseason_check",
+   "name": "Evaporative cooler mid-season check",
+   "description_howto": "In the heart of cooling season: clean the reservoir/pan, verify the float and pump, confirm the bleed-off is draining only what's needed, inspect pads for mineral crusting or sagging, and clear the water-distribution trough holes. Ten minutes here prevents the classic first-100F-day breakdown.",
+   "category": "HVAC",
+   "location": "Roof",
+   "recurrence": {
+    "interval": 1,
+    "unit": "years"
+   },
+   "seasonal_anchor": "July (mid-season)",
+   "schedule_mode": "calendar_anchored",
+   "workflow": "simple",
+   "lead_time_days": 14,
+   "effort": {
+    "diy_minutes": 30,
+    "difficulty": "Easy"
+   },
+   "est_cost_diy": 0,
+   "est_cost_pro": null,
+   "default_mode": "decide",
+   "products": [],
+   "assignable": true,
+   "default_point_value": 5,
+   "applicability": [
+    "evap_cooler"
+   ],
+   "climate_tags": [
+    "desert_southwest"
+   ],
+   "surprise_factor": "med",
+   "cost_status": "priced_b3",
+   "sources": [
+    "Univ. of Arizona Cooperative Extension (Cochise County) evaporative-cooler 'Cool Rules' (republished by Mission Springs Water District) — delay startup until ~85F (50% less water), run pump before fan to saturate pads, crack windows in cooled rooms, adjust bleed-off valve to minimum needed, replace mineral-crusted pads; winterize: drain and clean the pan (vinegar dissolves mineral buildup), inspect trough, dry, and cover.",
+    "AZ-market pro pricing: swamp-cooler spring startup or winterization service $99.95 (air-conditioning-arizona.com, AZ statewide 2026); pads replaced at least annually, 1-2x/season with heavy use or hard water (LJ Refrigeration Carefree AZ; Viking HVAC AZ); well-maintained coolers last 15-20 yr in AZ (Viking HVAC).",
+    "B3 cost classification: genuinely free — reservoir clean, float/pump/bleed-off verification with household supplies; pro attention is bundled into the startup/winterize service visits, so pro cost is null."
+   ]
+  },
+  {
+   "task_id": "evap_winterize",
+   "name": "Winterize evaporative cooler",
+   "description_howto": "At season's end: cut power, shut off and drain the water line, drain the pan and dissolve mineral buildup with vinegar, clean and dry the tray (inspect for cracks/corrosion), close or damper the duct, and cover the unit. Skipping this is where next spring's corrosion, mold, and freeze damage come from.",
+   "category": "HVAC",
+   "location": "Roof",
+   "recurrence": {
+    "interval": 1,
+    "unit": "years"
+   },
+   "seasonal_anchor": "October (end of cooling season)",
+   "schedule_mode": "calendar_anchored",
+   "workflow": "simple",
+   "lead_time_days": 14,
+   "effort": {
+    "diy_minutes": 60,
+    "difficulty": "Moderate"
+   },
+   "est_cost_diy": 10,
+   "est_cost_pro": 100,
+   "default_mode": "decide",
+   "products": [],
+   "assignable": false,
+   "default_point_value": 0,
+   "applicability": [
+    "evap_cooler"
+   ],
+   "climate_tags": [
+    "desert_southwest"
+   ],
+   "surprise_factor": "med",
+   "cost_status": "priced_b3",
+   "sources": [
+    "Univ. of Arizona Cooperative Extension (Cochise County) evaporative-cooler 'Cool Rules' (republished by Mission Springs Water District) — delay startup until ~85F (50% less water), run pump before fan to saturate pads, crack windows in cooled rooms, adjust bleed-off valve to minimum needed, replace mineral-crusted pads; winterize: drain and clean the pan (vinegar dissolves mineral buildup), inspect trough, dry, and cover.",
+    "AZ-market pro pricing: swamp-cooler spring startup or winterization service $99.95 (air-conditioning-arizona.com, AZ statewide 2026); pads replaced at least annually, 1-2x/season with heavy use or hard water (LJ Refrigeration Carefree AZ; Viking HVAC AZ); well-maintained coolers last 15-20 yr in AZ (Viking HVAC).",
+    "B3 note: winter cover is a one-time ~$20-$40 product (add to Products when purchased); recurring cost is vinegar/supplies, ~$10."
+   ]
+  }
+ ],
+ "pricing_basis": "2026 US national averages per B2 research (Angi, HomeGuide, Fixr, Homewyse, Thumbtack, manufacturer/retailer pricing; lifespans anchored to DOE, ENERGY STAR, ANSI/DASMA, manufacturer warranties). Rounding: small DIY consumables to $5/$10, pro services to $25/$50, big-ticket to $100. AZ adjustments are notes only — national baselines unchanged until B3. B2.1 mini-pass (2026-07-19) priced the remaining 29 records and 4 assets from the same guide class (Angi, HomeGuide, HomeAdvisor, Fixr, LawnStarter, Thumbtack, extension services, manufacturer/retail). Inflation default for sinking-fund projections: RECOMMEND 4.0% (configurable; scope band 3-4%) — BLS CPI 'Repair of household items' averaged 5.12%/yr 1997-2024 vs 2.51% overall CPI (in2013dollars.com/BLS), and trade labor is growing ~4-5%/yr; big-ticket equipment tracks closer to general inflation, so 4.0% splits the difference conservatively.",
+ "cost_status_legend": {
+  "priced_b2": "est_cost fields carry cited 2026 values from the B2 pass",
+  "confirmed_free_b2": "recurring occurrence confirmed $0 DIY (inspection/test/household supplies); pro null = never hired out standalone",
+  "linked_to_asset": "replacement cost lives in big_ticket_assets (sinking fund), kept off the task to prevent double-counting in the Costs & Savings math",
+  "pending_b2_1": "NO cited anchor yet — the 0 values are placeholders; resolve in the B2.1 mini-pass before the cost screens ship",
+  "priced_b2_1": "est_cost fields carry cited 2026 values from the B2.1 mini-pass (2026-07-19)",
+  "priced_b3": "new B3 climate-pass task with cited 2026 values"
+ },
+ "big_ticket_assets": [
+  {
+   "asset_id": "wh_tank",
+   "name": "Water heater — tank (40-50 gal, like-for-like)",
+   "current_replacement_cost": 1650,
+   "cost_basis_year": 2026,
+   "cost_range": [
+    1200,
+    3100
+   ],
+   "expected_life_years": [
+    10,
+    15
+   ],
+   "planning_life_years": 12,
+   "notes": "DOE life 10-15 yr; A.O. Smith cites 8-12 yr conservative. Standard same-fuel/same-location swap. AZ hard water can shorten life ~2 yr and warrants regular flush + anode checks. Point estimate = midpoint of common installed range. Active only when Home Profile water heater = Tank.",
+   "sources": [
+    "DOE Energy Saver (energy.gov)",
+    "Angi 2026 ($882-$1,825; avg $1,346)",
+    "HomeGuide 2026 ($600-$3,100 tank)",
+    "Fixr 2026"
+   ]
+  },
+  {
+   "asset_id": "wh_tankless",
+   "name": "Water heater — tankless (whole-home gas)",
+   "current_replacement_cost": 3500,
+   "cost_basis_year": 2026,
+   "cost_range": [
+    2400,
+    5600
+   ],
+   "expected_life_years": [
+    15,
+    20
+   ],
+   "planning_life_years": 20,
+   "notes": "DOE: life expectancy over 20 years; ENERGY STAR 20 yr; A.O. Smith 15-20 yr typical. Tank-to-tankless conversion adds $800-$2,000 labor (venting/gas line). Annual descale in hard water required to hold life/warranty. Active only when Home Profile water heater = Tankless (Jim's home).",
+   "sources": [
+    "DOE Energy Saver (energy.gov)",
+    "ENERGY STAR",
+    "HomeGuide 2026 ($1,400-$5,600)",
+    "Angi 2026 ($1,400-$3,900)"
+   ]
+  },
+  {
+   "asset_id": "hvac_heatpump",
+   "name": "HVAC — air-source heat pump (2.5-3 ton, installed)",
+   "current_replacement_cost": 13000,
+   "cost_basis_year": 2026,
+   "cost_range": [
+    9400,
+    16750
+   ],
+   "expected_life_years": [
+    12,
+    15
+   ],
+   "planning_life_years": 13,
+   "notes": "Heating + cooling in one system. SEER2/HSPF2 minimums and R-32/R-454B refrigerant transition raise 2026 pricing. AZ high-load sizing trends to upper range. Federal 25C credit up to $2,000 may offset (treat as 'may apply'). Active when Home Profile heating = Heat pump.",
+   "sources": [
+    "HeatPumpPriceGuides 2026 ($9,400-$16,750)",
+    "HomeGuide 2026 ($10k-$25k air-source range)",
+    "Carrier 2026",
+    "Angi/HomeAdvisor 2025 ($6,085 avg equipment-lean)"
+   ]
+  },
+  {
+   "asset_id": "hvac_ac_furnace",
+   "name": "HVAC — AC + gas furnace split system (installed)",
+   "current_replacement_cost": 11500,
+   "cost_basis_year": 2026,
+   "cost_range": [
+    8000,
+    15000
+   ],
+   "expected_life_years": [
+    12,
+    20
+   ],
+   "planning_life_years": 15,
+   "notes": "Most common US config; furnace ~15-20 yr, AC condenser ~12-18 yr — replace together for labor efficiency. Furnace-only $3,500-$7,500; AC-only $3,500-$14,000 (avg ~$6,600). AZ: AC is the life-limiting half due to run-hours — planning life 15. Active when Home Profile heating = Gas furnace (Jim's home).",
+   "sources": [
+    "ConsumerAffairs 2026 ($8k-$15k split; ~$11,500 avg)",
+    "Angi 2026 ($5k-$12,500)",
+    "Modernize 2026 (~$13,430 for 2,000 sq ft)",
+    "hvacprojectcost.com 2026"
+   ]
+  },
+  {
+   "asset_id": "roof_tile_underlayment",
+   "name": "Tile roof underlayment replacement (lift & relay)",
+   "current_replacement_cost": 12000,
+   "cost_basis_year": 2026,
+   "cost_range": [
+    4000,
+    18000
+   ],
+   "expected_life_years": [
+    20,
+    30
+   ],
+   "planning_life_years": 20,
+   "notes": "Tiles last 50+ yr; underlayment is the replacement driver. ~$2-5/sq ft incl. tile R&R; synthetic underlayment ~$0.10-0.65/sq ft material. Budget ~10% tile breakage. AZ: use high-temp synthetic/rubberized; UV+heat push toward 20 yr (vs 30-yr premium TileSeal). Point estimate ~2,400 sq ft roof. Active when Home Profile roof = Tile.",
+   "sources": [
+    "AZ Roofing Works (Phoenix-specific)",
+    "HomeGuide 2026 ($0.75-$4.00/sq ft)",
+    "Angi 2026 ($3,300 avg underlayment)",
+    "Boral/Westlake TileSeal 30-yr warranty",
+    "Brava Roof Tile (~20 yr underlayment)"
+   ]
+  },
+  {
+   "asset_id": "exterior_repaint_stucco",
+   "name": "Exterior repaint — stucco home (~2,000 sq ft)",
+   "current_replacement_cost": 4500,
+   "cost_basis_year": 2026,
+   "cost_range": [
+    3600,
+    7200
+   ],
+   "expected_life_years": [
+    5,
+    10
+   ],
+   "planning_life_years": 7,
+   "notes": "HomeAdvisor avg $4,500 ($3,600-$7,200); stucco paint lasts 5-10 yr (HomeGuide: 5-7 on sun-exposed). Elastomeric costs more but hides cracks / lasts ~10 yr. AZ sun/UV shortens toward 5-7, especially dark colors on south walls. Linked task exterior_repaint carries no cost (anti-double-count).",
+   "sources": [
+    "HomeAdvisor 2026 ($3,600-$7,200; $4,500 avg)",
+    "Angi 2026",
+    "HomeGuide 2026 ($1.00-$5.50/sq ft)",
+    "Thumbtack 2026"
+   ]
+  },
+  {
+   "asset_id": "carpet_whole_home",
+   "name": "Carpet — whole home (~1,500 sq ft mid-range)",
+   "current_replacement_cost": 7500,
+   "cost_basis_year": 2026,
+   "cost_range": [
+    4500,
+    12000
+   ],
+   "expected_life_years": [
+    8,
+    15
+   ],
+   "planning_life_years": 12,
+   "notes": "$3-8/sq ft installed incl. pad + labor + old-carpet removal; whole-home 1,500 sq ft = $4,500-$12,000. Lifespan 5-20 yr by fiber/traffic; 8-15 typical. Don't skimp on pad (8-lb density). Active when Home Profile carpet = yes.",
+   "sources": [
+    "HomeGuide 2026 ($2-$8/sq ft)",
+    "Angi 2026 ($3-$11/sq ft; $1,778 avg 330 sq ft)",
+    "Homewyse 2026 ($5.27-$7.72/sq ft)",
+    "NerdWallet 2026"
+   ]
+  },
+  {
+   "asset_id": "garage_door_springs",
+   "name": "Garage door torsion springs (pair, installed)",
+   "current_replacement_cost": 350,
+   "cost_basis_year": 2026,
+   "cost_range": [
+    250,
+    500
+   ],
+   "expected_life_years": [
+    7,
+    10
+   ],
+   "planning_life_years": 8,
+   "notes": "Standard 10,000-cycle spring ≈ 7 yr at 4 cycles/day (derived from ANSI/DASMA cycle rating, not a published year figure); replace in pairs; PRO-ONLY. DOUBLE-COUNT GUARD: also priced on task garage_spring_service — count in exactly one place; recommendation: task-side, fund accrual OFF for this asset by default.",
+   "sources": [
+    "ANSI/DASMA 102",
+    "Pioneer Overhead (DASMA cycle-to-years)",
+    "HomeGuide 2026 ($150-$350 torsion)",
+    "This Old House 2026 ($300-$540)",
+    "HomeAdvisor 2025 ($250 avg)"
+   ]
+  },
+  {
+   "asset_id": "garage_opener",
+   "name": "Garage door opener (installed)",
+   "current_replacement_cost": 450,
+   "cost_basis_year": 2026,
+   "cost_range": [
+    300,
+    900
+   ],
+   "expected_life_years": [
+    10,
+    15
+   ],
+   "planning_life_years": 12,
+   "notes": "CORROBORATED IN B2.1: installed opener $300-$900 (HomeGuide 2026; unit $150-$500 + labor $150-$400); Angi avg $379 ($218-$540); Fixr avg $480. Life 10-15 yr (Modernize/HomeGuide). Modern units add photo-eye/auto-reverse safety + rolling-code security. Chain-drive cheapest, belt-drive quiet mid-range.",
+   "sources": [
+    "HomeGuide 2026 ($300-$900 installed; 10-15 yr life)",
+    "Angi 2026 ($218-$540; $379 avg)",
+    "Fixr 2026 (~$480 avg 3/4-HP belt)",
+    "Modernize 2026 (10-15 yr life)",
+    "DASMA TDS-190 safety guidance"
+   ]
+  },
+  {
+   "asset_id": "water_softener",
+   "name": "Water softener (salt-based, whole-house, installed)",
+   "current_replacement_cost": 2000,
+   "cost_basis_year": 2026,
+   "cost_range": [
+    1200,
+    3800
+   ],
+   "expected_life_years": [
+    10,
+    15
+   ],
+   "planning_life_years": 12,
+   "notes": "Salt-based ion-exchange $1,200-$3,800 installed; most homeowners ~$1,500. AZ (Phoenix/Tucson among hardest US water) makes this near-essential and pushes to higher grain capacity. Ongoing salt + $100-$300/yr maintenance. Active when Home Profile softener = yes.",
+   "sources": [
+    "HomeGuide 2026 ($1,200-$3,800)",
+    "Angi 2026 (~$1,500 avg)",
+    "This Old House 2026 ($200-$6,000)",
+    "Modernize 2026"
+   ]
+  },
+  {
+   "asset_id": "ro_system",
+   "name": "Reverse-osmosis system (under-sink point-of-use)",
+   "current_replacement_cost": 500,
+   "cost_basis_year": 2026,
+   "cost_range": [
+    300,
+    950
+   ],
+   "expected_life_years": [
+    10,
+    15
+   ],
+   "planning_life_years": 12,
+   "notes": "Under-sink POU $300-$950 installed; unit alone $150-$600. Whole-house RO is $4,800-$8,000 (separate class — model only if installed). Membrane every 2-5 yr ($50-$100); filters every 6-12 mo. AZ hard water shortens membrane life; pair with softener as pretreatment. Active when Home Profile RO = yes.",
+   "sources": [
+    "HomeGuide 2026 ($300-$950 under-sink)",
+    "This Old House 2026 ($2,475 avg all types)",
+    "Crystal Quest 2026",
+    "Culligan pricing"
+   ]
+  },
+  {
+   "asset_id": "detector_fleet",
+   "name": "Smoke/CO detector fleet (whole home)",
+   "current_replacement_cost": 350,
+   "cost_basis_year": 2026,
+   "cost_range": [
+    200,
+    600
+   ],
+   "expected_life_years": [
+    10,
+    10
+   ],
+   "planning_life_years": 10,
+   "notes": "Derived fleet estimate: NFPA 72 placement (every bedroom + outside sleeping areas + every level) puts a typical 4-BR two-story at ~6-8 units; 10-yr sealed photoelectric smoke $30-$50/unit + CO/combination $35-$70/unit (2026 retail) -> ~$350 fleet point. Smoke alarms replace at 10 yr (NFPA); CO sensors at 5-7 yr (manufacturer) — the co_alarm_replace task covers the CO mid-cycle so the fund can amortize the full fleet on the 10-yr clock. Universal asset (every home).",
+   "sources": [
+    "NFPA 72 placement + 10-yr replacement guidance (cited on smoke_co_alarm_test / smoke_alarm_replace)",
+    "2026 retail unit pricing: HomeGuide smoke detectors $10-$150; Kidde/First Alert combos $39-$71 (Walmart/Lowe's)"
+   ]
+  },
+  {
+   "asset_id": "expansion_tank",
+   "name": "Thermal expansion tank (potable, tank-WH systems)",
+   "current_replacement_cost": 300,
+   "cost_basis_year": 2026,
+   "cost_range": [
+    100,
+    600
+   ],
+   "expected_life_years": [
+    5,
+    10
+   ],
+   "planning_life_years": 8,
+   "notes": "Replacement incl. labor $90-$350 (Angi 2026) to $300-$800 (HomeGuide 2026) — $300 point; tank alone $30-$200 (retail ~$35-$80 for 2-gal). Life 5-10 yr (Angi); check precharge annually (expansion_tank_precharge task). Active only for tank-water-heater homes (suppressed for Jim's tankless profile).",
+   "sources": [
+    "Angi 2026 ($90-$350 incl. labor; 5-10 yr life)",
+    "HomeGuide 2026 ($300-$800 installed; tank $30-$200)",
+    "Home Depot retail 2026 (2-gal tanks ~$35)"
+   ]
+  },
+  {
+   "asset_id": "prv",
+   "name": "Pressure-reducing valve (whole-house PRV)",
+   "current_replacement_cost": 550,
+   "cost_basis_year": 2026,
+   "cost_range": [
+    300,
+    1000
+   ],
+   "expected_life_years": [
+    10,
+    15
+   ],
+   "planning_life_years": 12,
+   "notes": "PRV replacement typically $400-$700 installed (2026 trade guides; wide market band $150-$3,000 for complex installs) — $550 point. Life basis: 10-15 yr service expectation aligned to the pressure_regulator_replace task's 12-yr watch interval; CORROBORATE life with a named source in a future pass. Annual gauge check (pressure_regulator_check) catches early failure.",
+   "sources": [
+    "CountBricks 2026 trade guide ($400-$700 typical; $1,000+ complex)",
+    "SuperBrothers 2026 ($150-$3,000 market band)",
+    "Life planning figure from library watch-task interval — corroborate"
+   ]
+  },
+  {
+   "asset_id": "sump_pump",
+   "name": "Sump pump (submersible, installed)",
+   "current_replacement_cost": 550,
+   "cost_basis_year": 2026,
+   "cost_range": [
+    300,
+    1200
+   ],
+   "expected_life_years": [
+    7,
+    10
+   ],
+   "planning_life_years": 8,
+   "notes": "Replacement $309-$755 typical, avg ~$430 unit-swap (Angi 2026); ConsumerAffairs $300-$800; full re-installs with pit/discharge work run $642-$2,107 (HomeAdvisor avg $1,354) — $550 point covers a quality submersible swap. Life 7-10 yr (Angi). Quarterly bucket test (sump_pump_test) is the failure detector. Profile-gated: no sump in Jim's home.",
+   "sources": [
+    "Angi 2026 ($309-$755; 7-10 yr life)",
+    "ConsumerAffairs 2026 ($300-$800)",
+    "HomeAdvisor 2026 ($642-$2,107 full installs; $1,354 avg)"
+   ]
+  }
+ ],
+ "climate_preset": {
+  "id": "desert_southwest",
+  "label": "Desert Southwest (Tucson, AZ tuned)",
+  "notes": [
+   "NWS-defined Arizona monsoon season: June 15 - September 30 (fixed dates adopted 2008; peak storms mid-July-mid-August).",
+   "Tucson water is classified hard to very hard by Tucson Water's own water-quality parameter guidance; 2026 city-wide readings run ~11-13 gpg (211-220 ppm) with CAP-heavy areas reported 12-22 gpg — 1.5-3x the 7-gpg 'hard' threshold (WQA scale).",
+   "Preset behavior: tasks carrying a climate_overrides.desert_southwest block apply that block's recurrence/seasonal_anchor/note when the Home Profile climate preset is desert_southwest; all other fields and all other tasks use their universal values. Only tankless_descale_flush overrides recurrence (12 -> 6 months unsoftened); all other overrides are anchors and guidance.",
+   "Tasks tagged climate_tags ['desert_southwest'] only (the evap_cooler set) are hidden entirely under other climate presets."
+  ]
+ }
+}

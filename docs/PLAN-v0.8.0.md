@@ -361,3 +361,26 @@ Chores/rewards declared in the registry with toggles exposed but **flagged exper
 - Module flags excluded from the `export_data` payload (informational in `meta.modules` only, never re-applied on import).
 - A6 is net-new work vs the original Phase A map (one extra sitting) — consequence of the all-gateable decision.
 - Chores rename (Quests / Missions / Task Board) remains open per scope §12 — decide before v0.8.0 strings work; does not block A2–A6.
+
+---
+
+## 9. Phase B delivered — seed library + D1 integration deltas (2026-07-25)
+
+Phase B (Chat/Research) is **complete**. Deliverable committed to the repo:
+
+- **`custom_components/family_hub/seed_library.json`** — v3.0.0 (`library_version` 5), **97 tasks + 15 big-ticket assets**, Desert Southwest / Tucson tuned. Replaces the empty `[]` A4 stub. Valid JSON, no duplicate `task_id`s.
+- **`docs/research-phase-b/`** — provenance + contract: `seed-schema.json` (v2), scope v5, implementation-plan v4, `README-HANDOFF.md`, and the B1.5/B2/B3 research records (every pricing citation, interval-disagreement resolution, monsoon anchors, UA Extension Bermuda refs).
+
+**Important:** the committed library is currently an **inert no-op** — `seed_loader.async_load_seed_library` returns `[]` for a dict-shaped file, so `apply_seeds` adds nothing until D1 updates the loader. Nothing breaks pre-D1. Do **not** partially wire it: reading `tasks` without the mapping work below would create tasks with broken schedules (e.g. annual → monthly-on-the-1st).
+
+### D1 must handle these deltas (the A4 stub loader is simpler than the real library)
+
+1. **Library shape.** The file is an object `{schema_version, library_version, tasks[97], big_ticket_assets[15], climate_preset, pricing_basis, cost_status_legend}` — not a bare array. Loader must read `data["tasks"]` (+ surface assets/preset).
+2. **`applicability` tag-lists → Home Profile** (not the stub's `requires` dict). Empty list = universal. 22 gating tags in use: `pool, softener, ro, tank_water_heater, tankless_water_heater, well_water, septic, fireplace, gutters, irrigation, lawn, carpet, stone_counters, tile_surfaces, wood_deck, wood_fence, evap_cooler, mini_split, sump_pump, generator, humidifier, gas_service`. D1 extends the Home Profile schema to cover these and maps each tag → a profile predicate; a task applies iff all its tags are satisfied.
+3. **`seasonal_anchor` strings → `{month, day}`.** 31 `calendar_anchored` tasks carry human-readable anchors ("April & October", "January / April / July / October" = quarterly, "October (post-monsoon)", "Growing season", …). `_maintenance_schedule` currently models a single `{month,day}` + interval; D1 either extends it to multi-anchor occurrences or maps each string to a representative anchor + interval (log the reduction). `_anchor_from_seed` today returns `None` for strings — that's why the loader must not run yet.
+4. **`climate_overrides.desert_southwest`** (11 tasks) — apply the override's `recurrence`/`seasonal_anchor`/`note` only when the Home Profile `climate_preset == "desert_southwest"`.
+5. **`big_ticket_assets`** (15) — reference data for the **E2** sinking funds (not A4's manual `maintenance_funds` ledger). Each has `current_replacement_cost`, `cost_basis_year` (2026), `planning_life_years`, `expected_life_years`, `cost_range`, and applicability notes. Future cost is computed at runtime, never stored; **inflation default 4.0%** is locked (scope §8). Assets are gated by Home Profile too (e.g. `wh_tank` only when water heater = Tank).
+6. **`products`** are referenced as id strings (e.g. `"ice"`, filter specs) — D1 decides whether to seed `maintenance_products` from these or leave products manual.
+7. **`cost_status`** per task (`priced_b2`/`priced_b2_1`/`priced_b3`/`confirmed_free_b2`/`linked_to_asset`) — provenance metadata; harmless to carry, zero pending.
+
+Mix for prototype/test realism: 66 `from_completion` / 31 `calendar_anchored`; 51 `simple` / 46 `inspect_plan_do`; units 56 years / 37 months / 4 weeks.
