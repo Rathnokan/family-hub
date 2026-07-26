@@ -384,3 +384,15 @@ Phase B (Chat/Research) is **complete**. Deliverable committed to the repo:
 7. **`cost_status`** per task (`priced_b2`/`priced_b2_1`/`priced_b3`/`confirmed_free_b2`/`linked_to_asset`) — provenance metadata; harmless to carry, zero pending.
 
 Mix for prototype/test realism: 66 `from_completion` / 31 `calendar_anchored`; 51 `simple` / 46 `inspect_plan_do`; units 56 years / 37 months / 4 weeks.
+
+---
+
+## 10. Phase C1 delivered — admin IA wireframes (2026-07-26)
+
+C1 (admin panel IA rethink) is **complete**. Full decisions record + wireframes + provenance: **[docs/design-phase-c/C1-DECISIONS.md](design-phase-c/C1-DECISIONS.md)**.
+
+Headline: five-item rail (Today · Modules · Hub · System · Log), module-off greys in place rather than disappearing, Home Care admin = Profile/Library/Assets & Money/Vendors & Services/Notifications, points economy confirmed staying in Rewards.
+
+**Six deltas from shipped A4–A6 behavior are catalogued in C1-DECISIONS.md §"Deltas"** — most notably: module-off nav treatment reverses A6's tab-hiding, and a new per-home `maintenance_assets` collection (warranty/service-contract/fund coverage) is needed for Phase E, beyond A4's collections. None require immediate code changes; D3/E must read that section before implementing.
+
+**Next:** C2 (Home Care room prototype, family-facing) — kicked off separately, not blocked on anything further from C1. D1 (seed loader wiring) can proceed in parallel; D3 (admin tab) should wait for C1's hi-fi mockup pass (in progress) and read the deltas list first.
