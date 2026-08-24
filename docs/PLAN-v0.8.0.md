@@ -396,3 +396,19 @@ Headline: five-item rail (Today · Modules · Hub · System · Log), module-off 
 **Six deltas from shipped A4–A6 behavior are catalogued in C1-DECISIONS.md §"Deltas"** — most notably: module-off nav treatment reverses A6's tab-hiding, and a new per-home `maintenance_assets` collection (warranty/service-contract/fund coverage) is needed for Phase E, beyond A4's collections. None require immediate code changes; D3/E must read that section before implementing.
 
 **Next:** C2 (Home Care room prototype, family-facing) — kicked off separately, not blocked on anything further from C1. D1 (seed loader wiring) can proceed in parallel; D3 (admin tab) should wait for C1's hi-fi mockup pass (in progress) and read the deltas list first.
+
+---
+
+## 11. Phase C2 delivered — Home Care room handoff (2026-08-23)
+
+C2 (family-facing Home Care room prototype) is **complete**. Deliverables in `docs/design-phase-c/`:
+
+- **[C2-Home-Care-Room-Handoff.md](design-phase-c/C2-Home-Care-Room-Handoff.md)** — the developer spec D2 builds from: token audit (30 EXISTING / 2 NEW), named component inventory, all 7 screens, the parent-gate pattern, a full state gallery, an interaction table, and inline SVG for every new icon.
+- **`design-phase-c/handoff-screens/`** — 28 full-page screenshots covering every screen and state.
+- **[C2-DECISIONS.md](design-phase-c/C2-DECISIONS.md)** — rulings + the D-phase work these decisions create.
+
+Headline: layout B (triage board) ships; Reschedule/Skip/Assign match the A4 services exactly; **a new hub-wide parent gate** keyed to `hass.user.is_admin` (parents unrestricted, the restricted kitchen account PIN-gated) with **server-side PIN verification**.
+
+**Six items of new D-phase work are catalogued in C2-DECISIONS.md §"D-phase implications"** — most notably a PIN store + verification service, exposing the full task list in the card model for room search, defining `--fh-accent-bg`, and retrofitting `htmlRewardLockBadge` (its emoji glyph has always ignored its color). Read that section before D2.
+
+**Phase C is now complete** (C1 admin IA + C2 room + both handoffs). Next: **Phase D** — D1 (seed loader + Home Profile applicability + model extension) then D2 (room UI from this spec).
