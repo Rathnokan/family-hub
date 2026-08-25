@@ -369,6 +369,14 @@ class CardShaperMixin:
         # It carries the same frozen item keys plus additive state/source_kind.
         return self.get_maintenance_view()
 
+    def get_maintenance_all_tasks_for_card(self) -> list[dict]:
+        # v0.8.0 D1: EVERY maintenance task — disabled, snoozed and far-future
+        # included — because the Home Care room's search spans the whole library,
+        # not just what is due (C2 handoff section 3.2). The per-record projection
+        # lives in card_model._maintenance_task_record.
+        from .card_model import build_maintenance_all_tasks
+        return build_maintenance_all_tasks(self)
+
     def get_claimable_tasks_for_card(self) -> list[dict]:
         items = []
         for task in self.get_claimable_tasks():

@@ -672,7 +672,190 @@ maintenance_update_fund:
           options: [sinking, emergency]
 maintenance_update_home_profile:
   name: Maintenance — update home profile
-  description: Update Home Profile settings; re-applies seed applicability.
+  description: >-
+    Update Home Profile answers and re-apply the seed library. Newly-applicable
+    tasks are added or re-enabled; tasks that no longer apply are disabled with a
+    reason (never deleted, so completion history survives). Send only the fields
+    you are changing.
+  fields:
+    climate_preset:
+      name: Climate preset
+      description: Selects the climate overrides applied to seed tasks.
+      selector:
+        select:
+          options: [desert_southwest]
+    water_heater_type:
+      name: Water heater type
+      selector:
+        select:
+          options: [tank, tankless]
+    water_source:
+      name: Water source
+      selector:
+        select:
+          options: [municipal, well]
+    roof_type:
+      name: Roof type
+      selector:
+        select:
+          options: [tile, shingle]
+    heating_type:
+      name: Primary heating
+      selector:
+        select:
+          options: [gas_furnace, heat_pump, electric]
+    dryer_fuel:
+      name: Dryer fuel
+      selector:
+        select:
+          options: [gas, electric]
+    fireplace_fuel:
+      name: Fireplace fuel
+      selector:
+        select:
+          options: [wood, gas]
+    water_heater_fuel:
+      name: Water heater fuel
+      selector:
+        select:
+          options: [gas, electric]
+    gas_range:
+      name: Gas range
+      selector:
+        boolean:
+    gas_service:
+      name: Gas service (leave unset to derive)
+      description: >-
+        Derived from the fuel answers when unset — any gas appliance or gas heat
+        means the home has gas/propane service.
+      selector:
+        boolean:
+    pool:
+      name: Pool
+      selector:
+        boolean:
+    softener:
+      name: Water softener
+      selector:
+        boolean:
+    ro:
+      name: RO system
+      selector:
+        boolean:
+    fireplace:
+      name: Fireplace
+      selector:
+        boolean:
+    gutters:
+      name: Gutters
+      selector:
+        boolean:
+    septic:
+      name: Septic system
+      selector:
+        boolean:
+    carpet:
+      name: Carpet
+      selector:
+        boolean:
+    sump_pump:
+      name: Sump pump
+      selector:
+        boolean:
+    irrigation:
+      name: Irrigation system
+      selector:
+        boolean:
+    lawn:
+      name: Lawn
+      selector:
+        boolean:
+    wood_deck:
+      name: Wood deck
+      selector:
+        boolean:
+    wood_fence:
+      name: Wood fence
+      selector:
+        boolean:
+    stone_counters:
+      name: Natural-stone counters
+      selector:
+        boolean:
+    tile_surfaces:
+      name: Tiled surfaces
+      selector:
+        boolean:
+    humidifier:
+      name: Whole-house humidifier
+      selector:
+        boolean:
+    mini_split:
+      name: Mini-split units
+      selector:
+        boolean:
+    generator:
+      name: Standby/portable generator
+      selector:
+        boolean:
+    evap_cooler:
+      name: Evaporative cooler
+      selector:
+        boolean:
+    hoa:
+      name: HOA
+      selector:
+        boolean:
+    year_built:
+      name: Year built
+      selector:
+        number:
+          min: 1800
+          max: 2100
+          mode: box
+    sq_ft:
+      name: Square feet
+      selector:
+        number:
+          min: 0
+          max: 20000
+          mode: box
+    stories:
+      name: Stories
+      selector:
+        number:
+          min: 1
+          max: 4
+          mode: box
+    home_value:
+      name: Home value
+      selector:
+        number:
+          min: 0
+          max: 10000000
+          mode: box
+    inflation_rate:
+      name: Escalation rate (%/yr)
+      description: Sinking-fund projection assumption. Default 4.0.
+      selector:
+        number:
+          min: 0
+          max: 20
+          step: 0.1
+          mode: box
+    hvac_filter_size:
+      name: HVAC filter size
+      selector:
+        text:
+    hvac_filter_count:
+      name: HVAC filter count
+      selector:
+        number:
+          min: 0
+          max: 20
+          mode: box
 maintenance_apply_seeds:
   name: Maintenance — apply seed library
-  description: Re-evaluate the seed library against the Home Profile (idempotent).
+  description: >-
+    Re-evaluate the seed library against the current Home Profile. Idempotent —
+    adds, re-enables, disables and refreshes as needed; never deletes.

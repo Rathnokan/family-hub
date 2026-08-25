@@ -207,22 +207,30 @@ def _empty_maintenance() -> dict:
     to the `maintenance` store domain. Tasks carry next_due/last_completed (state
     is derived, not stored — see _maintenance_schedule); completions are append-
     only; home_profile parameterises seed applicability and is editable settings."""
+    from .seed_loader import profile_defaults
     return {
         "maintenance_tasks":       [],
         "maintenance_products":    [],
         "maintenance_completions": [],
         "maintenance_vendors":     [],
         "maintenance_funds":       [],
-        "home_profile":            {},
+        "home_profile":            profile_defaults(),
     }
 
 
 def _migrate_maintenance(data: dict) -> None:
     """Idempotent forward-fill for the maintenance collections. Safe on every
-    load: ensures each collection exists without touching existing records."""
+    load: ensures each collection exists without touching existing records, and
+    fills any Home Profile key the running version knows about but the stored
+    profile predates. An existing answer (including an explicit False/None) is
+    never overwritten."""
     defaults = _empty_maintenance()
     for key, default in defaults.items():
         data.setdefault(key, default)
+    profile = data["home_profile"]
+    if isinstance(profile, dict):
+        for key, default in defaults["home_profile"].items():
+            profile.setdefault(key, default)
 
 
 # ---------------------------------------------------------------------------

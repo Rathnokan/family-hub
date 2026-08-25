@@ -63,6 +63,21 @@ _PRODUCT_EDITABLE = (
 _VENDOR_EDITABLE = ("name", "trade", "phone", "notes", "preferred", "last_used", "last_price")
 _FUND_EDITABLE = ("fund_type", "name", "asset_category", "target_amount", "balance", "monthly_target")
 
+# Schedule-shaping fields refreshed from the library on re-apply, but only for a
+# seeded task the user has never hand-edited (see async_maintenance_apply_seeds).
+_SEED_REFRESHABLE = ("schedule_mode", "recurrence", "seasonal_anchor",
+                     "seasonal_note", "climate_note")
+
+
+def _opt_float(value) -> float | None:
+    """float(), but None survives as None (an absent price, not a $0 price)."""
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
 
 class MaintenanceMixin:
     # ------------------------------------------------------------------
@@ -163,23 +178,34 @@ class MaintenanceMixin:
             "location":           f.get("location", ""),
             "schedule_mode":      f.get("schedule_mode", "from_completion"),
             "recurrence":         rec,                       # {"interval","unit"} or None
-            "seasonal_anchor":    f.get("seasonal_anchor"),  # {"month","day"} or None
+            # {"month","day"} | [{"month","day"}, ...] | None — a LIST is a
+            # multi-occurrence anchor (April & October, quarterly...), see
+            # _maintenance_schedule._next_anchor.
+            "seasonal_anchor":    f.get("seasonal_anchor"),
+            "seasonal_note":      f.get("seasonal_note", ""),   # the library's prose anchor
+            "climate_note":       f.get("climate_note", ""),    # climate-preset guidance
             "workflow":           f.get("workflow", "simple"),
             "workflow_stage":     None,
             "lead_time_days":     int(f.get("lead_time_days", 14) or 14),
             "effort":             f.get("effort") or {"diy_minutes": 0, "difficulty": "Easy"},
             "est_cost_diy":       float(f.get("est_cost_diy", 0) or 0),
-            "est_cost_pro":       float(f.get("est_cost_pro", 0) or 0),
+            # None means "never hired out standalone" and is NOT the same as $0 —
+            # the cost card renders the two differently, so preserve it.
+            "est_cost_pro":       _opt_float(f.get("est_cost_pro")),
             "default_mode":       f.get("default_mode", "diy"),
             "product_ids":        list(f.get("product_ids") or []),
             "assignable":         bool(f.get("assignable", False)),
             "default_point_value": int(f.get("default_point_value", 0) or 0),
+            "surprise_factor":    f.get("surprise_factor", "low"),
+            "cost_status":        f.get("cost_status", ""),
             "next_due":           None,
             "last_completed":     None,
             "snoozed_until":      None,
             "offered_external":   False,
             "source":             f.get("source", "custom"),
             "seed_id":            f.get("seed_id"),
+            "seed_fingerprint":   f.get("seed_fingerprint"),
+            "disabled_reason":    f.get("disabled_reason", ""),
             "legacy_chore_id":    f.get("legacy_chore_id"),
             "enabled":            bool(f.get("enabled", True)),
             "created_at":         _now_iso(),
@@ -434,8 +460,8 @@ class MaintenanceMixin:
     # Products
     # ------------------------------------------------------------------
 
-    async def async_maintenance_add_product(self, **f) -> dict:
-        product = {
+    def _new_maintenance_product(self, f: dict) -> dict:
+        return {
             "id":                  _new_id(),
             "name":                f.get("name", ""),
             "spec":                f.get("spec", ""),
@@ -445,7 +471,12 @@ class MaintenanceMixin:
             "inventory_count":     int(f.get("inventory_count", 0) or 0),
             "low_stock_threshold": int(f.get("low_stock_threshold", 1) or 0),
             "linked_task_ids":     list(f.get("linked_task_ids") or []),
+            "source":              f.get("source", "custom"),
+            "seed_id":             f.get("seed_id"),
         }
+
+    async def async_maintenance_add_product(self, **f) -> dict:
+        product = self._new_maintenance_product(f)
         self.maintenance_products.append(product)
         await self.async_save()
         return product
@@ -551,15 +582,25 @@ class MaintenanceMixin:
     # ------------------------------------------------------------------
 
     async def async_maintenance_update_home_profile(self, **fields) -> dict:
+        """Update Home Profile answers and re-apply the seed library.
+
+        `None` clears an answer back to unanswered for the single-select variant
+        fields (water heater type, roof type, heating type...) — that is a real
+        answer, not "no change". Every other field ignores None so a partial
+        service call never wipes anything.
+        """
+        from .seed_loader import VARIANT_FIELDS, profile_defaults
+
         hp = self.home_profile
+        for key, default in profile_defaults().items():
+            hp.setdefault(key, default)
         for key, value in fields.items():
-            if value is not None:
+            if value is not None or key in VARIANT_FIELDS:
                 hp[key] = value
         hp["updated_at"] = _now_iso()
         await self.async_save()
-        # Re-evaluate seed applicability (idempotent; no-op while the library is
-        # empty). Newly-applicable seeds enable; newly-inapplicable seed tasks
-        # disable but keep their history.
+        # Re-evaluate seed applicability (idempotent). Newly-applicable seeds
+        # enable, newly-inapplicable seed tasks disable but keep their history.
         await self.async_maintenance_apply_seeds()
         return hp
 
@@ -567,36 +608,159 @@ class MaintenanceMixin:
     # Seed library application
     # ------------------------------------------------------------------
 
-    async def async_maintenance_apply_seeds(self) -> int:
-        """Add applicable seed tasks not yet present (idempotent by seed_id) and
-        disable seed tasks that no longer apply (never delete → keep history).
-        Returns the number added. No-op while seed_library.json is empty."""
-        from .seed_loader import async_load_seed_library, applicable_seeds, seed_to_task_fields
+    async def async_maintenance_load_library(self, force: bool = False) -> dict:
+        """Read + cache seed_library.json. The card model needs the big-ticket
+        asset table synchronously, so the file read happens here (async, off the
+        event loop) and everything downstream reads `self._seed_library`."""
+        from .seed_loader import async_load_seed_library
 
-        library = await async_load_seed_library(self._hass)
-        if not library:
-            return 0
-        seeds = applicable_seeds(library, self.home_profile)
-        applicable_ids = {s["task_id"] for s in seeds}
-        existing_ids = {t.get("seed_id") for t in self.maintenance_tasks if t.get("seed_id")}
+        if force or not self._seed_library:
+            self._seed_library = await async_load_seed_library(self._hass)
+        return self._seed_library
+
+    def _seed_product_ids(self, seed: dict, task_id: str) -> list[str]:
+        """Upsert an untracked product stub per product id this seed consumes and
+        return the resulting product record ids.
+
+        Stubs carry name-only data (the library references products as bare id
+        strings) and `low_stock_threshold: 0`, so a zero count reads as UNTRACKED
+        rather than OUT — otherwise every seeded task would look supply-blocked on
+        day one. The user opts a product into inventory tracking by setting a
+        threshold. Idempotent by seed_id."""
+        from .seed_loader import product_display_name
+
+        ids: list[str] = []
+        for pid in (seed.get("products") or []):
+            product = next(
+                (p for p in self.maintenance_products if p.get("seed_id") == pid), None
+            )
+            if product is None:
+                product = self._new_maintenance_product({
+                    "name":                product_display_name(pid),
+                    "low_stock_threshold": 0,   # untracked until the user says otherwise
+                    "source":              "seed",
+                    "seed_id":             pid,
+                })
+                self.maintenance_products.append(product)
+            if task_id not in product["linked_task_ids"]:
+                product["linked_task_ids"].append(task_id)
+            ids.append(product["id"])
+        return ids
+
+    def _refresh_seeded_task(self, task: dict, fields: dict, fingerprint: str) -> bool:
+        """Pull changed library values into an existing seeded task, but only if
+        the user never hand-edited its schedule.
+
+        The fingerprint is the schedule shape as the seed resolved it last time; if
+        the task still matches, nothing local is at risk and it is safe to adopt the
+        new values (this is what makes a climate-preset change actually reach tasks
+        that already exist). If it differs, the user edited it — leave it alone."""
+        from .seed_loader import seed_fingerprint
+
+        stored = task.get("seed_fingerprint")
+        current = seed_fingerprint(task)
+        if stored is not None and stored != current:
+            return False   # hand-edited — never clobber
+        if stored == fingerprint:
+            return False   # nothing changed in the library
+        for key in _SEED_REFRESHABLE:
+            task[key] = fields.get(key)
+        task["seed_fingerprint"] = fingerprint
+        task["updated_at"] = _now_iso()
+        _LOGGER.info(
+            "Family Hub: refreshed seeded task '%s' from the library (schedule changed)",
+            task.get("name"),
+        )
+        return True
+
+    async def async_maintenance_apply_seeds(self) -> dict:
+        """Re-evaluate the seed library against the Home Profile.
+
+        Idempotent by seed_id, and safe to call any number of times:
+          • applicable seeds with no task yet are ADDED;
+          • seed tasks that apply again are RE-ENABLED (a profile answer flipped
+            back), with next_due re-armed only if it was cleared;
+          • seed tasks that stopped applying are DISABLED with a reason — never
+            deleted, so completions and history survive a wrong profile answer;
+          • untouched seed tasks pick up changed library values (climate preset).
+
+        Returns {"added", "reenabled", "disabled", "refreshed"}.
+        """
+        from .seed_loader import (
+            applicable_seeds,
+            disable_reason,
+            library_tasks,
+            seed_fingerprint,
+            seed_to_task_fields,
+        )
+
+        library = await self.async_maintenance_load_library(force=True)
+        tasks = library_tasks(library)
+        if not tasks:
+            return {"added": 0, "reenabled": 0, "disabled": 0, "refreshed": 0}
+
+        profile = self.home_profile
+        seeds = applicable_seeds(tasks, profile)
+        by_seed_id = {s["task_id"]: s for s in seeds}
+        existing = {
+            t["seed_id"]: t for t in self.maintenance_tasks
+            if t.get("source") == "seed" and t.get("seed_id")
+        }
         today = date.today()
+        counts = {"added": 0, "reenabled": 0, "disabled": 0, "refreshed": 0}
 
-        added = 0
-        for seed in seeds:
-            if seed["task_id"] in existing_ids:
+        for seed_id, seed in by_seed_id.items():
+            fields = seed_to_task_fields(seed, profile)
+            fingerprint = seed_fingerprint(fields)
+            task = existing.get(seed_id)
+
+            if task is None:
+                task = self._new_maintenance_task(
+                    {**fields, "source": "seed", "seed_id": seed_id,
+                     "seed_fingerprint": fingerprint},
+                    today,
+                )
+                task["product_ids"] = self._seed_product_ids(seed, task["id"])
+                self.maintenance_tasks.append(task)
+                counts["added"] += 1
                 continue
-            fields = {**seed_to_task_fields(seed), "source": "seed", "seed_id": seed["task_id"]}
-            self.maintenance_tasks.append(self._new_maintenance_task(fields, today))
-            added += 1
 
-        # Disable seed-sourced tasks that stopped applying (keep them + history).
-        for task in self.maintenance_tasks:
-            if task.get("source") == "seed" and task.get("seed_id") \
-                    and task["seed_id"] not in applicable_ids:
-                task["enabled"] = False
+            if self._refresh_seeded_task(task, fields, fingerprint):
+                counts["refreshed"] += 1
+            # Re-enable only what WE disabled. A non-empty disabled_reason is the
+            # marker that the profile turned this off; a task the user switched off
+            # by hand (or a finished one-shot) has none, and must stay off.
+            if not task.get("enabled", True) and task.get("disabled_reason"):
+                task["enabled"] = True
+                task["disabled_reason"] = ""
+                if not task.get("next_due"):
+                    nd = initial_next_due(task, today)
+                    task["next_due"] = nd.isoformat() if nd else None
+                task["updated_at"] = _now_iso()
+                counts["reenabled"] += 1
+
+        # Seed tasks that stopped applying: disable + say why. Keep the record.
+        library_by_id = {s["task_id"]: s for s in tasks}
+        for seed_id, task in existing.items():
+            if seed_id in by_seed_id or not task.get("enabled", True):
+                continue
+            task["enabled"] = False
+            task["disabled_reason"] = (
+                disable_reason(library_by_id[seed_id], profile)
+                if seed_id in library_by_id else "no longer in the seed library"
+            )
+            task["updated_at"] = _now_iso()
+            counts["disabled"] += 1
 
         await self.async_save()
-        return added
+        if any(counts.values()):
+            _LOGGER.warning(
+                "Family Hub: seed library applied — %d added, %d re-enabled, "
+                "%d disabled, %d refreshed (%d applicable of %d)",
+                counts["added"], counts["reenabled"], counts["disabled"],
+                counts["refreshed"], len(seeds), len(tasks),
+            )
+        return counts
 
     # ------------------------------------------------------------------
     # One-time migration: category_label=="Maintenance" chores → tasks (A5)

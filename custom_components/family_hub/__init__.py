@@ -190,6 +190,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if migrated_maint:
         _LOGGER.info("Family Hub: migrated %d Maintenance chore(s) to the maintenance module", migrated_maint)
 
+    # v0.8.0 D1: cache the seed library so the synchronous card-model builder can
+    # gate the big-ticket asset table. Does NOT apply seeds — that stays an
+    # explicit action (the maintenance_apply_seeds service / a Home Profile edit).
+    if "maintenance" in store.enabled_modules:
+        await store.async_maintenance_load_library()
+
     await store.async_update_settings(
         family_name=family_name,
         points_per_dollar=points_per_dollar,

@@ -12,6 +12,27 @@
 
 ---
 
+## ✅ Fixed in v0.8.0 D1 — deployed to Samba 2026-08-25, pending live-test
+
+Found by reading the shipped A4 code while wiring the real seed library. All three
+were latent — the library was inert (`seed_loader` returned `[]` for the dict-shaped
+file), so no seeded task ever existed to hit them.
+
+1. **HIGH — a seed task disabled by a Home Profile answer could never come back.** `async_maintenance_apply_seeds` skipped every seed already present (`if seed["task_id"] in existing_ids: continue`), so the re-enable path did not exist. Toggling pool off and then on again left the pool task permanently disabled — directly contradicting the A4 promise that the Home Profile is editable settings, not one-time setup. The apply loop now adds / re-enables / disables / refreshes. — `maintenance_mixin.py:async_maintenance_apply_seeds`
+2. **HIGH — `est_cost_pro: null` was coerced to `0.0`.** `_new_maintenance_task` did `float(f.get("est_cost_pro", 0) or 0)`. The library uses `null` for "never hired out standalone" on **40 of 97** tasks, and the C2 cost card renders that differently from a genuine $0. Now preserved via `_opt_float`. — `maintenance_mixin.py:_new_maintenance_task`
+3. **MED — a manually-disabled task would be resurrected by any profile edit.** Consequence of adding the re-enable path in #1: nothing distinguished "the profile turned this off" from "the user turned this off" (or "this one-shot finished"). Re-enable now requires a non-empty `disabled_reason`, which only the profile-driven disable sets. — `maintenance_mixin.py:async_maintenance_apply_seeds`
+
+**Also caught at deploy time (not a code bug):** the Samba share still held the 3-byte
+A4 stub `seed_library.json` (`[]`) from before Phase B. Every D1 test would have
+silently no-opped and looked like a failure. The real 168 KB library is now on the
+share. **`seed_library.json` is shipped integration code — it must be copied to Samba
+like any `.py` file.** (`family_hub_data.json` remains off-limits.)
+
+> Regression harnesses for all of the above live in the session scratchpad
+> (`d1_harness.py` 117 checks, `d1_lifecycle.py` 68 checks) — see the D1 handoff.
+
+---
+
 ## ✅ Fixed in v0.7.1 — deployed to Samba 2026-06-02, pending live-test, NOT yet committed/tagged
 
 1. **Redemption approval could hand out a reward for free (overspend).** `async_approve_redemption` never re-checked the balance; `async_deduct_points` floors at 0, so two pending redemptions each affordable alone could both be approved. Now re-checks affordability for one-time redemptions and leaves the request pending if the kid can no longer afford it. — `redemptions_mixin.py`

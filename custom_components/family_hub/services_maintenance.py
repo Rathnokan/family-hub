@@ -18,6 +18,7 @@ from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv
 
 from .const import DOMAIN
+from .seed_loader import PRESENCE_FIELDS, VARIANT_FIELDS
 
 if TYPE_CHECKING:
     from .coordinator import FamilyHubCoordinator
@@ -31,7 +32,9 @@ _TASK_OPTIONAL = {
     vol.Optional("location"):            cv.string,
     vol.Optional("schedule_mode"):       vol.In(["from_completion", "calendar_anchored"]),
     vol.Optional("recurrence"):          vol.Any(dict, None),
-    vol.Optional("seasonal_anchor"):     vol.Any(dict, None),
+    # A LIST is a multi-occurrence anchor ("April & October", quarterly...) — see
+    # _maintenance_schedule._next_anchor.
+    vol.Optional("seasonal_anchor"):     vol.Any(dict, [dict], None),
     vol.Optional("workflow"):            vol.In(["simple", "inspect_plan_do"]),
     vol.Optional("lead_time_days"):      vol.Coerce(int),
     vol.Optional("effort"):              dict,
@@ -252,12 +255,31 @@ def register_maintenance_services(hass: HomeAssistant, coordinator: "FamilyHubCo
         await store.async_maintenance_update_home_profile(**dict(call.data))
         await _refresh()
 
-    # Home Profile keys vary (age/sqft/pool/softener/...); accept any.
+    # Typed for the keys that gate seed applicability, but ALLOW_EXTRA is kept so a
+    # profile question added later (or a card sending a field this build predates)
+    # is never rejected outright.
     _reg("maintenance_update_home_profile", handle_update_home_profile,
-         vol.Schema({}, extra=vol.ALLOW_EXTRA))
+         vol.Schema({
+             **{vol.Optional(f): cv.boolean for f in PRESENCE_FIELDS},
+             vol.Optional("gas_range"):         cv.boolean,
+             vol.Optional("gas_service"):       vol.Any(cv.boolean, None),
+             **{
+                 vol.Optional(field): vol.Any(vol.In([v for v in values if v]), None)
+                 for field, values in VARIANT_FIELDS.items()
+             },
+             vol.Optional("climate_preset"):    cv.string,
+             vol.Optional("year_built"):        vol.Any(vol.Coerce(int), None),
+             vol.Optional("sq_ft"):             vol.Any(vol.Coerce(int), None),
+             vol.Optional("stories"):           vol.Coerce(int),
+             vol.Optional("home_value"):        vol.Any(vol.Coerce(float), None),
+             vol.Optional("inflation_rate"):    vol.Coerce(float),
+             vol.Optional("hvac_filter_size"):  cv.string,
+             vol.Optional("hvac_filter_count"): vol.Coerce(int),
+         }, extra=vol.ALLOW_EXTRA))
 
     async def handle_apply_seeds(call: ServiceCall) -> None:
-        await store.async_maintenance_apply_seeds()
+        counts = await store.async_maintenance_apply_seeds()
+        _LOGGER.info("Family Hub: maintenance_apply_seeds → %s", counts)
         await _refresh()
 
     _reg("maintenance_apply_seeds", handle_apply_seeds, vol.Schema({}))

@@ -58,14 +58,26 @@ def advance(d: date, interval: int, unit: str) -> date:
     return d + timedelta(days=interval)  # unknown unit → treat as days
 
 
-def _next_anchor(anchor: dict | None, interval: int, unit: str, after: date) -> date:
-    """Next occurrence of a calendar anchor strictly after `after`.
+def _anchor_list(anchor) -> list[dict]:
+    """Normalize a task's seasonal_anchor to a list of {month, day} dicts.
+
+    Accepts a single dict (the original single-anchor form), a list of dicts (the
+    D1 multi-occurrence form, e.g. "April & October" or a quarterly set), or None.
+    """
+    if isinstance(anchor, dict):
+        return [anchor]
+    if isinstance(anchor, list):
+        return [a for a in anchor if isinstance(a, dict)]
+    return []
+
+
+def _next_single_anchor(anchor: dict, interval: int, unit: str, after: date) -> date:
+    """Next occurrence of ONE calendar anchor strictly after `after`.
 
     anchor = {"month": M|None, "day": D}. month=None means a monthly anchor on
     day D (e.g. migrated monthly_on_date chores); a real month means a
     yearly/seasonal anchor on that month/day.
     """
-    anchor = anchor or {}
     day = int(anchor.get("day") or 1)
     month = anchor.get("month")
     interval = max(1, int(interval or 1))
@@ -83,6 +95,24 @@ def _next_anchor(anchor: dict | None, interval: int, unit: str, after: date) -> 
     while candidate <= after:
         candidate = _add_months(candidate, step_months)
     return candidate
+
+
+def _next_anchor(anchor, interval: int, unit: str, after: date) -> date:
+    """Next occurrence of a calendar anchor strictly after `after`.
+
+    With MULTIPLE anchors the list itself defines the cadence and `interval` is
+    ignored for anchoring — the next occurrence is simply the earliest of the
+    anchors that falls after `after`. That is what lets unevenly-spaced pairs work
+    ("June pre-monsoon & October post-monsoon" is 4 and 8 months apart, so no
+    single anchor + interval can express it). A single anchor behaves exactly as
+    it always has.
+    """
+    anchors = _anchor_list(anchor)
+    if not anchors:
+        return _next_single_anchor({}, interval, unit, after)
+    if len(anchors) == 1:
+        return _next_single_anchor(anchors[0], interval, unit, after)
+    return min(_next_single_anchor(a, 1, "years", after) for a in anchors)
 
 
 def compute_next_due(task: dict, completed_on: date) -> date | None:

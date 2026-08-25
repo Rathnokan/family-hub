@@ -385,6 +385,25 @@ Phase B (Chat/Research) is **complete**. Deliverable committed to the repo:
 
 Mix for prototype/test realism: 66 `from_completion` / 31 `calendar_anchored`; 51 `simple` / 46 `inspect_plan_do`; units 56 years / 37 months / 4 weeks.
 
+### ✅ D1 delivered (2026-08-25) — all seven deltas closed
+
+| # | How it was resolved |
+|---|---|
+| 1 | `async_load_seed_library` returns the library **object**; `library_tasks()` / `library_assets()` read it. A bare array still loads (legacy shape). The library is cached on the store at setup (`_seed_library`) so the synchronous card-model builder can reach the asset table. |
+| 2 | Home Profile schema: **19 presence booleans + 7 variant selects + non-gating cost fields**, all in `seed_loader.profile_defaults()`. Every tag maps to a predicate in `_TAG_PREDICATES`; a task applies iff all tags pass. Unknown tag **fails closed** + warns. Second gate on `climate_tags`. Blank profile = everything off ⇒ 56 universal tasks. `gas_service` derives from the fuel answers unless explicitly set. |
+| 3 | **Multi-anchor**, not a reduction: `seasonal_anchor` is now a LIST and `_next_anchor` returns the earliest upcoming entry. Required by `gutter_clean`'s override (June & October = 4 and 8 months apart). All 24 distinct anchor strings parse; seasons land on equinox/solstice so they are never confused with a named month. Prose kept as `seasonal_note`. The one null-anchor `calendar_anchored` task downgrades to `from_completion` with a WARNING. |
+| 4 | `resolve_climate_overrides` merges the preset block **before** field mapping — `recurrence`/`seasonal_anchor` override, `note` → `climate_note`. All 11 tasks verified; only `tankless_descale_flush` changes cadence (12 → 6 months). |
+| 5 | `applicable_assets` gates the 15 assets by an explicit predicate map (they carry no `applicability` field, only prose). `garage_door_springs` ships `accrual_default: false` per the library's own double-count guard. Shipped in the model as `assets`. **Fund math stays E2.** |
+| 6 | **Products seed as untracked stubs** — `low_stock_threshold: 0` so a zero count reads UNTRACKED, not OUT (otherwise 46 stubs would fire the room's supply-blocked banner on day one). Two-way task↔product links, idempotent by `seed_id`. |
+| 7 | `cost_status` + `surprise_factor` carried onto the task record; `surprise_factor` reaches the card for the C2 chip row. |
+
+**Plus the C2 model extension:** `sensor.family_hub_maintenance_due`'s payload gained
+`all_tasks` (every task, disabled and far-future included, for the room's search),
+`categories`, `products`, `completions`, `vendors`, `assets`, `profile`. `items` keeps
+its frozen A4 key set; the SENSOR still exposes scalars only. Payload ≈ 128 KB.
+
+**Three latent bugs in shipped A4 code were fixed** — see BUGS.md "Fixed in v0.8.0 D1".
+
 ---
 
 ## 10. Phase C1 delivered — admin IA wireframes (2026-07-26)

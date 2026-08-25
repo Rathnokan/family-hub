@@ -391,6 +391,43 @@
 - **Why:** A settings "migrated=true" flag is the trap — it misses Maintenance chores re-arriving via `import_data` of an old export. Presence-based detection makes import + migration compose for free. History rows are free-standing text/points records that stay valid without rewriting.
 - **Don't:** Don't remove `_migrate_chore`'s legacy label seeding or `LEGACY_MAINTENANCE_CATEGORIES` — they're what routes a v1-era import into this migration.
 
+### `seasonal_anchor` is a LIST of occurrences, not one anchor + interval (D1)
+- **Decision:** `_maintenance_schedule._next_anchor` accepts a list of `{month, day}`; with more than one entry the LIST defines the cadence and `recurrence.interval` is ignored for anchoring (next due = the earliest anchor after the reference date). One anchor behaves exactly as before.
+- **Why:** The obvious cheaper option — reduce "April & October" to April + a 6-month interval — is exact only for evenly-spaced sets. It breaks on `gutter_clean`'s Desert Southwest override, **"June (pre-monsoon) & October (post-monsoon)"**, which is 4 and 8 months apart: a 6-month step from June gives June/December, silently scheduling the pre-monsoon clean-out after the monsoon. Both options needed a comparable edit to `_next_anchor`, so the exact one won.
+- **Don't:** Don't "simplify" a multi-anchor task back to a representative anchor. Don't read `interval` when the anchor list has >1 entry.
+
+### Prose anchors parse to dates; the prose itself is kept alongside (D1)
+- **Decision:** `seed_loader.parse_seasonal_anchor` maps the library's human anchors to `{month, day}`: a named month or month-range → day 1 of the **first** month; a season → its equinox/solstice (spring Mar 20, summer Jun 21, fall Sep 22, winter Dec 21, late winter Feb 15, late spring May 15). The raw string is preserved on the task as `seasonal_note`.
+- **Why:** Seasons on the 1st would be indistinguishable from "the library named a month", and day 1 for a season is a false precision the library never claimed. Month-ranges anchor to the *start* because the work belongs at the start of the window (a pre-cooling tune-up in March, not April). `seasonal_note` keeps "October (post-monsoon)" for the UI, which reads better than `10/1`.
+- **Don't:** Don't use `calendar.month_name` for the month table — it is locale-aware and would silently stop matching the English library on a non-English HA host. The names are hardcoded for that reason.
+- **Trap:** A `calendar_anchored` seed whose anchor does not parse would fall into the monthly-anchor branch and land on the 1st of an arbitrary month. It is downgraded to `from_completion` with a WARNING instead. One library task hits this (`fire_extinguisher_pro_service`, anchor `null`).
+
+### Seed applicability fails CLOSED; unknown tags are never seeded (D1)
+- **Decision:** Every `applicability` tag maps to a Home Profile predicate in `seed_loader._TAG_PREDICATES`; a task applies iff EVERY tag is satisfied. A tag with no predicate returns False and logs a warning once. A blank profile answers everything off/unanswered, so it seeds only the 56 universal tasks. A second gate on `climate_tags` hides preset-specific tasks (the four evaporative-cooler tasks) under any other preset.
+- **Why:** Applicability tags exist precisely to keep irrelevant tasks off the board. Failing open on an unrecognized tag seeds exactly the thing the tag was written to prevent, and the user has to hunt it down and disable it.
+- **Don't:** Don't default presence toggles to "probably true" to fill the board faster — a wrong default costs the user a hunt-and-disable pass; a missing task costs one toggle.
+
+### Seeded tasks disable with a reason; only reasoned disables are ever re-enabled (D1)
+- **Decision:** `async_maintenance_apply_seeds` never deletes. A seed task that stops applying is disabled and stamped with `disabled_reason` ("no pool at this home"). Re-enable fires only when `disabled_reason` is non-empty — the marker that the *profile* turned it off.
+- **Why:** Without the reason check, a profile edit resurrects tasks the user deliberately switched off by hand (and finished one-shots, which also set `enabled=False`). The reason field does double duty: the room renders it, and it is the provenance flag distinguishing our disable from theirs.
+- **Don't:** Don't disable a seed task without setting a reason, and don't clear the reason except when re-enabling.
+
+### Untouched seeded tasks are refreshed from the library via a fingerprint (D1)
+- **Decision:** Each seeded task stores `seed_fingerprint` — the resolved `(schedule_mode, recurrence, seasonal_anchor)` at write time. On re-apply, a task still matching its fingerprint was never hand-edited, so the schedule fields are refreshed from the library and re-stamped; a mismatch means the user edited it and it is left alone.
+- **Why:** Without it, a climate-preset change reaches only newly-created tasks — the Tucson 6-month tankless descale would never revert to 12 on a preset flip. Refreshing unconditionally would instead silently overwrite the user's own cadence edits.
+- **Don't:** Don't add user-editable fields (name, points, costs) to `_SEED_REFRESHABLE` — it is scoped to schedule shape on purpose.
+
+### Seeded products are untracked stubs (D1)
+- **Decision:** The library references products as bare id strings, so seeding creates name-only records with `low_stock_threshold: 0`, `source: "seed"`, `seed_id`, and two-way task links.
+- **Why:** Threshold 0 reads as UNTRACKED, not OUT. Seeding 46 zero-count products at the default threshold of 1 would show every one as out of stock and fire the room's supply-blocked banner on day one. The user opts a product into inventory tracking by setting a threshold.
+- **Don't:** Don't give a seeded product stub a non-zero threshold or a fabricated cost — the library carries neither.
+
+### The room's full task list rides the existing maintenance-due model key (D1)
+- **Decision:** `all_tasks` (every task, disabled and far-future included) plus `assets`/`products`/`completions`/`profile`/`categories` were added to the `sensor.family_hub_maintenance_due` **model payload**. No new sensor, no new model key. The lean `items` list keeps its frozen A4 key set.
+- **Why:** Every model key has a backing sensor entity, and `build_claimable_payload`'s `tasks`/`all_tasks` split is the existing precedent for one payload carrying both a triage list and a full list. The SENSOR still exposes only `build_maintenance_due_scalars`, so none of this reaches the state machine or recorder.
+- **Trap:** The payload is ~128 KB (`all_tasks` ~77 KB), and `items` duplicates name+description for the enabled set. Retiring `items` is a card-side change that belongs with D2, not a backend trim.
+- **Don't:** Don't wire the full payload into `extra_state_attributes` — that is a recorder disaster and the exact thing the v0.7.0 P3 scalar split fixed.
+
 ---
 
 ## Doc conventions

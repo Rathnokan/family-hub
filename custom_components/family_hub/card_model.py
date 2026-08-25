@@ -28,6 +28,7 @@ from .const import (
     REDEMPTION_PENDING,
     STATUS_PENDING_APPROVAL,
 )
+from ._maintenance_schedule import effective_due, task_state
 from .modules import MODULE_IDS
 
 
@@ -590,9 +591,113 @@ def build_maintenance_due_scalars(store) -> dict:
     }
 
 
+_UNITS_SINGULAR = {"days": "day", "weeks": "week", "months": "month", "years": "year"}
+
+# Newest-first slice of the completion log shipped to the card. Task detail shows
+# a handful of rows per task; this is the whole room's worth with headroom.
+_COMPLETIONS_FOR_CARD = 300
+
+
+def cadence_label(task: dict) -> str:
+    """Human cadence for a task row: 'every 6 months', 'every year', 'one-time'."""
+    rec = task.get("recurrence") or {}
+    unit = rec.get("unit")
+    if not unit:
+        return "one-time"
+    interval = int(rec.get("interval", 1) or 1)
+    if interval == 1:
+        return f"every {_UNITS_SINGULAR.get(unit, unit)}"
+    return f"every {interval} {unit}"
+
+
+def _maintenance_task_record(task: dict, today: date) -> dict:
+    """One maintenance task as the Home Care room reads it.
+
+    Unlike the triage view (`get_maintenance_view`), this keeps DISABLED, snoozed
+    and far-future tasks: the room's search spans the whole library, and a disabled
+    task has to render its reason line (C2 handoff section 5.1)."""
+    due = effective_due(task)
+    return {
+        "id":                  task["id"],
+        "name":                task.get("name", ""),
+        "description":         task.get("description", ""),
+        "category":            task.get("category") or "Maintenance",
+        "location":            task.get("location", ""),
+        "state":               task_state(task, today),
+        "enabled":             bool(task.get("enabled", True)),
+        "disabled_reason":     task.get("disabled_reason", ""),
+        "next_due":            due.isoformat() if due else None,
+        "days_delta":          (due - today).days if due else None,
+        "last_completed":      task.get("last_completed"),
+        "snoozed_until":       task.get("snoozed_until"),
+        "recurrence":          task.get("recurrence"),
+        "cadence_label":       cadence_label(task),
+        "schedule_mode":       task.get("schedule_mode", "from_completion"),
+        "seasonal_anchor":     task.get("seasonal_anchor"),
+        "seasonal_note":       task.get("seasonal_note", ""),
+        "climate_note":        task.get("climate_note", ""),
+        "workflow":            task.get("workflow", "simple"),
+        "workflow_stage":      task.get("workflow_stage"),
+        "lead_time_days":      task.get("lead_time_days"),
+        "effort":              task.get("effort") or {},
+        "est_cost_diy":        task.get("est_cost_diy"),
+        "est_cost_pro":        task.get("est_cost_pro"),   # None = never hired out
+        "default_mode":        task.get("default_mode", "diy"),
+        "product_ids":         list(task.get("product_ids") or []),
+        "assignable":          bool(task.get("assignable", False)),
+        "default_point_value": int(task.get("default_point_value", 0) or 0),
+        "surprise_factor":     task.get("surprise_factor", "low"),
+        "offered_external":    bool(task.get("offered_external", False)),
+        "source":              task.get("source", "custom"),
+        "seed_id":             task.get("seed_id"),
+    }
+
+
+def build_maintenance_all_tasks(store) -> list[dict]:
+    """Every maintenance task, enabled or not, sorted by name."""
+    today = date.today()
+    return sorted(
+        (_maintenance_task_record(t, today) for t in store.maintenance_tasks),
+        key=lambda t: t["name"].lower(),
+    )
+
+
+def build_maintenance_assets(store) -> list[dict]:
+    """Big-ticket assets this home actually has, from the seed library's reference
+    table. Read-only here — the sinking-fund math is Phase E2."""
+    from .seed_loader import applicable_assets, library_assets
+    library = getattr(store, "_seed_library", None) or {}
+    return applicable_assets(library_assets(library), store.home_profile)
+
+
 def build_maintenance_due_payload(store) -> dict:
-    """Full maintenance-due model section = scalars + the items list."""
-    return {**build_maintenance_due_scalars(store), "items": store.get_maintenance_items_for_card()}
+    """Full maintenance-due model section.
+
+    Two task lists, mirroring the claimable payload's tasks/all_tasks split:
+    `items` is the lean due/overdue triage board (unchanged frozen contract) and
+    `all_tasks` is the full list the room's search needs. Everything else here is
+    supporting data for the room's task detail, products screen and fund rollup.
+    """
+    completions = sorted(
+        store.maintenance_completions, key=lambda c: c.get("date") or "", reverse=True,
+    )[:_COMPLETIONS_FOR_CARD]
+    all_tasks = store.get_maintenance_all_tasks_for_card()
+
+    categories: dict[str, int] = {}
+    for task in all_tasks:
+        categories[task["category"]] = categories.get(task["category"], 0) + 1
+
+    return {
+        **build_maintenance_due_scalars(store),
+        "items":       store.get_maintenance_items_for_card(),
+        "all_tasks":   all_tasks,
+        "categories":  categories,
+        "products":    store.maintenance_products,
+        "completions": completions,
+        "vendors":     store.maintenance_vendors,
+        "assets":      build_maintenance_assets(store),
+        "profile":     store.home_profile,
+    }
 
 
 def build_maintenance_overdue_scalars(store) -> dict:

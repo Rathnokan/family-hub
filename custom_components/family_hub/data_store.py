@@ -236,6 +236,10 @@ class FamilyHubDataStore(CardShaperMixin, TickMixin, StreaksRanksMixin, Subscrip
         # v0.8.0 internal pub/sub between modules. Delivery is gated on
         # enabled_modules at publish time (evaluated fresh each publish).
         self.bus = FamilyHubBus(lambda mid: mid in self.enabled_modules)
+        # v0.8.0 D1: the shipped seed library, read once off the event loop and
+        # cached so the SYNCHRONOUS card-model builder can gate the big-ticket
+        # assets against the Home Profile without touching the filesystem.
+        self._seed_library: dict = {}
         self._register_bus_subscriptions()
 
     def _register_bus_subscriptions(self) -> None:
