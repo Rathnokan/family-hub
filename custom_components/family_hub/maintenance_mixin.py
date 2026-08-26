@@ -754,7 +754,9 @@ class MaintenanceMixin:
 
         await self.async_save()
         if any(counts.values()):
-            _LOGGER.warning(
+            # INFO, not WARNING: a successful re-apply is routine, and surfacing it
+            # in HA's warning log would read as a problem with the integration.
+            _LOGGER.info(
                 "Family Hub: seed library applied — %d added, %d re-enabled, "
                 "%d disabled, %d refreshed (%d applicable of %d)",
                 counts["added"], counts["reenabled"], counts["disabled"],

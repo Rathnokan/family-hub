@@ -58,6 +58,14 @@ _PRODUCT_OPTIONAL = {
     vol.Optional("linked_task_ids"):     [cv.string],
 }
 
+def _variant_values(values: tuple):
+    """Allowed values for a Home Profile single-select, including None ("clear this
+    answer"). One In() rather than Any(In(...), None) so the validation error lists
+    null as a legal value — otherwise the message reads as though the answer is
+    mandatory when it is not."""
+    return vol.In([None] + [v for v in values if v is not None])
+
+
 _VENDOR_OPTIONAL = {
     vol.Optional("trade"):      cv.string,
     vol.Optional("phone"):      cv.string,
@@ -264,7 +272,7 @@ def register_maintenance_services(hass: HomeAssistant, coordinator: "FamilyHubCo
              vol.Optional("gas_range"):         cv.boolean,
              vol.Optional("gas_service"):       vol.Any(cv.boolean, None),
              **{
-                 vol.Optional(field): vol.Any(vol.In([v for v in values if v]), None)
+                 vol.Optional(field): _variant_values(values)
                  for field, values in VARIANT_FIELDS.items()
              },
              vol.Optional("climate_preset"):    cv.string,

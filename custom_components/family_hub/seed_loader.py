@@ -214,7 +214,11 @@ _TAG_REASONS = {
 
 _CLIMATE_REASON = "not applicable in this climate"
 
+# One-shot log guards. Both conditions are properties of the shipped LIBRARY, not
+# of any single run, so warning on every re-apply is pure noise (a Home Profile
+# edit re-applies the whole library).
 _warned_tags: set[str] = set()
+_warned_anchors: set[str] = set()
 
 
 def _tag_satisfied(tag: str, profile: dict) -> bool:
@@ -428,11 +432,14 @@ def seed_to_task_fields(seed: dict, home_profile: dict | None = None) -> dict:
     # the monthly-anchor branch and land on the 1st of an arbitrary month. Be
     # honest instead: float it from completion and say so.
     if schedule_mode == "calendar_anchored" and not anchor:
-        _LOGGER.warning(
-            "Family Hub: seed '%s' is calendar_anchored but its anchor %r does not "
-            "parse — scheduling it from completion instead",
-            resolved.get("task_id"), raw_anchor,
-        )
+        task_id = resolved.get("task_id") or ""
+        if task_id not in _warned_anchors:
+            _warned_anchors.add(task_id)
+            _LOGGER.warning(
+                "Family Hub: seed '%s' is calendar_anchored but its anchor %r does "
+                "not parse — scheduling it from completion instead",
+                task_id, raw_anchor,
+            )
         schedule_mode = "from_completion"
 
     return {
